@@ -17,6 +17,8 @@ const isTest = !!process.env.VITEST || process.env.NODE_ENV === "test";
  * Directory where durable, rotated log files are written. Override with LOG_DIR.
  * Each channel (errors, access/audit, lead-events) gets its own daily-rotated
  * file so operators can tail or ship them independently.
+ * On Vercel, the filesystem is read-only except `/tmp`, so default there is
+ * `/tmp/banco-logs` to keep file transports writable.
  */
 const LOG_DIR =
   process.env.LOG_DIR ??
