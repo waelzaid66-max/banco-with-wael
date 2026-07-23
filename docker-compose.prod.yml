@@ -103,6 +103,9 @@ services:
       context: .
       dockerfile: deploy/coolify/Dockerfile.banco-web
       args:
+        # Default http://api:8080 = internal Docker service DNS for SSR rewrites.
+        # Override NEXT_PUBLIC_API_URL only if the API is on a separate host/network
+        # where the `api` hostname is not resolvable from the Next.js container.
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://api:8080}
         NEXT_PUBLIC_SITE_URL: ${BANCO_WEB_URL:-http://localhost:3000}
         NEXT_PUBLIC_MARKET_URL: ${BANCO_WEB_MARKET_URL:-}
@@ -142,6 +145,7 @@ services:
       context: .
       dockerfile: deploy/coolify/Dockerfile.banco-website
       args:
+        # See banco-web comment above for NEXT_PUBLIC_API_URL override guidance.
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://api:8080}
         NEXT_PUBLIC_SITE_URL: ${BANCO_WEBSITE_URL:-http://localhost:3001}
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}

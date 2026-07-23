@@ -130,6 +130,7 @@ Click **Deploy** in Coolify. Coolify will:
 | `PRIVATE_OBJECT_DIR` | — | Private S3/GCS dir for internal assets |
 | `ERROR_ALERT_WEBHOOK` | — | Webhook URL for error alerts |
 | `LOG_LEVEL` | `info` | Pino log level |
+| `LOG_DIR` | — | Directory for log file output (omit to log to stdout only) |
 | `CRON_TIMEZONE` | `Africa/Cairo` | Timezone for scheduled jobs |
 
 ### Build-time Vite SPA variables (for `web` service)
