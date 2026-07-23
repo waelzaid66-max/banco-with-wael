@@ -33,7 +33,7 @@
 #   See docs/DEPLOY_COOLIFY.md → "Database Migrations" section.
 # ─────────────────────────────────────────────────────────────────────────────
 
-name: bancoo
+name: banco
 
 networks:
   banco_net:
