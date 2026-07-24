@@ -2,6 +2,7 @@ import pino, { type Logger, type TransportTargetOptions } from "pino";
 import path from "node:path";
 
 const isProduction = process.env.NODE_ENV === "production";
+const isVercel = process.env.VERCEL === "1";
 
 /**
  * In tests (vitest) every logger collapses to a silent, transport-less pino
@@ -16,8 +17,12 @@ const isTest = !!process.env.VITEST || process.env.NODE_ENV === "test";
  * Directory where durable, rotated log files are written. Override with LOG_DIR.
  * Each channel (errors, access/audit, lead-events) gets its own daily-rotated
  * file so operators can tail or ship them independently.
+ * On Vercel, the filesystem is read-only except `/tmp`, so default there is
+ * `/tmp/banco-logs` to keep file transports writable.
  */
-const LOG_DIR = process.env.LOG_DIR ?? path.resolve(process.cwd(), "logs");
+const LOG_DIR =
+  process.env.LOG_DIR ??
+  (isVercel ? "/tmp/banco-logs" : path.resolve(process.cwd(), "logs"));
 
 const REDACT_PATHS = [
   "req.headers.authorization",
