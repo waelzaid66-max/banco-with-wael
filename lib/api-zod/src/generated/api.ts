@@ -1556,7 +1556,7 @@ export const MarkConversationReadResponse = zod.object({
 export const ListNotificationsResponse = zod.object({
   "data": zod.array(zod.object({
   "id": zod.string(),
-  "type": zod.enum(['message', 'lead', 'system', 'rfq', 'new_match', 'price_drop', 'comment', 'review', 'investment', 'global_supply', 'booking', 'payment_success', 'payment_failed', 'subscription_expiring']),
+  "type": zod.enum(['message', 'lead', 'system', 'rfq', 'new_match', 'price_drop', 'comment', 'review', 'investment', 'global_supply', 'booking', 'payment_success', 'payment_failed', 'subscription_expiring', 'car_import']),
   "title": zod.string(),
   "body": zod.string(),
   "data": zod.record(zod.string(), zod.unknown()).nullish(),
@@ -1850,7 +1850,7 @@ export const SetMySocialLinksResponse = zod.object({
  */
 export const GetMyNotificationPreferencesResponse = zod.object({
   "data": zod.array(zod.object({
-  "type": zod.enum(['message', 'lead', 'system', 'rfq', 'new_match', 'price_drop', 'comment', 'review', 'investment', 'global_supply', 'booking', 'payment_success', 'payment_failed', 'subscription_expiring']),
+  "type": zod.enum(['message', 'lead', 'system', 'rfq', 'new_match', 'price_drop', 'comment', 'review', 'investment', 'global_supply', 'booking', 'payment_success', 'payment_failed', 'subscription_expiring', 'car_import']),
   "in_app": zod.boolean(),
   "email": zod.boolean()
 }).describe('Per-category notification preference. Absence of a row = enabled (Task')),
@@ -1871,7 +1871,7 @@ export const GetMyNotificationPreferencesResponse = zod.object({
  */
 export const SetMyNotificationPreferencesBody = zod.object({
   "preferences": zod.array(zod.object({
-  "type": zod.enum(['message', 'lead', 'system', 'rfq', 'new_match', 'price_drop', 'comment', 'review', 'investment', 'global_supply', 'booking', 'payment_success', 'payment_failed', 'subscription_expiring']),
+  "type": zod.enum(['message', 'lead', 'system', 'rfq', 'new_match', 'price_drop', 'comment', 'review', 'investment', 'global_supply', 'booking', 'payment_success', 'payment_failed', 'subscription_expiring', 'car_import']),
   "in_app": zod.boolean(),
   "email": zod.boolean()
 }).describe('Per-category notification preference. Absence of a row = enabled (Task'))
@@ -1879,7 +1879,7 @@ export const SetMyNotificationPreferencesBody = zod.object({
 
 export const SetMyNotificationPreferencesResponse = zod.object({
   "data": zod.array(zod.object({
-  "type": zod.enum(['message', 'lead', 'system', 'rfq', 'new_match', 'price_drop', 'comment', 'review', 'investment', 'global_supply', 'booking', 'payment_success', 'payment_failed', 'subscription_expiring']),
+  "type": zod.enum(['message', 'lead', 'system', 'rfq', 'new_match', 'price_drop', 'comment', 'review', 'investment', 'global_supply', 'booking', 'payment_success', 'payment_failed', 'subscription_expiring', 'car_import']),
   "in_app": zod.boolean(),
   "email": zod.boolean()
 }).describe('Per-category notification preference. Absence of a row = enabled (Task')),

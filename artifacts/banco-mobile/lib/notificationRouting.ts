@@ -60,6 +60,11 @@ export function routeForNotification(
     return "/billing" as Href;
   }
 
+  // A car-import lifecycle ping → the buyer's import-tracking screen (live stages).
+  if (type === "car_import") {
+    return "/import-tracking" as Href;
+  }
+
   // FI phase 2 — a financing request Banco forwarded to the caller's
   // institution lands in the Banks & Financiers hub (the bank-side surface).
   if (typeof d.financing_lead_id === "string") {

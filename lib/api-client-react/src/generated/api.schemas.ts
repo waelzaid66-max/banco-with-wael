@@ -537,6 +537,7 @@ export const NotificationType = {
   payment_success: 'payment_success',
   payment_failed: 'payment_failed',
   subscription_expiring: 'subscription_expiring',
+  car_import: 'car_import',
 } as const;
 
 export type NotificationData = { [key: string]: unknown } | null;
@@ -673,6 +674,7 @@ export const NotificationPreferenceType = {
   payment_success: 'payment_success',
   payment_failed: 'payment_failed',
   subscription_expiring: 'subscription_expiring',
+  car_import: 'car_import',
 } as const;
 
 /**

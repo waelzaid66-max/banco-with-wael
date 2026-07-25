@@ -666,7 +666,7 @@ components:
           type: string
         type:
           type: string
-          enum: [message, lead, system, rfq, new_match, price_drop, comment, review, investment, global_supply, booking, payment_success, payment_failed, subscription_expiring]
+          enum: [message, lead, system, rfq, new_match, price_drop, comment, review, investment, global_supply, booking, payment_success, payment_failed, subscription_expiring, car_import]
         title:
           type: string
         body:
@@ -813,7 +813,7 @@ components:
       properties:
         type:
           type: string
-          enum: [message, lead, system, rfq, new_match, price_drop, comment, review, investment, global_supply, booking, payment_success, payment_failed, subscription_expiring]
+          enum: [message, lead, system, rfq, new_match, price_drop, comment, review, investment, global_supply, booking, payment_success, payment_failed, subscription_expiring, car_import]
         in_app:
           type: boolean
         email:
