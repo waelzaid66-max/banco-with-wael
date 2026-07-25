@@ -2506,6 +2506,118 @@ components:
             confirm/reject are host-only (on a requested booking); cancel is
             guest-only (on a requested/confirmed booking).
 
+    ImportOrderStage:
+      type: string
+      enum: [order, review, confirm, shipping, customs, delivered, cancelled]
+      description: >-
+        Live sequential stage of a car-import order, matching the in-app import
+        guide: order to review to confirm to shipping to customs to delivered,
+        with cancelled as the terminal negative outcome.
+
+    CreateImportOrderBody:
+      type: object
+      description: A buyer's request to import a vehicle from abroad.
+      properties:
+        listing_id:
+          type: string
+          nullable: true
+          description: Optional marketplace listing this import is based on.
+        origin_country:
+          type: string
+          nullable: true
+          description: ISO country the vehicle is imported from.
+        destination_country:
+          type: string
+          nullable: true
+          description: ISO country the vehicle is imported to (buyer's market).
+        details:
+          type: object
+          additionalProperties: true
+          nullable: true
+          description: Free-form vehicle spec (make/model/year/trim) for listing-less requests.
+        budget_amount:
+          type: number
+          nullable: true
+        currency:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+
+    ImportOrder:
+      type: object
+      required: [id, stage, created_at]
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        listing_id:
+          type: string
+          nullable: true
+        stage:
+          $ref: "#/components/schemas/ImportOrderStage"
+        origin_country:
+          type: string
+          nullable: true
+        destination_country:
+          type: string
+          nullable: true
+        details:
+          type: object
+          additionalProperties: true
+          nullable: true
+        budget_amount:
+          type: number
+          nullable: true
+        quote_amount:
+          type: number
+          nullable: true
+        currency:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          nullable: true
+
+    ImportOrderListItem:
+      type: object
+      description: An import order enriched for the buyer's tracking list.
+      required: [id, stage, created_at]
+      properties:
+        id:
+          type: string
+        stage:
+          $ref: "#/components/schemas/ImportOrderStage"
+        origin_country:
+          type: string
+          nullable: true
+        destination_country:
+          type: string
+          nullable: true
+        budget_amount:
+          type: number
+          nullable: true
+        currency:
+          type: string
+          nullable: true
+        listing_title:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          nullable: true
+
     PromoCampaignView:
       type: object
       description: >
@@ -4435,6 +4547,99 @@ paths:
                 properties:
                   data:
                     $ref: "#/components/schemas/Booking"
+                  error:
+                    $ref: "#/components/schemas/ApiError"
+                    nullable: true
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+
+  /v1/import-orders:
+    post:
+      operationId: createImportOrder
+      summary: Request a car import
+      description: >-
+        Create a car-import order from the buyer's request. Starts at stage
+        "order". Optionally references an existing listing; otherwise the vehicle
+        is described free-form in details.
+      tags: [import-orders]
+      security:
+        - ClerkAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateImportOrderBody"
+      responses:
+        "200":
+          description: Import order created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ImportOrder"
+                  error:
+                    $ref: "#/components/schemas/ApiError"
+                    nullable: true
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+
+  /v1/import-orders/mine:
+    get:
+      operationId: listMyImportOrders
+      summary: My car-import orders
+      description: >-
+        The signed-in buyer's car-import orders with their live stage, newest
+        first. Powers the import-tracking screen.
+      tags: [import-orders]
+      security:
+        - ClerkAuth: []
+      responses:
+        "200":
+          description: My import orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ImportOrderListItem"
+                  error:
+                    $ref: "#/components/schemas/ApiError"
+                    nullable: true
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+
+  /v1/import-orders/{id}:
+    get:
+      operationId: getImportOrder
+      summary: Import order detail
+      description: >-
+        A single car-import order owned by the signed-in buyer, with its full
+        stage and details for the tracking detail view.
+      tags: [import-orders]
+      security:
+        - ClerkAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Import order
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ImportOrder"
                   error:
                     $ref: "#/components/schemas/ApiError"
                     nullable: true
