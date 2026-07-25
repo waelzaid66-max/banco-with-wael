@@ -2404,6 +2404,70 @@ export type InsertFinancingBranch = typeof financingBranches.$inferInsert;
 export type FinancingSeat = typeof financingSeats.$inferSelect;
 export type InsertFinancingSeat = typeof financingSeats.$inferInsert;
 
+/* ── CAR IMPORT ORDERS (live sequential import tracking) ──
+ *
+ * A buyer-initiated request to import a vehicle from abroad, driven through a
+ * live sequential lifecycle by the platform (Cars vertical). Mirrors
+ * financingRequests / globalSupplyRequests: user-owned, stage-driven, indexed
+ * on owner + stage. Additive & standalone — nothing else references it, so it
+ * can be created / extended with zero impact on existing data or APIs.
+ *
+ * Lifecycle mirrors the EXISTING in-app guide (app/import-tracking.tsx STAGES,
+ * whose icons file-text/clock/check-circle/truck/shield/package are already
+ * registered — no Android tofu): order → review → confirm → shipping → customs
+ * → delivered, with cancelled as the terminal negative outcome. This is
+ * Layer 1 of the car-import feature; OpenAPI + codegen + service + routes +
+ * mobile Import hub + notifications land in later layers.
+ */
+export const importOrderStageEnum = pgEnum("import_order_stage", [
+  "order",
+  "review",
+  "confirm",
+  "shipping",
+  "customs",
+  "delivered",
+  "cancelled",
+]);
+
+export const importOrders = pgTable(
+  "import_orders",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    // The buyer who requested the import.
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    // Optional listing this import is based on; free-form requests (no existing
+    // listing) leave this null and describe the vehicle in `details`.
+    listingId: uuid("listing_id").references(() => listings.id, {
+      onDelete: "set null",
+    }),
+    stage: importOrderStageEnum("stage").notNull().default("order"),
+    // ISO country the vehicle is imported FROM / TO (same market vocabulary as
+    // listings.marketCountry).
+    originCountry: text("origin_country"),
+    destinationCountry: text("destination_country"),
+    // Free-form vehicle spec for listing-less requests (make / model / year /
+    // trim / budget …). jsonb so the shape evolves without a migration.
+    details: jsonb("details"),
+    // Buyer budget and platform quote (major currency units) + ISO currency.
+    budgetAmount: numeric("budget_amount"),
+    quoteAmount: numeric("quote_amount"),
+    currency: text("currency"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => [
+    index("idx_import_orders_user").on(table.userId),
+    index("idx_import_orders_stage").on(table.stage),
+    index("idx_import_orders_listing").on(table.listingId),
+  ]
+);
+
+export type ImportOrder = typeof importOrders.$inferSelect;
+export type InsertImportOrder = typeof importOrders.$inferInsert;
+
 /* ── Task #40 inferred types ───────────────────────────── */
 export type InvestmentOpportunity = typeof investmentOpportunities.$inferSelect;
 export type InsertInvestmentOpportunity = typeof investmentOpportunities.$inferInsert;
