@@ -28,6 +28,7 @@ import investmentsRouter from "./investments";
 import globalSupplyRouter from "./global-supply";
 import marketRouter from "./market";
 import referenceRouter from "./reference";
+import importOrdersRouter from "./import-orders";
 
 const router = Router();
 
@@ -55,6 +56,7 @@ router.use("/support", supportRouter);
 router.use("/admin", adminRouter);
 router.use("/companies", companiesRouter);
 router.use("/rfqs", rfqsRouter);
+router.use("/import-orders", importOrdersRouter);
 router.use("/sellers", sellersRouter);
 router.use("/investments", investmentsRouter);
 router.use("/global-supply", globalSupplyRouter);

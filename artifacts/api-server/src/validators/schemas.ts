@@ -2522,6 +2522,68 @@ export const CreateRfqSchema = z
 
 export const RfqCreateResultSchema = z.object({ id: z.string() }).strict();
 
+// ── Car-import orders (stages match the in-app import guide) ──────────────
+export const ImportOrderStageZ = z.enum([
+  "order",
+  "review",
+  "confirm",
+  "shipping",
+  "customs",
+  "delivered",
+  "cancelled",
+]);
+
+export const ImportOrderSchema = z
+  .object({
+    id: z.string(),
+    user_id: z.string(),
+    listing_id: z.string().nullable(),
+    stage: ImportOrderStageZ,
+    origin_country: z.string().nullable(),
+    destination_country: z.string().nullable(),
+    details: z.record(z.string(), z.unknown()).nullable(),
+    budget_amount: z.string().nullable(),
+    quote_amount: z.string().nullable(),
+    currency: z.string().nullable(),
+    notes: z.string().nullable(),
+    created_at: z.string(),
+    updated_at: z.string().nullable(),
+  })
+  .strict();
+
+export const ImportOrderListItemSchema = z
+  .object({
+    id: z.string(),
+    stage: ImportOrderStageZ,
+    origin_country: z.string().nullable(),
+    destination_country: z.string().nullable(),
+    budget_amount: z.string().nullable(),
+    currency: z.string().nullable(),
+    listing_title: z.string().nullable(),
+    created_at: z.string(),
+    updated_at: z.string().nullable(),
+  })
+  .strict();
+
+export type ImportOrder = z.infer<typeof ImportOrderSchema>;
+export type ImportOrderListItem = z.infer<typeof ImportOrderListItemSchema>;
+
+export const CreateImportOrderSchema = z
+  .object({
+    listing_id: z.string().trim().max(80).optional(),
+    origin_country: z.string().trim().max(80).optional(),
+    destination_country: z.string().trim().max(80).optional(),
+    details: z.record(z.string(), z.unknown()).optional(),
+    budget_amount: z.number().positive().max(1_000_000_000).optional(),
+    currency: z.string().trim().max(8).optional(),
+    note: z.string().trim().max(2000).optional(),
+  })
+  .strict();
+
+export const ImportOrderCreateResultSchema = z
+  .object({ id: z.string() })
+  .strict();
+
 export const SubmitOfferSchema = z
   .object({
     price_quote: z.number().positive().max(1_000_000_000),
