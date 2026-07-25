@@ -20,7 +20,9 @@ export type NotificationType =
   // Billing (Wave B3): PSP settlement, failed checkout, subscription renewal.
   | "payment_success"
   | "payment_failed"
-  | "subscription_expiring";
+  | "subscription_expiring"
+  // Additive: car-import order lifecycle (created + each stage).
+  | "car_import";
 
 export interface NotificationDTO {
   id: string;

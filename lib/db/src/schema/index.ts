@@ -1139,6 +1139,9 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "payment_success",
   "payment_failed",
   "subscription_expiring",
+  // Additive: car-import order lifecycle (created + each stage). Deep-links to
+  // /import-tracking so the buyer follows order -> ... -> delivered.
+  "car_import",
 ]);
 
 // In-app notification feed. `data` holds typed deep-link ids (conversation_id,
