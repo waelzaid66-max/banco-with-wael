@@ -3589,6 +3589,10 @@ const styles = StyleSheet.create({
   postsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
+    // 2-col grid: tileSize already subtracts one GRID_GAP, so apply that gap
+    // BETWEEN the columns (was missing → the two cards touched and the 12px
+    // landed as dead space on the right / asymmetric margin after the shrink).
+    columnGap: GRID_GAP,
   },
   postTile: {
     marginBottom: GRID_GAP,
