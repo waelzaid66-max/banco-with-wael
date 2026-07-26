@@ -33,7 +33,39 @@
 - **Countries/currencies still "spread"** in RE + Materials matrices — owner wants them collapsed to the compact icon like Stay, BUT the current spread layout is locked by two guard assertions (owner-approved earlier). **Needs an explicit owner decision before touching.**
 - **Vercel preview failures** on the PR (`bancoo-api-server`, one `admin-os` variant) — pre-existing infra, non-required checks; the real API target is Coolify. Confirm they also fail on `main` before spending effort.
 
-## 2b. The Search-page mini-apps (owner: top priority, "layers under the 5 sections")
+## 2a. FULL census of the Search/Discover page — 10 rectangles, none missed
+Read end-to-end from `components/SearchDiscover.tsx` (render ends line 476; styles start 480 — the banks card is the last one, and the host `app/(tabs)/search.tsx` adds no cards while Discover is showing). `SECTIONS = ["car","real_estate","facilities","materials"]` → exactly 4 grid cards.
+
+| # | Rectangle | testID | Destination | Group |
+|---|---|---|---|---|
+| 1 | Cars | `section-card-car` | `/section/car` | 2×2 photo grid |
+| 2 | Real estate | `section-card-real_estate` | `/section/real-estate` | grid |
+| 3 | Factories | `section-card-facilities` | `/section/factories` | grid |
+| 4 | Materials | `section-card-materials` | `/section/materials` | grid |
+| 5 | Booking & Stays | `section-card-booking` | `/section/booking` | 5th wide portal |
+| 6 | **Maps** | `discover-explore-map` | `/section/real-estate?map=1` | standalone |
+| 7 | **Import your car** | `discover-car-import` | `/section/car?engine=import` | standalone |
+| 8 | **Global supply** | `discover-supply-portal` | `/business/global-supply` | Business & supply |
+| 9 | **Suppliers hub** | `discover-importers-hub` | `/business/supply-hub` | Business & supply |
+| 10 | **Banks & financiers** | `discover-banks-hub` | `/business/banks` | Business & supply |
+
+### Identity rules encoded in the design (any new/edited rectangle MUST follow these)
+1. **Per-section gradients stay inside the BANCO red/charcoal family** — each card reads as its own world without leaving the brand.
+2. **Red-family fallback fills sit behind the section photos** — stated in-code as the identity rule: *logo red*.
+3. **A faint BANCO wordmark is embossed behind each card's content** — white-tinted, very low opacity, above the scrim but below the badge/label/chevron so it never fights legibility.
+
+### Layer model (how the work cycle stays in harmony with the sections)
+```
+L1  Search host  → Discover = the 10 rectangles
+L2  5 section mini-apps (4 share SectionSearchApp + Booking standalone)
+L3  5 business/tool mini-apps (maps · import · global supply · suppliers · banks)
+L4  Each mini-app's own system (inner screens + API + notifications)
+```
+
+### Observation the owner did not raise (surfaced during the census)
+The **Maps** card opens the real-estate map only. That is a documented, deliberate choice (the destination is "honest" — it falls back to the list when a browse has no coordinates), but it is a real functional limit: cars/factories/materials also carry coordinates. Flagged for the Maps wave — **owner decision**, not changed unilaterally.
+
+## 2b. Portal destinations — connection audit
 Portal inventory read from `components/SearchDiscover.tsx` — **every destination file exists, so no dead buttons**:
 
 | Portal (testID) | Owner's name | Destination | Route exists |
