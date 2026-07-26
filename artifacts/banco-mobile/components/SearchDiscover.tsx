@@ -124,6 +124,8 @@ export function SearchDiscover({
             key={cat}
             onPress={() => handleSectionPress(cat)}
             style={styles.sectionCardWrap}
+            accessibilityRole="button"
+            accessibilityLabel={t(`home.categories.${cat}`)}
             testID={`section-card-${cat}`}
           >
             <View
@@ -201,6 +203,8 @@ export function SearchDiscover({
       <Pressable
         onPress={() => router.push("/section/booking" as Href)}
         style={styles.bookingCardWrap}
+        accessibilityRole="button"
+        accessibilityLabel={t("search.discover.bookingHub")}
         testID="section-card-booking"
       >
         <View
@@ -268,6 +272,8 @@ export function SearchDiscover({
       <Pressable
         onPress={onExploreMap}
         style={styles.mapCtaWrap}
+        accessibilityRole="button"
+        accessibilityLabel={t("search.discover.exploreMap")}
         testID="discover-explore-map"
       >
           <LinearGradient
@@ -309,6 +315,8 @@ export function SearchDiscover({
           router.push(`${SECTION_ROUTE.car}?engine=import` as Href)
         }
         style={styles.hubCtaWrap}
+        accessibilityRole="button"
+        accessibilityLabel={t("search.discover.carImport")}
         testID="discover-car-import"
       >
         <LinearGradient
@@ -356,6 +364,8 @@ export function SearchDiscover({
       <Pressable
         onPress={() => router.push("/business/global-supply")}
         style={styles.hubCtaWrap}
+        accessibilityRole="button"
+        accessibilityLabel={t("search.discover.supplyPortal")}
         testID="discover-supply-portal"
       >
         <LinearGradient
@@ -396,6 +406,8 @@ export function SearchDiscover({
       <Pressable
         onPress={() => router.push("/business/supply-hub")}
         style={styles.hubCtaWrap}
+        accessibilityRole="button"
+        accessibilityLabel={t("search.discover.importersHub")}
         testID="discover-importers-hub"
       >
         <LinearGradient
@@ -436,6 +448,8 @@ export function SearchDiscover({
       <Pressable
         onPress={() => router.push("/business/banks" as Href)}
         style={styles.hubCtaWrap}
+        accessibilityRole="button"
+        accessibilityLabel={t("search.discover.banksHub")}
         testID="discover-banks-hub"
       >
         <LinearGradient

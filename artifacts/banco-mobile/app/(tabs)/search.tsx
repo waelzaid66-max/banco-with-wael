@@ -1149,6 +1149,8 @@ export default function SearchScreen() {
                   flexDirection: isRTL ? "row-reverse" : "row",
                 },
               ]}
+              accessibilityRole="button"
+              accessibilityLabel={t("search.viewMap")}
               testID="discover-map-toggle"
             >
               <Feather name="map" size={16} color={colors.background} />
