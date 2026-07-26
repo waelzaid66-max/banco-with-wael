@@ -22,6 +22,7 @@ describe("permission matrix", () => {
       "manage_support",
       "manage_payments",
       "view_finance",
+      "manage_financing",
     ];
     for (const p of all) expect(hasPermission("owner", p)).toBe(true);
   });
