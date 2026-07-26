@@ -49,6 +49,24 @@ Read end-to-end from `components/SearchDiscover.tsx` (render ends line 476; styl
 | 9 | **Suppliers hub** | `discover-importers-hub` | `/business/supply-hub` | Business & supply |
 | 10 | **Banks & financiers** | `discover-banks-hub` | `/business/banks` | Business & supply |
 
+| **11** | **Map FAB (floating)** | `discover-map-toggle` | in-place map on the shared Search | **rendered by the HOST**, not by SearchDiscover |
+
+### ✅ Verified against the RUNNING app (first successful Expo web export in this environment)
+`npx expo export --platform web` succeeded (11 MB, `web-preview/`), served on `localhost:8099`, and the app **boots**: title "BANCO", category tabs, the bottom bar (Feed · Search · Messages · Saved · Profile) and "Post Asset". Opening the Search tab rendered all the cards above — which is how the following three findings were caught. **Reading the code alone would have missed them.**
+
+#### Finding A — an 11th rectangle exists that the code census missed
+`app/(tabs)/search.tsx:1131-1160` renders a floating **map FAB** over the Discover view (`viewState === "discover"` only). It was invisible to the earlier grep because it is in the host and its testID carries no card/portal/hub keyword.
+
+#### Finding B — two different map entries with different destinations
+| Entry | Goes to |
+|---|---|
+| Card `discover-explore-map` | `/section/real-estate?map=1` — the **real-estate section** map |
+| FAB `discover-map-toggle` | stays on the shared Search, commits a search and flips map mode on, with `category "all" → "car"` — i.e. effectively a **cars** map |
+Both are legitimate flows, but on one screen two map affordances lead to two different worlds. **Owner decision** for the Maps wave — not changed unilaterally.
+
+#### Finding C — two cards read as the same thing in English
+"**Global supply portal**" (→ `/business/global-supply`, *RFQs, suppliers & industrial import — Alibaba-style hub*) sits directly above "**Global supply & importers**" (→ `/business/supply-hub`, *Source products, match importers & close export deals*). The owner treats them as distinct worlds (العالمية vs الموردين), but both labels open with "Global supply", so the list reads as a duplicate. Copy-only clarification (no layout change) — **owner decision on the wording**.
+
 ### Identity rules encoded in the design (any new/edited rectangle MUST follow these)
 1. **Per-section gradients stay inside the BANCO red/charcoal family** — each card reads as its own world without leaving the brand.
 2. **Red-family fallback fills sit behind the section photos** — stated in-code as the identity rule: *logo red*.
