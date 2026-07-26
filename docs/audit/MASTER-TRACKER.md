@@ -105,6 +105,39 @@ The car-import card only **browses** imported cars. The live import flow that no
 2. **Additive, guard-safe:** keep the card on browse, and surface "Request an import / My orders" inside the car section's import view — no guard change.
 3. Leave as-is (import stays a Profile-menu feature).
 
+## 2c. Cross-repo archaeology (5 repos, all branches) — 2026-07-26
+Repos mapped: `b.deals` (2 branches) · `aws-virgen` (1) · `B-OOM` (1) · **`-BANCO-CA-OOM-` (61 branches — where the two prior engineers worked)** · `bancoo` (9).
+
+### The decisive discovery: the previous engineers were environment-blocked
+Their own `KnownIssues.md` (2026-07-21): **`KI-ENV-01 | OPEN | npm registry ECONNRESET — no node_modules`**, and their #1 pending repair was *"Unblock KI-ENV-01 → frozen install → typecheck/lint/build/tests"*. **They could never install dependencies, so they never ran typecheck, build, or a single test.** That explains the documentation-heavy output and the doc-over-claim pattern recorded in [[banco-recon-docs-fiction]]. Every one of those blockers is now cleared: full install ✅, tsc 0 ✅, 81 test files green on CI ✅, `expo export` build ✅, app driven live ✅.
+
+### Their official "MissingFeatures" list vs today
+| Their item | Status now |
+|---|---|
+| Facebook Login provider | ✅ **built + verified** (`6778e65`) |
+| FI auto-create | open — needs study (`audit/production-gates/FACEBOOK-LOGIN-AND-FI-AUTOCREATE-SECURITY-…`) |
+| Google Maps as live map engine | open — owner decision (today: Leaflet/OSM in a WebView) |
+| bancooom content (repo empty) | ✅ effectively closed — `virgen/main` now carries the full version |
+| Live OTP/magic-link certification | open — needs a live run |
+
+### Code-completeness verdict (reassuring)
+102 files exist in CA-OOM but not here: **97 are docs/reports, 5 are report-generator scripts — zero application code.** The current version carries all app code.
+
+### 🔴 THREE genuinely lost features (found by diffing CA-OOM against us)
+| # | Feature | Evidence here | Impact |
+|---|---|---|---|
+| 1 | **Banks/FI “awaiting-admin link” state** | no `awaiting`/`adminLink` anywhere in `app/business/banks.tsx`; CA-OOM has it **plus a guard test** we don't | an FI user without membership never sees that an admin still has to link them |
+| 2 | **Profile role must prefer `/me` over Clerk `publicMetadata`** | ours reads `user.publicMetadata?.role` at `profile.tsx:800` and `:1195`; CA-OOM guards *“Profile role prefers /me over Clerk publicMetadata”* | **real defect** — `syncRoleToClerk` swallows its errors by design, so when the mirror fails the profile shows a stale/wrong role for any of the 4 account types. The DB is the source of truth. |
+| 3 | **`marketCountryMapCenter`** | absent from our tree; CA restored it after it was wiped in `93b650b` (orig `b68c8af`), wired into `lib/searchTaxonomy.ts` + `SearchResultsMap.tsx` + `.web.tsx` + `mapHtml.ts` | switching market country does not recenter the map |
+
+Guard parity: ours **46** section-guard tests vs CA-OOM **48** — the two missing ones are exactly the guards for lost features #1 and #2.
+
+### Correction to an earlier claim of mine
+I previously reported the **radius draw/select** map tool as *missing*. Their `MAPS-ACCOUNTS-COMPLETE-MISSING` doc shows it is **deliberately deferred**, not forgotten: *“لم يُشحن كاملاً — يزاحم FilterSheet المضغوط”*. Also deferred by decision: `sort=nearest`, full web viewport clusters, near-me on web. **Not gaps — owner-level decisions.**
+
+### Their accounts verdict matches mine independently
+*"سلسلة الحسابات في المصدر مكتملة… أي عَرَض برودكشن بعد deploy = P1 Ops لا إعادة تصميم UX"* — the same conclusion my M1 audit reached from the code alone.
+
 ## 3. Product decisions to honour
 - **The AI assistant is “B”** — the same **B** as the B-reaction that replaces like/heart (B‑OOM identity). It should feel **human**, not robotic.
   **Constraint from the owner: it is already programmed to a high standard — apply only a light, safe polish (tone/persona/naming). No rewrite, no behavioural risk.**
