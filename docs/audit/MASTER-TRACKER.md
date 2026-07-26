@@ -33,6 +33,28 @@
 - **Countries/currencies still "spread"** in RE + Materials matrices — owner wants them collapsed to the compact icon like Stay, BUT the current spread layout is locked by two guard assertions (owner-approved earlier). **Needs an explicit owner decision before touching.**
 - **Vercel preview failures** on the PR (`bancoo-api-server`, one `admin-os` variant) — pre-existing infra, non-required checks; the real API target is Coolify. Confirm they also fail on `main` before spending effort.
 
+## 2b. The Search-page mini-apps (owner: top priority, "layers under the 5 sections")
+Portal inventory read from `components/SearchDiscover.tsx` — **every destination file exists, so no dead buttons**:
+
+| Portal (testID) | Owner's name | Destination | Route exists |
+|---|---|---|---|
+| `discover-explore-map` | الخرايط | `/section/real-estate?map=1` (via `onExploreMap`) | ✅ |
+| `discover-car-import` | استورد عربيتك مع بانكو | `/section/car?engine=import` | ✅ |
+| `discover-banks-hub` | البنوك والممولين | `/business/banks` | ✅ |
+| `discover-importers-hub` | الموردين | `/business/supply-hub` | ✅ |
+| `discover-supply-portal` | الحاجات العالمية | `/business/global-supply` | ✅ |
+| `section-card-booking` | الإقامات | `/section/booking` | ✅ |
+
+### 🔴 OPEN GAP — car-import entry is disconnected from the import system
+The car-import card only **browses** imported cars. The live import flow that now exists end-to-end (L1–L7: `import_orders` → API → `/import/request` → `/import-tracking` → `car_import` notifications) is reachable **only from a Profile menu item** (`profile.tsx:943`); `/import/request` is reachable only from inside the tracking screen. A user standing on the Search page who wants to actually import a car cannot get there.
+
+**Why this is not fixed unilaterally:** the card's destination is locked by an owner-approved guard — `tests/section-miniapp-guard.test.mjs:492` asserts the Discover file keeps `SECTION_ROUTE.car … engine=import`. Doc 09's original plan was to turn the card into an **Import hub** (`app/import/index.tsx`) offering: browse imported cars · request an import · my import orders.
+
+**Owner decision needed — options:**
+1. **Import hub** (doc 09's plan): card → `app/import/index.tsx` with the three paths; browse path preserved inside it. Requires updating that one guard assertion (it was written for the old behaviour).
+2. **Additive, guard-safe:** keep the card on browse, and surface "Request an import / My orders" inside the car section's import view — no guard change.
+3. Leave as-is (import stays a Profile-menu feature).
+
 ## 3. Product decisions to honour
 - **The AI assistant is “B”** — the same **B** as the B-reaction that replaces like/heart (B‑OOM identity). It should feel **human**, not robotic.
   **Constraint from the owner: it is already programmed to a high standard — apply only a light, safe polish (tone/persona/naming). No rewrite, no behavioural risk.**
