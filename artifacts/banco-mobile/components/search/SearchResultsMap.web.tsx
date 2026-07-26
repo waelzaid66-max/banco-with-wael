@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+import { marketCountryMapCenter } from "@/lib/searchTaxonomy";
 import { buildMapHtml, feedItemsToMarkers, type MapBridgeMessage } from "./mapHtml";
 import { MapOverlayChrome } from "./MapOverlayChrome";
 import type { SearchResultsMapProps } from "./SearchResultsMap";
@@ -13,7 +14,13 @@ import type { SearchResultsMapProps } from "./SearchResultsMap";
  * Keeping this on web means the preview pane shows a real, working map instead
  * of a dead fallback — and never imports react-native-webview into the web bundle.
  */
-export function SearchResultsMap({ items, onOpenListing, onSave, isSaved }: SearchResultsMapProps) {
+export function SearchResultsMap({
+  items,
+  criteria,
+  onOpenListing,
+  onSave,
+  isSaved,
+}: SearchResultsMapProps) {
   const colors = useColors();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -25,15 +32,27 @@ export function SearchResultsMap({ items, onOpenListing, onSave, isSaved }: Sear
   );
   const html = useMemo(
     () =>
-      buildMapHtml(markers, {
-        primary: colors.primary,
-        primaryForeground: colors.primaryForeground,
-        card: colors.card,
-        foreground: colors.foreground,
-        border: colors.border,
-      }),
+      buildMapHtml(
+        markers,
+        {
+          primary: colors.primary,
+          primaryForeground: colors.primaryForeground,
+          card: colors.card,
+          foreground: colors.foreground,
+          border: colors.border,
+        },
+        marketCountryMapCenter(criteria.marketCountry),
+      ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sig, colors.primary, colors.primaryForeground, colors.card, colors.foreground, colors.border],
+    [
+      sig,
+      colors.primary,
+      colors.primaryForeground,
+      colors.card,
+      colors.foreground,
+      colors.border,
+      criteria.marketCountry,
+    ],
   );
 
   // A reloaded iframe (keyed by `sig`) loses its in-page selection; drop ours

@@ -98,7 +98,16 @@ export function feedItemsToMarkers(items: FeedItem[]): MapMarker[] {
  * Tapping a count bubble drills in; tapping a single pin posts
  * {type:"select", id} so the host can reveal the listing card.
  */
-export function buildMapHtml(markers: MapMarker[], theme: MapTheme): string {
+export function buildMapHtml(
+  markers: MapMarker[],
+  theme: MapTheme,
+  // Initial framing for the selected market. Optional so existing callers keep
+  // working; Egypt stays the default exactly as before.
+  center?: { lat: number; lng: number; zoom: number },
+): string {
+  const lat = center?.lat ?? 26.8;
+  const lng = center?.lng ?? 30.8;
+  const zoom = center?.zoom ?? 6;
   // JSON is safe inside a <script> except for a literal "</script>"; escaping
   // "<" to its unicode form neutralizes that without changing the parsed data.
   const json = JSON.stringify(markers).replace(/</g, "\\u003c");
@@ -208,7 +217,7 @@ export function buildMapHtml(markers: MapMarker[], theme: MapTheme): string {
     }
     if (!window.L) { post({ type: "error" }); return; }
     var map = L.map("map", { zoomControl: false, attributionControl: true })
-      .setView([26.8, 30.8], 6);
+      .setView([${lat}, ${lng}], ${zoom});
     L.control.zoom({ position: "topright" }).addTo(map);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,

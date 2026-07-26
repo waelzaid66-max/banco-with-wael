@@ -11,6 +11,7 @@ import {
   type MapViewport,
   type SearchCriteria,
 } from "@/lib/searchParams";
+import { marketCountryMapCenter } from "@/lib/searchTaxonomy";
 import {
   buildMapHtml,
   feedItemsToMarkers,
@@ -72,16 +73,29 @@ export function SearchResultsMap({
   const criteriaSig = useMemo(() => JSON.stringify(criteria), [criteria]);
   const html = useMemo(
     () =>
-      buildMapHtml(markers, {
-        primary: colors.primary,
-        primaryForeground: colors.primaryForeground,
-        card: colors.card,
-        foreground: colors.foreground,
-        border: colors.border,
-      }),
-    // Rebuild only when the plotted set or the themed colors change.
+      buildMapHtml(
+        markers,
+        {
+          primary: colors.primary,
+          primaryForeground: colors.primaryForeground,
+          card: colors.card,
+          foreground: colors.foreground,
+          border: colors.border,
+        },
+        marketCountryMapCenter(criteria.marketCountry),
+      ),
+    // Rebuild when the plotted set, the themed colors, or the selected market
+    // (which decides the initial framing) change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sig, colors.primary, colors.primaryForeground, colors.card, colors.foreground, colors.border],
+    [
+      sig,
+      colors.primary,
+      colors.primaryForeground,
+      colors.card,
+      colors.foreground,
+      colors.border,
+      criteria.marketCountry,
+    ],
   );
 
   // Latest items, read inside the message handler without re-subscribing.
