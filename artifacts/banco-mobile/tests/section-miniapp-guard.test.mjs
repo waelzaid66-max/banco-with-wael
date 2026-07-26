@@ -852,6 +852,18 @@ test("Banks hub hides Join when institution membership is active", () => {
   );
 });
 
+// Restored from -BANCO-CA-OOM- alongside the feature itself. An account that
+// already holds the FI role must not be shown "Join" again — that reads as if
+// the registration never landed. Verification alone does not open the inbox: an
+// admin still has to link the institution, and this state says so.
+test("Banks hub shows awaiting-admin link for FI role without membership", () => {
+  const src = fs.readFileSync(BANKS, "utf8");
+  assert.match(src, /testID="banks-awaiting-link"/);
+  assert.match(src, /showAwaitingAdminLink/);
+  assert.match(src, /financial_institution/);
+  assert.match(src, /useGetMe/);
+});
+
 test("Banks productsHint honesty keys exist in en+ar", () => {
   const src = fs.readFileSync(I18N, "utf8");
   assert.match(src, /productsHint:\s*[\s\S]*?not a browsable partner list/i);

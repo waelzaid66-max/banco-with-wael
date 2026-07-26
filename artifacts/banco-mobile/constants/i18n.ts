@@ -1456,6 +1456,10 @@ const en = {
       joinDesc:
         "Register your institution on BANCO's ads marketplace. After review, an admin links your account so forwarded financing requests from listings can reach your team inbox.",
       joinCta: "Join as an institution",
+      awaitingLinkTitle: "Institution link pending",
+      awaitingLinkDesc:
+        "Your financial-institution account is submitted. Inbox access opens only after a BANCO admin links your institution — verification alone does not open the inbox.",
+      awaitingLinkCta: "Check verification status",
       note: "BANCO is a verified ads platform — financing terms are set entirely by the institution.",
       inboxTitle: "Financing requests inbox",
       inboxEmpty: "No forwarded requests yet — Banco sends them here after review.",
@@ -3458,6 +3462,10 @@ const ar: typeof en = {
       joinDesc:
         "سجّل مؤسستك على سوق إعلانات بانكو. بعد المراجعة، الأدمن بيربط حسابك عشان طلبات التمويل المحوّلة من الإعلانات توصل لصندوق فريقك.",
       joinCta: "انضم كمؤسسة",
+      awaitingLinkTitle: "ربط المؤسسة قيد الانتظار",
+      awaitingLinkDesc:
+        "حساب المؤسسة المالية اتبعت. صندوق الوارد يفتح فقط بعد ما أدمن بانكو يربط حساب مؤسستك — التوثيق لوحده مش بيفتح الصندوق.",
+      awaitingLinkCta: "راجع حالة التوثيق",
       note: "بانكو منصة إعلانات موثّقة — شروط التمويل تحددها المؤسسة بالكامل.",
       inboxTitle: "صندوق طلبات التمويل",
       inboxEmpty: "لا توجد طلبات محوّلة بعد — بانكو بترسلها هنا بعد الدراسة.",

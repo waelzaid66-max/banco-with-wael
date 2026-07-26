@@ -5,6 +5,8 @@ import {
   useGetInstitutionInbox,
   getGetInstitutionInboxQueryKey,
   useUpdateInstitutionRequest,
+  useGetMe,
+  getGetMeQueryKey,
   type FinancingRequest,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -385,9 +387,30 @@ export default function BanksScreen() {
   const rowDir = isRTL ? "row-reverse" : "row";
   const textAlign: "left" | "right" = isRTL ? "right" : "left";
   const [isFiMember, setIsFiMember] = React.useState(false);
+  const [membershipKnown, setMembershipKnown] = React.useState(false);
   const onMembershipChange = React.useCallback((active: boolean) => {
     setIsFiMember(active);
+    setMembershipKnown(true);
   }, []);
+  React.useEffect(() => {
+    if (!isSignedIn) {
+      setIsFiMember(false);
+      setMembershipKnown(true);
+    } else {
+      setMembershipKnown(false);
+    }
+  }, [isSignedIn]);
+  // DB role — when FI role exists but inbox is 403, show awaiting-admin (not Join again).
+  const meQuery = useGetMe({
+    query: { queryKey: getGetMeQueryKey(), enabled: !!isSignedIn, staleTime: 60_000 },
+  });
+  const meRole = meQuery.data?.data?.role ?? "";
+  const isFiRole = meRole === "financial_institution";
+  // Wait for /me + inbox membership probe before Join vs awaiting.
+  const roleReady = !isSignedIn || (!meQuery.isLoading && membershipKnown);
+  // Awaiting link: signed-in FI without institution membership (admin owner_user_id / seat).
+  const showAwaitingAdminLink = roleReady && !!isSignedIn && isFiRole && !isFiMember;
+  const showJoinCta = roleReady && !isFiMember && !showAwaitingAdminLink;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -508,8 +531,64 @@ export default function BanksScreen() {
           </View>
         ))}
 
-        {/* Join CTA — hidden for institution members who already have an inbox */}
-        {!isFiMember ? (
+        {/* Awaiting admin link (S2): the account already holds the FI role, so
+            showing "Join" again would read as if the registration never landed.
+            Verification alone does not open the inbox — an admin must link the
+            institution — so this state says exactly that. */}
+        {showAwaitingAdminLink ? (
+          <View
+            style={[
+              styles.joinBox,
+              {
+                backgroundColor: BLUE_BG,
+                borderColor: BLUE_BORDER,
+                borderRadius: colors.radius,
+              },
+            ]}
+            testID="banks-awaiting-link"
+          >
+            <View style={[styles.joinIconWrap, { backgroundColor: BLUE_BG }]}>
+              <MaterialCommunityIcons
+                name="clock-outline"
+                size={32}
+                color={BLUE}
+              />
+            </View>
+            <AppText
+              style={[styles.joinTitle, { color: colors.foreground, textAlign }]}
+            >
+              {t("business.banks.awaitingLinkTitle")}
+            </AppText>
+            <AppText
+              style={[
+                styles.joinDesc,
+                { color: colors.mutedForeground, textAlign },
+              ]}
+            >
+              {t("business.banks.awaitingLinkDesc")}
+            </AppText>
+            <Pressable
+              onPress={() => router.push("/business/verification")}
+              style={styles.joinBtn}
+              accessibilityRole="button"
+              accessibilityLabel={t("business.banks.awaitingLinkCta")}
+              testID="banks-awaiting-verify"
+            >
+              <MaterialCommunityIcons
+                name="shield-check"
+                size={18}
+                color="#FFFFFF"
+              />
+              <AppText style={styles.joinBtnText}>
+                {t("business.banks.awaitingLinkCta")}
+              </AppText>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {/* Join CTA — hidden for institution members who already have an inbox
+            AND for FI-role users still awaiting the admin owner link (S2). */}
+        {showJoinCta ? (
           <View
             style={[
               styles.joinBox,
