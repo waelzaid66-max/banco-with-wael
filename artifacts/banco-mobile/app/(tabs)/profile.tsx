@@ -1051,6 +1051,8 @@ export default function ProfileScreen() {
               onPress={launchCoverPicker}
               hitSlop={8}
               style={styles.coverActionBtn}
+              accessibilityRole="button"
+              accessibilityLabel={t("profile.changeCover")}
               testID="cover-edit"
             >
               {uploadingCover ? (
@@ -1077,6 +1079,8 @@ export default function ProfileScreen() {
                   borderColor: colors.background,
                 },
               ]}
+              accessibilityRole="button"
+              accessibilityLabel={t("profile.photoAccessConfirm")}
               testID="avatar-edit"
             >
               <View style={styles.avatarLargeInner}>
@@ -1141,6 +1145,8 @@ export default function ProfileScreen() {
                   styles.editProfileBtn,
                   { borderColor: colors.border, borderRadius: colors.radius, paddingHorizontal: 10 },
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel={t("common.more")}
                 testID="profile-menu"
                 hitSlop={8}
               >
