@@ -48,6 +48,8 @@ export default function VerificationScreen() {
         onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)/profile"))}
         hitSlop={12}
         style={styles.backBtn}
+        accessibilityRole="button"
+        accessibilityLabel={t("common.back")}
         testID="verification-back"
       >
         <Feather
