@@ -825,6 +825,21 @@ test("Profile FI account type pushes onboarding with intent=fi", () => {
   );
 });
 
+// Restored from -BANCO-CA-OOM- (its guard had this; ours had lost both the test
+// and the feature). The DB is the source of truth for role: syncRoleToClerk
+// swallows its failures by design, so a failed mirror must never decide chrome
+// or a demotion guard.
+test("Profile role prefers /me over Clerk publicMetadata", () => {
+  const src = fs.readFileSync(PROFILE, "utf8");
+  assert.match(src, /meQuery\.data\?\.data\?\.role/);
+  assert.match(
+    src,
+    /const role = meRole \|\| clerkRole/,
+    "profile must use DB role first (S1)",
+  );
+  assert.match(src, /demoteBlockedTitle/, "client demote guard copy");
+});
+
 test("Banks hub hides Join when institution membership is active", () => {
   const src = fs.readFileSync(BANKS, "utf8");
   assert.match(src, /onMembershipChange/);

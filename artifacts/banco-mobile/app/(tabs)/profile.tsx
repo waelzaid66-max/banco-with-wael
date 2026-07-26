@@ -529,6 +529,25 @@ export default function ProfileScreen() {
     type: "individual" | "dealer" | "company" | "financial_institution"
   ) => {
     if (savingAccountType) return;
+    // DB role is authoritative (same contract as verification.tsx). Clerk metadata
+    // can lag after updateMe — never use it alone to decide demotion guards.
+    const currentRole =
+      meQuery.data?.data?.role ||
+      ((user?.publicMetadata?.role as string) || "");
+    const elevated =
+      currentRole === "financial_institution" ||
+      currentRole === "company" ||
+      currentRole === "enterprise";
+    // Self-demote hole: menu "Manage account type" + Skip both called
+    // account_type=individual and the server used to accept it. Elevated
+    // accounts must not silently lose FI/company via this path (S4).
+    if (elevated && type === "individual") {
+      Alert.alert(
+        t("profile.demoteBlockedTitle"),
+        t("profile.demoteBlockedBody"),
+      );
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSavingAccountType(true);
     try {
@@ -797,7 +816,11 @@ export default function ProfileScreen() {
       }
     })();
 
-    const role = (user.publicMetadata?.role as string) || "";
+    // /me.role is authoritative (DB). Clerk publicMetadata is fallback only —
+    // same contract as business/verification.tsx (closes Clerk-lag chrome bugs).
+    const meRole = meQuery.data?.data?.role ?? "";
+    const clerkRole = (user.publicMetadata?.role as string) || "";
+    const role = meRole || clerkRole;
     const isFi = role === "financial_institution";
     const isBusiness = [
       "dealer",
