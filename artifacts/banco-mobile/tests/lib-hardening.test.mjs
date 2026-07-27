@@ -204,7 +204,22 @@ test("any asset can be published — the floor and the brand escape both hold", 
     "the floor must not be empty — condition is true of every movable asset",
   );
 
-  // 2. A brand outside the 410-entry catalogue must be typeable, or the brand
+  // 2. One clear photo is enough. The app used to demand two while the backend
+  //    required one, so it refused listings the platform would have accepted —
+  //    strictness nobody asked for, paid in trade that never happens.
+  const media = fs.readFileSync(
+    path.join(APP_ROOT, "lib", "listingMedia.ts"),
+    "utf8",
+  );
+  const minPhotos = media.match(/MIN_PHOTOS\s*=\s*(\d+)/);
+  assert.ok(minPhotos, "MIN_PHOTOS must be declared");
+  assert.equal(
+    minPhotos[1],
+    "1",
+    "MIN_PHOTOS must match the backend floor of 1 — a seller with one real photo must be able to publish",
+  );
+
+  // 3. A brand outside the 410-entry catalogue must be typeable, or the brand
   //    gate refuses "Cessna" no matter how small the spec floor is.
   assert.match(
     picker,
