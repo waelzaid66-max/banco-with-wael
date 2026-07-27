@@ -166,7 +166,16 @@ Audited from code, not assumed.
 
 **Why the CDN gap matters at this scale:** users in the Gulf, Morocco and Europe all pull media from one origin, so latency and egress both scale with traffic. **The app is already CDN-ready** — the correct cache headers exist — so this is a deployment/config task (point a CDN at the media origin, publish media through the CDN hostname), not an application rewrite. Recorded here so it is not mistaken for a code defect.
 
-**Still to audit in this area (not claimed as done):** video transcoding/poster generation, per-listing image resizing (thumbnail vs full), and prefetch on the feed.
+### The rest of the media pipeline — now audited (was listed as pending)
+| Concern | Reality | Verdict |
+|---|---|---|
+| Listing upload compression | images `quality: 0.7`, profile cover/avatar `0.6` | ✅ |
+| Video | modern `expo-video` (not deprecated `expo-av`); duration capped via `videoMaxDuration` + `allowsEditing`, so an over-long clip is **trimmed in-app instead of rejected**; a server-side size guard test exists | ✅ well handled |
+| Thumbnail selection | `pickListingThumbnailUrl`: explicit cover → first image → **video poster**, with an explicit guarantee that a raw video file never reaches an `<Image>` (a real bug class, prevented) | ✅ |
+| Feed prefetch | batched `Image.prefetch` with a Set that de-dupes, run both on load and for upcoming items while scrolling, non-blocking | ✅ |
+| **Image resizing** | **None.** The thumbnail picker returns the **original** upload URL, so a feed card downloads a full-resolution image. | 🔴 gap |
+
+**These two gaps are one problem.** Modern platforms do resizing **at the CDN edge** (Cloudflare Images / imgix / CloudFront). Adding a CDN with image transformation closes both the caching gap and the resizing gap **without touching app code** — the cache headers already exist and every media URL is built from one origin. At feed scale (≈20 cards × full-resolution images) this is the single highest-impact performance item for mobile networks across EG/Gulf/MA/EU.
 
 ## 2f. Full-cycle rule (owner, standing)
 Any task is only finished when its **whole journey** is inspected end to end — e.g. signup → account created → **profile actually opens fast** — not just the file that was edited. Applies to every module below.
