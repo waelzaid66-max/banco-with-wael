@@ -356,8 +356,23 @@ export default function CreateListingScreen() {
         setWhatsappEnabled(d.whatsappEnabled);
         setSpecs(d.specs);
         setCustomSpecs(d.customSpecs);
+        // A brand the seller typed themselves is not in the catalogue, so looking
+        // it up returned nothing and the brand disappeared on restore — leaving
+        // them blocked by a gate they had already satisfied, with no clue why.
+        // Rebuild it from the saved label instead; catalogue brands still resolve
+        // through the catalogue so their country/dbName stay authoritative.
         setCarBrand(
-          d.carBrandValue ? CAR_BRANDS.find((b) => b.value === d.carBrandValue) ?? null : null,
+          d.carBrandValue
+            ? CAR_BRANDS.find((b) => b.value === d.carBrandValue) ??
+                (d.carBrandLabel
+                  ? {
+                      value: d.carBrandValue,
+                      en: d.carBrandLabel,
+                      ar: d.carBrandLabel,
+                      country: "other",
+                    }
+                  : null)
+            : null,
         );
         setCarModel(d.carModel);
         setIndustrialType(d.industrialType);
@@ -402,6 +417,9 @@ export default function CreateListingScreen() {
       specs,
       customSpecs,
       carBrandValue: carBrand?.value ?? null,
+      // Saved so a self-typed brand survives. It exists only as what the seller
+      // wrote — the catalogue cannot recover it (see restore below).
+      carBrandLabel: carBrand?.en ?? null,
       carModel,
       industrialType,
       carOrigin,
