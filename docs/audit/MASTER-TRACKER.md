@@ -201,6 +201,31 @@ Prioritised above the remaining polish because a marketplace with no successful 
 ### Bonus: an old known bug is confirmed FIXED
 The historical "#1 publish failure" (mobile sent the Arabic location *label* while the backend fuzzy-matches the English taxonomy → 400 on every publish) is resolved: create now sends `(locationValue ?? location).trim()` with an explanatory comment, and dealer-os listings moved from a free-text input to a controlled `<Select>`. dealer-os **investments** still take free text, and that is correct — `InvestmentService` never normalises location (plain `ILIKE`), so it does not use the listing taxonomy. **Standing rule kept:** location has no Arabic alias map and the `locations` table has no Arabic column, so any NEW location field must submit the controlled English value.
 
+## 2h. M3 — Maps (foundation module, audited before the flows that sit on it)
+Re-ordered at the owner's direction: maps and the mini-apps are the base that publishing, notifications and messaging build on, so they are completed first.
+
+### What the map already is — a two-layer, production-grade surface
+| Layer | Implementation | Verdict |
+|---|---|---|
+| Instant paint | The loaded page's markers render immediately as **price pills**, so the map is never blank while the first viewport query is in flight | ✅ |
+| Live data | **Server-side viewport clusters** via `GET /search/map`; the page reports its bounds on load and after every pan/zoom (`{type:"viewport"}`) and the host injects the clusters back | ✅ |
+| Pin content | The **localized, pre-formatted price** sits on the pin; furnished/daily rentals get a **📅 bookable** prefix | ✅ |
+| Section colour | `.pill.car` / `.real_estate` / `.industrial` — and that is **complete**, because the DB enum has exactly three categories; "facilities" and "materials" are UI views of `industrial` (hence `apiCategoryForUi`). All stay inside the BANCO red family per the identity rule stated in-code; bookable emerald is a *status* colour that deliberately wins over the section tint | ✅ no gap |
+| Coverage | Coordinates resolve as `COALESCE(listing.lat, location.lat)`, so a listing with no precise pin still maps from its city/area — **nothing is unmappable** | ✅ |
+| Per section | `showMapChrome = inResultsView` — the map is available in **all five sections**, not real-estate only | ✅ |
+| Market framing | `marketCountryMapCenter` (restored, R3) | ✅ |
+| Near-me | radius circle + centre dot, with the 5/10/25/50/100 km control | ✅ (this wave) |
+
+### Genuine remaining gaps
+| Gap | Nature |
+|---|---|
+| The Discover "Explore on the map" card opens the **real-estate** map only, although every category is mappable | **owner decision** — the destination is deliberate today |
+| Draw-an-area / polygon select | deferred by the previous engineers (would crowd the compact FilterSheet); the km-radius control now covers the common case |
+| `sort=nearest` | deferred — changes result ordering |
+| Full web viewport clusters | deferred to a `.web.tsx`-only wave |
+
+**Verdict: the map is not a weak spot — it is one of the stronger subsystems.** The remaining items are two deferred decisions and one owner choice, not defects.
+
 ## 3. Product decisions to honour
 - **The AI assistant is “B”** — the same **B** as the B-reaction that replaces like/heart (B‑OOM identity). It should feel **human**, not robotic.
   **Constraint from the owner: it is already programmed to a high standard — apply only a light, safe polish (tone/persona/naming). No rewrite, no behavioural risk.**
