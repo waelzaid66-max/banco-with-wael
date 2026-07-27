@@ -380,3 +380,20 @@ and the guard asserts that button is mounted so a later edit cannot remove both.
 Orphans removed with it (each verified at 1 occurrence = declaration only): imports
 `MARKET_COUNTRIES` / `marketCountryLabel` / `sanitizeRentalTermForMarket`, styles
 `chipSm` / `chipSmText`. Guard count 50 → 51.
+
+### 11a. The downstream sweep caught a break I had just caused
+`FilterSheet` has **three** consumers, not two — the section mini-app, Stay, and
+**`app/(tabs)/search.tsx` (global search)**. The first two mount `MarketCountryButton`;
+global search did not. It had its own 21-chip market row gated behind
+`showRentalTerms = category === "real_estate" && offer_type !== "sale"`, so that row
+only appeared for real-estate-to-rent. **Removing the sheet row therefore left cars,
+materials, facilities and real-estate-for-sale in global search with no market control
+at all.** Fixed by mounting the compact button unconditionally there, plus the picker,
+and deleting the rent-gated spread row.
+
+Two guards had to be corrected, and the corrections are the lesson:
+- **My own new assertion was broken**: it scanned the raw 400 chars before the button for `showRentalTerms` and tripped on the *comment explaining the fix*. A guard that cannot tell code from prose is not a guard — it now strips comments before checking.
+- **`lib-hardening` line 140** asserted `/MARKET_COUNTRIES/` in the search tab under the message *"must expose per-market rental chips"* — a proxy that silently locked the spread row. That test's real subject is the market-**scoped** rental taxonomy (`rentalTermsForSearch`, still asserted); the chips line was stale and now asserts the control by its current shape.
+
+**Standing lesson:** before removing a shared component's feature, enumerate *every*
+consumer and prove each one still has the capability by another route.
