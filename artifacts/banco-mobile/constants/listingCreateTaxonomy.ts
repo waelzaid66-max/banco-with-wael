@@ -331,7 +331,17 @@ export const SPEC_FIELDS_BY_UI: Record<UiListingCategory, SpecField[]> = {
  * brand/model (CarPicker) are validated separately by the screen.
  */
 export const REQUIRED_SPEC_KEYS: Record<UiListingCategory, readonly string[]> = {
-  car: ["mileage", "year", "condition", "fuel_type"],
+  // Movable assets are not only cars. A plane, a boat, a launch or a bike is
+  // listed here too, and mileage / fuel type are car assumptions, not universal
+  // truths — aircraft count flight hours, vessels count engine hours, and jet or
+  // marine fuel is not in the five-value list this app offers. Gating on them
+  // meant a seller with a genuinely valuable asset simply could not publish it.
+  //
+  // Only `condition` gates now, because new/used is true of every one of them.
+  // mileage, year and fuel_type are STILL RENDERED and still saved when filled —
+  // this changes what BLOCKS, not what is asked for. Mirrors the server floor in
+  // validateAttributes exactly, so the app and the API never disagree.
+  car: ["condition"],
   real_estate: ["offer_type", "area", "rooms", "property_type", "finishing"],
   industrial: ["capacity", "industry", "industrial_type"],
   raw_materials: ["capacity", "industry", "material", "industrial_type"],
