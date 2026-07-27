@@ -1222,15 +1222,23 @@ export function SectionSearchApp({
 
       {/* ── Primary chip strip: country/currency · sort · mode/engines.
           The country button leads EVERY section — one compact control, one
-          left edge, so the strips below it stack on the same axis. ── */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        // Critical: horizontal ScrollView must NOT flex-grow. Without this, RN
-        // lets the strip eat the column and crushes results into a black void
-        // with one card pinned at the bottom (owner screenshot regression).
-        style={styles.hScroll}
-        contentContainerStyle={[styles.chipStrip, { flexDirection: rowDir }]}
+          left edge, so the strips below it stack on the same axis.
+
+          WRAPS instead of scrolling sideways. Measured in cars before the
+          change: 999px of content inside a 375px window — 624px, nearly two
+          screens, of the user's own segmentation hidden off the right edge
+          where nothing hints it exists. These are "which slice am I browsing"
+          chips, so they stay one-tap chips (a dropdown would cost a tap on the
+          most-used control); they simply all fit now.
+
+          `flexGrow: 0` is carried over deliberately: the old horizontal
+          ScrollView needed it because without it RN let the strip eat the
+          column and crushed the results into a black void with one card pinned
+          at the bottom (owner screenshot regression). A wrapping View is taller
+          than a single row, so that constraint matters more here, not less. ── */}
+      <View
+        style={[styles.chipStrip, { flexDirection: rowDir }]}
+        testID="section-primary-strip"
       >
         <MarketCountryButton
           selected={criteria.marketCountry}
@@ -1360,7 +1368,7 @@ export function SectionSearchApp({
             </Pressable>
           );
         }) : null}
-      </ScrollView>
+      </View>
 
       {/* ── RE property-type strip (Stay-parallel) — never mixed into offer row ── */}
       {showReTypeStrip ? (
@@ -1918,6 +1926,11 @@ const styles = StyleSheet.create({
   // Unified horizontal chip strip — globe first, then mode/engine chips inline
   chipStrip: {
     alignItems: "center",
+    // Wraps onto as many short rows as the section needs. `flexGrow: 0` keeps
+    // the guarantee the old horizontal ScrollView relied on — the strip must
+    // never expand into the results column (see the note at its mount).
+    flexWrap: "wrap",
+    flexGrow: 0,
     gap: 8,
     paddingHorizontal: 12,
     paddingTop: 8,

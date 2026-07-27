@@ -430,6 +430,42 @@ test("SectionSearchApp keeps engine chips during facet load (no reload flash)", 
   );
 });
 
+test("The primary strip wraps and can never eat the results column", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  // Measured in cars before this changed: 999px of chips inside a 375px window,
+  // so 624px — nearly two screens — of the user's own segmentation sat off the
+  // right edge with nothing hinting it was there. Wrapping shows all of it and
+  // costs no extra tap, which matters because these are the most-used controls.
+  // Read CODE, not prose. The first version of this guard matched the comment
+  // inside the block, which names `flexGrow: 0` while explaining why it matters —
+  // so deleting the real declaration still passed. Comments are stripped first.
+  const codeOnly = section
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  const strip = codeOnly.match(/\bchipStrip:\s*\{[^}]*\}/);
+  assert.ok(strip, "chipStrip style must exist");
+  assert.match(
+    strip[0],
+    /flexWrap:\s*"wrap"/,
+    "the primary strip must wrap — sideways scroll hides segmentation off-screen",
+  );
+  // Load-bearing: the old horizontal ScrollView carried flexGrow: 0 because
+  // without it RN let the strip expand and crush the results into a black void
+  // with one card pinned at the bottom. A wrapping row is TALLER than a single
+  // line, so dropping that constraint here would reproduce that regression
+  // faster, not slower.
+  assert.match(
+    strip[0],
+    /flexGrow:\s*0/,
+    "chipStrip must keep flexGrow: 0 or the strip can eat the results column",
+  );
+  assert.match(
+    section,
+    /testID="section-primary-strip"/,
+    "the primary strip must stay identifiable for layout regression checks",
+  );
+});
+
 test("FilterPill is the ONE filter-control shape, and it keeps Stay's approved metrics", () => {
   const pill = fs.readFileSync(
     path.join(APP_ROOT, "components", "search", "FilterPill.tsx"),
