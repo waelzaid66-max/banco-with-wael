@@ -1137,8 +1137,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     padding: 0,
   },
-  // Type tabs only (country/currency moved to marketMatrix below).
-  // Vertical rhythm: 8 → 6 → 4 between type / market / rental (P-STAY mm).
+  // Type tabs; country + currency ride in the compact MarketCountryButton.
   controlsRow: {
     alignItems: "center",
     gap: 7,
@@ -1158,41 +1157,6 @@ const styles = StyleSheet.create({
     width: StyleSheet.hairlineWidth,
     height: 22,
     alignSelf: "center",
-  },
-  marketMatrix: {
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingTop: 6,
-    paddingBottom: 2,
-  },
-  matrixCell: {
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 10,
-    borderWidth: 1,
-    maxWidth: 148,
-  },
-  matrixFlag: { fontSize: 13, lineHeight: 16 },
-  matrixCountry: {
-    fontSize: 11.5,
-    fontFamily: "Inter_600SemiBold",
-    flexShrink: 1,
-  },
-  matrixCurrency: {
-    fontSize: 10.5,
-    fontFamily: "Inter_500Medium",
-    letterSpacing: 0.3,
-  },
-  matrixMore: {
-    width: 32,
-    height: 28,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
   },
   heroWatermarkWrap: {
     position: "absolute",

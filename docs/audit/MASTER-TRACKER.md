@@ -283,12 +283,60 @@ Country + currency control, per section:
 Owner decision **2026-07-20** (guard @270) already stated: *"currency is display/valuation of the market's money, NOT a search axis. Country + currency collapse into ONE compact icon — **same pattern as every section**"*. It was applied to Stay only; guards @442 and @517 then froze the old spread layout in RE + Materials, and @517 justifies it as the "Stay/RE pattern" — wording that is now stale, since Stay no longer has it.
 **Action:** finish the 2026-07-20 decision in the two sections it never reached; rewrite the two stale guards to the new contract.
 
+**DONE + verified live in the running app (2026-07-27, not claimed — measured in the browser):**
+| Check | Real-estate | Materials |
+|---|---|---|
+| wide 21-country strip present | **no** | **no** |
+| compact `search-market-country-btn` present | **yes** | **yes** |
+| button content | `🇪🇬 Egypt EGP` | `🇪🇬 Egypt EGP` |
+| measured button width | **134 px** (was ~2,300 px) | **134 px** |
+| stacked strips left edge | all **12 px** | all **12 px** |
+
+Bundle-level proof: the old bundle `entry-187088c6…` contains `re-market-matrix`; the new `entry-dff0878b…` does **not**, and does contain `search-market-country-btn`. The fix is in the artifact the owner loads, not only in source.
+Also removed 6 style blocks in `BookingStaysApp` (`marketMatrix`, `matrixCell`, `matrixFlag`, `matrixCountry`, `matrixCurrency`, `matrixMore`) — proven dead by usage count (0 references each), left behind when Stay dropped its own matrix on 2026-07-20.
+
+**Preview caveat, stated honestly:** the static export carries no `EXPO_PUBLIC_API_BASE_URL`, so cards stay as skeletons and Clerk reports the origin is unauthorised. **This is not a regression** — the previous 10:52 bundle carried the exact same condition and the same FATAL guard string. The preview is a *layout* preview, which is what the reported complaint is about; live data needs the API plus the OPS gate in §4.
+
 ## 8. Delivery order (architectural, strongest first — 2026-07-27)
 | # | Step | Why it is at this rank |
 |---|---|---|
 | **D0** | Preview truth: re-export `web-preview` | Nothing below can be judged while the owner sees a stale build. Blocks all review. |
 | **D1** | Collapse country/currency in RE + Materials (§7) | Owner-reported, owner-decided, measured. Pure UI, zero backend risk. |
 | **D2** | Sweep every strip/filter row for the same divergence | The complaint says "بعض الأقسام" — one instance found by measurement, the rest must be measured too, not assumed. |
-| **D3** | Maps: confirm every section mounts its own tool set | Foundation module (M3) that publish/booking sit on. |
-| **D4** | CDN + cache + image transformation | Single highest-impact performance item; no app-code change (headers already correct). |
+| **D3** | Maps: confirm every section mounts its own tool set | Foundation module (M3) that publish/booking sit on. **Measured 2026-07-27 → structurally satisfied**, see §9. |
+| **D4** | CDN + cache + image transformation | Single highest-impact performance item; no app-code change. **Measured 2026-07-27 → §10.** |
 | **D5** | OPS gate (§4) | Owner-side, external to code. |
+
+## 9. D3 — maps per section (measured 2026-07-27, read-only audit)
+Owner requirement: *"الخرايط يجب ان تعمل في كل الاقسام، كل قسم بيستخدم ادواتو الخاصة"*.
+`SearchResultsMap` is mounted at exactly three places, which together cover every surface:
+| Mount | Covers |
+|---|---|
+| `SectionSearchApp.tsx` | cars · real-estate · factories · materials (all 4 section mini-apps) |
+| `BookingStaysApp.tsx` | Stay / booking |
+| `app/(tabs)/search.tsx` | global search |
+
+It is one engine that specialises off `criteria`, rather than five copies:
+- **Two-layer render** — loaded items paint instantly as price pins, then the map reports its viewport and `GET /search/map` returns authoritative clusters for the whole viewport (not just the loaded page).
+- **Viewport-keyed cluster cache** (`clusterCacheKey`: criteria signature + rounded bbox + zoom) so panning back is free.
+- **Per-section pin tint** — exact listing category when it is on the loaded page, else the browsing section itself.
+- **Near-me** — `nearMeEnabled` / `nearLat` / `nearLng` / `nearRadiusKm` drive the circle + radius chips (5/10/25/50/100 km).
+- **Section-correct destination** — RE opens `/listing/:id?focus=booking`, others open plain.
+Because the map consumes the same `criteria` object the strips write to, every section's own filters already apply to it. **No section is missing a map; no section shares another's tools.** Remaining depth (draw-on-map area select, tool offices) stays under M3.
+
+## 10. D4 — cache + CDN (measured 2026-07-27, read-only audit)
+**Cache headers: already production-grade — do not touch.**
+| Endpoint | Header |
+|---|---|
+| feed | `public, max-age=30, stale-while-revalidate=60` |
+| listing detail | `public, max-age=20, swr=60` |
+| search | `public, max-age=20, swr=60` |
+| facets / map clusters | `public, max-age=60, swr=120–300` |
+| served objects | `public, max-age=86400` |
+| object storage (per object) | `public|private, max-age=<ttl>` |
+
+Critically, each of those flips to **`private, no-store` when the response is user-specific**. That is the exact discipline a shared CDN needs — without it, a cache could serve one user's personalised feed to another. It is already correct, so a CDN can be placed in front with **zero code change**.
+
+**Image transformation: genuinely absent** — verified, not assumed: `sharp`, `jimp`, `imagemin`, `@squoosh/lib` are all *not installed*, and the only `webp` occurrence in the server is an entry in the allowed-content-type list. Uploads are validated (content-type + `MAX_IMAGE_BYTES`) and then served **as the original bytes**. A seller's 4 MB phone photo is therefore shipped whole to every viewer, for every card in the feed, on mobile data — across 21 markets.
+
+**Conclusion:** one problem, one solution, and it is an **OPS change, not a code change** — put a CDN with edge image transformation (Cloudflare Images / Bunny / imgproxy) in front of the object-storage origin and request width-appropriate variants. No app code should grow an image pipeline; the headers that make this work are already in place.
