@@ -396,6 +396,10 @@ const en = {
   search: {
     placeholder: "Search cars, property, machines…",
     filters: "Filters",
+    // Section label for the real-estate refinement row (compound / instalment
+    // plans / furnished). It must NOT reuse `filters` — that is the sheet's own
+    // title, and the same word at two levels of one screen reads as a bug.
+    options: "Options",
     category: "Category",
     location: "Location",
     price: "Price",
@@ -2409,6 +2413,7 @@ const ar: typeof en = {
   search: {
     placeholder: "دوّر على عربيات، عقارات، ماكينات…",
     filters: "فلاتر",
+    options: "خيارات",
     category: "الفئة",
     location: "المكان",
     price: "السعر",

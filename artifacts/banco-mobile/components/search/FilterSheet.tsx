@@ -421,7 +421,7 @@ export function FilterSheet({
               <>
                 <SectionLabel
                   text={
-                    isRealEstate ? t("search.filters") : t("search.type")
+                    isRealEstate ? t("search.options") : t("search.type")
                   }
                   align={textAlign}
                   colors={colors}

@@ -430,6 +430,22 @@ test("SectionSearchApp keeps engine chips during facet load (no reload flash)", 
   );
 });
 
+test("FilterSheet never labels a section with the sheet's own title", () => {
+  const filter = fs.readFileSync(FILTER_SHEET, "utf8");
+  // The sheet header renders t("search.filters"). Any SectionLabel inside it that
+  // reuses that same key produces "Filters" nested under "Filters" on one screen,
+  // which reads as a rendering bug. Measured in the running app 2026-07-27.
+  const headerUsesFilters = /styles\.sheetTitle[\s\S]{0,160}?t\("search\.filters"\)/.test(filter);
+  assert.ok(headerUsesFilters, "sheet header is expected to use search.filters");
+  const sectionLabelUses = filter.match(/<SectionLabel[\s\S]{0,240}?\/>/g) ?? [];
+  const clashing = sectionLabelUses.filter((b) => /t\("search\.filters"\)/.test(b));
+  assert.equal(
+    clashing.length,
+    0,
+    `No SectionLabel may reuse search.filters (the sheet title). Found ${clashing.length}.`,
+  );
+});
+
 test("Country + currency is ONE compact button in every section (no per-section gate)", () => {
   const section = fs.readFileSync(SECTION_APP, "utf8");
   // Owner 2026-07-20, completed 2026-07-27: currency is display/valuation of the
