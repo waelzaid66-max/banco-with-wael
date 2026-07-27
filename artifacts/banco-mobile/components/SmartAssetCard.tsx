@@ -18,6 +18,7 @@ import { isVerifiedSignal } from "@/constants/feed";
 import { useColors } from "@/hooks/useColors";
 import { useI18n } from "@/context/LanguageContext";
 import { useSession } from "@/context/SessionContext";
+import { pulseSpark } from "@/lib/brandSpark";
 import { shareListing } from "@/lib/share";
 
 // The save glyph adapts to the section — a car for cars, a key for real estate,
@@ -55,7 +56,7 @@ function SmartAssetCardComponent({
 }: SmartAssetCardProps) {
   const colors = useColors();
   const { t } = useI18n();
-  const { cacheFeedItem, sessionId, pulseSpark } = useSession();
+  const { cacheFeedItem, sessionId } = useSession();
 
   const reduceMotion = useReducedMotion();
   const scale = useSharedValue(1);

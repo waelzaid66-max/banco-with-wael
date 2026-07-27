@@ -121,10 +121,6 @@ interface SessionContextValue {
    * and search refetches per query, so they don't need to watch it.
    */
   listingsVersion: number;
-  /** Monotonic counter bumped by a user action that deserves a brand spark. */
-  sparkVersion: number;
-  /** Fire one B-OOM header pop (B-reaction, booking, …). */
-  pulseSpark: () => void;
   /** Signal that the caller's listings changed; triggers the refetch above. */
   bumpListings: () => void;
 }
@@ -141,11 +137,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   // Bumped on publish so the home feed + profile grid refetch (see type docs).
   const [listingsVersion, setListingsVersion] = useState(0);
   const bumpListings = useCallback(() => setListingsVersion((v) => v + 1), []);
-  // Brand spark: bumped by a real user action (B-reaction, booking). The header
-  // B-OOM mark answers with one short 3D pop, so the sub-brand appears as a
-  // REACTION to what the user did instead of on a timer nobody notices.
-  const [sparkVersion, setSparkVersion] = useState(0);
-  const pulseSpark = useCallback(() => setSparkVersion((v) => v + 1), []);
 
   // Mirror of savedItems for use inside async callbacks without stale closures.
   const savedItemsRef = useRef<SavedItem[]>([]);
@@ -421,8 +412,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       cacheFeedItem,
       listingsVersion,
       bumpListings,
-      sparkVersion,
-      pulseSpark,
     }),
     [
       savedItems,
@@ -440,8 +429,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       cacheFeedItem,
       listingsVersion,
       bumpListings,
-      sparkVersion,
-      pulseSpark,
     ],
   );
 

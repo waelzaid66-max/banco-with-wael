@@ -10,7 +10,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useColors } from "@/hooks/useColors";
 import { useI18n } from "@/context/LanguageContext";
-import { useSession } from "@/context/SessionContext";
+import { pulseSpark } from "@/lib/brandSpark";
 import { AppText } from "@/components/AppText";
 
 /**
@@ -69,7 +69,6 @@ export function BookingCard({ listingId, pricePerNight }: Props) {
   const colors = useColors();
   const { t, isRTL } = useI18n();
   const queryClient = useQueryClient();
-  const { pulseSpark } = useSession();
 
   const today = useMemo(() => ymd(new Date()), []);
   const [cursor, setCursor] = useState(() => {

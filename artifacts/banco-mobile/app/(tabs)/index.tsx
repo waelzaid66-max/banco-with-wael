@@ -45,6 +45,7 @@ import Animated, {
   interpolate,
   useAnimatedStyle,
   useReducedMotion,
+  useAnimatedReaction,
   useSharedValue,
   withDelay,
   withRepeat,
@@ -83,6 +84,7 @@ import {
 } from "@/constants/feed";
 import { useI18n } from "@/context/LanguageContext";
 import { useSession } from "@/context/SessionContext";
+import { brandSpark } from "@/lib/brandSpark";
 import { useAuthGate } from "@/hooks/useAuthGate";
 import { useColors } from "@/hooks/useColors";
 
@@ -209,24 +211,30 @@ const BOOM_W = Math.round(BOOM_H * BOOM_ASPECT);
 
 function HeaderSpark() {
   const reduceMotion = useReducedMotion();
-  const { sparkVersion } = useSession();
   // At rest the mark is hidden. One real user action (B-reaction, booking…)
   // drives this 0 → 1 → 0 once: the sub-brand answers what the user just did.
   const pop = useSharedValue(0);
 
-  useEffect(() => {
-    // sparkVersion starts at 0 — never fire on mount, only on a real action.
-    if (reduceMotion || sparkVersion === 0) return;
-    pop.value = 0;
-    pop.value = withSequence(
-      // The spring overshoots past 1 — that overshoot IS the pop.
-      withSpring(1, { damping: 9, stiffness: 220, mass: 0.5 }),
-      withDelay(
-        520,
-        withTiming(0, { duration: 380, easing: Easing.out(Easing.quad) }),
-      ),
-    );
-  }, [sparkVersion, pop, reduceMotion]);
+  // The trigger is a module-level shared value, NOT React state — writing it
+  // re-renders nothing, so a tap inside a long feed list can never cost a
+  // render anywhere in the tree. This reaction runs on the UI thread and only
+  // when the counter actually changes (prev === null is the initial read).
+  useAnimatedReaction(
+    () => brandSpark.value,
+    (curr, prev) => {
+      if (prev === null || curr === prev || reduceMotion) return;
+      pop.value = 0;
+      pop.value = withSequence(
+        // The spring overshoots past 1 — that overshoot IS the pop.
+        withSpring(1, { damping: 9, stiffness: 220, mass: 0.5 }),
+        withDelay(
+          520,
+          withTiming(0, { duration: 380, easing: Easing.out(Easing.quad) }),
+        ),
+      );
+    },
+    [reduceMotion],
+  );
 
   const logoStyle = useAnimatedStyle(() => ({
     opacity: interpolate(pop.value, [0, 0.3, 1], [0, 1, 1], Extrapolation.CLAMP),
