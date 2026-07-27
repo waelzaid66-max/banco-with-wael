@@ -450,6 +450,7 @@ const en = {
     yearTo: "To",
     nearMe: "Near me",
     nearMeDenied: "Location permission is required to search near you.",
+    kmShort: "km",
     allEgypt: "All Egypt",
     discover: {
       categories: "Browse categories",
@@ -2462,6 +2463,7 @@ const ar: typeof en = {
     yearTo: "إلى",
     nearMe: "قريب مني",
     nearMeDenied: "يلزم السماح بالموقع للبحث بالقرب منك.",
+    kmShort: "كم",
     allEgypt: "كل مصر",
     discover: {
       categories: "تصفّح الأقسام",

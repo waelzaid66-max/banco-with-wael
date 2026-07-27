@@ -83,9 +83,18 @@ export function SearchResultsMap({
           border: colors.border,
         },
         marketCountryMapCenter(criteria.marketCountry),
+        criteria.nearMeEnabled &&
+          criteria.nearLat != null &&
+          criteria.nearLng != null
+          ? {
+              lat: criteria.nearLat,
+              lng: criteria.nearLng,
+              radiusKm: criteria.nearRadiusKm,
+            }
+          : undefined,
       ),
-    // Rebuild when the plotted set, the themed colors, or the selected market
-    // (which decides the initial framing) change.
+    // Rebuild when the plotted set, the themed colors, the selected market
+    // (initial framing) or the near-me area change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       sig,
@@ -95,6 +104,10 @@ export function SearchResultsMap({
       colors.foreground,
       colors.border,
       criteria.marketCountry,
+      criteria.nearMeEnabled,
+      criteria.nearLat,
+      criteria.nearLng,
+      criteria.nearRadiusKm,
     ],
   );
 

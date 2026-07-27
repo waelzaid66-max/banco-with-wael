@@ -42,6 +42,15 @@ export function SearchResultsMap({
           border: colors.border,
         },
         marketCountryMapCenter(criteria.marketCountry),
+        criteria.nearMeEnabled &&
+          criteria.nearLat != null &&
+          criteria.nearLng != null
+          ? {
+              lat: criteria.nearLat,
+              lng: criteria.nearLng,
+              radiusKm: criteria.nearRadiusKm,
+            }
+          : undefined,
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
@@ -52,6 +61,10 @@ export function SearchResultsMap({
       colors.foreground,
       colors.border,
       criteria.marketCountry,
+      criteria.nearMeEnabled,
+      criteria.nearLat,
+      criteria.nearLng,
+      criteria.nearRadiusKm,
     ],
   );
 

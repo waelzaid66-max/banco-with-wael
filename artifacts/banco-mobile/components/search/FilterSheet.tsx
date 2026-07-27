@@ -33,6 +33,7 @@ import {
 } from "@/constants/listingCreateTaxonomy";
 import { useI18n } from "@/context/LanguageContext";
 import { useColors } from "@/hooks/useColors";
+import { NEAR_RADIUS_OPTIONS_KM } from "@/lib/nearMe";
 import {
   MARKET_COUNTRIES,
   marketCountryLabel,
@@ -806,6 +807,55 @@ export function FilterSheet({
                 {t("search.nearMe")}
               </AppText>
             </Pressable>
+
+            {/* Search radius — rendered ONLY while near-me is on, so the compact
+                sheet keeps its default height when the feature is unused. The
+                value already travels to the server as radius_km. */}
+            {criteria.nearMeEnabled ? (
+              <View
+                style={{
+                  flexDirection: rowDir,
+                  flexWrap: "wrap",
+                  gap: 6,
+                  marginTop: 8,
+                }}
+                testID="filter-near-radius"
+              >
+                {NEAR_RADIUS_OPTIONS_KM.map((km) => {
+                  const active = criteria.nearRadiusKm === km;
+                  return (
+                    <Pressable
+                      key={km}
+                      onPress={() => onUpdate({ nearRadiusKm: km })}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: active
+                            ? colors.primary
+                            : colors.secondary,
+                        },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${km} ${t("search.kmShort")}`}
+                      testID={`filter-radius-${km}`}
+                    >
+                      <AppText
+                        style={[
+                          styles.chipText,
+                          {
+                            color: active
+                              ? colors.primaryForeground
+                              : colors.mutedForeground,
+                          },
+                        ]}
+                      >
+                        {km} {t("search.kmShort")}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : null}
 
             {/* Price */}
             <SectionLabel text={t("search.price")} align={textAlign} colors={colors} />
