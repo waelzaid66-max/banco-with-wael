@@ -410,6 +410,12 @@ const en = {
     listingModeAll: "All",
     listingModeSale: "For sale",
     listingModeBuy: "Wanted",
+    // Resting labels for the two strip pills. A pill that just says "All" next
+    // to another pill that also says "All" tells the user nothing about which
+    // axis it controls — the label has to name the axis when nothing narrows it,
+    // then switch to the chosen value. Same pattern as Stay's "All types".
+    offerAny: "All offers",
+    typeAny: "All types",
     minPrice: "Min",
     maxPrice: "Max",
     paymentType: "Payment",
@@ -2424,6 +2430,8 @@ const ar: typeof en = {
     listingModeAll: "الكل",
     listingModeSale: "معروض للبيع",
     listingModeBuy: "مطلوب",
+    offerAny: "كل العروض",
+    typeAny: "كل الأنواع",
     minPrice: "من",
     maxPrice: "إلى",
     paymentType: "الدفع",
