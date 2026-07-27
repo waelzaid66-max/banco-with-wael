@@ -55,7 +55,7 @@ function SmartAssetCardComponent({
 }: SmartAssetCardProps) {
   const colors = useColors();
   const { t } = useI18n();
-  const { cacheFeedItem, sessionId } = useSession();
+  const { cacheFeedItem, sessionId, pulseSpark } = useSession();
 
   const reduceMotion = useReducedMotion();
   const scale = useSharedValue(1);
@@ -96,6 +96,8 @@ function SmartAssetCardComponent({
   const handleSave = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onSave?.(item);
+    // Brand answer: the header B-OOM mark pops once for this B-reaction.
+    pulseSpark();
   };
 
   // B-reactions (long-press on the identity B): real personalization signals —
