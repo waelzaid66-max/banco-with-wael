@@ -430,6 +430,58 @@ test("SectionSearchApp keeps engine chips during facet load (no reload flash)", 
   );
 });
 
+test("FilterPill is the ONE filter-control shape, and it keeps Stay's approved metrics", () => {
+  const pill = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "FilterPill.tsx"),
+    "utf8",
+  );
+  // FilterPill was extracted from Stay's rental-term button, which was measured
+  // in the running app at 108×25 before the extraction: padding 4/10, gap 5,
+  // radius 20, 1px border. Those numbers are the contract — a pill that drifts
+  // from them stops matching the control the owner already approved.
+  const base = pill.match(/\bpill:\s*\{[^}]*\}/);
+  assert.ok(base, "FilterPill must define its base style");
+  for (const [prop, value] of [
+    ["gap", "5"],
+    ["paddingHorizontal", "10"],
+    ["paddingVertical", "4"],
+    ["borderRadius", "20"],
+    ["borderWidth", "1"],
+  ]) {
+    assert.match(
+      base[0],
+      new RegExp(`${prop}:\\s*${value}\\b`),
+      `FilterPill.${prop} must stay ${value} — Stay's measured pill`,
+    );
+  }
+  // The whole point is that an applied filter LOOKS applied. One flip must drive
+  // background, border and content together, or a pill can read "off" while on.
+  assert.match(pill, /active/, "FilterPill must expose an active state");
+  assert.match(
+    pill,
+    /backgroundColor:\s*on\s*\?/,
+    "the active flag must drive the fill",
+  );
+  assert.match(
+    pill,
+    /borderColor:\s*on\s*\?/,
+    "the active flag must drive the border too",
+  );
+
+  // …and Stay actually uses it, so the extraction cannot rot into a second copy.
+  const booking = fs.readFileSync(BOOKING_APP, "utf8");
+  assert.match(
+    booking,
+    /<FilterPill\b/,
+    "Stay's rental-term control must render FilterPill, not a private copy",
+  );
+  assert.doesNotMatch(
+    booking,
+    /styles\.termBtn\b/,
+    "the old private pill styles must be gone, or the two shapes drift apart",
+  );
+});
+
 test("Leaving a mini-app resets the filters but KEEPS the remembered market", () => {
   for (const [label, file] of [
     ["section", SECTION_APP],

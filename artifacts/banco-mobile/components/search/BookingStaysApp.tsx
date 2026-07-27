@@ -22,6 +22,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppText } from "@/components/AppText";
+import { FilterPill } from "@/components/search/FilterPill";
 import { LocationPicker } from "@/components/LocationPicker";
 import { SkeletonCard } from "@/components/SkeletonCard";
 import { StayCard, STAYS_ACCENT } from "@/components/StayCard";
@@ -103,36 +104,17 @@ function RentalTermPickerButton({
 
   return (
     <>
-      <Pressable
+      {/* This pill IS the extraction source: FilterPill carries its metrics to
+          the pixel (108×25, padding 4/10, gap 5, radius 20). Using it here keeps
+          one shape in one place instead of a copy that drifts. */}
+      <FilterPill
+        icon="calendar"
+        label={label}
+        active={!!selected}
+        accentColor={STAYS_ACCENT}
         onPress={() => setOpen(true)}
-        style={[
-          styles.termBtn,
-          {
-            flexDirection: rowDir,
-            backgroundColor: selected ? STAYS_ACCENT : colors.secondary,
-            borderColor: selected ? STAYS_ACCENT : colors.border,
-          },
-        ]}
         testID="stays-rental-term-btn"
-        accessibilityLabel={label}
-      >
-        <Feather
-          name="calendar"
-          size={13}
-          color={selected ? "#FFFFFF" : colors.mutedForeground}
-        />
-        <AppText
-          style={[styles.termBtnLabel, { color: selected ? "#FFFFFF" : colors.foreground }]}
-          numberOfLines={1}
-        >
-          {label}
-        </AppText>
-        <Feather
-          name="chevron-down"
-          size={13}
-          color={selected ? "#FFFFFF" : colors.mutedForeground}
-        />
-      </Pressable>
+      />
 
       <Modal
         visible={open}
@@ -1236,20 +1218,6 @@ const styles = StyleSheet.create({
   },
   emptyCtaText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   // RentalTermPickerButton
-  termBtn: {
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  termBtnLabel: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    flexShrink: 1,
-    maxWidth: 120,
-  },
   termBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.55)",
