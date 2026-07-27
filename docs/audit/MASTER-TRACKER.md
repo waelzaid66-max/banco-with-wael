@@ -138,6 +138,20 @@ I previously reported the **radius draw/select** map tool as *missing*. Their `M
 ### Their accounts verdict matches mine independently
 *"سلسلة الحسابات في المصدر مكتملة… أي عَرَض برودكشن بعد deploy = P1 Ops لا إعادة تصميم UX"* — the same conclusion my M1 audit reached from the code alone.
 
+## 2d. The engineers' MissingFeatures list — now fully resolved
+Their `audit/production-gates/FACEBOOK-LOGIN-AND-FI-AUTOCREATE-SECURITY` marks both remaining items **INTENTIONALLY NOT IMPLEMENTED (security + tenant truth)**, which changes what "missing" meant:
+
+| Item | Resolution |
+|---|---|
+| Facebook Login | Their own prescribed path was: (1) owner enables it in Clerk + Meta, (2) **add `oauth_facebook` beside Google/Apple with the same redirect contract**, (3) update tenant memory. The owner did (1) and asked for it; `6778e65` is exactly (2) — a real strategy, not a stub; (3) is now done. **Closed.** |
+| **FI auto-create** | **Must never be built.** Auto-creating a financing intermediary at signup would mint a privileged org with no admin review = permission escalation. Their own "already product-complete" table shows the only missing link was the **awaiting-admin-link UI** — which is exactly what R2 restored. **Closed by R2.** |
+| Google Maps as engine | still an owner decision (today: Leaflet/OSM) |
+| bancooom content | closed — `virgen/main` carries the full version |
+| Live OTP/magic-link certification | needs a live run on a real device |
+
+### ⚠️ Launch blocker recorded (not a code defect)
+`.agents/memory/banco-auth-tenant-limits.md` carries a live probe from 2026-07-21: the **production** Clerk instance (`clerk.banco.today`, `pk_live`) had **no social providers at all** — `social` empty, `identification_strategies = ["email_address"]`. That means **Google and Apple were already dead paths on production too**, not just Facebook. All three start working with **zero code changes** the moment each provider is configured in the Clerk Dashboard. **Before any store submission, confirm each enabled provider actually resolves on `pk_live` — shipping a visible social button that always errors is a review risk.**
+
 ## 3. Product decisions to honour
 - **The AI assistant is “B”** — the same **B** as the B-reaction that replaces like/heart (B‑OOM identity). It should feel **human**, not robotic.
   **Constraint from the owner: it is already programmed to a high standard — apply only a light, safe polish (tone/persona/naming). No rewrite, no behavioural risk.**
