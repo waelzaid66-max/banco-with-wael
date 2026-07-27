@@ -62,14 +62,18 @@ export default function ImportTrackingScreen() {
   const rowDir = isRTL ? "row-reverse" : "row";
   const textAlign = isRTL ? "right" : "left";
   const { user } = useUser();
-  const { data: ordersRes } = useListMyImportOrders({
+  const ordersQuery = useListMyImportOrders({
     query: {
       queryKey: getListMyImportOrdersQueryKey(),
       enabled: !!user,
       staleTime: 30_000,
     },
   });
-  const orders = ordersRes?.data ?? [];
+  const orders = ordersQuery.data?.data ?? [];
+  // A signed-in buyer whose orders fail to load must NOT silently fall through
+  // to the educational guide — that reads as "my order vanished". Same contract
+  // the Banks inbox uses: surface the failure with a retry.
+  const showOrdersError = !!user && ordersQuery.isError;
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -129,6 +133,43 @@ export default function ImportTrackingScreen() {
             {t("importTrack.requestCta")}
           </AppText>
         </Pressable>
+
+        {/* Orders failed to load — never fall through to the guide silently. */}
+        {showOrdersError && (
+          <View
+            style={[
+              styles.orderCard,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                flexDirection: rowDir,
+              },
+            ]}
+            testID="import-orders-error"
+          >
+            <View style={[styles.orderDot, { backgroundColor: "#9CA3AF" }]}>
+              <Feather name="alert-triangle" size={14} color="#FFFFFF" />
+            </View>
+            <View style={styles.orderBody}>
+              <AppText
+                style={[styles.orderTitle, { color: colors.foreground, textAlign }]}
+              >
+                {t("common.error")}
+              </AppText>
+            </View>
+            <Pressable
+              onPress={() => ordersQuery.refetch()}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t("common.retry")}
+              testID="import-orders-retry"
+            >
+              <AppText style={[styles.orderStage, { color: colors.primary }]}>
+                {t("common.retry")}
+              </AppText>
+            </Pressable>
+          </View>
+        )}
 
         {/* My import orders (live stages) */}
         {orders.length > 0 && (
