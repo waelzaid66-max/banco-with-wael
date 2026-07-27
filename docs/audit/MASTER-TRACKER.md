@@ -152,6 +152,25 @@ Their `audit/production-gates/FACEBOOK-LOGIN-AND-FI-AUTOCREATE-SECURITY` marks b
 ### ⚠️ Launch blocker recorded (not a code defect)
 `.agents/memory/banco-auth-tenant-limits.md` carries a live probe from 2026-07-21: the **production** Clerk instance (`clerk.banco.today`, `pk_live`) had **no social providers at all** — `social` empty, `identification_strategies = ["email_address"]`. That means **Google and Apple were already dead paths on production too**, not just Facebook. All three start working with **zero code changes** the moment each provider is configured in the Clerk Dashboard. **Before any store submission, confirm each enabled provider actually resolves on `pk_live` — shipping a visible social button that always errors is a review risk.**
 
+## 2e. Performance & media pipeline (owner: cache · CDN · image/video processing)
+Audited from code, not assumed.
+
+| Concern | Reality today | Verdict |
+|---|---|---|
+| Profile-open cycle (signup → profile) | 4 queries fire **in parallel**, every one `enabled: !!user` (a guest never fires an authed call) with `staleTime` 60s (me / metrics / social) and 30s (listings). The DB row is created lazily on the first authed call, race-safe, and the welcome email is fire-and-forget so it can never delay the screen. | ✅ already optimised |
+| Image caching in-app | `expo-image` on 12 surfaces (disk + memory cache built in) | ✅ |
+| Media cache headers | S3 layer sets `Cache-Control: public\|private, max-age=3600` per object visibility | ✅ CDN-ready |
+| Upload compression | Cover + avatar picked at `quality: 0.6` before upload | ✅ |
+| Upload security | Presigned S3 PUT; serving URLs promoted/verified server-side | ✅ |
+| **CDN** | **Not configured anywhere** — absent from `.env.example`, the Coolify compose, the nginx config and the deploy doc. Every image is served from a single origin. | 🔴 **real gap — ops, not code** |
+
+**Why the CDN gap matters at this scale:** users in the Gulf, Morocco and Europe all pull media from one origin, so latency and egress both scale with traffic. **The app is already CDN-ready** — the correct cache headers exist — so this is a deployment/config task (point a CDN at the media origin, publish media through the CDN hostname), not an application rewrite. Recorded here so it is not mistaken for a code defect.
+
+**Still to audit in this area (not claimed as done):** video transcoding/poster generation, per-listing image resizing (thumbnail vs full), and prefetch on the feed.
+
+## 2f. Full-cycle rule (owner, standing)
+Any task is only finished when its **whole journey** is inspected end to end — e.g. signup → account created → **profile actually opens fast** — not just the file that was edited. Applies to every module below.
+
 ## 3. Product decisions to honour
 - **The AI assistant is “B”** — the same **B** as the B-reaction that replaces like/heart (B‑OOM identity). It should feel **human**, not robotic.
   **Constraint from the owner: it is already programmed to a high standard — apply only a light, safe polish (tone/persona/naming). No rewrite, no behavioural risk.**
