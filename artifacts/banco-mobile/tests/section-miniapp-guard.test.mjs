@@ -430,6 +430,57 @@ test("SectionSearchApp keeps engine chips during facet load (no reload flash)", 
   );
 });
 
+test("Leaving a mini-app resets the filters but KEEPS the remembered market", () => {
+  for (const [label, file] of [
+    ["section", SECTION_APP],
+    ["stay", BOOKING_APP],
+  ]) {
+    const src = fs.readFileSync(file, "utf8");
+    // Owner contract: filters clear on the way out so the next entry is clean,
+    // while the market + its currency persist across sessions. Both halves are
+    // load-bearing — clearing the market too would drop a returning user back
+    // into Egypt every time, and not clearing the filters would carry someone
+    // else's price range into a fresh browse.
+    assert.match(
+      src,
+      /usePreventRemove\(/,
+      `${label}: exit must be intercepted, or hardware back skips the reset`,
+    );
+    assert.match(
+      src,
+      /resetAndLeave\s*\(/,
+      `${label}: exit must route through resetAndLeave`,
+    );
+    // Scope this to the reset path itself. `buildSeed(criteria.marketCountry)`
+    // also appears in the initial-seed effect, so a file-wide match would still
+    // pass while the reset quietly seeded from a hard-coded default — proven by
+    // negative test, which is why this reads clearAllFilters' body specifically.
+    const clearAt = src.indexOf("clearAllFilters = useCallback");
+    assert.ok(clearAt > 0, `${label}: clearAllFilters must exist`);
+    const clearBody = src.slice(clearAt, src.indexOf("}, [", clearAt));
+    assert.match(
+      clearBody,
+      /buildSeed\(\s*criteria\.marketCountry\s*\)/,
+      `${label}: the reset baseline must be seeded from criteria.marketCountry so the market survives the clear`,
+    );
+    assert.doesNotMatch(
+      clearBody,
+      /DEFAULT_MARKET_COUNTRY/,
+      `${label}: the reset must NOT fall back to the default market — that drops a returning user out of their market`,
+    );
+  }
+  // …and the market is what is written to storage, so it also survives a cold start.
+  const pref = fs.readFileSync(
+    path.join(APP_ROOT, "lib", "marketPreference.ts"),
+    "utf8",
+  );
+  assert.match(
+    pref,
+    /AsyncStorage\.setItem/,
+    "the preferred market must be persisted, or 'remembered market' is only true within one session",
+  );
+});
+
 test("Filter rows COMPRESS instead of scrolling sideways, and market stays in the sheet", () => {
   const filter = fs.readFileSync(FILTER_SHEET, "utf8");
   const section = fs.readFileSync(SECTION_APP, "utf8");
