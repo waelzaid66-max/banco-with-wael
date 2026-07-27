@@ -430,6 +430,49 @@ test("SectionSearchApp keeps engine chips during facet load (no reload flash)", 
   );
 });
 
+test("Country + currency is ONE compact button in every section (no per-section gate)", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  // Owner 2026-07-20, completed 2026-07-27: currency is display/valuation of the
+  // market's money, NOT a search axis — so it rides inside one compact control on
+  // the primary strip, identically in all five sections. This guard fails if the
+  // button is ever put back behind a section condition (that gate is exactly what
+  // left RE + materials with the wide spread matrix while Stay/cars had the button).
+  assert.match(
+    section,
+    /<MarketCountryButton\b/,
+    "Section mini-app must mount MarketCountryButton",
+  );
+  // Structural, not pattern-matched: the button must be the FIRST thing inside
+  // the primary chip strip, with no section flag between the two. An earlier
+  // version of this guard matched the exact `cond ? (` spelling and was proven
+  // blind to `cond ? null : (` — so it asserts on the window instead, which no
+  // spelling of a gate can slip past.
+  const stripIdx = section.indexOf("styles.chipStrip");
+  assert.ok(stripIdx > 0, "primary chip strip must exist");
+  const btnIdx = section.indexOf("<MarketCountryButton", stripIdx);
+  assert.ok(btnIdx > 0, "MarketCountryButton must sit inside the primary chip strip");
+  assert.doesNotMatch(
+    section.slice(stripIdx, btnIdx),
+    /isRealEstateSection|isMaterialsSection|isCarSection|isFacilitiesSection|category\s*===/,
+    "MarketCountryButton must NOT be gated per section — every section shows it",
+  );
+  // And the strips that stack under it share one left edge + one rhythm.
+  for (const [name, padH] of [
+    ["chipStrip", 12],
+    ["reTypeStrip", 12],
+    ["chipRow", 12],
+    ["rentalChrome", 12],
+  ]) {
+    const block = section.match(new RegExp(`\\b${name}:\\s*\\{[^}]*\\}`));
+    assert.ok(block, `${name} style must exist`);
+    assert.match(
+      block[0],
+      new RegExp(`paddingHorizontal:\\s*${padH}\\b`),
+      `${name} must use paddingHorizontal ${padH} so stacked strips align`,
+    );
+  }
+});
+
 test("Real-estate section uses offer strip + type strip (no listingMode clash)", () => {
   const section = fs.readFileSync(SECTION_APP, "utf8");
   assert.match(
@@ -437,10 +480,14 @@ test("Real-estate section uses offer strip + type strip (no listingMode clash)",
     /testID="re-type-strip"/,
     "RE must expose a dedicated property-type strip",
   );
-  assert.match(
+  // Owner 2026-07-27: RE joins Stay/cars/facilities — country + currency collapse
+  // into the ONE compact MarketCountryButton. The spread 21-cell matrix (~6
+  // screens of horizontal scroll) is gone; its "…" button opened the very same
+  // picker, so no capability was lost. Completes the 2026-07-20 decision.
+  assert.doesNotMatch(
     section,
     /testID="re-market-matrix"/,
-    "RE must expose market matrix under type strip",
+    "RE must NOT spread a market matrix (owner: collapse into MarketCountryButton)",
   );
   assert.match(
     section,
@@ -512,10 +559,11 @@ test("Materials (toridat) restores material strip + origin + market matrix", () 
     /testID="materials-origin-strip"/,
     "Materials must expose origin strip (local/imported)",
   );
-  assert.match(
+  // Owner 2026-07-27: same collapse as RE — one compact button, not 21 cells.
+  assert.doesNotMatch(
     section,
     /testID="materials-market-matrix"/,
-    "Materials must expose market matrix under origin (Stay/RE pattern)",
+    "Materials must NOT spread a market matrix (owner: collapse into MarketCountryButton)",
   );
   assert.match(
     section,

@@ -12,6 +12,10 @@
 6. **No large refactors, no blind merges, no deleting code that isn't proven dead.**
 7. Work **one module at a time**: complete → verify → lock → next.
 8. **Push after each command/step** to both repos.
+9. **Never abandon a task mid-way.** A new owner instruction is *recorded* in this ledger and the in-flight task is *finished first*. Order: test before → fix → hard test after → real install/assembly → test again, including everything downstream → only then move on. (owner, 2026-07-27)
+10. **Never invent problems, never experiment on the owner.** Every claim is measured. The project ships to real users; stability outranks everything.
+11. **The preview the owner looks at must always equal the code.** A static export is a frozen snapshot — re-export `web-preview` after every visible change, or the owner reviews a version that no longer exists. (root cause of "أنا يُعرض أمامي نسخة غلط", 2026-07-27 — see §6)
+12. **UX is a first-class deliverable**, not polish: compact, tidy, dynamic, simple. No exaggeration, no decoration for its own sake. Native Android + iOS quality is the bar.
 
 ## 1. Modules (one at a time)
 | # | Module | State |
@@ -30,7 +34,7 @@
 - **UNKNOWN M1-F5** — are non-field Clerk errors (rate limit, network, existing session) invisible? Needs the official Clerk 3.3.1 contract or a live trial.
 - **Accessibility beyond the account screens** — only 16 of 62 mobile files use accessibility props; the same silent-icon-button pattern likely repeats elsewhere. Sweep per module as each module is opened.
 - **Uploads (images/video/documents)** — audit every upload point per module (picker → claim → verify → storage → cleanup).
-- **Countries/currencies still "spread"** in RE + Materials matrices — owner wants them collapsed to the compact icon like Stay, BUT the current spread layout is locked by two guard assertions (owner-approved earlier). **Needs an explicit owner decision before touching.**
+- ~~**Countries/currencies still "spread"** in RE + Materials matrices — needs an explicit owner decision before touching.~~ → **DECISION RECEIVED 2026-07-27**: owner reports "في بعض الأقسام العملات والشرايط والفلاتر ما زالت غير مضغوطة وغير منسقة". That is the decision this line was blocked on. Collapse RE + Materials to the compact `MarketCountryButton`, and update the two stale guards. Measured evidence below (§7).
 - **Vercel preview failures** on the PR (`bancoo-api-server`, one `admin-os` variant) — pre-existing infra, non-required checks; the real API target is Coolify. Confirm they also fail on `main` before spending effort.
 
 ## 2a. FULL census of the Search/Discover page — 10 rectangles, none missed
@@ -255,4 +259,36 @@ I ran broad module sweeps and pushed real fixes, but I had **not** audited the b
 4. **Rotate the GitHub token** shared in chat.
 
 ## 5. Verification standard used on every change
-`mobile tsc` + **all 7 mobile gates** (section-guard 46/46, icons, i18n-usage, lib-hardening, resilience, session-restore, universal-links) + `api-server tsc` when the server is touched + **CI on PR #8** (API tests on real Postgres, typecheck, mobile regression, web build) as the authoritative run.
+`mobile tsc` + **all 7 mobile gates** (section-guard 48/48, icons, i18n-usage, lib-hardening, resilience, session-restore, universal-links) + `api-server tsc` when the server is touched + **CI on PR #8** (API tests on real Postgres, typecheck, mobile regression, web build) as the authoritative run.
+**Plus (2026-07-27): re-export `web-preview` and confirm the bundle hash changed** whenever the change is visible. A green test the owner cannot see is not delivered.
+
+## 6. ROOT CAUSE — "أنا يُعرض أمامي نسخة غلط" (2026-07-27, measured)
+The owner reviews `http://localhost:8099`, served by `npx serve -s web-preview` / `scratchpad/static-server.mjs` from `artifacts/banco-mobile/web-preview`.
+That folder is a **static Expo export — a frozen snapshot with no HMR**. Measured: the folder was built **10:52**, while the code had moved on to **11:46+** (header spark `f769262`, decoupling `532ce0c`). So the owner was reviewing a build that predated the work being discussed.
+Aggravating factor: **8 copies of the mobile app exist on this machine** (`bancoo-prod`, `BANCO-CA-OOM`, `bancoo-forensic-20260722`, `B-OOM`, `aws-virgen`, `banco done`, `banco-c-oom-wep-update`, `BANCO-CA-OOM-strongest-20260722`). Only **`bancoo-prod` @ `532ce0c`** carries current work; the rest are 6–19 days stale, and `BANCO-CA-OOM` even holds its own 19-day-old `dist/`.
+**Rule (§0.11):** re-export after every visible change; the preview is part of the deliverable, not a convenience.
+
+## 7. Compactness divergence — measured, not estimated (2026-07-27)
+Country + currency control, per section:
+
+| Section | Control | padH/padV | flag / country / currency (pt) | Width on screen |
+|---|---|---|---|---|
+| Stay | `MarketCountryButton` | 12 / 8 | 16 / 13 / 12 | ~140 px |
+| Cars | `MarketCountryButton` | 12 / 8 | 16 / 13 / 12 | ~140 px |
+| Facilities | `MarketCountryButton` | 12 / 8 | 16 / 13 / 12 | ~140 px |
+| **Real-estate** | **spread `re-market-matrix`** | 9 / 5 ×21 cells | 13 / 11.5 / 10.5 | **~2,300 px (≈6 screens)** |
+| **Materials** | **spread `materials-market-matrix`** | 9 / 5 ×21 cells | 13 / 11.5 / 10.5 | **~2,300 px (≈6 screens)** |
+
+`MARKET_COUNTRIES` = 21 (EG SA AE KW QA JO OM LY BH IQ LB MA TN SD TR GB US FR DE ES IT). Both spread strips already render a `…more` button that opens the very same picker the compact button uses — so collapsing loses no capability.
+Owner decision **2026-07-20** (guard @270) already stated: *"currency is display/valuation of the market's money, NOT a search axis. Country + currency collapse into ONE compact icon — **same pattern as every section**"*. It was applied to Stay only; guards @442 and @517 then froze the old spread layout in RE + Materials, and @517 justifies it as the "Stay/RE pattern" — wording that is now stale, since Stay no longer has it.
+**Action:** finish the 2026-07-20 decision in the two sections it never reached; rewrite the two stale guards to the new contract.
+
+## 8. Delivery order (architectural, strongest first — 2026-07-27)
+| # | Step | Why it is at this rank |
+|---|---|---|
+| **D0** | Preview truth: re-export `web-preview` | Nothing below can be judged while the owner sees a stale build. Blocks all review. |
+| **D1** | Collapse country/currency in RE + Materials (§7) | Owner-reported, owner-decided, measured. Pure UI, zero backend risk. |
+| **D2** | Sweep every strip/filter row for the same divergence | The complaint says "بعض الأقسام" — one instance found by measurement, the rest must be measured too, not assumed. |
+| **D3** | Maps: confirm every section mounts its own tool set | Foundation module (M3) that publish/booking sit on. |
+| **D4** | CDN + cache + image transformation | Single highest-impact performance item; no app-code change (headers already correct). |
+| **D5** | OPS gate (§4) | Owner-side, external to code. |

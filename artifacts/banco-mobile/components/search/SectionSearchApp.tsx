@@ -55,13 +55,10 @@ import {
 } from "@/constants/cars";
 import { labelForValue } from "@/constants/locations";
 import {
-  CURRENCY_BY_MARKET,
   DEFAULT_MARKET_COUNTRY,
-  MARKET_COUNTRIES,
   MATERIAL_TYPES,
   PROPERTY_TYPES,
 } from "@/constants/listingCreateTaxonomy";
-import { PHONE_COUNTRIES } from "@/constants/countryCodes";
 import {
   loadPreferredMarketCountry,
   savePreferredMarketCountry,
@@ -804,10 +801,11 @@ export function SectionSearchApp({
   // keep it for cars; RE uses offer engines + type strip (+ FilterSheet for مطلوب).
   const showListingMode = !lockedEngine && !isRealEstateSection;
   const showReTypeStrip = isRealEstateSection && reTypeTabs.length > 0;
-  // Market matrix under secondary strips (Stay/RE pattern) — RE + materials
-  // (toridat). Globe button stays on car/facilities primary strip only.
-  const showReMarketMatrix = isRealEstateSection;
-  const showMaterialsMarketMatrix = isMaterialsSection;
+  // Country + currency live in ONE compact MarketCountryButton on the primary
+  // strip — every section, no exception (owner 2026-07-20, completed for RE +
+  // materials 2026-07-27). The old spread matrix laid 21 country cells in a
+  // horizontal strip ≈ 6 screens wide; the button is ~140px and opens the same
+  // picker the matrix's "…" button already opened, so nothing is lost.
 
   // ── Section-scoped "dirty" filter count (excludes the locked baseline) ──────
   const rentEngineActive =
@@ -1219,8 +1217,9 @@ export function SectionSearchApp({
         </View>
       )}
 
-      {/* ── Primary chip strip: globe (car/facilities) · sort · mode/engines.
-          RE + materials countries live in the market matrix under secondary strips. ── */}
+      {/* ── Primary chip strip: country/currency · sort · mode/engines.
+          The country button leads EVERY section — one compact control, one
+          left edge, so the strips below it stack on the same axis. ── */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -1230,15 +1229,13 @@ export function SectionSearchApp({
         style={styles.hScroll}
         contentContainerStyle={[styles.chipStrip, { flexDirection: rowDir }]}
       >
-        {!isRealEstateSection && !isMaterialsSection ? (
-          <MarketCountryButton
-            selected={criteria.marketCountry}
-            onPress={() => {
-              playSound("tap");
-              setMarketPickerOpen(true);
-            }}
-          />
-        ) : null}
+        <MarketCountryButton
+          selected={criteria.marketCountry}
+          onPress={() => {
+            playSound("tap");
+            setMarketPickerOpen(true);
+          }}
+        />
         {/* Quick sort — a small in-strip filter present in every section (was a
             4th header icon that crowded the title). Cycles recommended → newest
             → price low→high → high→low. Isolated: plain criteria state, never
@@ -1415,76 +1412,6 @@ export function SectionSearchApp({
                 </Pressable>
               );
             })}
-        </ScrollView>
-      ) : null}
-
-      {/* ── RE market matrix (countries + currencies) under type strip ── */}
-      {showReMarketMatrix ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.hScroll}
-          contentContainerStyle={[styles.reMarketMatrix, { flexDirection: rowDir }]}
-          testID="re-market-matrix"
-        >
-          {MARKET_COUNTRIES.map((m) => {
-            const active = criteria.marketCountry === m.value;
-            const currency = CURRENCY_BY_MARKET[m.value] ?? "";
-            const flag = PHONE_COUNTRIES.find((c) => c.iso === m.value)?.flag;
-            return (
-              <Pressable
-                key={m.value}
-                onPress={() => {
-                  playSound("tap");
-                  Haptics.selectionAsync();
-                  selectMarketCountry(m.value);
-                }}
-                style={[
-                  styles.reMatrixCell,
-                  {
-                    flexDirection: rowDir,
-                    backgroundColor: active
-                      ? "rgba(122,18,38,0.10)"
-                      : colors.card,
-                    borderColor: active ? accent : colors.border,
-                  },
-                ]}
-                testID={`re-market-${m.value}`}
-                accessibilityLabel={`${isRTL ? m.ar : m.en} ${currency}`}
-              >
-                {flag ? (
-                  <AppText style={styles.reMatrixFlag}>{flag}</AppText>
-                ) : (
-                  <Feather name="globe" size={12} color={colors.mutedForeground} />
-                )}
-                <AppText
-                  style={[styles.reMatrixCountry, { color: colors.foreground }]}
-                  numberOfLines={1}
-                >
-                  {isRTL ? m.ar : m.en}
-                </AppText>
-                <AppText
-                  style={[styles.reMatrixCurrency, { color: colors.mutedForeground }]}
-                >
-                  {currency}
-                </AppText>
-              </Pressable>
-            );
-          })}
-          <Pressable
-            onPress={() => {
-              playSound("tap");
-              setMarketPickerOpen(true);
-            }}
-            style={[
-              styles.reMatrixMore,
-              { backgroundColor: colors.secondary, borderColor: colors.border },
-            ]}
-            testID="re-market-more"
-            accessibilityLabel={t("search.marketCountryTitle")}
-          >
-            <Feather name="more-horizontal" size={14} color={colors.mutedForeground} />
-          </Pressable>
         </ScrollView>
       ) : null}
 
@@ -1678,76 +1605,6 @@ export function SectionSearchApp({
             );
           })}
         </View>
-      ) : null}
-
-      {/* ── Materials market matrix (countries + currencies) under origin ── */}
-      {showMaterialsMarketMatrix ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.hScroll}
-          contentContainerStyle={[styles.reMarketMatrix, { flexDirection: rowDir }]}
-          testID="materials-market-matrix"
-        >
-          {MARKET_COUNTRIES.map((m) => {
-            const active = criteria.marketCountry === m.value;
-            const currency = CURRENCY_BY_MARKET[m.value] ?? "";
-            const flag = PHONE_COUNTRIES.find((c) => c.iso === m.value)?.flag;
-            return (
-              <Pressable
-                key={m.value}
-                onPress={() => {
-                  playSound("tap");
-                  Haptics.selectionAsync();
-                  selectMarketCountry(m.value);
-                }}
-                style={[
-                  styles.reMatrixCell,
-                  {
-                    flexDirection: rowDir,
-                    backgroundColor: active
-                      ? "rgba(122,18,38,0.10)"
-                      : colors.card,
-                    borderColor: active ? accent : colors.border,
-                  },
-                ]}
-                testID={`materials-market-${m.value}`}
-                accessibilityLabel={`${isRTL ? m.ar : m.en} ${currency}`}
-              >
-                {flag ? (
-                  <AppText style={styles.reMatrixFlag}>{flag}</AppText>
-                ) : (
-                  <Feather name="globe" size={12} color={colors.mutedForeground} />
-                )}
-                <AppText
-                  style={[styles.reMatrixCountry, { color: colors.foreground }]}
-                  numberOfLines={1}
-                >
-                  {isRTL ? m.ar : m.en}
-                </AppText>
-                <AppText
-                  style={[styles.reMatrixCurrency, { color: colors.mutedForeground }]}
-                >
-                  {currency}
-                </AppText>
-              </Pressable>
-            );
-          })}
-          <Pressable
-            onPress={() => {
-              playSound("tap");
-              setMarketPickerOpen(true);
-            }}
-            style={[
-              styles.reMatrixMore,
-              { backgroundColor: colors.secondary, borderColor: colors.border },
-            ]}
-            testID="materials-market-more"
-            accessibilityLabel={t("search.marketCountryTitle")}
-          >
-            <Feather name="more-horizontal" size={14} color={colors.mutedForeground} />
-          </Pressable>
-        </ScrollView>
       ) : null}
 
       {/* ── Rental term chips (RE rent / Booking) ── */}
@@ -2036,10 +1893,15 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontFamily: "Inter_700Bold",
   },
+  // Every stacked strip in a section shares ONE left edge (12) and ONE vertical
+  // rhythm (8 / 2). Before: this row sat at 16/10 between neighbours at 12/8, so
+  // the materials origin strip visibly jutted out 4px from the strips above and
+  // below it. Alignment, not decoration — see MASTER-TRACKER §7.
   chipRow: {
     gap: 8,
-    paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 2,
   },
   chip: {
     paddingHorizontal: 14,
@@ -2093,8 +1955,8 @@ const styles = StyleSheet.create({
   rentalChrome: {
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingHorizontal: 12,
+    paddingTop: 8,
     paddingBottom: 2,
   },
   reTypeStrip: {
@@ -2103,41 +1965,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 2,
-  },
-  reMarketMatrix: {
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingTop: 6,
-    paddingBottom: 4,
-  },
-  reMatrixCell: {
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 10,
-    borderWidth: 1,
-    maxWidth: 148,
-  },
-  reMatrixFlag: { fontSize: 13, lineHeight: 16 },
-  reMatrixCountry: {
-    fontSize: 11.5,
-    fontFamily: "Inter_600SemiBold",
-    flexShrink: 1,
-  },
-  reMatrixCurrency: {
-    fontSize: 10.5,
-    fontFamily: "Inter_500Medium",
-    letterSpacing: 0.3,
-  },
-  reMatrixMore: {
-    width: 32,
-    height: 28,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
   },
   resultsCount: { fontSize: 12.5, paddingHorizontal: 16, paddingTop: 8 },
   suggestions: {
