@@ -869,6 +869,9 @@ export function SectionSearchApp({
   const handleSaveSearch = () => {
     const snapshot: SearchCriteria = { ...criteria, q: draftQuery.trim() };
     saveSearch({
+      // The name is read back to the user inside the "new listing matches your
+      // search" alert and its email, so it is localised here where `t` lives.
+      name: snapshot.q.trim() || t(`home.categories.${snapshot.category}`),
       criteria: snapshot,
       q: snapshot.q,
       category: snapshot.category,

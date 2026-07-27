@@ -599,6 +599,7 @@ export default function SearchScreen() {
 
   const handleSaveSearch = () => {
     saveSearch({
+      name: draftQuery.trim() || t(`home.categories.${criteria.category}`),
       q: draftQuery.trim(),
       category: criteria.category,
       minPrice: criteria.minPrice,

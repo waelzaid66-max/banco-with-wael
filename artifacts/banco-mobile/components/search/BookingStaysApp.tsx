@@ -564,6 +564,7 @@ export function BookingStaysApp() {
   const handleSaveSearch = () => {
     const snapshot: SearchCriteria = { ...criteria, q: draftQuery.trim() };
     saveSearch({
+      name: snapshot.q.trim() || t(`home.categories.${snapshot.category}`),
       criteria: snapshot,
       q: snapshot.q,
       category: snapshot.category,
