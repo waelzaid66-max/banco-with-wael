@@ -454,6 +454,43 @@ test("Market lives ONLY on the section header, never inside the filter sheet", (
     /<MarketCountryButton\b/,
     "the section header button is now the ONLY way to change market — it must be mounted",
   );
+
+  // Global search is the third FilterSheet consumer and it does NOT use the
+  // section mini-app. It previously showed 21 spread market chips gated behind
+  // `showRentalTerms`, so cars / materials / facilities / real-estate-for-sale had
+  // no market control at all — and removing the sheet row would have sealed that
+  // shut. It now mounts the same compact button, unconditionally, plus the picker
+  // (a button with no picker is a dead control).
+  const searchTab = fs.readFileSync(SEARCH_TAB, "utf8");
+  assert.match(
+    searchTab,
+    /<MarketCountryButton\b/,
+    "Global search must mount MarketCountryButton — market must stay reachable there",
+  );
+  assert.match(
+    searchTab,
+    /<MarketCountryPicker\b/,
+    "Global search must mount MarketCountryPicker, or the button opens nothing",
+  );
+  assert.doesNotMatch(
+    searchTab,
+    /testID=\{?`?search-market-\$\{/,
+    "Global search must NOT spread a market chip row (owner: one compact button)",
+  );
+  // Check CODE, not prose. The first version of this assertion scanned the raw
+  // 400 chars before the button and tripped on the comment that explains the fix,
+  // because the comment names `showRentalTerms`. Strip comments first, then look
+  // for a real conditional immediately preceding the mount.
+  const codeOnly = searchTab
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  const btnAt = codeOnly.indexOf("<MarketCountryButton");
+  assert.ok(btnAt > 0, "MarketCountryButton must be mounted in global search JSX");
+  assert.doesNotMatch(
+    codeOnly.slice(Math.max(0, btnAt - 300), btnAt),
+    /showRentalTerms|criteria\.category\s*===|\?\s*\($/,
+    "Global search market button must NOT sit behind a conditional — that was the bug",
+  );
 });
 
 test("FilterSheet never labels a section with the sheet's own title", () => {

@@ -137,7 +137,16 @@ test("search tab uses market-scoped rental taxonomy adapter", () => {
     "utf8",
   );
   assert.match(search, /rentalTermsForSearch/, "search tab must use searchTaxonomy adapter");
-  assert.match(search, /MARKET_COUNTRIES/, "search tab must expose per-market rental chips");
+  // This used to assert /MARKET_COUNTRIES/ with the message "must expose per-market
+  // rental chips" — a proxy that locked the 21-chip spread row in place. Owner
+  // 2026-07-27 replaced that row with the compact MarketCountryButton everywhere.
+  // The real subject of this test is the market-SCOPED rental taxonomy (asserted
+  // above), so the market control is now asserted by its current shape.
+  assert.match(
+    search,
+    /<MarketCountryButton\b/,
+    "search tab must expose the compact market control",
+  );
   assert.match(sheet, /rentalTermsForSearch/, "FilterSheet must use market-scoped rental terms");
   assert.match(sheet, /filter-near-me/, "FilterSheet must expose near-me control");
 });

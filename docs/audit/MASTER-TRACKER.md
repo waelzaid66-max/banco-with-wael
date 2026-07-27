@@ -364,12 +364,19 @@ so a sheet titled "Filters" contained a section titled "Filters". Added `search.
 ("Options" / "خيارات") + a guard that fails if any `SectionLabel` reuses the sheet's
 own title key. Guard count 49 → 50.
 
-**OWNER DECISION NEEDED — the Market row.** It spreads all 21 countries: 1485px of
-content in a 343px window, ~1142px (over 4 screens) of sideways scroll — the same
-"غير مضغوطة" shape just removed from the section strips, and now a **second control
-for the same `marketCountry`** the compact header button already sets. Two recorded
-intents disagree:
+**The Market row — decision taken 2026-07-27: REMOVED.** It spread all 21 countries
+(1485px inside a 343px window, ~4 screens of sideways scroll) and, once the header
+button became universal earlier the same day, was a **second control writing the same
+`marketCountry`**. Two recorded intents appeared to disagree:
 - FilterSheet comment: *"a universal axis ... one compact, balanced inline row (not buried under rent only, not a separate oversized button)"*
 - Guard @270, dated 2026-07-20: *"country + currency collapse into ONE compact icon — same pattern as every section"*
-Note the row does not meet its **own** stated goal either: 1485px is not "compact".
-Not actioned unilaterally — measured, and put to the owner.
+
+They do not actually disagree: the row **failed its own stated goal** — 1485px is not
+"one compact, balanced inline row". That is what made it a defect rather than a matter
+of taste. Owner chose "احذفه — الزر يكفي"; market answers *which marketplace am I in*,
+not *narrow these results*, so it belongs to the chrome.
+Nothing became unreachable — every market stays one tap away via `MarketCountryButton`,
+and the guard asserts that button is mounted so a later edit cannot remove both.
+Orphans removed with it (each verified at 1 occurrence = declaration only): imports
+`MARKET_COUNTRIES` / `marketCountryLabel` / `sanitizeRentalTermForMarket`, styles
+`chipSm` / `chipSmText`. Guard count 50 → 51.

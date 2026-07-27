@@ -74,11 +74,13 @@ import {
   requestNearMeCoords,
 } from "@/lib/nearMe";
 import {
-  MARKET_COUNTRIES,
-  marketCountryLabel,
   rentalTermsForSearch,
   sanitizeRentalTermForMarket,
 } from "@/lib/searchTaxonomy";
+import {
+  MarketCountryButton,
+  MarketCountryPicker,
+} from "@/components/MarketCountryPicker";
 
 type FilterCategory = Category;
 
@@ -329,6 +331,7 @@ export default function SearchScreen() {
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const [brandValue, setBrandValue] = useState<string | null>(null);
   const [carPickerOpen, setCarPickerOpen] = useState(false);
+  const [marketPickerOpen, setMarketPickerOpen] = useState(false);
 
   const autocompleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const commitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -824,6 +827,21 @@ export default function SearchScreen() {
             onChange={selectCategory}
             visible={shownCategories}
           />
+          {/* Country + currency — the SAME compact control every section mini-app
+              leads with, and unconditional here for a reason: this row used to be
+              21 spread country chips gated behind `showRentalTerms`, so anyone
+              browsing cars, materials, facilities, or real-estate FOR SALE in
+              global search had no way to change market at all. One control, one
+              place, always reachable (owner 2026-07-27). */}
+          <View style={[styles.marketRow, { flexDirection: rowDir }]}>
+            <MarketCountryButton
+              selected={criteria.marketCountry}
+              onPress={() => {
+                playSound("tap");
+                setMarketPickerOpen(true);
+              }}
+            />
+          </View>
           {/* In-place sub-filters for car / real-estate (new/used, property type,
               financing, …), surfaced under the tabs instead of buried in the filter
               sheet. Empty for every other section, so this row only appears where it
@@ -885,50 +903,6 @@ export default function SearchScreen() {
           ) : null}
           {showRentalTerms ? (
             <>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.hScroll}
-                contentContainerStyle={[
-                  styles.originRow,
-                  { flexDirection: rowDir },
-                ]}
-              >
-                {MARKET_COUNTRIES.map((m) => {
-                  const active = criteria.marketCountry === m.value;
-                  return (
-                    <Pressable
-                      key={m.value}
-                      onPress={() => {
-                        playSound("tap");
-                        selectMarketCountry(m.value);
-                      }}
-                      style={[
-                        styles.originChip,
-                        {
-                          backgroundColor: active
-                            ? colors.primary
-                            : colors.secondary,
-                        },
-                      ]}
-                      testID={`search-market-${m.value}`}
-                    >
-                      <AppText
-                        style={[
-                          styles.originChipText,
-                          {
-                            color: active
-                              ? colors.primaryForeground
-                              : colors.mutedForeground,
-                          },
-                        ]}
-                      >
-                        {marketCountryLabel(m.value, isRTL)}
-                      </AppText>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -1193,6 +1167,16 @@ export default function SearchScreen() {
           setCarPickerOpen(false);
         }}
       />
+
+      <MarketCountryPicker
+        visible={marketPickerOpen}
+        selected={criteria.marketCountry}
+        onClose={() => setMarketPickerOpen(false)}
+        onSelect={(iso) => {
+          selectMarketCountry(iso);
+          setMarketPickerOpen(false);
+        }}
+      />
     </View>
   );
 }
@@ -1222,6 +1206,11 @@ const styles = StyleSheet.create({
   resultsCount: { fontSize: 12.5, paddingHorizontal: 16, paddingTop: 8 },
   originRow: {
     gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  marketRow: {
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingTop: 8,
   },
