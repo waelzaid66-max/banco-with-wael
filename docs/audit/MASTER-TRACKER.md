@@ -180,6 +180,27 @@ Audited from code, not assumed.
 ## 2f. Full-cycle rule (owner, standing)
 Any task is only finished when its **whole journey** is inspected end to end — e.g. signup → account created → **profile actually opens fast** — not just the file that was edited. Applies to every module below.
 
+## 2g. M4 — the publish journey (highest-value cycle, audited end to end)
+Prioritised above the remaining polish because a marketplace with no successful publish has no inventory. Audited from the create wizard through to the listing appearing in the feed.
+
+| Stage | What the code actually does | Verdict |
+|---|---|---|
+| Draft | Multi-step wizard persists a draft and restores the step on return | ✅ |
+| Submit guard | Re-runs `validateStep` for **every prior step** and jumps back to the first failure, so a deep-linked or edited draft can't post an invalid body | ✅ |
+| Requests vs sales | A buyer request omits `base_price_cash` entirely so the server applies request rules instead of storing a 0 price; photos optional for requests, required for sales | ✅ subtle and correct |
+| Thumbnail | Flags the **first image** (never a leading video) as `is_thumbnail`, mirroring the server's `pickListingThumbnailUrl` — the feed renders it in an `<Image>` | ✅ contract honoured on both sides |
+| Media race | Re-checks every tile is `uploaded` even though the button is already gated, "so a race can never POST a half-uploaded set" | ✅ |
+| Phones | Normalised to E.164 per country | ✅ |
+| Payment plans | Cash always present; installment plans validated (monthly + duration required, profit rate bounded 0–100) | ✅ |
+| Market stamp | `market_country` + `currency` written into specs; origin (local/imported) only for car + industrial, never for a request | ✅ |
+| **Failure** | 402/403 → explicit quota copy; otherwise the **real API reason** is extracted from the error and shown, instead of a silent generic retry | ✅ |
+| **After success** | Clears the stale draft, then `bumpListings()` bumps `listingsVersion` in SessionContext — consumed by the home feed and the profile grid, so the new listing appears **with no manual pull-to-refresh** | ✅ cycle closes |
+
+**Verdict: the publish path is production-grade; no defects found.**
+
+### Bonus: an old known bug is confirmed FIXED
+The historical "#1 publish failure" (mobile sent the Arabic location *label* while the backend fuzzy-matches the English taxonomy → 400 on every publish) is resolved: create now sends `(locationValue ?? location).trim()` with an explanatory comment, and dealer-os listings moved from a free-text input to a controlled `<Select>`. dealer-os **investments** still take free text, and that is correct — `InvestmentService` never normalises location (plain `ILIKE`), so it does not use the listing taxonomy. **Standing rule kept:** location has no Arabic alias map and the `locations` table has no Arabic column, so any NEW location field must submit the controlled English value.
+
 ## 3. Product decisions to honour
 - **The AI assistant is “B”** — the same **B** as the B-reaction that replaces like/heart (B‑OOM identity). It should feel **human**, not robotic.
   **Constraint from the owner: it is already programmed to a high standard — apply only a light, safe polish (tone/persona/naming). No rewrite, no behavioural risk.**
