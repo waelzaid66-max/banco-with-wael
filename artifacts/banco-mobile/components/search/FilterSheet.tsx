@@ -34,7 +34,12 @@ import {
 import { useI18n } from "@/context/LanguageContext";
 import { useColors } from "@/hooks/useColors";
 import { NEAR_RADIUS_OPTIONS_KM } from "@/lib/nearMe";
-import { rentalTermsForSearch } from "@/lib/searchTaxonomy";
+import {
+  MARKET_COUNTRIES,
+  marketCountryLabel,
+  rentalTermsForSearch,
+  sanitizeRentalTermForMarket,
+} from "@/lib/searchTaxonomy";
 import type {
   PaymentType,
   SearchCriteria,
@@ -266,11 +271,7 @@ export function FilterSheet({
           >
             {/* Sort */}
             <SectionLabel text={t("search.sortBy")} align={textAlign} colors={colors} />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={[styles.chipRow, { flexDirection: rowDir }]}
-            >
+            <View style={[styles.wrapRow, { flexDirection: rowDir }]}>
               {SORTS.map((s) => {
                 const active = criteria.sort === s;
                 return (
@@ -302,15 +303,54 @@ export function FilterSheet({
                   </Pressable>
                 );
               })}
-            </ScrollView>
+            </View>
 
-            {/* Market country is deliberately NOT here. Owner 2026-07-27: it is
-                set by the compact MarketCountryButton on the section header —
-                one control, one place. It was a 21-chip row (1485px inside a
-                343px window, ~4 screens of sideways scroll) AND a second control
-                writing the same `marketCountry` the header button already sets.
-                Market answers "which marketplace am I in", not "narrow these
-                results", so it belongs to the chrome, not to the filters. */}
+            {/* Market country — a universal axis, so it lives here for EVERY
+                section as one compact, balanced inline row (not buried under
+                rent only, not a separate oversized button). Switching market
+                re-sanitizes the rental term to that market's legal regimes. */}
+            <SectionLabel text={t("create.fields.market")} align={textAlign} colors={colors} />
+            <View style={[styles.wrapRow, { flexDirection: rowDir }]}>
+              {MARKET_COUNTRIES.map((m) => {
+                const active = criteria.marketCountry === m.value;
+                return (
+                  <Pressable
+                    key={m.value}
+                    onPress={() =>
+                      onUpdate({
+                        marketCountry: m.value,
+                        rentalTerm: sanitizeRentalTermForMarket(
+                          criteria.rentalTerm,
+                          m.value,
+                        ),
+                      })
+                    }
+                    style={[
+                      styles.chipSm,
+                      {
+                        backgroundColor: active
+                          ? colors.primary
+                          : colors.secondary,
+                      },
+                    ]}
+                    testID={`filter-market-${m.value}`}
+                  >
+                    <AppText
+                      style={[
+                        styles.chipSmText,
+                        {
+                          color: active
+                            ? colors.primaryForeground
+                            : colors.mutedForeground,
+                        },
+                      ]}
+                    >
+                      {marketCountryLabel(m.value, isRTL)}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
 
             {/* Category — hidden inside the section mini-apps (lockCategory):
                 the section is locked there, so a single dead chip is pure
@@ -318,11 +358,7 @@ export function FilterSheet({
             {!lockCategory && (
             <>
             <SectionLabel text={t("search.category")} align={textAlign} colors={colors} />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={[styles.chipRow, { flexDirection: rowDir }]}
-            >
+            <View style={[styles.wrapRow, { flexDirection: rowDir }]}>
               {shownCategories.map((cat) => {
                 const active = criteria.category === cat;
                 return (
@@ -363,7 +399,7 @@ export function FilterSheet({
                   </Pressable>
                 );
               })}
-            </ScrollView>
+            </View>
             </>
             )}
 
@@ -454,14 +490,7 @@ export function FilterSheet({
             {isCar && (
               <>
                 <SectionLabel text={t("search.brand")} align={textAlign} colors={colors} />
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={[
-                    styles.chipRow,
-                    { flexDirection: rowDir },
-                  ]}
-                >
+                <View style={[styles.wrapRow, { flexDirection: rowDir }]}>
                   <Pressable
                     onPress={onOpenBrandPicker}
                     style={[
@@ -511,7 +540,7 @@ export function FilterSheet({
                       </Pressable>
                     );
                   })}
-                </ScrollView>
+                </View>
 
                 {/* Year range (cars) */}
                 <SectionLabel text={t("search.year")} align={textAlign} colors={colors} />
@@ -931,11 +960,7 @@ function ToggleChipRow<T extends string>({
   testPrefix: string;
 }) {
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={[styles.chipRow, { flexDirection: rowDir }]}
-    >
+    <View style={[styles.wrapRow, { flexDirection: rowDir }]}>
       {options.map((v) => {
         const active = selected === v;
         return (
@@ -963,7 +988,7 @@ function ToggleChipRow<T extends string>({
           </Pressable>
         );
       })}
-    </ScrollView>
+    </View>
   );
 }
 
@@ -1030,6 +1055,19 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 2,
   },
+  // Compressed row: long option sets (markets, property types, sort) WRAP onto
+  // as many short lines as they need instead of running off the side of the
+  // screen. Measured before: the market row was 1485px of content inside a 343px
+  // window — over four screens of sideways scrolling, so a user could not see
+  // what they were choosing between and options past the fold were effectively
+  // invisible. Wrapping shows every option at once, in place, with no scrolling
+  // in either axis. This is the same shape the create screen already uses for
+  // these very markets, so it is the established pattern here, not a new idea.
+  wrapRow: {
+    flexWrap: "wrap",
+    gap: 6,
+    paddingVertical: 2,
+  },
   engineWrap: {
     marginHorizontal: -16,
   },
@@ -1040,6 +1078,17 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 12.5,
+    fontFamily: "Inter_500Medium",
+  },
+  // Compact variant — the always-visible market-country row: one notch smaller
+  // than the standard chips so the strip reads balanced, never dominant.
+  chipSm: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+  },
+  chipSmText: {
+    fontSize: 12,
     fontFamily: "Inter_500Medium",
   },
   rangeRow: {

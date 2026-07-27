@@ -430,29 +430,39 @@ test("SectionSearchApp keeps engine chips during facet load (no reload flash)", 
   );
 });
 
-test("Market lives ONLY on the section header, never inside the filter sheet", () => {
+test("Filter rows COMPRESS instead of scrolling sideways, and market stays in the sheet", () => {
   const filter = fs.readFileSync(FILTER_SHEET, "utf8");
   const section = fs.readFileSync(SECTION_APP, "utf8");
-  // Owner 2026-07-27, decided on measurement: the sheet spread all 21 markets
-  // (1485px inside a 343px window, ~4 screens of sideways scroll) AND was a second
-  // control writing the same `marketCountry` the header button already sets.
-  // Market answers "which marketplace am I in", not "narrow these results", so it
-  // belongs to the chrome. One control, one place.
-  assert.doesNotMatch(
+  // Owner 2026-07-27 (correcting an earlier misread of mine): the ask was to
+  // COMPRESS the filters, never to delete them. The market row stays — a filter
+  // sheet is where you narrow by market, and having it here as well as on the
+  // header chrome is deliberate, not accidental duplication. What was wrong was
+  // the SHAPE: 21 chips on one horizontal line, ~4 screens of sideways scroll.
+  // Long option sets now wrap onto multiple lines, so everything is visible at
+  // once with zero horizontal scrolling — the same pattern the create screen
+  // already uses for these very markets.
+  assert.match(
     filter,
     /testID=\{?`?filter-market-/,
-    "FilterSheet must NOT offer a market-country row (owner: header button only)",
+    "FilterSheet MUST keep the market row (owner: compress, do not delete)",
   );
-  assert.doesNotMatch(
+  assert.match(
     filter,
-    /MARKET_COUNTRIES/,
-    "FilterSheet must not enumerate MARKET_COUNTRIES at all",
+    /wrapRow/,
+    "FilterSheet must define the wrapping row style used to compress long option sets",
   );
-  // …and the single surviving control must still exist, or market becomes unreachable.
+  const wrapRow = filter.match(/\bwrapRow:\s*\{[^}]*\}/);
+  assert.ok(wrapRow, "wrapRow style must exist");
+  assert.match(
+    wrapRow[0],
+    /flexWrap:\s*"wrap"/,
+    "wrapRow must actually wrap — that is what removes the sideways scroll",
+  );
+  // The header control stays too; both are intended.
   assert.match(
     section,
     /<MarketCountryButton\b/,
-    "the section header button is now the ONLY way to change market — it must be mounted",
+    "the section header market button must stay mounted",
   );
 
   // Global search is the third FilterSheet consumer and it does NOT use the
