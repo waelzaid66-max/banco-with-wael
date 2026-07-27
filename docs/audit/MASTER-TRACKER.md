@@ -226,6 +226,21 @@ Re-ordered at the owner's direction: maps and the mini-apps are the base that pu
 
 **Verdict: the map is not a weak spot — it is one of the stronger subsystems.** The remaining items are two deferred decisions and one owner choice, not defects.
 
+## 2i. Per-app inventory — strong layers vs what is genuinely missing
+Written after the owner pushed back that the audit was too broad. Honest per surface, including where **I** had not looked.
+
+| App / surface | Strong layers (verified) | Genuinely missing |
+|---|---|---|
+| **Booking / stays (apartments)** | Custom calendar with **server-driven availability**; booked nights computed as the half-open `[check_in, check_out)` so adjacent stays remain bookable — explicitly mirroring the server's overlap rule; past days and taken nights unselectable; a span crossing a taken night restarts the selection; live nights × price estimate; AR/EN month + weekday labels with RTL; cannot page before the current month. On reserve: success invalidates availability so the nights grey out instantly, and **failure assumes a race** ("taken between load and tap"), refetches and asks for a new pick. | Nothing found in the booking flow itself. Payment-through-us for furnished/daily is a separate module (M6). |
+| **Header animation (home)** | `HeaderSpark`: the B-OOM mark crosses the gap between the BANCO wordmark and the actions **once every 30s**, "like a branded car driving through". Verified the maths matches the comments exactly (fade-in 26.0s, glide 26.25s→30s ≈3.75s, fade-out from 28.5s). Only `translateX` + `opacity` (GPU, no layout), 16px vs the 26px wordmark so it never competes, and **`prefers-reduced-motion` renders it static**. | Nothing — this *is* the finished polish. |
+| **Car import** | DB → OpenAPI → service → routes → request form → live tracking → notifications (L1–L7), plus the error state fixed this wave. | **Never exercised end-to-end against a running API/DB.** Types, guards and CI pass, but no real order has been created. Honest status: built + verified, **not yet lived**. |
+| **Suppliers hub** | Pure navigation surface (correctly no API); **all 8 destinations exist** — industry, investments, suppliers, global-supply, market, analytics, company/edit, rfq-inbox. | — |
+| **Global supply** | API-wired with loading / error / empty states. | a11y labels (icon-only controls) |
+| **Maps** | See §2h — two-layer render, viewport clusters, price pins, section tints, market centring, radius circle. | Discover map card is RE-only (owner decision); draw-area, sort=nearest, full web clusters (deferred) |
+
+### Where I was NOT at full strength (owner was right)
+I ran broad module sweeps and pushed real fixes, but I had **not** audited the booking/calendar lifecycle at all, had **not** looked at the header animation, and had **not** produced this per-app breakdown — while still moving on to the next module. Both gaps are now closed above; the import "not yet lived" status stays open and is stated plainly rather than implied as done.
+
 ## 3. Product decisions to honour
 - **The AI assistant is “B”** — the same **B** as the B-reaction that replaces like/heart (B‑OOM identity). It should feel **human**, not robotic.
   **Constraint from the owner: it is already programmed to a high standard — apply only a light, safe polish (tone/persona/naming). No rewrite, no behavioural risk.**
