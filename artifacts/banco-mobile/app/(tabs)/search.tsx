@@ -759,6 +759,8 @@ export default function SearchScreen() {
                 borderRadius: colors.radius,
               },
             ]}
+            accessibilityRole="button"
+            accessibilityLabel={t("search.saveSearch")}
             testID="save-search"
           >
             <Feather
@@ -781,6 +783,8 @@ export default function SearchScreen() {
                 borderRadius: colors.radius,
               },
             ]}
+            accessibilityRole="button"
+            accessibilityLabel={t("search.filters")}
             testID="filter-toggle"
           >
             <Feather
