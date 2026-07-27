@@ -430,6 +430,32 @@ test("SectionSearchApp keeps engine chips during facet load (no reload flash)", 
   );
 });
 
+test("Market lives ONLY on the section header, never inside the filter sheet", () => {
+  const filter = fs.readFileSync(FILTER_SHEET, "utf8");
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  // Owner 2026-07-27, decided on measurement: the sheet spread all 21 markets
+  // (1485px inside a 343px window, ~4 screens of sideways scroll) AND was a second
+  // control writing the same `marketCountry` the header button already sets.
+  // Market answers "which marketplace am I in", not "narrow these results", so it
+  // belongs to the chrome. One control, one place.
+  assert.doesNotMatch(
+    filter,
+    /testID=\{?`?filter-market-/,
+    "FilterSheet must NOT offer a market-country row (owner: header button only)",
+  );
+  assert.doesNotMatch(
+    filter,
+    /MARKET_COUNTRIES/,
+    "FilterSheet must not enumerate MARKET_COUNTRIES at all",
+  );
+  // …and the single surviving control must still exist, or market becomes unreachable.
+  assert.match(
+    section,
+    /<MarketCountryButton\b/,
+    "the section header button is now the ONLY way to change market — it must be mounted",
+  );
+});
+
 test("FilterSheet never labels a section with the sheet's own title", () => {
   const filter = fs.readFileSync(FILTER_SHEET, "utf8");
   // The sheet header renders t("search.filters"). Any SectionLabel inside it that

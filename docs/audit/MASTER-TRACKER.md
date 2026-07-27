@@ -302,7 +302,7 @@ Also removed 6 style blocks in `BookingStaysApp` (`marketMatrix`, `matrixCell`, 
 |---|---|---|
 | **D0** | Preview truth: re-export `web-preview` | Nothing below can be judged while the owner sees a stale build. Blocks all review. |
 | **D1** | Collapse country/currency in RE + Materials (§7) | Owner-reported, owner-decided, measured. Pure UI, zero backend risk. |
-| **D2** | Sweep every strip/filter row for the same divergence | The complaint says "بعض الأقسام" — one instance found by measurement, the rest must be measured too, not assumed. |
+| **D2** | Sweep every strip/filter row for the same divergence | The complaint says "بعض الأقسام" — one instance found by measurement, the rest must be measured too, not assumed. **Strips done; FilterSheet audited live → §11.** |
 | **D3** | Maps: confirm every section mounts its own tool set | Foundation module (M3) that publish/booking sit on. **Measured 2026-07-27 → structurally satisfied**, see §9. |
 | **D4** | CDN + cache + image transformation | Single highest-impact performance item; no app-code change. **Measured 2026-07-27 → §10.** |
 | **D5** | OPS gate (§4) | Owner-side, external to code. |
@@ -340,3 +340,36 @@ Critically, each of those flips to **`private, no-store` when the response is us
 **Image transformation: genuinely absent** — verified, not assumed: `sharp`, `jimp`, `imagemin`, `@squoosh/lib` are all *not installed*, and the only `webp` occurrence in the server is an entry in the allowed-content-type list. Uploads are validated (content-type + `MAX_IMAGE_BYTES`) and then served **as the original bytes**. A seller's 4 MB phone photo is therefore shipped whole to every viewer, for every card in the feed, on mobile data — across 21 markets.
 
 **Conclusion:** one problem, one solution, and it is an **OPS change, not a code change** — put a CDN with edge image transformation (Cloudflare Images / Bunny / imgproxy) in front of the object-storage origin and request width-appropriate variants. No app code should grow an image pipeline; the headers that make this work are already in place.
+
+## 11. FilterSheet audit (owner said "والفلاتر" — measured live in the app, 2026-07-27)
+Measured with the sheet open on real-estate, 375×812. Rows were separated from the
+section page showing through behind the overlay by depth-to-common-ancestor with
+the Apply button: **depth ≤ 4 = sheet, depth 10 = page behind it.**
+
+| Sheet row | first chip left | scrollWidth in 343px window | overflow |
+|---|---|---|---|
+| Sort | 16 | 572 | 229 |
+| Market | 16 | **1485** | **1142** |
+| Options (was "Filters") | 16 | 565 | 190 |
+| Property type | 16 | 1206 | 863 |
+
+**Alignment: correct — nothing to fix.** `engineWrap: { marginHorizontal: -16 }`
+cancels the body's 16px padding so that row can scroll edge to edge; its content
+container adds 16 back, so **every first chip in every row sits at exactly 16px**.
+I nearly filed this as a misalignment off the raw row box (left 0 / width 375 vs
+16 / 343) — measuring what the eye sees corrected it. Deliberate, and left alone.
+
+**Fixed:** the sheet header and the RE refinement row both rendered `t("search.filters")`,
+so a sheet titled "Filters" contained a section titled "Filters". Added `search.options`
+("Options" / "خيارات") + a guard that fails if any `SectionLabel` reuses the sheet's
+own title key. Guard count 49 → 50.
+
+**OWNER DECISION NEEDED — the Market row.** It spreads all 21 countries: 1485px of
+content in a 343px window, ~1142px (over 4 screens) of sideways scroll — the same
+"غير مضغوطة" shape just removed from the section strips, and now a **second control
+for the same `marketCountry`** the compact header button already sets. Two recorded
+intents disagree:
+- FilterSheet comment: *"a universal axis ... one compact, balanced inline row (not buried under rent only, not a separate oversized button)"*
+- Guard @270, dated 2026-07-20: *"country + currency collapse into ONE compact icon — same pattern as every section"*
+Note the row does not meet its **own** stated goal either: 1485px is not "compact".
+Not actioned unilaterally — measured, and put to the owner.
