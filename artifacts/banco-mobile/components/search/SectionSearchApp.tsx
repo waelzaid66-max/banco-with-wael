@@ -35,6 +35,7 @@ import { SearchResultsSurface } from "@/components/search/SearchResultsSurface";
 import { SearchResultsMap } from "@/components/search/SearchResultsMap";
 import { FilterSheet } from "@/components/search/FilterSheet";
 import { FilterPillSelect } from "@/components/search/FilterPillSelect";
+import { axisShape, type SectionChrome } from "@/components/search/sectionChrome";
 import { MiniAppBottomNav } from "@/components/MiniAppBottomNav";
 import {
   Category,
@@ -156,6 +157,13 @@ export interface SectionSearchAppProps {
   subtitleKey?: string;
   /** Optional Feather icon name overriding the CategoryIcon in the header. */
   headerIcon?: React.ComponentProps<typeof Feather>["name"];
+  /**
+   * How THIS section renders its own axes. Owner rule: sections must not share a
+   * shape by accident — cars, real-estate, factories and materials segment on
+   * genuinely different things, so each screen states its own and this component
+   * executes it. Omitted axes keep the shipped chip behaviour (see sectionChrome).
+   */
+  chrome?: SectionChrome;
 }
 
 /**
@@ -174,6 +182,7 @@ export function SectionSearchApp({
   titleKey,
   subtitleKey,
   headerIcon,
+  chrome,
 }: SectionSearchAppProps) {
   const colors = useColors();
   const { t, isRTL } = useI18n();
@@ -1288,51 +1297,85 @@ export function SectionSearchApp({
         {(showListingMode || showEngineChips || showIndustrialChips || isRealEstateSection) ? (
           <View style={[styles.chipStripDivider, { backgroundColor: colors.border }]} />
         ) : null}
-        {/* Offer axis and engine axis are PILLS, not chip rows — the same shape
-            Stay already uses for its rental terms. Spread as chips they were
-            999px inside a 375px window; wrapped they became four rows and 163px
-            of chrome before the first car, with two adjacent "All" chips from
-            two different axes reading as one wall. Each pill now shows its
-            CURRENT VALUE, so the user sees what is applied without opening
-            anything, and the screen goes back to the inventory. */}
+        {/* Offer + engine axes: the SECTION decides the shape, this only renders
+            it. Cars ask for pills because their engine axis carries five values
+            (new / used / imported / bank / islamic instalment) which measured
+            999px inside a 375px window as chips. A section whose axis is short
+            and constantly flicked asks for chips instead and keeps its taps. */}
         {showListingMode ? (
-          <FilterPillSelect
-            icon="tag"
-            title={t("search.listingModeAll")}
-            options={[
-              { value: "sale", label: t("search.listingModeSale") },
-              { value: "buy", label: t("search.listingModeBuy") },
-            ]}
-            selected={criteria.listingMode}
-            allValue="all"
-            allLabel={t("search.offerAny")}
-            onSelect={(v) => {
-              playSound("tap");
-              Haptics.selectionAsync();
-              selectListingMode(v as "all" | "sale" | "buy");
-            }}
-            accentColor={accent}
-            testID="section-listing-mode"
-          />
+          axisShape(chrome, "listingMode") === "pill" ? (
+            <FilterPillSelect
+              icon="tag"
+              title={t("search.listingModeAll")}
+              options={[
+                { value: "sale", label: t("search.listingModeSale") },
+                { value: "buy", label: t("search.listingModeBuy") },
+              ]}
+              selected={criteria.listingMode}
+              allValue="all"
+              allLabel={t("search.offerAny")}
+              onSelect={(v) => {
+                playSound("tap");
+                Haptics.selectionAsync();
+                selectListingMode(v as "all" | "sale" | "buy");
+              }}
+              accentColor={accent}
+              testID="section-listing-mode"
+            />
+          ) : (
+            (["all", "sale", "buy"] as const).map((mode) => {
+              const active = criteria.listingMode === mode;
+              return (
+                <Pressable
+                  key={mode}
+                  onPress={() => { playSound("tap"); Haptics.selectionAsync(); selectListingMode(mode); }}
+                  style={[styles.stripChip, { backgroundColor: active ? accent : colors.secondary }]}
+                  testID={`section-listing-mode-${mode}`}
+                >
+                  <AppText style={[styles.stripChipText, { color: active ? "#FFFFFF" : colors.mutedForeground }]}>
+                    {mode === "all" ? t("search.listingModeAll") : mode === "sale" ? t("search.listingModeSale") : t("search.listingModeBuy")}
+                  </AppText>
+                </Pressable>
+              );
+            })
+          )
         ) : null}
         {showEngineChips ? (
-          <FilterPillSelect
-            icon="sliders"
-            title={t("search.type")}
-            options={stripEngineList
-              .filter((e) => e.key !== "all")
-              .map((e) => ({ value: e.key, label: t(e.i18nKey) }))}
-            selected={activeOfferKey ?? "all"}
-            allValue="all"
-            allLabel={t("search.typeAny")}
-            onSelect={(v) => {
-              playSound("tap");
-              Haptics.selectionAsync();
-              selectEngine(v);
-            }}
-            accentColor={accent}
-            testID="section-engine"
-          />
+          axisShape(chrome, "engines") === "pill" ? (
+            <FilterPillSelect
+              icon="sliders"
+              title={t("search.type")}
+              options={stripEngineList
+                .filter((e) => e.key !== "all")
+                .map((e) => ({ value: e.key, label: t(e.i18nKey) }))}
+              selected={activeOfferKey ?? "all"}
+              allValue="all"
+              allLabel={t("search.typeAny")}
+              onSelect={(v) => {
+                playSound("tap");
+                Haptics.selectionAsync();
+                selectEngine(v);
+              }}
+              accentColor={accent}
+              testID="section-engine"
+            />
+          ) : (
+            stripEngineList.map((e) => {
+              const active = activeOfferKey === e.key;
+              return (
+                <Pressable
+                  key={e.key}
+                  onPress={() => { playSound("tap"); Haptics.selectionAsync(); selectEngine(e.key); }}
+                  style={[styles.stripChip, { backgroundColor: active ? accent : colors.secondary }]}
+                  testID={`engine-${e.key}`}
+                >
+                  <AppText style={[styles.stripChipText, { color: active ? "#FFFFFF" : colors.mutedForeground }]}>
+                    {t(e.i18nKey)}
+                  </AppText>
+                </Pressable>
+              );
+            })
+          )
         ) : null}
         {/* RE: single Wanted chip (is_request) — not the full listingMode trio
             that duplicated "For sale" next to offer "Sale/تمليك". */}

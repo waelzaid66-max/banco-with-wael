@@ -430,6 +430,64 @@ test("SectionSearchApp keeps engine chips during facet load (no reload flash)", 
   );
 });
 
+test("Each section declares its OWN chrome — the shared mini-app never decides for it", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+
+  // Owner 2026-07-28: «ممنوع الخلط بين الأقسام — كل قسم له طبيعة خاصة». The
+  // failure this guards was architectural, not visual: the shared component was
+  // choosing the shape of every section's controls, so one judgement about cars
+  // silently became the rule for real-estate, factories and materials — sections
+  // that segment on genuinely different things. The decision now lives in each
+  // section's own screen and this component only executes it.
+  assert.match(
+    section,
+    /chrome\?:\s*SectionChrome/,
+    "SectionSearchApp must accept the section's chrome rather than inventing one",
+  );
+  assert.match(
+    section,
+    /axisShape\(chrome,\s*"listingMode"\)/,
+    "the offer axis shape must come from the section, not a hardcoded choice",
+  );
+  assert.match(
+    section,
+    /axisShape\(chrome,\s*"engines"\)/,
+    "the engine axis shape must come from the section",
+  );
+  // Both shapes must still exist, or "the section decides" is a decision with
+  // only one possible answer.
+  assert.match(section, /<FilterPillSelect/, "the pill shape must be available");
+  assert.match(
+    section,
+    /testID=\{`section-listing-mode-\$\{mode\}`\}/,
+    "the chips shape must still be available for sections that want it",
+  );
+
+  // …and every section screen must actually state its own, so none inherits a
+  // shape by accident.
+  for (const [file, expected] of [
+    ["car", /listingMode:\s*"pill"[\s\S]*engines:\s*"pill"/],
+    ["real-estate", /engines:\s*"chips"/],
+    ["factories", /engines:\s*"chips"/],
+    ["materials", /engines:\s*"chips"/],
+  ]) {
+    const screen = fs.readFileSync(
+      path.join(APP_ROOT, "app", "section", `${file}.tsx`),
+      "utf8",
+    );
+    assert.match(
+      screen,
+      /chrome=\{\{/,
+      `app/section/${file}.tsx must declare its own chrome`,
+    );
+    assert.match(
+      screen,
+      expected,
+      `app/section/${file}.tsx must state the shape its axes actually need`,
+    );
+  }
+});
+
 test("The primary strip wraps and can never eat the results column", () => {
   const section = fs.readFileSync(SECTION_APP, "utf8");
   // Measured in cars before this changed: 999px of chips inside a 375px window,
