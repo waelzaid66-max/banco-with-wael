@@ -11,18 +11,18 @@ import {
   getGetMyListingsQueryKey,
   getGetMyMetricsQueryKey,
   getGetMySocialLinksQueryKey,
+  getMyListings,
   setMySocialLinks,
   promoteUpload,
   updateMe,
   useGetMe,
-  useGetMyListings,
   useGetMyMetrics,
   useGetMySocialLinks,
   type FeedItem,
   type SocialLink,
   type SocialLinkPlatform,
 } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -179,8 +179,24 @@ export default function ProfileScreen() {
     query: { queryKey: getGetMySocialLinksQueryKey(), enabled: !!user, staleTime: 60_000 },
   });
   // The Instagram-style grid of the caller's OWN real listings (role-agnostic).
-  const listingsQuery = useGetMyListings(undefined, {
-    query: { queryKey: getGetMyListingsQueryKey(), enabled: !!user, staleTime: 30_000 },
+  //
+  // Paged, because the endpoint always was. `GET /me/listings` defaults to 20 per
+  // page and returns a cursor, but this screen only ever read the first page and
+  // never followed it — so a dealer with 50 listings saw 20 of their OWN stock and
+  // had no way to reach the rest, with nothing on screen admitting more existed.
+  // Silent truncation of a seller's own inventory is the worst kind: they conclude
+  // their listings were lost.
+  const listingsQuery = useInfiniteQuery({
+    queryKey: [...getGetMyListingsQueryKey(), "paged"],
+    enabled: !!user,
+    staleTime: 30_000,
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) => getMyListings({ cursor: pageParam }),
+    // Trust the server's has_next rather than inferring from page length — a total
+    // that happens to be an exact multiple of the page size would otherwise cause
+    // one phantom fetch that returns nothing.
+    getNextPageParam: (last) =>
+      last.meta?.has_next ? last.meta.cursor : undefined,
   });
   // Refetch the profile grid when the user publishes a listing so it appears
   // immediately — the profile tab stays mounted, so react-query won't refetch on
@@ -899,7 +915,8 @@ export default function ProfileScreen() {
         route: "/business/requests",
       });
     }
-    const posts = listingsQuery.data?.data ?? [];
+    // Every page fetched so far, flattened — the grid grows as the seller pages.
+    const posts = listingsQuery.data?.pages.flatMap((p) => p.data) ?? [];
     const hasBookableRentals = filterBookableListings(posts).length > 0;
     // Banks are not rental hosts — do not push the rental hub from FI role alone.
     const showRentalHub = hasBookableRentals || (isBusiness && !isFi);
@@ -1770,6 +1787,7 @@ export default function ProfileScreen() {
             </Pressable>
           </View>
         ) : (
+          <>
           <View style={styles.postsGrid}>
             {posts.map((item) => (
               <Pressable
@@ -1883,6 +1901,33 @@ export default function ProfileScreen() {
               </Pressable>
             ))}
           </View>
+          {/* The rest of the seller's own stock. Rendered only when the server
+              says more exist, so a seller with one page never sees a dead control. */}
+          {listingsQuery.hasNextPage ? (
+            <Pressable
+              onPress={() => {
+                Haptics.selectionAsync();
+                listingsQuery.fetchNextPage();
+              }}
+              disabled={listingsQuery.isFetchingNextPage}
+              style={[
+                styles.postsLoadMore,
+                { borderColor: colors.border, backgroundColor: colors.card },
+              ]}
+              testID="profile-load-more-listings"
+              accessibilityRole="button"
+              accessibilityLabel={t("profile.loadMoreListings")}
+            >
+              {listingsQuery.isFetchingNextPage ? (
+                <ActivityIndicator size="small" color={colors.mutedForeground} />
+              ) : (
+                <AppText style={[styles.postsLoadMoreText, { color: colors.foreground }]}>
+                  {t("profile.loadMoreListings")}
+                </AppText>
+              )}
+            </Pressable>
+          ) : null}
+          </>
         )}
 
         <Modal
@@ -3612,6 +3657,19 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   postsCreateText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
+  postsLoadMore: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  postsLoadMoreText: {
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
   },
