@@ -6,6 +6,7 @@ import { listingMedia, listings, users } from "@workspace/db/schema";
 import { ObjectNotFoundError, UploadOwnershipError } from "../lib/objectStorage";
 import { getObjectStorageService } from "../lib/objectStorageProvider";
 import { publicVisibilityConditions } from "../lib/feedVisibility";
+import { getObjectAclPolicy } from "../lib/objectAcl";
 import {
   recordUploadClaim,
   assertCallerMayUseUpload,
@@ -185,7 +186,27 @@ export async function serveObjectHandler(req: Request, res: Response): Promise<v
     });
     res.setHeader("Content-Type", contentType);
     res.setHeader("X-Content-Type-Options", "nosniff");
-    res.setHeader("Cache-Control", "public, max-age=86400");
+
+    // Cache scope must follow the object's ACL, not the happy path.
+    //
+    // Every successful response here used to be marked `public, max-age=86400`,
+    // including objects that are readable only by their owner — business
+    // verification documents, identity photos, private chat media. Directly that
+    // is merely wrong; behind a CDN it is a data leak, and this repo is being
+    // prepared for exactly that: the owner's own request would be cached at the
+    // edge for a day, and the next person to open the same URL would be served
+    // those bytes without the request ever reaching this handler, so the ACL
+    // check above would never run for them.
+    //
+    // The authorization decision is untouched — this only decides who may STORE
+    // the reply. Public listing media keeps the identical 24h public caching it
+    // has today; anything else becomes uncacheable by shared caches.
+    const aclPolicy = await getObjectAclPolicy(objectFile);
+    const isPublicObject = aclPolicy?.visibility === "public";
+    res.setHeader(
+      "Cache-Control",
+      isPublicObject ? "public, max-age=86400" : "private, no-store",
+    );
 
     if (response.body) {
       const nodeStream = Readable.fromWeb(response.body as ReadableStream<Uint8Array>);
