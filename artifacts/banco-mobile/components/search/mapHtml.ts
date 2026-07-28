@@ -98,7 +98,44 @@ export function feedItemsToMarkers(items: FeedItem[]): MapMarker[] {
  * Tapping a count bubble drills in; tapping a single pin posts
  * {type:"select", id} so the host can reveal the listing card.
  */
-export function buildMapHtml(markers: MapMarker[], theme: MapTheme): string {
+export function buildMapHtml(
+  markers: MapMarker[],
+  theme: MapTheme,
+  // Initial framing for the selected market. Optional so existing callers keep
+  // working; Egypt stays the default exactly as before.
+  center?: { lat: number; lng: number; zoom: number },
+  // "Near me" area: drawn as a soft circle so the user SEES the radius being
+  // searched instead of guessing. Optional — omitted callers render as before.
+  near?: { lat: number; lng: number; radiusKm: number },
+): string {
+  const lat = center?.lat ?? 26.8;
+  const lng = center?.lng ?? 30.8;
+  const zoom = center?.zoom ?? 6;
+  // Values are coerced to finite numbers before being inlined into the page.
+  const nearLat = Number(near?.lat);
+  const nearLng = Number(near?.lng);
+  const nearMeters = Math.round(Number(near?.radiusKm) * 1000);
+  const nearScript =
+    near && Number.isFinite(nearLat) && Number.isFinite(nearLng) && nearMeters > 0
+      ? `
+    L.circle([${nearLat}, ${nearLng}], {
+      radius: ${nearMeters},
+      color: "${theme.primary}",
+      weight: 2,
+      opacity: 0.9,
+      fillColor: "${theme.primary}",
+      fillOpacity: 0.08,
+      interactive: false
+    }).addTo(map);
+    L.circleMarker([${nearLat}, ${nearLng}], {
+      radius: 5,
+      color: "#ffffff",
+      weight: 2,
+      fillColor: "${theme.primary}",
+      fillOpacity: 1,
+      interactive: false
+    }).addTo(map);`
+      : "";
   // JSON is safe inside a <script> except for a literal "</script>"; escaping
   // "<" to its unicode form neutralizes that without changing the parsed data.
   const json = JSON.stringify(markers).replace(/</g, "\\u003c");
@@ -208,12 +245,13 @@ export function buildMapHtml(markers: MapMarker[], theme: MapTheme): string {
     }
     if (!window.L) { post({ type: "error" }); return; }
     var map = L.map("map", { zoomControl: false, attributionControl: true })
-      .setView([26.8, 30.8], 6);
+      .setView([${lat}, ${lng}], ${zoom});
     L.control.zoom({ position: "topright" }).addTo(map);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: "&copy; OpenStreetMap"
     }).addTo(map);
+${nearScript}
 
     // Layer 1 — the loaded page, shown instantly so the map is never blank.
     var group = L.markerClusterGroup

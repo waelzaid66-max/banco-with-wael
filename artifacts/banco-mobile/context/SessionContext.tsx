@@ -10,11 +10,18 @@ import React, {
   useState,
 } from "react";
 import {
+  createSavedSearch,
+  deleteSavedSearch,
   FeedItem,
   getListing,
   getSavedListings,
   toggleSaveListing,
 } from "@workspace/api-client-react";
+// Pure data helper (no RN/React deps) — maps browse categories onto the three
+// the API stores: car · real_estate · industrial (facilities + materials both
+// being industrial). `all` maps to undefined, which the server reads as
+// "match any category".
+import { apiCategoryFor, type Category } from "@workspace/taxonomy/categories";
 
 import { useAuthGate } from "@/hooks/useAuthGate";
 
@@ -70,9 +77,26 @@ export type SavedSearch = {
    * own SearchCriteria. Legacy saves without it keep working.
    */
   criteria?: object;
+  /**
+   * Server-side row id, set once the search is persisted through
+   * `POST /v1/me/saved-searches`. It is what makes the alert pipeline work:
+   * the server scans `saved_searches` on every publish and sends the
+   * "new listing matches your search" notification + email. It also lets
+   * `removeSearch` delete the row instead of orphaning it, and lets the same
+   * search follow the user across devices. Absent on records saved before this
+   * wire existed, or while the create request is still in flight/offline.
+   */
+  remoteId?: string;
 };
 
-type SavedSearchInput = Omit<SavedSearch, "id" | "savedAt">;
+type SavedSearchInput = Omit<SavedSearch, "id" | "savedAt" | "remoteId"> & {
+  /**
+   * Human label shown back to the user inside the alert ("a new listing matches
+   * «…»") and its email. Callers own it because they hold the i18n dictionary;
+   * `saveSearch` falls back to the query text so the name is never a raw slug.
+   */
+  name?: string;
+};
 
 function searchSignature(s: SavedSearchInput): string {
   return [
@@ -355,21 +379,80 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       const id = searchSignature(input);
+      let alreadySaved = false;
       setSavedSearches((prev) => {
-        if (prev.some((s) => s.id === id)) return prev;
+        if (prev.some((s) => s.id === id)) {
+          alreadySaved = true;
+          return prev;
+        }
         const next = [...prev, { ...input, id, savedAt: Date.now() }];
         scheduleStorageWrite(SEARCHES_KEY, JSON.stringify(next));
         return next;
       });
+      if (alreadySaved) return;
+
+      // Persist to the backend — this is what arms the alert. The server scans
+      // `saved_searches` on every publish and sends "a new listing matches your
+      // search" as a notification AND an email. Kept identical in shape to
+      // toggleSave above: optimistic local write first, server call second,
+      // revert the local write if the server rejects it, so an offline or
+      // failed save never leaves a search the user believes is being watched.
+      const trimmedQuery = input.q.trim();
+      createSavedSearch({
+        name: input.name?.trim() || trimmedQuery || "Saved search",
+        query: trimmedQuery || null,
+        // undefined (category "all") is sent as null = match any category.
+        category: apiCategoryFor(input.category as Category) ?? null,
+        // The full criteria snapshot rides along so a future server-side matcher
+        // can narrow further without another migration; today the server matches
+        // on category + price + query text.
+        filters: (input.criteria ?? null) as Record<string, unknown> | null,
+        price_min: input.minPrice.trim() || null,
+        price_max: input.maxPrice.trim() || null,
+        alerts_enabled: true,
+      })
+        .then((res) => {
+          const remoteId = res?.data?.id;
+          if (!remoteId) return;
+          setSavedSearches((prev) => {
+            const next = prev.map((s) => (s.id === id ? { ...s, remoteId } : s));
+            scheduleStorageWrite(SEARCHES_KEY, JSON.stringify(next));
+            return next;
+          });
+        })
+        .catch(() => {
+          setSavedSearches((prev) => {
+            const next = prev.filter((s) => s.id !== id);
+            scheduleStorageWrite(SEARCHES_KEY, JSON.stringify(next));
+            return next;
+          });
+        });
     },
     [isSignedIn, requireAuth, scheduleStorageWrite],
   );
 
   const removeSearch = useCallback((id: string) => {
+    let removed: SavedSearch | undefined;
     setSavedSearches((prev) => {
+      removed = prev.find((s) => s.id === id);
       const next = prev.filter((s) => s.id !== id);
       scheduleStorageWrite(SEARCHES_KEY, JSON.stringify(next));
       return next;
+    });
+    // Delete the server row too, or the user keeps receiving alerts for a search
+    // they removed — worse than never having had the alert. Records saved before
+    // this wire have no remoteId and are local-only, so there is nothing to call.
+    const remoteId = removed?.remoteId;
+    if (!remoteId) return;
+    deleteSavedSearch(remoteId).catch(() => {
+      // Server still holds it — put it back so the list matches reality and the
+      // user can retry, rather than silently diverging from what is being watched.
+      setSavedSearches((prev) => {
+        if (!removed || prev.some((s) => s.id === removed!.id)) return prev;
+        const next = [...prev, removed];
+        scheduleStorageWrite(SEARCHES_KEY, JSON.stringify(next));
+        return next;
+      });
     });
   }, [scheduleStorageWrite]);
 

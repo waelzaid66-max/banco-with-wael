@@ -68,3 +68,8 @@ attached_assets/
 .env
 .env.*
 !.env*.example
+
+# Local static preview builds (rebuilt on demand, never committed)
+artifacts/banco-mobile/web-preview/
+artifacts/banco-mobile/web-preview-prev/
+artifacts/banco-mobile/web-preview-next/

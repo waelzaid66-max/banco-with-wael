@@ -67,6 +67,8 @@ function iconForType(type: Notification["type"], colors: ReturnType<typeof useCo
       return { name: "star", color: "#F5A623", bg: "rgba(245,166,35,0.12)" };
     case "booking":
       return { name: "calendar", color: colors.primary, bg: colors.secondary };
+    case "car_import":
+      return { name: "truck", color: "#0EA5E9", bg: "rgba(14,165,233,0.12)" };
     default:
       return { name: "bell", color: colors.mutedForeground, bg: colors.secondary };
   }

@@ -50,6 +50,49 @@ const listing = fs.readFileSync(LISTING, "utf8");
 
 // ─── 1. Token cache → session survives Expo Go restart ───────────────────────
 
+test("Saving a search reaches the SERVER, or the new-listing alert stays dark", () => {
+  const ctx = fs.readFileSync(
+    path.join(APP_ROOT, "context", "SessionContext.tsx"),
+    "utf8",
+  );
+  // The whole "a new listing matches your saved search" pipeline already existed
+  // server-side: the saved_searches table, the new_match notification type, the
+  // four CRUD endpoints, the per-user email channel, and notifyNewMatch running
+  // on every publish. It produced nothing for anyone, because the app wrote
+  // saved searches to AsyncStorage and never called the API — so every user's
+  // server row set was empty and the matcher had nothing to match. This guard
+  // exists because that failure is SILENT: no crash, no error, just an alert
+  // that never arrives, which is exactly the kind of break that survives review.
+  assert.match(
+    ctx,
+    /createSavedSearch\s*\(/,
+    "saveSearch must POST the search to the server — local-only leaves new_match dark",
+  );
+  assert.match(
+    ctx,
+    /alerts_enabled:\s*true/,
+    "the row must be created with alerts enabled, or notifyNewMatch skips it",
+  );
+  assert.match(
+    ctx,
+    /deleteSavedSearch\s*\(/,
+    "removeSearch must delete the server row, or alerts outlive the search",
+  );
+  assert.match(
+    ctx,
+    /remoteId/,
+    "the server id must be stored locally, or removeSearch cannot delete the row",
+  );
+  // Server enum is car | real_estate | industrial; facilities and materials both
+  // collapse into industrial. Sending a raw browse category would be rejected —
+  // or worse, stored and then never matched.
+  assert.match(
+    ctx,
+    /apiCategoryFor\s*\(/,
+    "the browse category must be mapped through apiCategoryFor before being sent",
+  );
+});
+
 test("ClerkProvider configured with tokenCache (SecureStore-backed session persistence)", () => {
   assert.match(
     layout,

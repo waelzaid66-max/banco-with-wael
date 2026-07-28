@@ -46,6 +46,17 @@ export interface ListingDraftV1 {
   specs: Record<string, string>;
   customSpecs: DraftCustomSpec[];
   carBrandValue: string | null;
+  /**
+   * The brand's display name, saved alongside its value.
+   *
+   * Catalogue brands can be looked up from `carBrandValue` alone, but a brand the
+   * seller typed themselves ("Cessna", "Azimut" — anything the catalogue's 410
+   * entries do not cover) exists ONLY as what they wrote. Restoring the draft by
+   * searching the catalogue returned nothing for those, so the brand vanished
+   * silently and the seller was blocked again by the brand gate they had already
+   * satisfied. Optional so drafts written before this field still load.
+   */
+  carBrandLabel?: string | null;
   carModel: string | null;
   industrialType: string | null;
   carOrigin: "local" | "imported" | null;
@@ -171,6 +182,17 @@ export function parseListingDraft(raw: string | null, now: number = Date.now()):
   const customSpecs = parseCustomSpecs(o.customSpecs);
   if (!customSpecs) return null;
   if (!(o.carBrandValue === null || isStr(o.carBrandValue))) return null;
+  // Optional and additive: older drafts have no label, and must still load rather
+  // than being discarded wholesale for a field that did not exist when saved.
+  if (
+    !(
+      o.carBrandLabel === undefined ||
+      o.carBrandLabel === null ||
+      isStr(o.carBrandLabel)
+    )
+  ) {
+    return null;
+  }
   if (!(o.carModel === null || isStr(o.carModel))) return null;
   if (!(o.industrialType === null || isStr(o.industrialType))) return null;
   if (!(o.carOrigin === null || o.carOrigin === "local" || o.carOrigin === "imported")) return null;
@@ -194,6 +216,7 @@ export function parseListingDraft(raw: string | null, now: number = Date.now()):
     specs,
     customSpecs,
     carBrandValue: o.carBrandValue as string | null,
+    carBrandLabel: (o.carBrandLabel ?? null) as string | null,
     carModel: o.carModel as string | null,
     industrialType: o.industrialType as string | null,
     carOrigin: o.carOrigin as ListingDraftV1["carOrigin"],

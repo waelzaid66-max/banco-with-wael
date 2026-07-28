@@ -6,6 +6,7 @@ const en = {
     retry: "Retry",
     loading: "Loading…",
     seeAll: "See all",
+    more: "More options",
     cancel: "Cancel",
     delete: "Delete",
     save: "Save",
@@ -395,6 +396,10 @@ const en = {
   search: {
     placeholder: "Search cars, property, machines…",
     filters: "Filters",
+    // Section label for the real-estate refinement row (compound / instalment
+    // plans / furnished). It must NOT reuse `filters` — that is the sheet's own
+    // title, and the same word at two levels of one screen reads as a bug.
+    options: "Options",
     category: "Category",
     location: "Location",
     price: "Price",
@@ -405,6 +410,12 @@ const en = {
     listingModeAll: "All",
     listingModeSale: "For sale",
     listingModeBuy: "Wanted",
+    // Resting labels for the two strip pills. A pill that just says "All" next
+    // to another pill that also says "All" tells the user nothing about which
+    // axis it controls — the label has to name the axis when nothing narrows it,
+    // then switch to the chosen value. Same pattern as Stay's "All types".
+    offerAny: "All offers",
+    typeAny: "All types",
     minPrice: "Min",
     maxPrice: "Max",
     paymentType: "Payment",
@@ -449,6 +460,7 @@ const en = {
     yearTo: "To",
     nearMe: "Near me",
     nearMeDenied: "Location permission is required to search near you.",
+    kmShort: "km",
     allEgypt: "All Egypt",
     discover: {
       categories: "Browse categories",
@@ -520,6 +532,22 @@ const en = {
     emptyTitle: "No import requests yet",
     emptyText: "Browse imported cars and contact a dealer to start your import journey",
     viewRfqs: "View my requests",
+    myOrdersTitle: "My import orders",
+    requestCta: "Request a car import",
+    stageCancelled: "Cancelled",
+    reqTitle: "Request a car import",
+    reqSub: "Tell us what you want to import — we'll source it and keep you posted through every stage.",
+    reqVehicle: "Vehicle",
+    reqVehiclePh: "e.g. Toyota Corolla 2022",
+    reqOrigin: "Import from (country)",
+    reqOriginPh: "e.g. Germany",
+    reqBudget: "Budget",
+    reqBudgetPh: "Your target budget",
+    reqNote: "Notes",
+    reqNotePh: "Colour, trim, condition — anything specific",
+    reqSubmit: "Submit request",
+    reqSuccess: "Request sent — we'll start reviewing it.",
+    reqError: "Couldn't send the request. Please try again.",
   },
   locationPicker: {
     title: "Location",
@@ -734,6 +762,7 @@ const en = {
     fiMode: "Financial institution",
     fiModeHint: "Open your financing inbox and institution hub — not a seller storefront",
     fiOpenBanks: "Open Banks & Financiers",
+    loadMoreListings: "Show more listings",
     postListing: "Post a listing",
     language: "Language",
     arabic: "العربية",
@@ -798,6 +827,7 @@ const en = {
     deleteAuthPrompt: "Confirm your identity to delete your account",
     continueWithGoogle: "Continue with Google",
     continueWithApple: "Continue with Apple",
+    continueWithFacebook: "Continue with Facebook",
     orDivider: "or",
     secureNotice:
       "Bank-grade security. We never post on your behalf or share your data.",
@@ -817,6 +847,9 @@ const en = {
     onboardingContinue: "Continue",
     settingUpAccount: "Setting up your account…",
     accountTypeError: "Couldn't save your account type. Please try again.",
+    demoteBlockedTitle: "Can't switch to personal",
+    demoteBlockedBody:
+      "Company and financial-institution accounts can't be switched to personal from the app. Contact BANCO support if you need a change.",
     statListings: "Listings",
     statActive: "Active",
     statYears: "Years",
@@ -1435,6 +1468,10 @@ const en = {
       joinDesc:
         "Register your institution on BANCO's ads marketplace. After review, an admin links your account so forwarded financing requests from listings can reach your team inbox.",
       joinCta: "Join as an institution",
+      awaitingLinkTitle: "Institution link pending",
+      awaitingLinkDesc:
+        "Your financial-institution account is submitted. Inbox access opens only after a BANCO admin links your institution — verification alone does not open the inbox.",
+      awaitingLinkCta: "Check verification status",
       note: "BANCO is a verified ads platform — financing terms are set entirely by the institution.",
       inboxTitle: "Financing requests inbox",
       inboxEmpty: "No forwarded requests yet — Banco sends them here after review.",
@@ -1993,6 +2030,7 @@ const ar: typeof en = {
     retry: "إعادة المحاولة",
     loading: "بيحمّل…",
     seeAll: "الكل",
+    more: "خيارات إضافية",
     cancel: "إلغاء",
     delete: "حذف",
     save: "حفظ",
@@ -2382,6 +2420,7 @@ const ar: typeof en = {
   search: {
     placeholder: "دوّر على عربيات، عقارات، ماكينات…",
     filters: "فلاتر",
+    options: "خيارات",
     category: "الفئة",
     location: "المكان",
     price: "السعر",
@@ -2392,6 +2431,8 @@ const ar: typeof en = {
     listingModeAll: "الكل",
     listingModeSale: "معروض للبيع",
     listingModeBuy: "مطلوب",
+    offerAny: "كل العروض",
+    typeAny: "كل الأنواع",
     minPrice: "من",
     maxPrice: "إلى",
     paymentType: "الدفع",
@@ -2436,6 +2477,7 @@ const ar: typeof en = {
     yearTo: "إلى",
     nearMe: "قريب مني",
     nearMeDenied: "يلزم السماح بالموقع للبحث بالقرب منك.",
+    kmShort: "كم",
     allEgypt: "كل مصر",
     discover: {
       categories: "تصفّح الأقسام",
@@ -2506,6 +2548,22 @@ const ar: typeof en = {
     emptyTitle: "لا توجد طلبات استيراد بعد",
     emptyText: "تصفّح السيارات المستوردة واتصل بوكيل لبدء رحلة استيرادك",
     viewRfqs: "عرض طلباتي",
+    myOrdersTitle: "طلبات الاستيراد بتاعتي",
+    requestCta: "اطلب استيراد سيارة",
+    stageCancelled: "ملغي",
+    reqTitle: "اطلب استيراد سيارة",
+    reqSub: "قولنا عايز تستورد إيه — إحنا نجيبهولك ونطمّنك في كل مرحلة.",
+    reqVehicle: "السيارة",
+    reqVehiclePh: "مثلاً تويوتا كورولا 2022",
+    reqOrigin: "الاستيراد من (بلد)",
+    reqOriginPh: "مثلاً ألمانيا",
+    reqBudget: "الميزانية",
+    reqBudgetPh: "ميزانيتك المستهدفة",
+    reqNote: "ملاحظات",
+    reqNotePh: "اللون، الفئة، الحالة — أي حاجة محددة",
+    reqSubmit: "إرسال الطلب",
+    reqSuccess: "الطلب اتبعت — هنبدأ نراجعه.",
+    reqError: "الطلب مابعتش. حاول تاني.",
   },
   locationPicker: {
     title: "المكان",
@@ -2719,6 +2777,7 @@ const ar: typeof en = {
     fiMode: "مؤسسة مالية",
     fiModeHint: "افتح صندوق طلبات التمويل وهب المؤسسة — مش واجهة بائع",
     fiOpenBanks: "افتح البنوك والممولين",
+    loadMoreListings: "عرض إعلانات أكثر",
     postListing: "أضف إعلان",
     language: "اللغة",
     arabic: "العربية",
@@ -2783,6 +2842,7 @@ const ar: typeof en = {
     deleteAuthPrompt: "أكّد هويتك لحذف الحساب",
     continueWithGoogle: "المتابعة عبر Google",
     continueWithApple: "المتابعة عبر Apple",
+    continueWithFacebook: "المتابعة عبر Facebook",
     orDivider: "أو",
     secureNotice: "حماية بمستوى البنوك. عمرنا مننشر باسمك ولا نشارك بياناتك.",
     fraudNotice:
@@ -2801,6 +2861,9 @@ const ar: typeof en = {
     onboardingContinue: "متابعة",
     settingUpAccount: "بنجهّز حسابك…",
     accountTypeError: "تعذّر حفظ نوع الحساب. حاول تاني.",
+    demoteBlockedTitle: "مش هينفع تتحوّل لشخصي",
+    demoteBlockedBody:
+      "حسابات الشركة والمؤسسة المالية ماينفعش تتحول لشخصي من التطبيق. تواصل مع دعم بانكو لو محتاج تغيير.",
     statListings: "إعلانات",
     statActive: "نشطة",
     statYears: "سنوات",
@@ -3416,6 +3479,10 @@ const ar: typeof en = {
       joinDesc:
         "سجّل مؤسستك على سوق إعلانات بانكو. بعد المراجعة، الأدمن بيربط حسابك عشان طلبات التمويل المحوّلة من الإعلانات توصل لصندوق فريقك.",
       joinCta: "انضم كمؤسسة",
+      awaitingLinkTitle: "ربط المؤسسة قيد الانتظار",
+      awaitingLinkDesc:
+        "حساب المؤسسة المالية اتبعت. صندوق الوارد يفتح فقط بعد ما أدمن بانكو يربط حساب مؤسستك — التوثيق لوحده مش بيفتح الصندوق.",
+      awaitingLinkCta: "راجع حالة التوثيق",
       note: "بانكو منصة إعلانات موثّقة — شروط التمويل تحددها المؤسسة بالكامل.",
       inboxTitle: "صندوق طلبات التمويل",
       inboxEmpty: "لا توجد طلبات محوّلة بعد — بانكو بترسلها هنا بعد الدراسة.",

@@ -537,6 +537,7 @@ export const NotificationType = {
   payment_success: 'payment_success',
   payment_failed: 'payment_failed',
   subscription_expiring: 'subscription_expiring',
+  car_import: 'car_import',
 } as const;
 
 export type NotificationData = { [key: string]: unknown } | null;
@@ -673,6 +674,7 @@ export const NotificationPreferenceType = {
   payment_success: 'payment_success',
   payment_failed: 'payment_failed',
   subscription_expiring: 'subscription_expiring',
+  car_import: 'car_import',
 } as const;
 
 /**
@@ -1044,8 +1046,7 @@ export const AdminUserStaffRole = {
 } as const;
 
 /**
- * Business / FI onboarding payload used for KYC review.
- * Null when the user never submitted business verification.
+ * Business / FI onboarding payload used for KYC review (activity, names, city, document URLs). Null when the user never submitted business verification.
  */
 export type AdminUserCompanyDetails = {
   activity_type?: string | null;
@@ -1055,7 +1056,7 @@ export type AdminUserCompanyDetails = {
   city?: string | null;
   /** Uploaded verification document / ID photo URLs. */
   documents?: string[];
-};
+} | null;
 
 export interface AdminUser {
   id?: string;
@@ -1073,12 +1074,8 @@ export interface AdminUser {
   wallet_balance?: string;
   listing_count?: number;
   created_at?: string;
-  /**
-   * Business / FI onboarding payload used for KYC review (activity,
-   * names, city, document URLs). Null when the user never submitted
-   * business verification.
-   */
-  company_details?: AdminUserCompanyDetails | null;
+  /** Business / FI onboarding payload used for KYC review (activity, names, city, document URLs). Null when the user never submitted business verification. */
+  company_details?: AdminUserCompanyDetails;
 }
 
 export type AdminListingStatus = typeof AdminListingStatus[keyof typeof AdminListingStatus];
@@ -1763,6 +1760,77 @@ export const UpdateBookingBodyAction = {
 export interface UpdateBookingBody {
   /** confirm/reject are host-only (on a requested booking); cancel is guest-only (on a requested/confirmed booking). */
   action: UpdateBookingBodyAction;
+}
+
+/**
+ * Live sequential stage of a car-import order, matching the in-app import guide: order to review to confirm to shipping to customs to delivered, with cancelled as the terminal negative outcome.
+ */
+export type ImportOrderStage = typeof ImportOrderStage[keyof typeof ImportOrderStage];
+
+
+export const ImportOrderStage = {
+  order: 'order',
+  review: 'review',
+  confirm: 'confirm',
+  shipping: 'shipping',
+  customs: 'customs',
+  delivered: 'delivered',
+  cancelled: 'cancelled',
+} as const;
+
+/**
+ * Free-form vehicle spec (make/model/year/trim) for listing-less requests.
+ */
+export type CreateImportOrderBodyDetails = { [key: string]: unknown } | null;
+
+/**
+ * A buyer's request to import a vehicle from abroad.
+ */
+export interface CreateImportOrderBody {
+  /** Optional marketplace listing this import is based on. */
+  listing_id?: string | null;
+  /** ISO country the vehicle is imported from. */
+  origin_country?: string | null;
+  /** ISO country the vehicle is imported to (buyer's market). */
+  destination_country?: string | null;
+  /** Free-form vehicle spec (make/model/year/trim) for listing-less requests. */
+  details?: CreateImportOrderBodyDetails;
+  budget_amount?: number | null;
+  currency?: string | null;
+  note?: string | null;
+}
+
+export type ImportOrderDetails = { [key: string]: unknown } | null;
+
+export interface ImportOrder {
+  id: string;
+  user_id?: string;
+  listing_id?: string | null;
+  stage: ImportOrderStage;
+  origin_country?: string | null;
+  destination_country?: string | null;
+  details?: ImportOrderDetails;
+  budget_amount?: number | null;
+  quote_amount?: number | null;
+  currency?: string | null;
+  notes?: string | null;
+  created_at: string | null;
+  updated_at?: string | null;
+}
+
+/**
+ * An import order enriched for the buyer's tracking list.
+ */
+export interface ImportOrderListItem {
+  id: string;
+  stage: ImportOrderStage;
+  origin_country?: string | null;
+  destination_country?: string | null;
+  budget_amount?: number | null;
+  currency?: string | null;
+  listing_title?: string | null;
+  created_at: string | null;
+  updated_at?: string | null;
 }
 
 export type PromoCampaignViewStatus = typeof PromoCampaignViewStatus[keyof typeof PromoCampaignViewStatus];
@@ -2956,6 +3024,24 @@ export type ListBookings200 = {
 
 export type UpdateBooking200 = {
   data?: Booking;
+  error?: ApiError | null;
+  meta?: Meta;
+};
+
+export type CreateImportOrder200 = {
+  data?: ImportOrder;
+  error?: ApiError | null;
+  meta?: Meta;
+};
+
+export type ListMyImportOrders200 = {
+  data?: ImportOrderListItem[];
+  error?: ApiError | null;
+  meta?: Meta;
+};
+
+export type GetImportOrder200 = {
+  data?: ImportOrder;
   error?: ApiError | null;
   meta?: Meta;
 };

@@ -160,6 +160,11 @@ export async function updateMeHandler(req: Request, res: Response) {
         .status(409)
         .json(errorResponse("INVALID_DATA", (err as Error).message ?? "Duplicate account"));
     }
+    if ((err as { code?: string })?.code === "DEMOTE_BLOCKED") {
+      return res
+        .status(403)
+        .json(errorResponse("FORBIDDEN", (err as Error).message ?? "Demotion blocked"));
+    }
     if ((err as { code?: string })?.code === "NOT_FOUND") {
       return res.status(404).json(errorResponse("NOT_FOUND", "User not found"));
     }

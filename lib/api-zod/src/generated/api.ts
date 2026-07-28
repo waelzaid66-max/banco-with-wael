@@ -796,6 +796,112 @@ export const UpdateBookingResponse = zod.object({
 
 
 /**
+ * Create a car-import order from the buyer's request. Starts at stage "order". Optionally references an existing listing; otherwise the vehicle is described free-form in details.
+ * @summary Request a car import
+ */
+export const CreateImportOrderBody = zod.object({
+  "listing_id": zod.string().nullish().describe('Optional marketplace listing this import is based on.'),
+  "origin_country": zod.string().nullish().describe('ISO country the vehicle is imported from.'),
+  "destination_country": zod.string().nullish().describe('ISO country the vehicle is imported to (buyer\'s market).'),
+  "details": zod.record(zod.string(), zod.unknown()).nullish().describe('Free-form vehicle spec (make\/model\/year\/trim) for listing-less requests.'),
+  "budget_amount": zod.number().nullish(),
+  "currency": zod.string().nullish(),
+  "note": zod.string().nullish()
+}).describe('A buyer\'s request to import a vehicle from abroad.')
+
+export const CreateImportOrderResponse = zod.object({
+  "data": zod.object({
+  "id": zod.string(),
+  "user_id": zod.string().optional(),
+  "listing_id": zod.string().nullish(),
+  "stage": zod.enum(['order', 'review', 'confirm', 'shipping', 'customs', 'delivered', 'cancelled']).describe('Live sequential stage of a car-import order, matching the in-app import guide: order to review to confirm to shipping to customs to delivered, with cancelled as the terminal negative outcome.'),
+  "origin_country": zod.string().nullish(),
+  "destination_country": zod.string().nullish(),
+  "details": zod.record(zod.string(), zod.unknown()).nullish(),
+  "budget_amount": zod.number().nullish(),
+  "quote_amount": zod.number().nullish(),
+  "currency": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "created_at": zod.string().nullable(),
+  "updated_at": zod.string().nullish()
+}).optional(),
+  "error": zod.object({
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "message": zod.string()
+}).nullish(),
+  "meta": zod.object({
+  "cursor": zod.string().optional(),
+  "has_next": zod.boolean().optional(),
+  "total": zod.number().optional()
+}).optional()
+})
+
+
+/**
+ * The signed-in buyer's car-import orders with their live stage, newest first. Powers the import-tracking screen.
+ * @summary My car-import orders
+ */
+export const ListMyImportOrdersResponse = zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string(),
+  "stage": zod.enum(['order', 'review', 'confirm', 'shipping', 'customs', 'delivered', 'cancelled']).describe('Live sequential stage of a car-import order, matching the in-app import guide: order to review to confirm to shipping to customs to delivered, with cancelled as the terminal negative outcome.'),
+  "origin_country": zod.string().nullish(),
+  "destination_country": zod.string().nullish(),
+  "budget_amount": zod.number().nullish(),
+  "currency": zod.string().nullish(),
+  "listing_title": zod.string().nullish(),
+  "created_at": zod.string().nullable(),
+  "updated_at": zod.string().nullish()
+}).describe('An import order enriched for the buyer\'s tracking list.')).optional(),
+  "error": zod.object({
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "message": zod.string()
+}).nullish(),
+  "meta": zod.object({
+  "cursor": zod.string().optional(),
+  "has_next": zod.boolean().optional(),
+  "total": zod.number().optional()
+}).optional()
+})
+
+
+/**
+ * A single car-import order owned by the signed-in buyer, with its full stage and details for the tracking detail view.
+ * @summary Import order detail
+ */
+export const GetImportOrderParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetImportOrderResponse = zod.object({
+  "data": zod.object({
+  "id": zod.string(),
+  "user_id": zod.string().optional(),
+  "listing_id": zod.string().nullish(),
+  "stage": zod.enum(['order', 'review', 'confirm', 'shipping', 'customs', 'delivered', 'cancelled']).describe('Live sequential stage of a car-import order, matching the in-app import guide: order to review to confirm to shipping to customs to delivered, with cancelled as the terminal negative outcome.'),
+  "origin_country": zod.string().nullish(),
+  "destination_country": zod.string().nullish(),
+  "details": zod.record(zod.string(), zod.unknown()).nullish(),
+  "budget_amount": zod.number().nullish(),
+  "quote_amount": zod.number().nullish(),
+  "currency": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "created_at": zod.string().nullable(),
+  "updated_at": zod.string().nullish()
+}).optional(),
+  "error": zod.object({
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "message": zod.string()
+}).nullish(),
+  "meta": zod.object({
+  "cursor": zod.string().optional(),
+  "has_next": zod.boolean().optional(),
+  "total": zod.number().optional()
+}).optional()
+})
+
+
+/**
  * Owner-only. Sets bumped_at to now so the listing sorts by COALESCE(bumped_at, created_at) in recency feeds and search. NEVER changes created_at — the true publish date is preserved. Rate-limited with a cooldown; only active, publicly visible listings can be recycled.
  * @summary Recycle (renew) a listing to the top of recency feeds
  */
@@ -1450,7 +1556,7 @@ export const MarkConversationReadResponse = zod.object({
 export const ListNotificationsResponse = zod.object({
   "data": zod.array(zod.object({
   "id": zod.string(),
-  "type": zod.enum(['message', 'lead', 'system', 'rfq', 'new_match', 'price_drop', 'comment', 'review', 'investment', 'global_supply', 'booking', 'payment_success', 'payment_failed', 'subscription_expiring']),
+  "type": zod.enum(['message', 'lead', 'system', 'rfq', 'new_match', 'price_drop', 'comment', 'review', 'investment', 'global_supply', 'booking', 'payment_success', 'payment_failed', 'subscription_expiring', 'car_import']),
   "title": zod.string(),
   "body": zod.string(),
   "data": zod.record(zod.string(), zod.unknown()).nullish(),
@@ -1744,7 +1850,7 @@ export const SetMySocialLinksResponse = zod.object({
  */
 export const GetMyNotificationPreferencesResponse = zod.object({
   "data": zod.array(zod.object({
-  "type": zod.enum(['message', 'lead', 'system', 'rfq', 'new_match', 'price_drop', 'comment', 'review', 'investment', 'global_supply', 'booking', 'payment_success', 'payment_failed', 'subscription_expiring']),
+  "type": zod.enum(['message', 'lead', 'system', 'rfq', 'new_match', 'price_drop', 'comment', 'review', 'investment', 'global_supply', 'booking', 'payment_success', 'payment_failed', 'subscription_expiring', 'car_import']),
   "in_app": zod.boolean(),
   "email": zod.boolean()
 }).describe('Per-category notification preference. Absence of a row = enabled (Task')),
@@ -1765,7 +1871,7 @@ export const GetMyNotificationPreferencesResponse = zod.object({
  */
 export const SetMyNotificationPreferencesBody = zod.object({
   "preferences": zod.array(zod.object({
-  "type": zod.enum(['message', 'lead', 'system', 'rfq', 'new_match', 'price_drop', 'comment', 'review', 'investment', 'global_supply', 'booking', 'payment_success', 'payment_failed', 'subscription_expiring']),
+  "type": zod.enum(['message', 'lead', 'system', 'rfq', 'new_match', 'price_drop', 'comment', 'review', 'investment', 'global_supply', 'booking', 'payment_success', 'payment_failed', 'subscription_expiring', 'car_import']),
   "in_app": zod.boolean(),
   "email": zod.boolean()
 }).describe('Per-category notification preference. Absence of a row = enabled (Task'))
@@ -1773,7 +1879,7 @@ export const SetMyNotificationPreferencesBody = zod.object({
 
 export const SetMyNotificationPreferencesResponse = zod.object({
   "data": zod.array(zod.object({
-  "type": zod.enum(['message', 'lead', 'system', 'rfq', 'new_match', 'price_drop', 'comment', 'review', 'investment', 'global_supply', 'booking', 'payment_success', 'payment_failed', 'subscription_expiring']),
+  "type": zod.enum(['message', 'lead', 'system', 'rfq', 'new_match', 'price_drop', 'comment', 'review', 'investment', 'global_supply', 'booking', 'payment_success', 'payment_failed', 'subscription_expiring', 'car_import']),
   "in_app": zod.boolean(),
   "email": zod.boolean()
 }).describe('Per-category notification preference. Absence of a row = enabled (Task')),
@@ -2919,8 +3025,8 @@ export const GetAdminUsersResponse = zod.object({
   "trade_name": zod.string().nullish(),
   "owner_name": zod.string().nullish(),
   "city": zod.string().nullish(),
-  "documents": zod.array(zod.string()).optional().describe('Uploaded verification document / ID photo URLs.')
-}).nullish().describe('Business / FI onboarding payload used for KYC review (activity, names, city, document URLs). Null when the user never submitted business verification.')
+  "documents": zod.array(zod.string()).optional().describe('Uploaded verification document \/ ID photo URLs.')
+}).nullish().describe('Business \/ FI onboarding payload used for KYC review (activity, names, city, document URLs). Null when the user never submitted business verification.\n')
 })).optional(),
   "error": zod.object({
   "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
@@ -2967,8 +3073,8 @@ export const SetUserBanResponse = zod.object({
   "trade_name": zod.string().nullish(),
   "owner_name": zod.string().nullish(),
   "city": zod.string().nullish(),
-  "documents": zod.array(zod.string()).optional().describe('Uploaded verification document / ID photo URLs.')
-}).nullish().describe('Business / FI onboarding payload used for KYC review (activity, names, city, document URLs). Null when the user never submitted business verification.')
+  "documents": zod.array(zod.string()).optional().describe('Uploaded verification document \/ ID photo URLs.')
+}).nullish().describe('Business \/ FI onboarding payload used for KYC review (activity, names, city, document URLs). Null when the user never submitted business verification.\n')
 }).optional(),
   "error": zod.object({
   "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
@@ -3010,8 +3116,8 @@ export const SetUserRoleResponse = zod.object({
   "trade_name": zod.string().nullish(),
   "owner_name": zod.string().nullish(),
   "city": zod.string().nullish(),
-  "documents": zod.array(zod.string()).optional().describe('Uploaded verification document / ID photo URLs.')
-}).nullish().describe('Business / FI onboarding payload used for KYC review (activity, names, city, document URLs). Null when the user never submitted business verification.')
+  "documents": zod.array(zod.string()).optional().describe('Uploaded verification document \/ ID photo URLs.')
+}).nullish().describe('Business \/ FI onboarding payload used for KYC review (activity, names, city, document URLs). Null when the user never submitted business verification.\n')
 }).optional(),
   "error": zod.object({
   "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
@@ -3053,8 +3159,8 @@ export const SetUserVerifiedResponse = zod.object({
   "trade_name": zod.string().nullish(),
   "owner_name": zod.string().nullish(),
   "city": zod.string().nullish(),
-  "documents": zod.array(zod.string()).optional().describe('Uploaded verification document / ID photo URLs.')
-}).nullish().describe('Business / FI onboarding payload used for KYC review (activity, names, city, document URLs). Null when the user never submitted business verification.')
+  "documents": zod.array(zod.string()).optional().describe('Uploaded verification document \/ ID photo URLs.')
+}).nullish().describe('Business \/ FI onboarding payload used for KYC review (activity, names, city, document URLs). Null when the user never submitted business verification.\n')
 }).optional(),
   "error": zod.object({
   "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),

@@ -8,9 +8,22 @@ function apiRewriteTarget(): string {
   return base;
 }
 
+/**
+ * CDN origin for the build's static assets (`/_next/static/*`) — infrastructure
+ * only, never behaviour. Unset it is undefined and Next behaves exactly as today;
+ * set, hashed immutable assets are served from the edge instead of the app
+ * container. Same operator-env pattern as the Vite apps' BASE_PATH and the mobile
+ * web export's EXPO_WEB_BASE_URL, so there is one way to do this in the monorepo.
+ */
+const assetCdnOrigin = process.env.NEXT_PUBLIC_ASSET_CDN_URL?.trim().replace(
+  /\/+$/,
+  "",
+);
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  ...(assetCdnOrigin ? { assetPrefix: assetCdnOrigin } : {}),
   // Allow Replit's proxied preview (cross-origin iframe) to load /_next/* assets
   allowedDevOrigins: ["*"],
   transpilePackages: [

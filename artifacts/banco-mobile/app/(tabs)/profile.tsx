@@ -11,18 +11,18 @@ import {
   getGetMyListingsQueryKey,
   getGetMyMetricsQueryKey,
   getGetMySocialLinksQueryKey,
+  getMyListings,
   setMySocialLinks,
   promoteUpload,
   updateMe,
   useGetMe,
-  useGetMyListings,
   useGetMyMetrics,
   useGetMySocialLinks,
   type FeedItem,
   type SocialLink,
   type SocialLinkPlatform,
 } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -152,7 +152,9 @@ export default function ProfileScreen() {
   const pendingFirstNameRef = useRef("");
   const pendingLastNameRef = useRef("");
 
-  const [oauthLoading, setOauthLoading] = useState<null | "google" | "apple">(
+  const [oauthLoading, setOauthLoading] = useState<
+    null | "google" | "apple" | "facebook"
+  >(
     null
   );
   const [needsAccountType, setNeedsAccountType] = useState(false);
@@ -177,8 +179,24 @@ export default function ProfileScreen() {
     query: { queryKey: getGetMySocialLinksQueryKey(), enabled: !!user, staleTime: 60_000 },
   });
   // The Instagram-style grid of the caller's OWN real listings (role-agnostic).
-  const listingsQuery = useGetMyListings(undefined, {
-    query: { queryKey: getGetMyListingsQueryKey(), enabled: !!user, staleTime: 30_000 },
+  //
+  // Paged, because the endpoint always was. `GET /me/listings` defaults to 20 per
+  // page and returns a cursor, but this screen only ever read the first page and
+  // never followed it — so a dealer with 50 listings saw 20 of their OWN stock and
+  // had no way to reach the rest, with nothing on screen admitting more existed.
+  // Silent truncation of a seller's own inventory is the worst kind: they conclude
+  // their listings were lost.
+  const listingsQuery = useInfiniteQuery({
+    queryKey: [...getGetMyListingsQueryKey(), "paged"],
+    enabled: !!user,
+    staleTime: 30_000,
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) => getMyListings({ cursor: pageParam }),
+    // Trust the server's has_next rather than inferring from page length — a total
+    // that happens to be an exact multiple of the page size would otherwise cause
+    // one phantom fetch that returns nothing.
+    getNextPageParam: (last) =>
+      last.meta?.has_next ? last.meta.cursor : undefined,
   });
   // Refetch the profile grid when the user publishes a listing so it appears
   // immediately — the profile tab stays mounted, so react-query won't refetch on
@@ -497,13 +515,18 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleOAuth = async (provider: "google" | "apple") => {
+  const handleOAuth = async (provider: "google" | "apple" | "facebook") => {
     if (oauthLoading) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setOauthLoading(provider);
     try {
       const { createdSessionId, setActive: ssoSetActive } = await startSSOFlow({
-        strategy: provider === "google" ? "oauth_google" : "oauth_apple",
+        strategy:
+          provider === "google"
+            ? "oauth_google"
+            : provider === "facebook"
+              ? "oauth_facebook"
+              : "oauth_apple",
         redirectUrl: AuthSession.makeRedirectUri(),
       });
       if (createdSessionId && ssoSetActive) {
@@ -522,6 +545,25 @@ export default function ProfileScreen() {
     type: "individual" | "dealer" | "company" | "financial_institution"
   ) => {
     if (savingAccountType) return;
+    // DB role is authoritative (same contract as verification.tsx). Clerk metadata
+    // can lag after updateMe — never use it alone to decide demotion guards.
+    const currentRole =
+      meQuery.data?.data?.role ||
+      ((user?.publicMetadata?.role as string) || "");
+    const elevated =
+      currentRole === "financial_institution" ||
+      currentRole === "company" ||
+      currentRole === "enterprise";
+    // Self-demote hole: menu "Manage account type" + Skip both called
+    // account_type=individual and the server used to accept it. Elevated
+    // accounts must not silently lose FI/company via this path (S4).
+    if (elevated && type === "individual") {
+      Alert.alert(
+        t("profile.demoteBlockedTitle"),
+        t("profile.demoteBlockedBody"),
+      );
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSavingAccountType(true);
     try {
@@ -790,7 +832,11 @@ export default function ProfileScreen() {
       }
     })();
 
-    const role = (user.publicMetadata?.role as string) || "";
+    // /me.role is authoritative (DB). Clerk publicMetadata is fallback only —
+    // same contract as business/verification.tsx (closes Clerk-lag chrome bugs).
+    const meRole = meQuery.data?.data?.role ?? "";
+    const clerkRole = (user.publicMetadata?.role as string) || "";
+    const role = meRole || clerkRole;
     const isFi = role === "financial_institution";
     const isBusiness = [
       "dealer",
@@ -869,7 +915,8 @@ export default function ProfileScreen() {
         route: "/business/requests",
       });
     }
-    const posts = listingsQuery.data?.data ?? [];
+    // Every page fetched so far, flattened — the grid grows as the seller pages.
+    const posts = listingsQuery.data?.pages.flatMap((p) => p.data) ?? [];
     const hasBookableRentals = filterBookableListings(posts).length > 0;
     // Banks are not rental hosts — do not push the rental hub from FI role alone.
     const showRentalHub = hasBookableRentals || (isBusiness && !isFi);
@@ -1044,6 +1091,8 @@ export default function ProfileScreen() {
               onPress={launchCoverPicker}
               hitSlop={8}
               style={styles.coverActionBtn}
+              accessibilityRole="button"
+              accessibilityLabel={t("profile.changeCover")}
               testID="cover-edit"
             >
               {uploadingCover ? (
@@ -1070,6 +1119,8 @@ export default function ProfileScreen() {
                   borderColor: colors.background,
                 },
               ]}
+              accessibilityRole="button"
+              accessibilityLabel={t("profile.photoAccessConfirm")}
               testID="avatar-edit"
             >
               <View style={styles.avatarLargeInner}>
@@ -1134,6 +1185,8 @@ export default function ProfileScreen() {
                   styles.editProfileBtn,
                   { borderColor: colors.border, borderRadius: colors.radius, paddingHorizontal: 10 },
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel={t("common.more")}
                 testID="profile-menu"
                 hitSlop={8}
               >
@@ -1734,6 +1787,7 @@ export default function ProfileScreen() {
             </Pressable>
           </View>
         ) : (
+          <>
           <View style={styles.postsGrid}>
             {posts.map((item) => (
               <Pressable
@@ -1847,6 +1901,33 @@ export default function ProfileScreen() {
               </Pressable>
             ))}
           </View>
+          {/* The rest of the seller's own stock. Rendered only when the server
+              says more exist, so a seller with one page never sees a dead control. */}
+          {listingsQuery.hasNextPage ? (
+            <Pressable
+              onPress={() => {
+                Haptics.selectionAsync();
+                listingsQuery.fetchNextPage();
+              }}
+              disabled={listingsQuery.isFetchingNextPage}
+              style={[
+                styles.postsLoadMore,
+                { borderColor: colors.border, backgroundColor: colors.card },
+              ]}
+              testID="profile-load-more-listings"
+              accessibilityRole="button"
+              accessibilityLabel={t("profile.loadMoreListings")}
+            >
+              {listingsQuery.isFetchingNextPage ? (
+                <ActivityIndicator size="small" color={colors.mutedForeground} />
+              ) : (
+                <AppText style={[styles.postsLoadMoreText, { color: colors.foreground }]}>
+                  {t("profile.loadMoreListings")}
+                </AppText>
+              )}
+            </Pressable>
+          ) : null}
+          </>
         )}
 
         <Modal
@@ -2895,6 +2976,32 @@ export default function ProfileScreen() {
         )}
       </Pressable>
 
+      <Pressable
+        onPress={() => handleOAuth("facebook")}
+        disabled={!!oauthLoading}
+        style={[
+          styles.oauthBtn,
+          {
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+            borderRadius: colors.radius,
+          },
+          isRTL && styles.rowReverse,
+        ]}
+        testID="oauth-facebook"
+      >
+        {oauthLoading === "facebook" ? (
+          <ActivityIndicator color={colors.foreground} size="small" />
+        ) : (
+          <>
+            <Ionicons name="logo-facebook" size={18} color={colors.foreground} />
+            <AppText style={[styles.oauthBtnText, { color: colors.foreground }]}>
+              {t("profile.continueWithFacebook")}
+            </AppText>
+          </>
+        )}
+      </Pressable>
+
       {Platform.OS !== "android" && (
         <Pressable
           onPress={() => handleOAuth("apple")}
@@ -3553,9 +3660,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
   },
+  postsLoadMore: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  postsLoadMoreText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+  },
   postsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
+    // 2-col grid: tileSize already subtracts one GRID_GAP, so apply that gap
+    // BETWEEN the columns (was missing → the two cards touched and the 12px
+    // landed as dead space on the right / asymmetric margin after the shrink).
+    columnGap: GRID_GAP,
   },
   postTile: {
     marginBottom: GRID_GAP,

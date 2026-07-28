@@ -11,10 +11,17 @@ import { isVideoAsset } from "./upload";
  */
 
 export const MAX_PHOTOS = 15;
-// Backend hard-requires >=1 image (awards a trust bonus at >=3). Keep the
-// publish gate low (2) so posting stays Instagram-easy; the boost hint still
-// nudges sellers toward more photos for reach.
-export const MIN_PHOTOS = 2;
+// The backend hard-requires >= 1 image and awards a trust bonus at >= 3. The app
+// used to demand 2, which meant a seller holding one clear photo of a real asset
+// was refused by the app for a listing the platform itself would have accepted —
+// the same shape of loss as the mileage floor: strictness the server never asked
+// for, paid in trade that simply never happens.
+//
+// Owner 2026-07-28: publishing must succeed in every section even with the least
+// data — one photo at least. So the gate is now exactly the backend's own floor.
+// Nothing else moves: the boost hint still nudges toward 3+ for reach, and a
+// seller with plenty of photos sees precisely what they saw before.
+export const MIN_PHOTOS = 1;
 // Videos are additive and optional. The card thumbnail (media_preview) is always
 // the first IMAGE, so a listing can carry video while staying renderable in the
 // feed's <Image>. Caps are UX guards only — never server-enforced.

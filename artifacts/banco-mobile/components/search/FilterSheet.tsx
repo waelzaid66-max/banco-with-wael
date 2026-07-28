@@ -33,6 +33,7 @@ import {
 } from "@/constants/listingCreateTaxonomy";
 import { useI18n } from "@/context/LanguageContext";
 import { useColors } from "@/hooks/useColors";
+import { NEAR_RADIUS_OPTIONS_KM } from "@/lib/nearMe";
 import {
   MARKET_COUNTRIES,
   marketCountryLabel,
@@ -270,11 +271,7 @@ export function FilterSheet({
           >
             {/* Sort */}
             <SectionLabel text={t("search.sortBy")} align={textAlign} colors={colors} />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={[styles.chipRow, { flexDirection: rowDir }]}
-            >
+            <View style={[styles.wrapRow, { flexDirection: rowDir }]}>
               {SORTS.map((s) => {
                 const active = criteria.sort === s;
                 return (
@@ -306,18 +303,14 @@ export function FilterSheet({
                   </Pressable>
                 );
               })}
-            </ScrollView>
+            </View>
 
             {/* Market country — a universal axis, so it lives here for EVERY
                 section as one compact, balanced inline row (not buried under
                 rent only, not a separate oversized button). Switching market
                 re-sanitizes the rental term to that market's legal regimes. */}
             <SectionLabel text={t("create.fields.market")} align={textAlign} colors={colors} />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={[styles.chipRow, { flexDirection: rowDir }]}
-            >
+            <View style={[styles.wrapRow, { flexDirection: rowDir }]}>
               {MARKET_COUNTRIES.map((m) => {
                 const active = criteria.marketCountry === m.value;
                 return (
@@ -357,7 +350,7 @@ export function FilterSheet({
                   </Pressable>
                 );
               })}
-            </ScrollView>
+            </View>
 
             {/* Category — hidden inside the section mini-apps (lockCategory):
                 the section is locked there, so a single dead chip is pure
@@ -365,11 +358,7 @@ export function FilterSheet({
             {!lockCategory && (
             <>
             <SectionLabel text={t("search.category")} align={textAlign} colors={colors} />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={[styles.chipRow, { flexDirection: rowDir }]}
-            >
+            <View style={[styles.wrapRow, { flexDirection: rowDir }]}>
               {shownCategories.map((cat) => {
                 const active = criteria.category === cat;
                 return (
@@ -410,7 +399,7 @@ export function FilterSheet({
                   </Pressable>
                 );
               })}
-            </ScrollView>
+            </View>
             </>
             )}
 
@@ -420,7 +409,7 @@ export function FilterSheet({
               <>
                 <SectionLabel
                   text={
-                    isRealEstate ? t("search.filters") : t("search.type")
+                    isRealEstate ? t("search.options") : t("search.type")
                   }
                   align={textAlign}
                   colors={colors}
@@ -501,14 +490,7 @@ export function FilterSheet({
             {isCar && (
               <>
                 <SectionLabel text={t("search.brand")} align={textAlign} colors={colors} />
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={[
-                    styles.chipRow,
-                    { flexDirection: rowDir },
-                  ]}
-                >
+                <View style={[styles.wrapRow, { flexDirection: rowDir }]}>
                   <Pressable
                     onPress={onOpenBrandPicker}
                     style={[
@@ -558,7 +540,7 @@ export function FilterSheet({
                       </Pressable>
                     );
                   })}
-                </ScrollView>
+                </View>
 
                 {/* Year range (cars) */}
                 <SectionLabel text={t("search.year")} align={textAlign} colors={colors} />
@@ -807,6 +789,55 @@ export function FilterSheet({
               </AppText>
             </Pressable>
 
+            {/* Search radius — rendered ONLY while near-me is on, so the compact
+                sheet keeps its default height when the feature is unused. The
+                value already travels to the server as radius_km. */}
+            {criteria.nearMeEnabled ? (
+              <View
+                style={{
+                  flexDirection: rowDir,
+                  flexWrap: "wrap",
+                  gap: 6,
+                  marginTop: 8,
+                }}
+                testID="filter-near-radius"
+              >
+                {NEAR_RADIUS_OPTIONS_KM.map((km) => {
+                  const active = criteria.nearRadiusKm === km;
+                  return (
+                    <Pressable
+                      key={km}
+                      onPress={() => onUpdate({ nearRadiusKm: km })}
+                      style={[
+                        styles.chip,
+                        {
+                          backgroundColor: active
+                            ? colors.primary
+                            : colors.secondary,
+                        },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${km} ${t("search.kmShort")}`}
+                      testID={`filter-radius-${km}`}
+                    >
+                      <AppText
+                        style={[
+                          styles.chipText,
+                          {
+                            color: active
+                              ? colors.primaryForeground
+                              : colors.mutedForeground,
+                          },
+                        ]}
+                      >
+                        {km} {t("search.kmShort")}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : null}
+
             {/* Price */}
             <SectionLabel text={t("search.price")} align={textAlign} colors={colors} />
             <View style={[styles.rangeRow, { flexDirection: rowDir }]}>
@@ -929,11 +960,7 @@ function ToggleChipRow<T extends string>({
   testPrefix: string;
 }) {
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={[styles.chipRow, { flexDirection: rowDir }]}
-    >
+    <View style={[styles.wrapRow, { flexDirection: rowDir }]}>
       {options.map((v) => {
         const active = selected === v;
         return (
@@ -961,7 +988,7 @@ function ToggleChipRow<T extends string>({
           </Pressable>
         );
       })}
-    </ScrollView>
+    </View>
   );
 }
 
@@ -1026,6 +1053,19 @@ const styles = StyleSheet.create({
   },
   chipRow: {
     gap: 8,
+    paddingVertical: 2,
+  },
+  // Compressed row: long option sets (markets, property types, sort) WRAP onto
+  // as many short lines as they need instead of running off the side of the
+  // screen. Measured before: the market row was 1485px of content inside a 343px
+  // window — over four screens of sideways scrolling, so a user could not see
+  // what they were choosing between and options past the fold were effectively
+  // invisible. Wrapping shows every option at once, in place, with no scrolling
+  // in either axis. This is the same shape the create screen already uses for
+  // these very markets, so it is the established pattern here, not a new idea.
+  wrapRow: {
+    flexWrap: "wrap",
+    gap: 6,
     paddingVertical: 2,
   },
   engineWrap: {

@@ -10,6 +10,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { useColors } from "@/hooks/useColors";
 import { useI18n } from "@/context/LanguageContext";
+import { pulseSpark } from "@/lib/brandSpark";
 import { AppText } from "@/components/AppText";
 
 /**
@@ -165,6 +166,8 @@ export function BookingCard({ listingId, pricePerNight }: Props) {
         onSuccess: () => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           setConfirmed(true);
+          // Brand answer: the header B-OOM mark pops once for a real booking.
+          pulseSpark();
           // Fresh availability so the just-booked nights grey out immediately.
           queryClient.invalidateQueries({
             queryKey: getGetListingAvailabilityQueryKey(listingId),

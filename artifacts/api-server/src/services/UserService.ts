@@ -165,6 +165,26 @@ export async function updateUserProfile(
   // A client can never request `admin` or any privileged role; those are
   // unreachable through this path. A financial institution still has to pass
   // verification (KYC / bank approval) before its financing features unlock.
+  // Self-demote guard (S4): elevated roles must not silently collapse to
+  // `individual` via PATCH /me — that hole let FI/company wipe themselves from
+  // the profile "Manage account type" / Skip paths. Upgrades and lateral moves
+  // (dealer↔company↔FI) stay allowed; admin tooling remains the path for rare
+  // personal demotions.
+  if (input.account_type === "individual") {
+    const elevatedNow =
+      user.role === "financial_institution" ||
+      user.role === "company" ||
+      user.role === "enterprise";
+    if (elevatedNow) {
+      throw Object.assign(
+        new Error(
+          "Company and financial-institution accounts cannot switch to personal from the app",
+        ),
+        { code: "DEMOTE_BLOCKED" },
+      );
+    }
+  }
+
   if (input.account_type) {
     patch.role =
       input.account_type === "individual"

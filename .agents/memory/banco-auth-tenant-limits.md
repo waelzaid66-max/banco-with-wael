@@ -20,8 +20,19 @@ Dashboard (Google: GCP OAuth client ID/secret; Apple: Developer account + Servic
 code changes once enabled. An earlier check that showed `{oauth_google: true}` was the
 DEV instance; never extrapolate dev social state to prod.
 
+**Facebook (updated 2026-07-26 — owner decision + real implementation).** The owner
+enabled Facebook on the Meta/Clerk side and asked for it, so it is now wired the same
+way Google and Apple are: a genuine `oauth_facebook` Clerk SSO strategy in
+`profile.tsx` (commit `6778e65`), NOT a stub and NOT fake UX. It therefore sits in the
+exact same class as Google/Apple — **dashboard-gated, dead until the provider is
+configured on the production instance, and working with zero code changes once it is.**
+The prior "never add Facebook" note referred to faking a provider the tenant did not
+have; that rule still stands for stubs, and is satisfied here because the strategy is
+real. Before any store submission, confirm the provider is actually enabled on
+`pk_live` — shipping a visible button that always errors is a review risk.
+
 NOT supported (and must NOT be faked anywhere — UI, copy, or stubs):
-- Facebook / LinkedIn login
+- LinkedIn login
 - Phone number as a login method
 - Standalone authenticator-app / SMS 2FA (sign-in is already protected by email OTP)
 - OTP email branding (that is a Clerk *dashboard* config, not app code)
@@ -34,9 +45,10 @@ the challenge), NOT a defect. Real-device sign-up (Expo Go webview) is the only 
 confirm the widget actually solves; if it fails there, it's a Clerk-dashboard toggle
 (account-level), not app code.
 
-**Rule:** When a reviewer or task asks to "add Facebook/LinkedIn/phone login" or
+**Rule:** When a reviewer or task asks to "add LinkedIn/phone login" or
 "add 2FA", do NOT implement or fake them. Reconcile honestly: surface the *real*
-available sign-in methods (email & password, Google — Apple only if enabled) and frame unavailable
+available sign-in methods (email & password, plus Google / Apple / Facebook — each only
+once enabled on the instance) and frame unavailable
 features as unavailable (e.g. settings "Sign-in methods" + "Two-step verification"
 info rows state what is and isn't available).
 

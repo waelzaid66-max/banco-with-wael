@@ -18,6 +18,7 @@ import { isVerifiedSignal } from "@/constants/feed";
 import { useColors } from "@/hooks/useColors";
 import { useI18n } from "@/context/LanguageContext";
 import { useSession } from "@/context/SessionContext";
+import { pulseSpark } from "@/lib/brandSpark";
 import { shareListing } from "@/lib/share";
 
 // The save glyph adapts to the section — a car for cars, a key for real estate,
@@ -96,6 +97,8 @@ function SmartAssetCardComponent({
   const handleSave = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onSave?.(item);
+    // Brand answer: the header B-OOM mark pops once for this B-reaction.
+    pulseSpark();
   };
 
   // B-reactions (long-press on the identity B): real personalization signals —

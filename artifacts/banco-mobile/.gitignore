@@ -40,3 +40,4 @@ yarn-error.*
 
 .env
 static-build/
+web-preview/

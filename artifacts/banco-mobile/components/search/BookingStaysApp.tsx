@@ -22,6 +22,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppText } from "@/components/AppText";
+import { FilterPill } from "@/components/search/FilterPill";
 import { LocationPicker } from "@/components/LocationPicker";
 import { SkeletonCard } from "@/components/SkeletonCard";
 import { StayCard, STAYS_ACCENT } from "@/components/StayCard";
@@ -103,36 +104,17 @@ function RentalTermPickerButton({
 
   return (
     <>
-      <Pressable
+      {/* This pill IS the extraction source: FilterPill carries its metrics to
+          the pixel (108×25, padding 4/10, gap 5, radius 20). Using it here keeps
+          one shape in one place instead of a copy that drifts. */}
+      <FilterPill
+        icon="calendar"
+        label={label}
+        active={!!selected}
+        accentColor={STAYS_ACCENT}
         onPress={() => setOpen(true)}
-        style={[
-          styles.termBtn,
-          {
-            flexDirection: rowDir,
-            backgroundColor: selected ? STAYS_ACCENT : colors.secondary,
-            borderColor: selected ? STAYS_ACCENT : colors.border,
-          },
-        ]}
         testID="stays-rental-term-btn"
-        accessibilityLabel={label}
-      >
-        <Feather
-          name="calendar"
-          size={13}
-          color={selected ? "#FFFFFF" : colors.mutedForeground}
-        />
-        <AppText
-          style={[styles.termBtnLabel, { color: selected ? "#FFFFFF" : colors.foreground }]}
-          numberOfLines={1}
-        >
-          {label}
-        </AppText>
-        <Feather
-          name="chevron-down"
-          size={13}
-          color={selected ? "#FFFFFF" : colors.mutedForeground}
-        />
-      </Pressable>
+      />
 
       <Modal
         visible={open}
@@ -564,6 +546,7 @@ export function BookingStaysApp() {
   const handleSaveSearch = () => {
     const snapshot: SearchCriteria = { ...criteria, q: draftQuery.trim() };
     saveSearch({
+      name: snapshot.q.trim() || t(`home.categories.${snapshot.category}`),
       criteria: snapshot,
       q: snapshot.q,
       category: snapshot.category,
@@ -1137,8 +1120,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     padding: 0,
   },
-  // Type tabs only (country/currency moved to marketMatrix below).
-  // Vertical rhythm: 8 → 6 → 4 between type / market / rental (P-STAY mm).
+  // Type tabs; country + currency ride in the compact MarketCountryButton.
   controlsRow: {
     alignItems: "center",
     gap: 7,
@@ -1158,41 +1140,6 @@ const styles = StyleSheet.create({
     width: StyleSheet.hairlineWidth,
     height: 22,
     alignSelf: "center",
-  },
-  marketMatrix: {
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingTop: 6,
-    paddingBottom: 2,
-  },
-  matrixCell: {
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 10,
-    borderWidth: 1,
-    maxWidth: 148,
-  },
-  matrixFlag: { fontSize: 13, lineHeight: 16 },
-  matrixCountry: {
-    fontSize: 11.5,
-    fontFamily: "Inter_600SemiBold",
-    flexShrink: 1,
-  },
-  matrixCurrency: {
-    fontSize: 10.5,
-    fontFamily: "Inter_500Medium",
-    letterSpacing: 0.3,
-  },
-  matrixMore: {
-    width: 32,
-    height: 28,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
   },
   heroWatermarkWrap: {
     position: "absolute",
@@ -1271,20 +1218,6 @@ const styles = StyleSheet.create({
   },
   emptyCtaText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   // RentalTermPickerButton
-  termBtn: {
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  termBtnLabel: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    flexShrink: 1,
-    maxWidth: 120,
-  },
   termBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.55)",

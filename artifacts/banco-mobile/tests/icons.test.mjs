@@ -208,6 +208,21 @@ test("every icon name used in the app is mapped in the registry", () => {
     ))
       add(m[1]);
 
+    // 5b. Icon-CONFIG object literals whose icon name sits in a `name:` field,
+    //    e.g. notifications' `type IconConfig = { name: keyof typeof
+    //    Feather.glyphMap; color; bg }` returned by iconForType(). Rule 5 cannot
+    //    see these because the function's return type is the ALIAS, not the
+    //    glyphMap expression. Proven gap: an unmapped name added here used to
+    //    pass the guard and would then render blank in the native Android/iOS
+    //    build. The adjacent `color:` (either order) keeps this scoped to real
+    //    icon configs, and validGlyphNames still filters the result.
+    for (const m of src.matchAll(/\bname:\s*["']([^"']+)["']\s*,\s*color\s*:/g))
+      add(m[1]);
+    for (const m of src.matchAll(
+      /\bcolor\s*:[^,{}]{1,60},\s*name:\s*["']([^"']+)["']/g,
+    ))
+      add(m[1]);
+
     // 5. Helpers whose RETURN TYPE is an icon name (e.g. socialIcon/planIcon:
     //    `): ComponentProps<typeof Ionicons>["name"]` or `): keyof typeof
     //    MaterialCommunityIcons.glyphMap`). Scope the return-literal scan to

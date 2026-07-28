@@ -374,6 +374,8 @@ export default function BusinessOnboardingScreen() {
         onPress={() => router.back()}
         style={styles.backBtn}
         hitSlop={12}
+        accessibilityRole="button"
+        accessibilityLabel={t("common.back")}
         testID="business-back"
       >
         <Feather
@@ -726,6 +728,8 @@ export default function BusinessOnboardingScreen() {
                 onPress={() => removeDoc(d.url)}
                 style={styles.docRemove}
                 hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={t("common.delete")}
                 testID={`doc-remove-${d.url}`}
               >
                 <Feather name="x" size={14} color="#FFFFFF" />
@@ -761,6 +765,8 @@ export default function BusinessOnboardingScreen() {
                 onPress={() => removeFailedDoc(a.uri)}
                 style={styles.docRemove}
                 hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={t("common.delete")}
                 testID={`doc-failed-remove-${a.uri}`}
               >
                 <Feather name="x" size={14} color="#FFFFFF" />
@@ -825,6 +831,8 @@ export default function BusinessOnboardingScreen() {
               onPress={() => setIdPhoto(null)}
               style={styles.docRemove}
               hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t("common.delete")}
               testID="business-id-remove"
             >
               <Feather name="x" size={14} color="#FFFFFF" />

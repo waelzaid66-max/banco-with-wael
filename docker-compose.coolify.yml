@@ -28,9 +28,10 @@
 #   See docs/DEPLOY_COOLIFY.md for the complete variable reference.
 #
 # ─── Migrations ──────────────────────────────────────────────────────────────
-#   Database schema migrations are NOT run automatically on container start.
-#   Run them manually via the API container shell or a dedicated one-off container.
-#   See docs/DEPLOY_COOLIFY.md → "Database Migrations" section.
+#   Schema migrations are NOT run automatically on deploy. Apply them explicitly
+#   once per schema change with the profile-gated one-off `migrate` service:
+#       docker compose --profile migrate run --rm migrate
+#   (creates/updates tables such as import_orders). See docs/DEPLOY_COOLIFY.md.
 # ─────────────────────────────────────────────────────────────────────────────
 
 name: banco
@@ -64,6 +65,29 @@ services:
       retries: 5
       start_period: 30s
     # Postgres is internal-only. Do NOT expose a host port in production.
+
+  # ── DB migrate (one-off; NEVER runs on `up`) ────────────────────────────────
+  # Applies the Drizzle schema to Postgres (creates/updates tables, e.g.
+  # import_orders). Profile-gated so a normal deploy never touches the schema.
+  # Run it explicitly after the DB is healthy, once per schema change:
+  #   docker compose --profile migrate run --rm migrate
+  # Reuses the API builder stage (it has drizzle-kit + the schema). --force applies
+  # the diff non-interactively; on a real data migration review the SQL first.
+  migrate:
+    profiles: ["migrate"]
+    build:
+      context: .
+      dockerfile: deploy/coolify/Dockerfile.api
+      target: builder
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - banco_net
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-banco}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-banco}
+    command: ["pnpm", "--filter", "@workspace/db", "run", "push", "--", "--force"]
 
   # ── API server ───────────────────────────────────────────────────────────────
   api:

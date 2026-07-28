@@ -34,6 +34,8 @@ import { SkeletonCard } from "@/components/SkeletonCard";
 import { SearchResultsSurface } from "@/components/search/SearchResultsSurface";
 import { SearchResultsMap } from "@/components/search/SearchResultsMap";
 import { FilterSheet } from "@/components/search/FilterSheet";
+import { FilterPillSelect } from "@/components/search/FilterPillSelect";
+import { axisShape, type SectionChrome } from "@/components/search/sectionChrome";
 import { MiniAppBottomNav } from "@/components/MiniAppBottomNav";
 import {
   Category,
@@ -55,13 +57,10 @@ import {
 } from "@/constants/cars";
 import { labelForValue } from "@/constants/locations";
 import {
-  CURRENCY_BY_MARKET,
   DEFAULT_MARKET_COUNTRY,
-  MARKET_COUNTRIES,
   MATERIAL_TYPES,
   PROPERTY_TYPES,
 } from "@/constants/listingCreateTaxonomy";
-import { PHONE_COUNTRIES } from "@/constants/countryCodes";
 import {
   loadPreferredMarketCountry,
   savePreferredMarketCountry,
@@ -158,6 +157,13 @@ export interface SectionSearchAppProps {
   subtitleKey?: string;
   /** Optional Feather icon name overriding the CategoryIcon in the header. */
   headerIcon?: React.ComponentProps<typeof Feather>["name"];
+  /**
+   * How THIS section renders its own axes. Owner rule: sections must not share a
+   * shape by accident — cars, real-estate, factories and materials segment on
+   * genuinely different things, so each screen states its own and this component
+   * executes it. Omitted axes keep the shipped chip behaviour (see sectionChrome).
+   */
+  chrome?: SectionChrome;
 }
 
 /**
@@ -176,6 +182,7 @@ export function SectionSearchApp({
   titleKey,
   subtitleKey,
   headerIcon,
+  chrome,
 }: SectionSearchAppProps) {
   const colors = useColors();
   const { t, isRTL } = useI18n();
@@ -804,10 +811,11 @@ export function SectionSearchApp({
   // keep it for cars; RE uses offer engines + type strip (+ FilterSheet for مطلوب).
   const showListingMode = !lockedEngine && !isRealEstateSection;
   const showReTypeStrip = isRealEstateSection && reTypeTabs.length > 0;
-  // Market matrix under secondary strips (Stay/RE pattern) — RE + materials
-  // (toridat). Globe button stays on car/facilities primary strip only.
-  const showReMarketMatrix = isRealEstateSection;
-  const showMaterialsMarketMatrix = isMaterialsSection;
+  // Country + currency live in ONE compact MarketCountryButton on the primary
+  // strip — every section, no exception (owner 2026-07-20, completed for RE +
+  // materials 2026-07-27). The old spread matrix laid 21 country cells in a
+  // horizontal strip ≈ 6 screens wide; the button is ~140px and opens the same
+  // picker the matrix's "…" button already opened, so nothing is lost.
 
   // ── Section-scoped "dirty" filter count (excludes the locked baseline) ──────
   const rentEngineActive =
@@ -871,6 +879,9 @@ export function SectionSearchApp({
   const handleSaveSearch = () => {
     const snapshot: SearchCriteria = { ...criteria, q: draftQuery.trim() };
     saveSearch({
+      // The name is read back to the user inside the "new listing matches your
+      // search" alert and its email, so it is localised here where `t` lives.
+      name: snapshot.q.trim() || t(`home.categories.${snapshot.category}`),
       criteria: snapshot,
       q: snapshot.q,
       category: snapshot.category,
@@ -1219,26 +1230,33 @@ export function SectionSearchApp({
         </View>
       )}
 
-      {/* ── Primary chip strip: globe (car/facilities) · sort · mode/engines.
-          RE + materials countries live in the market matrix under secondary strips. ── */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        // Critical: horizontal ScrollView must NOT flex-grow. Without this, RN
-        // lets the strip eat the column and crushes results into a black void
-        // with one card pinned at the bottom (owner screenshot regression).
-        style={styles.hScroll}
-        contentContainerStyle={[styles.chipStrip, { flexDirection: rowDir }]}
+      {/* ── Primary chip strip: country/currency · sort · mode/engines.
+          The country button leads EVERY section — one compact control, one
+          left edge, so the strips below it stack on the same axis.
+
+          WRAPS instead of scrolling sideways. Measured in cars before the
+          change: 999px of content inside a 375px window — 624px, nearly two
+          screens, of the user's own segmentation hidden off the right edge
+          where nothing hints it exists. These are "which slice am I browsing"
+          chips, so they stay one-tap chips (a dropdown would cost a tap on the
+          most-used control); they simply all fit now.
+
+          `flexGrow: 0` is carried over deliberately: the old horizontal
+          ScrollView needed it because without it RN let the strip eat the
+          column and crushed the results into a black void with one card pinned
+          at the bottom (owner screenshot regression). A wrapping View is taller
+          than a single row, so that constraint matters more here, not less. ── */}
+      <View
+        style={[styles.chipStrip, { flexDirection: rowDir }]}
+        testID="section-primary-strip"
       >
-        {!isRealEstateSection && !isMaterialsSection ? (
-          <MarketCountryButton
-            selected={criteria.marketCountry}
-            onPress={() => {
-              playSound("tap");
-              setMarketPickerOpen(true);
-            }}
-          />
-        ) : null}
+        <MarketCountryButton
+          selected={criteria.marketCountry}
+          onPress={() => {
+            playSound("tap");
+            setMarketPickerOpen(true);
+          }}
+        />
         {/* Quick sort — a small in-strip filter present in every section (was a
             4th header icon that crowded the title). Cycles recommended → newest
             → price low→high → high→low. Isolated: plain criteria state, never
@@ -1279,36 +1297,86 @@ export function SectionSearchApp({
         {(showListingMode || showEngineChips || showIndustrialChips || isRealEstateSection) ? (
           <View style={[styles.chipStripDivider, { backgroundColor: colors.border }]} />
         ) : null}
-        {showListingMode ? (["all", "sale", "buy"] as const).map((mode) => {
-          const active = criteria.listingMode === mode;
-          return (
-            <Pressable
-              key={mode}
-              onPress={() => { playSound("tap"); Haptics.selectionAsync(); selectListingMode(mode); }}
-              style={[styles.stripChip, { backgroundColor: active ? accent : colors.secondary }]}
-              testID={`section-listing-mode-${mode}`}
-            >
-              <AppText style={[styles.stripChipText, { color: active ? "#FFFFFF" : colors.mutedForeground }]}>
-                {mode === "all" ? t("search.listingModeAll") : mode === "sale" ? t("search.listingModeSale") : t("search.listingModeBuy")}
-              </AppText>
-            </Pressable>
-          );
-        }) : null}
-        {showEngineChips ? stripEngineList.map((e) => {
-          const active = activeOfferKey === e.key;
-          return (
-            <Pressable
-              key={e.key}
-              onPress={() => { playSound("tap"); Haptics.selectionAsync(); selectEngine(e.key); }}
-              style={[styles.stripChip, { backgroundColor: active ? accent : colors.secondary }]}
-              testID={`engine-${e.key}`}
-            >
-              <AppText style={[styles.stripChipText, { color: active ? "#FFFFFF" : colors.mutedForeground }]}>
-                {t(e.i18nKey)}
-              </AppText>
-            </Pressable>
-          );
-        }) : null}
+        {/* Offer + engine axes: the SECTION decides the shape, this only renders
+            it. Cars ask for pills because their engine axis carries five values
+            (new / used / imported / bank / islamic instalment) which measured
+            999px inside a 375px window as chips. A section whose axis is short
+            and constantly flicked asks for chips instead and keeps its taps. */}
+        {showListingMode ? (
+          axisShape(chrome, "listingMode") === "pill" ? (
+            <FilterPillSelect
+              icon="tag"
+              title={t("search.listingModeAll")}
+              options={[
+                { value: "sale", label: t("search.listingModeSale") },
+                { value: "buy", label: t("search.listingModeBuy") },
+              ]}
+              selected={criteria.listingMode}
+              allValue="all"
+              allLabel={t("search.offerAny")}
+              onSelect={(v) => {
+                playSound("tap");
+                Haptics.selectionAsync();
+                selectListingMode(v as "all" | "sale" | "buy");
+              }}
+              accentColor={accent}
+              testID="section-listing-mode"
+            />
+          ) : (
+            (["all", "sale", "buy"] as const).map((mode) => {
+              const active = criteria.listingMode === mode;
+              return (
+                <Pressable
+                  key={mode}
+                  onPress={() => { playSound("tap"); Haptics.selectionAsync(); selectListingMode(mode); }}
+                  style={[styles.stripChip, { backgroundColor: active ? accent : colors.secondary }]}
+                  testID={`section-listing-mode-${mode}`}
+                >
+                  <AppText style={[styles.stripChipText, { color: active ? "#FFFFFF" : colors.mutedForeground }]}>
+                    {mode === "all" ? t("search.listingModeAll") : mode === "sale" ? t("search.listingModeSale") : t("search.listingModeBuy")}
+                  </AppText>
+                </Pressable>
+              );
+            })
+          )
+        ) : null}
+        {showEngineChips ? (
+          axisShape(chrome, "engines") === "pill" ? (
+            <FilterPillSelect
+              icon="sliders"
+              title={t("search.type")}
+              options={stripEngineList
+                .filter((e) => e.key !== "all")
+                .map((e) => ({ value: e.key, label: t(e.i18nKey) }))}
+              selected={activeOfferKey ?? "all"}
+              allValue="all"
+              allLabel={t("search.typeAny")}
+              onSelect={(v) => {
+                playSound("tap");
+                Haptics.selectionAsync();
+                selectEngine(v);
+              }}
+              accentColor={accent}
+              testID="section-engine"
+            />
+          ) : (
+            stripEngineList.map((e) => {
+              const active = activeOfferKey === e.key;
+              return (
+                <Pressable
+                  key={e.key}
+                  onPress={() => { playSound("tap"); Haptics.selectionAsync(); selectEngine(e.key); }}
+                  style={[styles.stripChip, { backgroundColor: active ? accent : colors.secondary }]}
+                  testID={`engine-${e.key}`}
+                >
+                  <AppText style={[styles.stripChipText, { color: active ? "#FFFFFF" : colors.mutedForeground }]}>
+                    {t(e.i18nKey)}
+                  </AppText>
+                </Pressable>
+              );
+            })
+          )
+        ) : null}
         {/* RE: single Wanted chip (is_request) — not the full listingMode trio
             that duplicated "For sale" next to offer "Sale/تمليك". */}
         {isRealEstateSection && !lockedEngine ? (
@@ -1360,7 +1428,7 @@ export function SectionSearchApp({
             </Pressable>
           );
         }) : null}
-      </ScrollView>
+      </View>
 
       {/* ── RE property-type strip (Stay-parallel) — never mixed into offer row ── */}
       {showReTypeStrip ? (
@@ -1415,76 +1483,6 @@ export function SectionSearchApp({
                 </Pressable>
               );
             })}
-        </ScrollView>
-      ) : null}
-
-      {/* ── RE market matrix (countries + currencies) under type strip ── */}
-      {showReMarketMatrix ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.hScroll}
-          contentContainerStyle={[styles.reMarketMatrix, { flexDirection: rowDir }]}
-          testID="re-market-matrix"
-        >
-          {MARKET_COUNTRIES.map((m) => {
-            const active = criteria.marketCountry === m.value;
-            const currency = CURRENCY_BY_MARKET[m.value] ?? "";
-            const flag = PHONE_COUNTRIES.find((c) => c.iso === m.value)?.flag;
-            return (
-              <Pressable
-                key={m.value}
-                onPress={() => {
-                  playSound("tap");
-                  Haptics.selectionAsync();
-                  selectMarketCountry(m.value);
-                }}
-                style={[
-                  styles.reMatrixCell,
-                  {
-                    flexDirection: rowDir,
-                    backgroundColor: active
-                      ? "rgba(122,18,38,0.10)"
-                      : colors.card,
-                    borderColor: active ? accent : colors.border,
-                  },
-                ]}
-                testID={`re-market-${m.value}`}
-                accessibilityLabel={`${isRTL ? m.ar : m.en} ${currency}`}
-              >
-                {flag ? (
-                  <AppText style={styles.reMatrixFlag}>{flag}</AppText>
-                ) : (
-                  <Feather name="globe" size={12} color={colors.mutedForeground} />
-                )}
-                <AppText
-                  style={[styles.reMatrixCountry, { color: colors.foreground }]}
-                  numberOfLines={1}
-                >
-                  {isRTL ? m.ar : m.en}
-                </AppText>
-                <AppText
-                  style={[styles.reMatrixCurrency, { color: colors.mutedForeground }]}
-                >
-                  {currency}
-                </AppText>
-              </Pressable>
-            );
-          })}
-          <Pressable
-            onPress={() => {
-              playSound("tap");
-              setMarketPickerOpen(true);
-            }}
-            style={[
-              styles.reMatrixMore,
-              { backgroundColor: colors.secondary, borderColor: colors.border },
-            ]}
-            testID="re-market-more"
-            accessibilityLabel={t("search.marketCountryTitle")}
-          >
-            <Feather name="more-horizontal" size={14} color={colors.mutedForeground} />
-          </Pressable>
         </ScrollView>
       ) : null}
 
@@ -1678,76 +1676,6 @@ export function SectionSearchApp({
             );
           })}
         </View>
-      ) : null}
-
-      {/* ── Materials market matrix (countries + currencies) under origin ── */}
-      {showMaterialsMarketMatrix ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.hScroll}
-          contentContainerStyle={[styles.reMarketMatrix, { flexDirection: rowDir }]}
-          testID="materials-market-matrix"
-        >
-          {MARKET_COUNTRIES.map((m) => {
-            const active = criteria.marketCountry === m.value;
-            const currency = CURRENCY_BY_MARKET[m.value] ?? "";
-            const flag = PHONE_COUNTRIES.find((c) => c.iso === m.value)?.flag;
-            return (
-              <Pressable
-                key={m.value}
-                onPress={() => {
-                  playSound("tap");
-                  Haptics.selectionAsync();
-                  selectMarketCountry(m.value);
-                }}
-                style={[
-                  styles.reMatrixCell,
-                  {
-                    flexDirection: rowDir,
-                    backgroundColor: active
-                      ? "rgba(122,18,38,0.10)"
-                      : colors.card,
-                    borderColor: active ? accent : colors.border,
-                  },
-                ]}
-                testID={`materials-market-${m.value}`}
-                accessibilityLabel={`${isRTL ? m.ar : m.en} ${currency}`}
-              >
-                {flag ? (
-                  <AppText style={styles.reMatrixFlag}>{flag}</AppText>
-                ) : (
-                  <Feather name="globe" size={12} color={colors.mutedForeground} />
-                )}
-                <AppText
-                  style={[styles.reMatrixCountry, { color: colors.foreground }]}
-                  numberOfLines={1}
-                >
-                  {isRTL ? m.ar : m.en}
-                </AppText>
-                <AppText
-                  style={[styles.reMatrixCurrency, { color: colors.mutedForeground }]}
-                >
-                  {currency}
-                </AppText>
-              </Pressable>
-            );
-          })}
-          <Pressable
-            onPress={() => {
-              playSound("tap");
-              setMarketPickerOpen(true);
-            }}
-            style={[
-              styles.reMatrixMore,
-              { backgroundColor: colors.secondary, borderColor: colors.border },
-            ]}
-            testID="materials-market-more"
-            accessibilityLabel={t("search.marketCountryTitle")}
-          >
-            <Feather name="more-horizontal" size={14} color={colors.mutedForeground} />
-          </Pressable>
-        </ScrollView>
       ) : null}
 
       {/* ── Rental term chips (RE rent / Booking) ── */}
@@ -2036,10 +1964,15 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontFamily: "Inter_700Bold",
   },
+  // Every stacked strip in a section shares ONE left edge (12) and ONE vertical
+  // rhythm (8 / 2). Before: this row sat at 16/10 between neighbours at 12/8, so
+  // the materials origin strip visibly jutted out 4px from the strips above and
+  // below it. Alignment, not decoration — see MASTER-TRACKER §7.
   chipRow: {
     gap: 8,
-    paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 2,
   },
   chip: {
     paddingHorizontal: 14,
@@ -2053,6 +1986,11 @@ const styles = StyleSheet.create({
   // Unified horizontal chip strip — globe first, then mode/engine chips inline
   chipStrip: {
     alignItems: "center",
+    // Wraps onto as many short rows as the section needs. `flexGrow: 0` keeps
+    // the guarantee the old horizontal ScrollView relied on — the strip must
+    // never expand into the results column (see the note at its mount).
+    flexWrap: "wrap",
+    flexGrow: 0,
     gap: 8,
     paddingHorizontal: 12,
     paddingTop: 8,
@@ -2093,8 +2031,8 @@ const styles = StyleSheet.create({
   rentalChrome: {
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: 16,
-    paddingTop: 10,
+    paddingHorizontal: 12,
+    paddingTop: 8,
     paddingBottom: 2,
   },
   reTypeStrip: {
@@ -2103,41 +2041,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 2,
-  },
-  reMarketMatrix: {
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingTop: 6,
-    paddingBottom: 4,
-  },
-  reMatrixCell: {
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 10,
-    borderWidth: 1,
-    maxWidth: 148,
-  },
-  reMatrixFlag: { fontSize: 13, lineHeight: 16 },
-  reMatrixCountry: {
-    fontSize: 11.5,
-    fontFamily: "Inter_600SemiBold",
-    flexShrink: 1,
-  },
-  reMatrixCurrency: {
-    fontSize: 10.5,
-    fontFamily: "Inter_500Medium",
-    letterSpacing: 0.3,
-  },
-  reMatrixMore: {
-    width: 32,
-    height: 28,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
   },
   resultsCount: { fontSize: 12.5, paddingHorizontal: 16, paddingTop: 8 },
   suggestions: {

@@ -4,6 +4,13 @@ import { Platform } from "react-native";
 export const DEFAULT_NEAR_RADIUS_KM = 25;
 
 /**
+ * Selectable radii for the "Near me" search (km). The row is rendered ONLY while
+ * near-me is enabled, so the compact filter sheet keeps its default height.
+ * 5 → walking/neighbourhood, 100 → whole-governorate reach.
+ */
+export const NEAR_RADIUS_OPTIONS_KM = [5, 10, 25, 50, 100] as const;
+
+/**
  * Requests foreground location permission and returns the device coordinates.
  * Returns null on web, denied permission, or any runtime error — callers show UX.
  */

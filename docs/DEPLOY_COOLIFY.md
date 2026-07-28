@@ -123,11 +123,11 @@ Click **Deploy** in Coolify. Coolify will:
 | `PAYMOB_SECRET_KEY` | — | Paymob secret key |
 | `PAYMOB_HMAC_SECRET` | — | Paymob HMAC secret |
 | `PAYMOB_INTEGRATION_IDS` | — | Paymob integration IDs (JSON) |
-| `OBJECT_STORAGE_PROVIDER` | — | `s3` or `gcs` |
+| `OBJECT_STORAGE_PROVIDER` | `replit` | `s3` or `replit` — **NOT `gcs`** (the API rejects `gcs`: "Unsupported OBJECT_STORAGE_PROVIDER … Supported: s3, replit"). For a VPS/Coolify deploy use `s3` (any S3-compatible endpoint). |
 | `S3_BUCKET` | — | S3 bucket name |
 | `AWS_REGION` | — | AWS region |
-| `PUBLIC_OBJECT_SEARCH_PATHS` | — | Public S3/GCS path prefix for listing images |
-| `PRIVATE_OBJECT_DIR` | — | Private S3/GCS dir for internal assets |
+| `PUBLIC_OBJECT_SEARCH_PATHS` | — | Public S3 path prefix for listing images |
+| `PRIVATE_OBJECT_DIR` | — | Private S3 dir for internal assets |
 | `ERROR_ALERT_WEBHOOK` | — | Webhook URL for error alerts |
 | `LOG_LEVEL` | `info` | Pino log level |
 | `LOG_DIR` | — | Directory for log file output (omit to log to stdout only) |

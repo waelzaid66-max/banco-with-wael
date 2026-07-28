@@ -147,8 +147,22 @@ export function validateAttributes(
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
+  // The floor is the SMALLEST set that is true for every asset the category can
+  // hold — never the set that is true for its most common one.
+  //
+  // `car` is the movable-asset category: a plane, a boat, a launch, a bike or a
+  // truck all belong here, and none of them measure their life in kilometres —
+  // aircraft count flight hours, vessels count engine hours. Requiring `mileage`
+  // therefore blocked whole classes of high-value assets from ever being listed,
+  // which is the one outcome a marketplace can never afford. `condition`
+  // (new / used) is the only attribute that is genuinely true of all of them, so
+  // it is the only one that gates.
+  //
+  // Nothing is lost by relaxing this: mileage, year and fuel stay in the form and
+  // are still stored whenever the seller fills them — they simply no longer stop
+  // a seller whose asset has no odometer.
   const required: Record<string, string[]> = {
-    car: ["mileage", "condition"],
+    car: ["condition"],
     real_estate: ["area"],
     industrial: ["capacity"],
   };

@@ -137,7 +137,16 @@ test("search tab uses market-scoped rental taxonomy adapter", () => {
     "utf8",
   );
   assert.match(search, /rentalTermsForSearch/, "search tab must use searchTaxonomy adapter");
-  assert.match(search, /MARKET_COUNTRIES/, "search tab must expose per-market rental chips");
+  // This used to assert /MARKET_COUNTRIES/ with the message "must expose per-market
+  // rental chips" — a proxy that locked the 21-chip spread row in place. Owner
+  // 2026-07-27 replaced that row with the compact MarketCountryButton everywhere.
+  // The real subject of this test is the market-SCOPED rental taxonomy (asserted
+  // above), so the market control is now asserted by its current shape.
+  assert.match(
+    search,
+    /<MarketCountryButton\b/,
+    "search tab must expose the compact market control",
+  );
   assert.match(sheet, /rentalTermsForSearch/, "FilterSheet must use market-scoped rental terms");
   assert.match(sheet, /filter-near-me/, "FilterSheet must expose near-me control");
 });
@@ -149,4 +158,91 @@ test("create taxonomy includes engine-aligned commercial property types", () => 
   );
   assert.match(src, /commercial_land/, "PROPERTY_TYPES must include commercial_land");
   assert.match(src, /warehouse/, "PROPERTY_TYPES must include warehouse");
+});
+
+test("any asset can be published — the floor and the brand escape both hold", () => {
+  const taxonomy = fs.readFileSync(
+    path.join(APP_ROOT, "constants", "listingCreateTaxonomy.ts"),
+    "utf8",
+  );
+  const picker = fs.readFileSync(
+    path.join(APP_ROOT, "components", "CarPicker.tsx"),
+    "utf8",
+  );
+  const create = fs.readFileSync(
+    path.join(APP_ROOT, "app", "listings", "create.tsx"),
+    "utf8",
+  );
+  const draft = fs.readFileSync(
+    path.join(APP_ROOT, "lib", "listingDraft.ts"),
+    "utf8",
+  );
+
+  // Owner 2026-07-28: a plane, a boat or a launch must be listable. Three things
+  // have to hold together, and any ONE of them failing blocks the whole journey
+  // while the other two look fine — which is why they are asserted as a set.
+
+  // 1. The floor cannot assume an odometer. Aircraft count flight hours.
+  //    Scoped to REQUIRED_SPEC_KEYS: the file also declares the RENDERED spec
+  //    fields, and `mileage` belongs there legitimately — it is asked for, it
+  //    just must not block. A file-wide match hit that list instead and failed on
+  //    correct code, so the block is isolated first.
+  const floorBlock = taxonomy.match(
+    /REQUIRED_SPEC_KEYS[^=]*=\s*\{[\s\S]*?\n\};/,
+  );
+  assert.ok(floorBlock, "REQUIRED_SPEC_KEYS must be declared");
+  const carFloor = floorBlock[0].match(/car:\s*\[[^\]]*\]/);
+  assert.ok(carFloor, "car floor must be declared");
+  assert.doesNotMatch(
+    carFloor[0],
+    /"mileage"/,
+    "mileage must not gate publishing — assets without an odometer cannot supply it",
+  );
+  assert.match(
+    carFloor[0],
+    /"condition"/,
+    "the floor must not be empty — condition is true of every movable asset",
+  );
+
+  // 2. One clear photo is enough. The app used to demand two while the backend
+  //    required one, so it refused listings the platform would have accepted —
+  //    strictness nobody asked for, paid in trade that never happens.
+  const media = fs.readFileSync(
+    path.join(APP_ROOT, "lib", "listingMedia.ts"),
+    "utf8",
+  );
+  const minPhotos = media.match(/MIN_PHOTOS\s*=\s*(\d+)/);
+  assert.ok(minPhotos, "MIN_PHOTOS must be declared");
+  assert.equal(
+    minPhotos[1],
+    "1",
+    "MIN_PHOTOS must match the backend floor of 1 — a seller with one real photo must be able to publish",
+  );
+
+  // 3. A brand outside the 410-entry catalogue must be typeable, or the brand
+  //    gate refuses "Cessna" no matter how small the spec floor is.
+  assert.match(
+    picker,
+    /useTypedBrand/,
+    "CarPicker must offer the typed brand when the catalogue has no match",
+  );
+  assert.match(
+    picker,
+    /custom:/,
+    "the typed brand must be carried as a custom value",
+  );
+
+  // 3. …and it must SURVIVE a draft save/restore. It previously did not: the
+  //    restore looked the value up in the catalogue, found nothing, and dropped
+  //    the brand — silently re-blocking a seller who had already chosen one.
+  assert.match(
+    create,
+    /carBrandLabel/,
+    "create must persist the typed brand's label, or restore cannot rebuild it",
+  );
+  assert.match(
+    draft,
+    /carBrandLabel/,
+    "the draft shape must carry the brand label",
+  );
 });

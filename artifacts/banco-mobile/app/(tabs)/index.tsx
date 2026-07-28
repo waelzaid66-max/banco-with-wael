@@ -45,8 +45,12 @@ import Animated, {
   interpolate,
   useAnimatedStyle,
   useReducedMotion,
+  useAnimatedReaction,
   useSharedValue,
+  withDelay,
   withRepeat,
+  withSequence,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
 
@@ -80,6 +84,7 @@ import {
 } from "@/constants/feed";
 import { useI18n } from "@/context/LanguageContext";
 import { useSession } from "@/context/SessionContext";
+import { brandSpark } from "@/lib/brandSpark";
 import { useAuthGate } from "@/hooks/useAuthGate";
 import { useColors } from "@/hooks/useColors";
 
@@ -185,13 +190,13 @@ function Rail({ title, items, onCardPress, onSave, isSaved }: RailProps) {
 // small header gap between the BANCO wordmark and the action cluster — it never
 // touches, resizes, recolors, or competes with the BANCO logo.
 //
-// Behaviour (one calm pass every 30s, like a branded car driving through):
-//   • 0s → 26s   : fully hidden (opacity 0), no movement.
-//   • 26.0s      : fade in over 250ms only.
-//   • 26.25s →   : glide ONCE across the gap at a constant, calm speed (~3.75s).
-//   • ~28.5s     : begin fading out WHILE still moving, gone before the far edge.
-//   • then       : back to opacity 0 until the next 30s cycle.
-// Only translateX + opacity animate (GPU thread, no layout, no scale/zoom/rotate).
+// Behaviour — INTERACTIVE, not on a timer: the mark is hidden at rest and answers
+// a real user action (a B-reaction on a car, a booking) with ONE short 3D pop:
+//   • idle       : hidden (opacity 0).
+//   • on action  : swings in on a perspective/rotateY arc while a spring scales
+//                  it past 1 — that overshoot is the "pop" — then holds ~0.5s.
+//   • after      : fades back out over 380ms until the next action.
+// Only perspective/rotateY/scale/opacity animate (GPU thread, no layout reflow).
 // Uses the official B-OOM asset as-is (only its flat black backdrop was made
 // transparent so it sits cleanly on both the dark and light header). Respects
 // prefers-reduced-motion by showing the mark static instead of animating.
@@ -206,45 +211,43 @@ const BOOM_W = Math.round(BOOM_H * BOOM_ASPECT);
 
 function HeaderSpark() {
   const reduceMotion = useReducedMotion();
-  const t = useSharedValue(0);
-  const boxW = useSharedValue(0);
+  // At rest the mark is hidden. One real user action (B-reaction, booking…)
+  // drives this 0 → 1 → 0 once: the sub-brand answers what the user just did.
+  const pop = useSharedValue(0);
 
-  useEffect(() => {
-    if (reduceMotion) return;
-    t.value = withRepeat(
-      withTiming(1, { duration: 30000, easing: Easing.linear }),
-      -1,
-      false
-    );
-  }, [t, reduceMotion]);
+  // The trigger is a module-level shared value, NOT React state — writing it
+  // re-renders nothing, so a tap inside a long feed list can never cost a
+  // render anywhere in the tree. This reaction runs on the UI thread and only
+  // when the counter actually changes (prev === null is the initial read).
+  useAnimatedReaction(
+    () => brandSpark.value,
+    (curr, prev) => {
+      if (prev === null || curr === prev || reduceMotion) return;
+      pop.value = 0;
+      pop.value = withSequence(
+        // The spring overshoots past 1 — that overshoot IS the pop.
+        withSpring(1, { damping: 9, stiffness: 220, mass: 0.5 }),
+        withDelay(
+          520,
+          withTiming(0, { duration: 380, easing: Easing.out(Easing.quad) }),
+        ),
+      );
+    },
+    [reduceMotion],
+  );
 
-  const logoStyle = useAnimatedStyle(() => {
-    // Keep the whole mark inside the gap at both extremes (overflow:hidden also
-    // guards it). span = half the free horizontal room.
-    const span = Math.max(0, (boxW.value - BOOM_W) / 2);
-    return {
-      opacity: interpolate(
-        t.value,
-        [0.8667, 0.875, 0.95, 0.98, 1],
-        [0, 1, 1, 0, 0],
-        Extrapolation.CLAMP
-      ),
-      transform: [
-        {
-          translateX: interpolate(
-            t.value,
-            [0.875, 1],
-            [-span, span],
-            Extrapolation.CLAMP
-          ),
-        },
-      ],
-    };
-  });
-
-  const onLayout = (e: LayoutChangeEvent) => {
-    boxW.value = e.nativeEvent.layout.width;
-  };
+  const logoStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(pop.value, [0, 0.3, 1], [0, 1, 1], Extrapolation.CLAMP),
+    transform: [
+      // Perspective + rotateY give real depth, so the mark swings in like a
+      // small 3D badge instead of just scaling. GPU-only: no layout, no reflow.
+      { perspective: 600 },
+      {
+        rotateY: `${interpolate(pop.value, [0, 1], [-42, 0], Extrapolation.CLAMP)}deg`,
+      },
+      { scale: interpolate(pop.value, [0, 1], [0.55, 1], Extrapolation.CLAMP) },
+    ],
+  }));
 
   if (reduceMotion) {
     return (
@@ -259,7 +262,7 @@ function HeaderSpark() {
   }
 
   return (
-    <View style={styles.spark} pointerEvents="none" onLayout={onLayout}>
+    <View style={styles.spark} pointerEvents="none">
       <Animated.View style={logoStyle}>
         <Image
           source={BOOM_LOGO}

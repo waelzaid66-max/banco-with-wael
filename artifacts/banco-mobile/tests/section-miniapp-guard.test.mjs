@@ -430,6 +430,335 @@ test("SectionSearchApp keeps engine chips during facet load (no reload flash)", 
   );
 });
 
+test("Each section declares its OWN chrome — the shared mini-app never decides for it", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+
+  // Owner 2026-07-28: «ممنوع الخلط بين الأقسام — كل قسم له طبيعة خاصة». The
+  // failure this guards was architectural, not visual: the shared component was
+  // choosing the shape of every section's controls, so one judgement about cars
+  // silently became the rule for real-estate, factories and materials — sections
+  // that segment on genuinely different things. The decision now lives in each
+  // section's own screen and this component only executes it.
+  assert.match(
+    section,
+    /chrome\?:\s*SectionChrome/,
+    "SectionSearchApp must accept the section's chrome rather than inventing one",
+  );
+  assert.match(
+    section,
+    /axisShape\(chrome,\s*"listingMode"\)/,
+    "the offer axis shape must come from the section, not a hardcoded choice",
+  );
+  assert.match(
+    section,
+    /axisShape\(chrome,\s*"engines"\)/,
+    "the engine axis shape must come from the section",
+  );
+  // Both shapes must still exist, or "the section decides" is a decision with
+  // only one possible answer.
+  assert.match(section, /<FilterPillSelect/, "the pill shape must be available");
+  assert.match(
+    section,
+    /testID=\{`section-listing-mode-\$\{mode\}`\}/,
+    "the chips shape must still be available for sections that want it",
+  );
+
+  // …and every section screen must actually state its own, so none inherits a
+  // shape by accident.
+  for (const [file, expected] of [
+    ["car", /listingMode:\s*"pill"[\s\S]*engines:\s*"pill"/],
+    ["real-estate", /engines:\s*"chips"/],
+    ["factories", /engines:\s*"chips"/],
+    ["materials", /engines:\s*"chips"/],
+  ]) {
+    const screen = fs.readFileSync(
+      path.join(APP_ROOT, "app", "section", `${file}.tsx`),
+      "utf8",
+    );
+    assert.match(
+      screen,
+      /chrome=\{\{/,
+      `app/section/${file}.tsx must declare its own chrome`,
+    );
+    assert.match(
+      screen,
+      expected,
+      `app/section/${file}.tsx must state the shape its axes actually need`,
+    );
+  }
+});
+
+test("The primary strip wraps and can never eat the results column", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  // Measured in cars before this changed: 999px of chips inside a 375px window,
+  // so 624px — nearly two screens — of the user's own segmentation sat off the
+  // right edge with nothing hinting it was there. Wrapping shows all of it and
+  // costs no extra tap, which matters because these are the most-used controls.
+  // Read CODE, not prose. The first version of this guard matched the comment
+  // inside the block, which names `flexGrow: 0` while explaining why it matters —
+  // so deleting the real declaration still passed. Comments are stripped first.
+  const codeOnly = section
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  const strip = codeOnly.match(/\bchipStrip:\s*\{[^}]*\}/);
+  assert.ok(strip, "chipStrip style must exist");
+  assert.match(
+    strip[0],
+    /flexWrap:\s*"wrap"/,
+    "the primary strip must wrap — sideways scroll hides segmentation off-screen",
+  );
+  // Load-bearing: the old horizontal ScrollView carried flexGrow: 0 because
+  // without it RN let the strip expand and crush the results into a black void
+  // with one card pinned at the bottom. A wrapping row is TALLER than a single
+  // line, so dropping that constraint here would reproduce that regression
+  // faster, not slower.
+  assert.match(
+    strip[0],
+    /flexGrow:\s*0/,
+    "chipStrip must keep flexGrow: 0 or the strip can eat the results column",
+  );
+  assert.match(
+    section,
+    /testID="section-primary-strip"/,
+    "the primary strip must stay identifiable for layout regression checks",
+  );
+});
+
+test("FilterPill is the ONE filter-control shape, and it keeps Stay's approved metrics", () => {
+  const pill = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "FilterPill.tsx"),
+    "utf8",
+  );
+  // FilterPill was extracted from Stay's rental-term button, which was measured
+  // in the running app at 108×25 before the extraction: padding 4/10, gap 5,
+  // radius 20, 1px border. Those numbers are the contract — a pill that drifts
+  // from them stops matching the control the owner already approved.
+  const base = pill.match(/\bpill:\s*\{[^}]*\}/);
+  assert.ok(base, "FilterPill must define its base style");
+  for (const [prop, value] of [
+    ["gap", "5"],
+    ["paddingHorizontal", "10"],
+    ["paddingVertical", "4"],
+    ["borderRadius", "20"],
+    ["borderWidth", "1"],
+  ]) {
+    assert.match(
+      base[0],
+      new RegExp(`${prop}:\\s*${value}\\b`),
+      `FilterPill.${prop} must stay ${value} — Stay's measured pill`,
+    );
+  }
+  // The whole point is that an applied filter LOOKS applied. One flip must drive
+  // background, border and content together, or a pill can read "off" while on.
+  assert.match(pill, /active/, "FilterPill must expose an active state");
+  assert.match(
+    pill,
+    /backgroundColor:\s*on\s*\?/,
+    "the active flag must drive the fill",
+  );
+  assert.match(
+    pill,
+    /borderColor:\s*on\s*\?/,
+    "the active flag must drive the border too",
+  );
+
+  // …and Stay actually uses it, so the extraction cannot rot into a second copy.
+  const booking = fs.readFileSync(BOOKING_APP, "utf8");
+  assert.match(
+    booking,
+    /<FilterPill\b/,
+    "Stay's rental-term control must render FilterPill, not a private copy",
+  );
+  assert.doesNotMatch(
+    booking,
+    /styles\.termBtn\b/,
+    "the old private pill styles must be gone, or the two shapes drift apart",
+  );
+});
+
+test("Leaving a mini-app resets the filters but KEEPS the remembered market", () => {
+  for (const [label, file] of [
+    ["section", SECTION_APP],
+    ["stay", BOOKING_APP],
+  ]) {
+    const src = fs.readFileSync(file, "utf8");
+    // Owner contract: filters clear on the way out so the next entry is clean,
+    // while the market + its currency persist across sessions. Both halves are
+    // load-bearing — clearing the market too would drop a returning user back
+    // into Egypt every time, and not clearing the filters would carry someone
+    // else's price range into a fresh browse.
+    assert.match(
+      src,
+      /usePreventRemove\(/,
+      `${label}: exit must be intercepted, or hardware back skips the reset`,
+    );
+    assert.match(
+      src,
+      /resetAndLeave\s*\(/,
+      `${label}: exit must route through resetAndLeave`,
+    );
+    // Scope this to the reset path itself. `buildSeed(criteria.marketCountry)`
+    // also appears in the initial-seed effect, so a file-wide match would still
+    // pass while the reset quietly seeded from a hard-coded default — proven by
+    // negative test, which is why this reads clearAllFilters' body specifically.
+    const clearAt = src.indexOf("clearAllFilters = useCallback");
+    assert.ok(clearAt > 0, `${label}: clearAllFilters must exist`);
+    const clearBody = src.slice(clearAt, src.indexOf("}, [", clearAt));
+    assert.match(
+      clearBody,
+      /buildSeed\(\s*criteria\.marketCountry\s*\)/,
+      `${label}: the reset baseline must be seeded from criteria.marketCountry so the market survives the clear`,
+    );
+    assert.doesNotMatch(
+      clearBody,
+      /DEFAULT_MARKET_COUNTRY/,
+      `${label}: the reset must NOT fall back to the default market — that drops a returning user out of their market`,
+    );
+  }
+  // …and the market is what is written to storage, so it also survives a cold start.
+  const pref = fs.readFileSync(
+    path.join(APP_ROOT, "lib", "marketPreference.ts"),
+    "utf8",
+  );
+  assert.match(
+    pref,
+    /AsyncStorage\.setItem/,
+    "the preferred market must be persisted, or 'remembered market' is only true within one session",
+  );
+});
+
+test("Filter rows COMPRESS instead of scrolling sideways, and market stays in the sheet", () => {
+  const filter = fs.readFileSync(FILTER_SHEET, "utf8");
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  // Owner 2026-07-27 (correcting an earlier misread of mine): the ask was to
+  // COMPRESS the filters, never to delete them. The market row stays — a filter
+  // sheet is where you narrow by market, and having it here as well as on the
+  // header chrome is deliberate, not accidental duplication. What was wrong was
+  // the SHAPE: 21 chips on one horizontal line, ~4 screens of sideways scroll.
+  // Long option sets now wrap onto multiple lines, so everything is visible at
+  // once with zero horizontal scrolling — the same pattern the create screen
+  // already uses for these very markets.
+  assert.match(
+    filter,
+    /testID=\{?`?filter-market-/,
+    "FilterSheet MUST keep the market row (owner: compress, do not delete)",
+  );
+  assert.match(
+    filter,
+    /wrapRow/,
+    "FilterSheet must define the wrapping row style used to compress long option sets",
+  );
+  const wrapRow = filter.match(/\bwrapRow:\s*\{[^}]*\}/);
+  assert.ok(wrapRow, "wrapRow style must exist");
+  assert.match(
+    wrapRow[0],
+    /flexWrap:\s*"wrap"/,
+    "wrapRow must actually wrap — that is what removes the sideways scroll",
+  );
+  // The header control stays too; both are intended.
+  assert.match(
+    section,
+    /<MarketCountryButton\b/,
+    "the section header market button must stay mounted",
+  );
+
+  // Global search is the third FilterSheet consumer and it does NOT use the
+  // section mini-app. It previously showed 21 spread market chips gated behind
+  // `showRentalTerms`, so cars / materials / facilities / real-estate-for-sale had
+  // no market control at all — and removing the sheet row would have sealed that
+  // shut. It now mounts the same compact button, unconditionally, plus the picker
+  // (a button with no picker is a dead control).
+  const searchTab = fs.readFileSync(SEARCH_TAB, "utf8");
+  assert.match(
+    searchTab,
+    /<MarketCountryButton\b/,
+    "Global search must mount MarketCountryButton — market must stay reachable there",
+  );
+  assert.match(
+    searchTab,
+    /<MarketCountryPicker\b/,
+    "Global search must mount MarketCountryPicker, or the button opens nothing",
+  );
+  assert.doesNotMatch(
+    searchTab,
+    /testID=\{?`?search-market-\$\{/,
+    "Global search must NOT spread a market chip row (owner: one compact button)",
+  );
+  // Check CODE, not prose. The first version of this assertion scanned the raw
+  // 400 chars before the button and tripped on the comment that explains the fix,
+  // because the comment names `showRentalTerms`. Strip comments first, then look
+  // for a real conditional immediately preceding the mount.
+  const codeOnly = searchTab
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  const btnAt = codeOnly.indexOf("<MarketCountryButton");
+  assert.ok(btnAt > 0, "MarketCountryButton must be mounted in global search JSX");
+  assert.doesNotMatch(
+    codeOnly.slice(Math.max(0, btnAt - 300), btnAt),
+    /showRentalTerms|criteria\.category\s*===|\?\s*\($/,
+    "Global search market button must NOT sit behind a conditional — that was the bug",
+  );
+});
+
+test("FilterSheet never labels a section with the sheet's own title", () => {
+  const filter = fs.readFileSync(FILTER_SHEET, "utf8");
+  // The sheet header renders t("search.filters"). Any SectionLabel inside it that
+  // reuses that same key produces "Filters" nested under "Filters" on one screen,
+  // which reads as a rendering bug. Measured in the running app 2026-07-27.
+  const headerUsesFilters = /styles\.sheetTitle[\s\S]{0,160}?t\("search\.filters"\)/.test(filter);
+  assert.ok(headerUsesFilters, "sheet header is expected to use search.filters");
+  const sectionLabelUses = filter.match(/<SectionLabel[\s\S]{0,240}?\/>/g) ?? [];
+  const clashing = sectionLabelUses.filter((b) => /t\("search\.filters"\)/.test(b));
+  assert.equal(
+    clashing.length,
+    0,
+    `No SectionLabel may reuse search.filters (the sheet title). Found ${clashing.length}.`,
+  );
+});
+
+test("Country + currency is ONE compact button in every section (no per-section gate)", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  // Owner 2026-07-20, completed 2026-07-27: currency is display/valuation of the
+  // market's money, NOT a search axis — so it rides inside one compact control on
+  // the primary strip, identically in all five sections. This guard fails if the
+  // button is ever put back behind a section condition (that gate is exactly what
+  // left RE + materials with the wide spread matrix while Stay/cars had the button).
+  assert.match(
+    section,
+    /<MarketCountryButton\b/,
+    "Section mini-app must mount MarketCountryButton",
+  );
+  // Structural, not pattern-matched: the button must be the FIRST thing inside
+  // the primary chip strip, with no section flag between the two. An earlier
+  // version of this guard matched the exact `cond ? (` spelling and was proven
+  // blind to `cond ? null : (` — so it asserts on the window instead, which no
+  // spelling of a gate can slip past.
+  const stripIdx = section.indexOf("styles.chipStrip");
+  assert.ok(stripIdx > 0, "primary chip strip must exist");
+  const btnIdx = section.indexOf("<MarketCountryButton", stripIdx);
+  assert.ok(btnIdx > 0, "MarketCountryButton must sit inside the primary chip strip");
+  assert.doesNotMatch(
+    section.slice(stripIdx, btnIdx),
+    /isRealEstateSection|isMaterialsSection|isCarSection|isFacilitiesSection|category\s*===/,
+    "MarketCountryButton must NOT be gated per section — every section shows it",
+  );
+  // And the strips that stack under it share one left edge + one rhythm.
+  for (const [name, padH] of [
+    ["chipStrip", 12],
+    ["reTypeStrip", 12],
+    ["chipRow", 12],
+    ["rentalChrome", 12],
+  ]) {
+    const block = section.match(new RegExp(`\\b${name}:\\s*\\{[^}]*\\}`));
+    assert.ok(block, `${name} style must exist`);
+    assert.match(
+      block[0],
+      new RegExp(`paddingHorizontal:\\s*${padH}\\b`),
+      `${name} must use paddingHorizontal ${padH} so stacked strips align`,
+    );
+  }
+});
+
 test("Real-estate section uses offer strip + type strip (no listingMode clash)", () => {
   const section = fs.readFileSync(SECTION_APP, "utf8");
   assert.match(
@@ -437,10 +766,14 @@ test("Real-estate section uses offer strip + type strip (no listingMode clash)",
     /testID="re-type-strip"/,
     "RE must expose a dedicated property-type strip",
   );
-  assert.match(
+  // Owner 2026-07-27: RE joins Stay/cars/facilities — country + currency collapse
+  // into the ONE compact MarketCountryButton. The spread 21-cell matrix (~6
+  // screens of horizontal scroll) is gone; its "…" button opened the very same
+  // picker, so no capability was lost. Completes the 2026-07-20 decision.
+  assert.doesNotMatch(
     section,
     /testID="re-market-matrix"/,
-    "RE must expose market matrix under type strip",
+    "RE must NOT spread a market matrix (owner: collapse into MarketCountryButton)",
   );
   assert.match(
     section,
@@ -512,10 +845,11 @@ test("Materials (toridat) restores material strip + origin + market matrix", () 
     /testID="materials-origin-strip"/,
     "Materials must expose origin strip (local/imported)",
   );
-  assert.match(
+  // Owner 2026-07-27: same collapse as RE — one compact button, not 21 cells.
+  assert.doesNotMatch(
     section,
     /testID="materials-market-matrix"/,
-    "Materials must expose market matrix under origin (Stay/RE pattern)",
+    "Materials must NOT spread a market matrix (owner: collapse into MarketCountryButton)",
   );
   assert.match(
     section,
@@ -825,6 +1159,21 @@ test("Profile FI account type pushes onboarding with intent=fi", () => {
   );
 });
 
+// Restored from -BANCO-CA-OOM- (its guard had this; ours had lost both the test
+// and the feature). The DB is the source of truth for role: syncRoleToClerk
+// swallows its failures by design, so a failed mirror must never decide chrome
+// or a demotion guard.
+test("Profile role prefers /me over Clerk publicMetadata", () => {
+  const src = fs.readFileSync(PROFILE, "utf8");
+  assert.match(src, /meQuery\.data\?\.data\?\.role/);
+  assert.match(
+    src,
+    /const role = meRole \|\| clerkRole/,
+    "profile must use DB role first (S1)",
+  );
+  assert.match(src, /demoteBlockedTitle/, "client demote guard copy");
+});
+
 test("Banks hub hides Join when institution membership is active", () => {
   const src = fs.readFileSync(BANKS, "utf8");
   assert.match(src, /onMembershipChange/);
@@ -835,6 +1184,18 @@ test("Banks hub hides Join when institution membership is active", () => {
     /onboarding\?intent=fi/,
     "Banks Join CTA must keep intent=fi",
   );
+});
+
+// Restored from -BANCO-CA-OOM- alongside the feature itself. An account that
+// already holds the FI role must not be shown "Join" again — that reads as if
+// the registration never landed. Verification alone does not open the inbox: an
+// admin still has to link the institution, and this state says so.
+test("Banks hub shows awaiting-admin link for FI role without membership", () => {
+  const src = fs.readFileSync(BANKS, "utf8");
+  assert.match(src, /testID="banks-awaiting-link"/);
+  assert.match(src, /showAwaitingAdminLink/);
+  assert.match(src, /financial_institution/);
+  assert.match(src, /useGetMe/);
 });
 
 test("Banks productsHint honesty keys exist in en+ar", () => {
