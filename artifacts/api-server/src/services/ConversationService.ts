@@ -101,7 +101,7 @@ async function getUserId(clerkId: string): Promise<string> {
   const [user] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   if (!user) throw codedError("UNAUTHORIZED", "User not found");
   return user.id;
@@ -398,12 +398,19 @@ export async function sendMessage(
       .limit(1);
     if (!target) throw codedError("INVALID_DATA", "Reply target not found in this conversation");
   }
-  // A shared listing must exist.
+  // A shared listing must be publicly contactable — same gate as createConversation.
   if (listingRefId) {
     const [l] = await db
       .select({ id: listings.id })
       .from(listings)
-      .where(eq(listings.id, listingRefId))
+      .leftJoin(users, eq(listings.userId, users.id))
+      .where(
+        and(
+          eq(listings.id, listingRefId),
+          eq(listings.status, "active"),
+          ...publicVisibilityConditions(),
+        ),
+      )
       .limit(1);
     if (!l) throw codedError("INVALID_DATA", "Shared listing not found");
   }

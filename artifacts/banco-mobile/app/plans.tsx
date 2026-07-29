@@ -107,7 +107,11 @@ export default function PlansScreen() {
     setSelectedPlan(p);
     setMethod("vodafone_cash");
     setPayState("idle");
-    subscribeAttemptKeyRef.current = null;
+    // Keep attempt key when re-opening the same plan mid-pending Paymob checkout.
+    // Switching plans must mint a new key (fingerprint includes plan).
+    if (selectedPlan?.slug !== p.slug) {
+      subscribeAttemptKeyRef.current = null;
+    }
     setSheetOpen(true);
   };
 

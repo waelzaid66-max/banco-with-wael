@@ -3,7 +3,7 @@
 **Authority:** Chief Production Architect / Final Production Certification  
 **Repository SoT:** `waelzaid66-max/banco-with-wael`  
 **Branch:** `cursor/phase-x-production-hardening-5cf0`  
-**Tip at certification write:** Round 14 tip (see git log)  
+**Tip at certification write:** Round 15 tip (see git log)  
 **Policy:** Zero invented features. PASS only with evidence. Multi-repo hunt + character-level verify before patch. UNVERIFIED when device/ops required.
 
 ---
@@ -12,7 +12,7 @@
 
 **CONDITIONAL GO — NOT FULL PRODUCTION CERTIFIED.**
 
-Rounds 1–14 closed proven code-path defects. Round 14 closed a **CRITICAL** post-settlement Paymob refund/void hole (wallet/sub left intact) plus HIGH lead visibility lock, RFQ supplier tombstone, import authz, provider_opening lease, and Intention order pre-bind. Device/ops remain **UNVERIFIED**. Product/infra items (CPL fail-open, Clerk inbound delete, Redis) stay deferred honestly.
+Rounds 1–15 closed proven code-path defects. Round 15 closed **CRITICAL** reverse-before-settle races (durable `psp_reversed` + settle refuse), orphan subscription clawback, adjustment-typed clawbacks, client idempotency key retention, Save/Conversation/GlobalSupply tombstones, and AWS SSM wait. Device/ops remain **UNVERIFIED**. Product/infra items (CPL fail-open, Clerk inbound delete, Redis, MFA UI) stay deferred honestly.
 
 ---
 
@@ -20,29 +20,28 @@ Rounds 1–14 closed proven code-path defects. Round 14 closed a **CRITICAL** po
 
 | Gate | Result | Evidence |
 |------|--------|----------|
-| `node scripts/chain-integrity-gate.mjs` | **151/151 PASS** | Round 14 reversal, lease, lead FOR UPDATE, RFQ, import perm, comments, pre-bind |
-| API `pnpm test` (vitest) | **374 passed / 3 skipped** | Reversal + RFQ tombstone suites |
-| Mobile lib-hardening | prior PASS | Attempt key on pending (R13) |
+| `node scripts/chain-integrity-gate.mjs` | see tip run | Round 15 markers (+ R14) |
+| API `pnpm test` (vitest) | see tip run | Reverse-race + orphan + save tombstone |
+| Mobile lib-hardening | prior PASS | Attempt key on pending (R13); plans key (R15) |
 | Cross-repo cherry-pick | **NONE** | SoT ahead — no blind merge |
 | SVG icon registry | **PASS (static)** | No SVG→PNG migration |
 
 ---
 
-## Round 14 (director accuracy pass)
+## Round 15 (director accuracy pass)
 
 | Defect | Severity | Status |
 |--------|----------|--------|
-| Refund/void after settle left credit/sub | CRITICAL | **FIXED** + vitest |
-| Lead CPL without listing FOR UPDATE | HIGH | **FIXED** |
-| RFQ award deleted/shadow supplier | HIGH | **FIXED** + vitest |
-| Import stage bare admin role | HIGH | **FIXED** |
-| provider_opening permanent after crash | HIGH | **FIXED** |
-| First-bind when Intention returns order id | HIGH | **FIXED** |
-| Comments on non-active listings | MED | **FIXED** |
+| Reverse before success without `psp_reversed` | CRITICAL | **FIXED** + vitest |
+| Orphan `:orphan_topup` not clawed on refund | CRITICAL | **FIXED** + vitest |
+| Clawback typed as `refund` (UI = credit) | HIGH | **FIXED** + vitest |
+| Web/plans/dealer bulk key regeneration | HIGH | **FIXED** |
+| Save / Conversation / GlobalSupply tombstones | HIGH | **FIXED** + vitest |
+| AWS SSM fire-and-forget | HIGH OPS | **FIXED** |
 
-See `reports/production-verification/27-ROUND-14-REVERSAL-LEAD-RFQ-AUTHZ.md`.
+See `reports/production-verification/28-ROUND-15-REVERSE-RACE-TOMBSTONE-OPS.md`.
 
-Prior rounds 5–13 FIXED rows remain closed (docs 19–26).
+Prior rounds 5–14 FIXED rows remain closed (docs 19–27).
 
 ---
 
@@ -55,7 +54,6 @@ Prior rounds 5–13 FIXED rows remain closed (docs 19–26).
 | CPL fail-open on insufficient funds | HIGH (product) | Intentional + tested |
 | Clerk inbound `user.deleted` | HIGH (ops) | Feature — not invented |
 | Adaptive feed / rate-limit multi-instance | HIGH (ops) | Needs shared store |
-| GlobalSupply tombstone reads | MED | Next B2B pass |
 | Mobile AsyncStorage payment keys | MED | Device path |
 | Device/EAS/APNs/FCM visual QA | — | **UNVERIFIED** |
 

@@ -4,9 +4,11 @@ import {
   settleSubscriptionIntentByWebhook,
   cancelSubscription,
   getMySubscription,
+  reverseSubscriptionAfterPspReversal,
 } from "./SubscriptionService";
 import { db, createUser, deleteUsers, randomUUID } from "../__tests__/helpers";
 import { plans, subscriptions, paymentIntents, transactions } from "@workspace/db/schema";
+import { applyTransaction, getWalletBalance } from "./WalletService";
 
 /**
  * SubscriptionService is an untested MONEY path. These cover the webhook
@@ -123,5 +125,89 @@ describe("SubscriptionService — webhook settlement & lifecycle", () => {
     expect(view.subscription).not.toBeNull();
     expect(view.usage.active_listings).toBe(0);
     expect(view.usage.listings_this_month).toBe(0);
+  });
+});
+
+describe("Subscription PSP reverse (Round 15)", () => {
+  it("pending reverse blocks late settle and sets durable psp_reversed", async () => {
+    const userId = await createUser({ role: "dealer" });
+    uids.push(userId);
+    const plan = await paidPlan();
+    const intentId = await pendingIntent(userId, plan.id, plan.monthlyPrice);
+
+    await reverseSubscriptionAfterPspReversal(intentId, { reason: "voided" });
+    const [after] = await db.select().from(paymentIntents).where(eq(paymentIntents.id, intentId));
+    expect(after.status).toBe("failed");
+    expect((after.metadata as Record<string, unknown>).psp_reversed).toBe(true);
+
+    await settleSubscriptionIntentByWebhook(intentId, { providerTxnId: "late" });
+    const subs = await db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.userId, userId));
+    expect(subs).toHaveLength(0);
+    expect(Number(await getWalletBalance(userId))).toBe(0);
+  });
+
+  it("claws back orphan_topup credit with adjustment debit", async () => {
+    const userId = await createUser({ role: "dealer" });
+    uids.push(userId);
+    const plan = await paidPlan();
+    const intentId = randomUUID();
+
+    // Simulate orphan settlement path: wallet credit without a charge/sub row.
+    await db.transaction((tx) =>
+      applyTransaction(tx, {
+        userId,
+        type: "wallet_topup",
+        direction: "credit",
+        amount: plan.monthlyPrice,
+        idempotencyKey: `${intentId}:orphan_topup`,
+        referenceType: "payment_intent",
+        referenceId: intentId,
+      }),
+    );
+    await db.insert(paymentIntents).values({
+      id: intentId,
+      userId,
+      amount: plan.monthlyPrice,
+      method: "instapay",
+      purpose: "subscription",
+      status: "completed",
+      planId: plan.id,
+      completedAt: new Date(),
+      metadata: { orphan_reason: "active_slot_taken" },
+    });
+    expect(Number(await getWalletBalance(userId))).toBe(Number(plan.monthlyPrice));
+
+    await reverseSubscriptionAfterPspReversal(intentId, { reason: "refunded" });
+    expect(Number(await getWalletBalance(userId))).toBe(0);
+
+    const [claw] = await db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.idempotencyKey, `${intentId}:psp_reversal_clawback:orphan`));
+    expect(claw.type).toBe("adjustment");
+    expect(Number(claw.amount)).toBe(-Number(plan.monthlyPrice));
+
+    const [row] = await db.select().from(paymentIntents).where(eq(paymentIntents.id, intentId));
+    expect((row.metadata as Record<string, unknown>).psp_reversed).toBe(true);
+  });
+
+  it("expires active subscription created from charge key", async () => {
+    const userId = await createUser({ role: "dealer" });
+    uids.push(userId);
+    const plan = await paidPlan();
+    const intentId = await pendingIntent(userId, plan.id, plan.monthlyPrice);
+    await settleSubscriptionIntentByWebhook(intentId);
+
+    await reverseSubscriptionAfterPspReversal(intentId, { reason: "refunded" });
+    const [sub] = await db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.userId, userId));
+    expect(sub.status).toBe("cancelled");
+    const [row] = await db.select().from(paymentIntents).where(eq(paymentIntents.id, intentId));
+    expect((row.metadata as Record<string, unknown>).psp_reversed).toBe(true);
   });
 });

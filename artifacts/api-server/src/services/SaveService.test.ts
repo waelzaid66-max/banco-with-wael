@@ -108,6 +108,46 @@ describe("saveOrUnsaveListing — denormalized counter stays in lockstep", () =>
   });
 });
 
+describe("saveOrUnsaveListing tombstone gate (Round 15)", () => {
+  it("rejects new saves on soft-deleted seller listings", async () => {
+    const listingId = await seedListing();
+    const saver = await seedSaver();
+    const [listing] = await db
+      .select({ userId: listings.userId })
+      .from(listings)
+      .where(eq(listings.id, listingId));
+    await db
+      .update(users)
+      .set({ deletedAt: new Date() })
+      .where(eq(users.id, listing.userId));
+
+    await expect(saveOrUnsaveListing(saver, listingId)).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+    expect(await rowCount(listingId)).toBe(0);
+  });
+
+  it("still allows unsave after seller tombstone", async () => {
+    const listingId = await seedListing();
+    const saver = await seedSaver();
+    await saveOrUnsaveListing(saver, listingId);
+    expect(await rowCount(listingId)).toBe(1);
+
+    const [listing] = await db
+      .select({ userId: listings.userId })
+      .from(listings)
+      .where(eq(listings.id, listingId));
+    await db
+      .update(users)
+      .set({ deletedAt: new Date() })
+      .where(eq(users.id, listing.userId));
+
+    const off = await saveOrUnsaveListing(saver, listingId);
+    expect(off.saved).toBe(false);
+    expect(await rowCount(listingId)).toBe(0);
+  });
+});
+
 describe("saved_listings UNIQUE(user_id, listing_id) — concurrent-save safety", () => {
   it("two concurrent inserts for the same (user, listing) yield exactly one row", async () => {
     const listingId = await seedListing();

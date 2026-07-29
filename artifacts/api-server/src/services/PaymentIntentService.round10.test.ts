@@ -285,3 +285,100 @@ describe("PSP post-settlement reversal (Round 14)", () => {
     expect((row.metadata as Record<string, unknown>).psp_reversed).toBe(true);
   });
 });
+
+describe("PSP reverse-before-settle race (Round 15)", () => {
+  it("pending reverse sets psp_reversed and blocks late settle credit", async () => {
+    const {
+      reverseTopupAfterPspReversal,
+      settleTopupIntent,
+    } = await import("./PaymentIntentService");
+    const { getWalletBalance } = await import("./WalletService");
+    const userId = await createUser();
+    uids.push(userId);
+    const key = randomUUID();
+
+    await db.insert(paymentIntents).values({
+      id: key,
+      userId,
+      amount: "150.00",
+      method: "fawry",
+      purpose: "wallet_topup",
+      status: "pending",
+      providerRef: "intention_pend",
+      metadata: { provider: "paymob" },
+    });
+
+    await reverseTopupAfterPspReversal(key, { reason: "voided", providerTxnId: "txn_void" });
+    const [afterReverse] = await db
+      .select()
+      .from(paymentIntents)
+      .where(eq(paymentIntents.id, key));
+    expect(afterReverse.status).toBe("failed");
+    expect((afterReverse.metadata as Record<string, unknown>).psp_reversed).toBe(true);
+
+    await settleTopupIntent(key, { providerTxnId: "txn_late_success" });
+    expect(Number(await getWalletBalance(userId))).toBe(0);
+    const [afterSettle] = await db
+      .select()
+      .from(paymentIntents)
+      .where(eq(paymentIntents.id, key));
+    expect(afterSettle.status).toBe("failed");
+  });
+
+  it("partial clawback uses adjustment debit and flags shortfall", async () => {
+    const { reverseTopupAfterPspReversal } = await import("./PaymentIntentService");
+    const { applyTransaction, getWalletBalance } = await import("./WalletService");
+    const { transactions } = await import("@workspace/db/schema");
+    const userId = await createUser();
+    uids.push(userId);
+    const key = randomUUID();
+
+    await db.transaction(async (tx) => {
+      await applyTransaction(tx, {
+        userId,
+        type: "wallet_topup",
+        direction: "credit",
+        amount: 300,
+        idempotencyKey: key,
+        referenceType: "payment_intent",
+        referenceId: key,
+      });
+      await applyTransaction(tx, {
+        userId,
+        type: "boost_charge",
+        direction: "debit",
+        amount: 200,
+        idempotencyKey: `${key}:spend`,
+      });
+    });
+    expect(Number(await getWalletBalance(userId))).toBe(100);
+
+    await db.insert(paymentIntents).values({
+      id: key,
+      userId,
+      amount: "300.00",
+      method: "instapay",
+      purpose: "wallet_topup",
+      status: "completed",
+      providerRef: "intention_spent",
+      completedAt: new Date(),
+      metadata: { provider: "paymob" },
+    });
+
+    await reverseTopupAfterPspReversal(key, { reason: "refunded" });
+    expect(Number(await getWalletBalance(userId))).toBe(0);
+
+    const [row] = await db.select().from(paymentIntents).where(eq(paymentIntents.id, key));
+    const meta = row.metadata as Record<string, unknown>;
+    expect(meta.psp_reversed).toBe(true);
+    expect(meta.psp_reversal_shortfall).toBe(true);
+    expect(meta.psp_reversal_shortfall_amount).toBe("200.00");
+
+    const [claw] = await db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.idempotencyKey, `${key}:psp_reversal`));
+    expect(claw.type).toBe("adjustment");
+    expect(Number(claw.amount)).toBe(-100);
+  });
+});

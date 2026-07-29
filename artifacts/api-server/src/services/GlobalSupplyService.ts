@@ -263,7 +263,12 @@ async function fetchResponses(
   viewerUserId: string | null,
   onlySupplierId?: string,
 ): Promise<GlobalSupplyResponseDTO[]> {
-  const conditions = [eq(globalSupplyResponses.requestId, requestId)];
+  const conditions = [
+    eq(globalSupplyResponses.requestId, requestId),
+    // Never surface responses from soft-deleted / shadow-banned suppliers to buyers.
+    sql`${users.isShadowBanned} IS NOT TRUE`,
+    sql`${users.deletedAt} IS NULL`,
+  ];
   if (onlySupplierId) conditions.push(eq(globalSupplyResponses.supplierId, onlySupplierId));
 
   const rows = await db
@@ -285,7 +290,7 @@ async function fetchResponses(
       created_at: globalSupplyResponses.createdAt,
     })
     .from(globalSupplyResponses)
-    .leftJoin(users, eq(globalSupplyResponses.supplierId, users.id))
+    .innerJoin(users, eq(globalSupplyResponses.supplierId, users.id))
     .where(and(...conditions))
     .orderBy(desc(globalSupplyResponses.createdAt));
 
@@ -340,6 +345,7 @@ async function computeSupplierMatches(req: {
     .where(
       and(
         sql`${users.isShadowBanned} IS NOT TRUE`,
+        sql`${users.deletedAt} IS NULL`,
         or(exportsMatch, industryMatch),
       ),
     )

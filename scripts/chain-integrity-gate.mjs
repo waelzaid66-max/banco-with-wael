@@ -1405,6 +1405,83 @@ const CHECKS = [
       /providerOrderId/.test(s),
     why: "Intention create must capture order id when Paymob returns it (first-bind TOFU)",
   },
+  // ── Round 15 ──────────────────────────────────────────────
+  {
+    id: "P-topup-settle-refuses-psp-reversed",
+    file: "artifacts/api-server/src/services/PaymentIntentService.ts",
+    test: (s) =>
+      /pspReversedFromMeta/.test(s) &&
+      /function settleTopupIntent/.test(s) &&
+      /for\("update"\)/.test(s) &&
+      /type: "adjustment"/.test(s),
+    why: "Top-up settle must lock intent and refuse credit after durable PSP reverse; clawback is adjustment debit",
+  },
+  {
+    id: "P-sub-reverse-orphan-and-pending",
+    file: "artifacts/api-server/src/services/SubscriptionService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function reverseSubscriptionAfterPspReversal"));
+      return (
+        /orphan_topup/.test(fn) &&
+        /psp_reversed/.test(fn) &&
+        /type: "adjustment"/.test(fn) &&
+        /status === "pending" \|\| intent\.status === "failed"/.test(fn)
+      );
+    },
+    why: "Subscription reverse must terminalize pending with psp_reversed and claw orphan_topup",
+  },
+  {
+    id: "P-web-keep-topup-key-pending",
+    file: "artifacts/banco-web/components/workspace/WalletPanel.tsx",
+    test: (s) => {
+      const pending = s.slice(s.indexOf('polled.status === "pending"'));
+      const block = pending.slice(0, pending.indexOf("} else {"));
+      return (
+        /setPayState\("pending"\)/.test(block) &&
+        !/topupAttemptKeyRef\.current = null/.test(block)
+      );
+    },
+    why: "Web WalletPanel must not clear top-up attempt key while intent is still pending",
+  },
+  {
+    id: "P-dealer-bulk-boost-batch-ref",
+    file: "artifacts/dealer-os/src/pages/listings.tsx",
+    test: (s) =>
+      /bulkBoostBatchRef/.test(s) &&
+      /if \(!bulkBoostBatchRef\.current\)/.test(s),
+    why: "Dealer bulk boost must reuse one batch token across double-confirm / retries",
+  },
+  {
+    id: "P-save-visibility-gate",
+    file: "artifacts/api-server/src/services/SaveService.ts",
+    test: (s) =>
+      /publicVisibilityConditions\(\)/.test(s) &&
+      /eq\(listings\.status, "active"\)/.test(s),
+    why: "New saves must require active + public visibility; unsaves stay allowed",
+  },
+  {
+    id: "P-globalsupply-supplier-tombstone",
+    file: "artifacts/api-server/src/services/GlobalSupplyService.ts",
+    test: (s) => {
+      const fetch = s.slice(s.indexOf("async function fetchResponses"));
+      const matches = s.slice(s.indexOf("async function computeSupplierMatches"));
+      return (
+        /deletedAt} IS NULL/.test(fetch) &&
+        /deletedAt} IS NULL/.test(matches)
+      );
+    },
+    why: "GlobalSupply must hide deleted suppliers from matches and buyer response lists",
+  },
+  {
+    id: "P-aws-ssm-wait-command",
+    file: ".github/workflows/deploy.yml",
+    test: (s) =>
+      /aws ssm wait command-executed/.test(s) &&
+      /get-command-invocation/.test(s) &&
+      /STATUS/.test(s) &&
+      /Success/.test(s),
+    why: "AWS deploy must wait for SSM and fail the job when Status is not Success",
+  },
 ];
 
 function main() {

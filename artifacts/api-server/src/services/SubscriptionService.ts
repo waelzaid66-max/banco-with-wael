@@ -19,6 +19,7 @@ import {
   chargeErrorPaymentMetadataSql,
   checkoutBoundPaymentMetadataSql,
   paymobOrderIdFromMeta,
+  pspReversedFromMeta,
 } from "./PaymentIntentService";
 import { resolveEffectivePlan, type UserRole } from "./PlanService";
 import { createProviderCharge, type EgyptianRail } from "../lib/paymentProvider";
@@ -609,6 +610,10 @@ export async function settleSubscriptionIntentByWebhook(
   if (!intent) throw notFound("Payment intent not found");
   if (intent.purpose !== "subscription") throw invalidData("Not a subscription intent");
   if (intent.status === "completed") return; // idempotent replay
+  // Refund/void already recorded — never activate/credit after PSP reverse won.
+  if (pspReversedFromMeta(intent.metadata)) {
+    return;
+  }
   if (intent.status !== "pending" && intent.status !== "failed") {
     throw invalidData(`Cannot settle a ${intent.status} intent`);
   }
@@ -655,6 +660,19 @@ export async function settleSubscriptionIntentByWebhook(
 
   try {
     const settled = await db.transaction(async (tx) => {
+      const [lockedIntent] = await tx
+        .select()
+        .from(paymentIntents)
+        .where(eq(paymentIntents.id, intent.id))
+        .for("update")
+        .limit(1);
+      if (!lockedIntent) return null;
+      if (lockedIntent.status === "completed") return null;
+      if (pspReversedFromMeta(lockedIntent.metadata)) return null;
+      if (lockedIntent.status !== "pending" && lockedIntent.status !== "failed") {
+        throw invalidData(`Cannot settle a ${lockedIntent.status} intent`);
+      }
+
       const [locked] = await tx
         .select({ id: users.id, deletedAt: users.deletedAt })
         .from(users)
@@ -768,6 +786,16 @@ export async function settleSubscriptionIntentByWebhook(
       // complete the intent (never ACK success while leaving intent pending).
       try {
         await db.transaction(async (tx) => {
+          const [lockedIntent] = await tx
+            .select()
+            .from(paymentIntents)
+            .where(eq(paymentIntents.id, intent.id))
+            .for("update")
+            .limit(1);
+          if (!lockedIntent || lockedIntent.status === "completed") return;
+          if (pspReversedFromMeta(lockedIntent.metadata)) return;
+          if (lockedIntent.status !== "pending" && lockedIntent.status !== "failed") return;
+
           await applyTransaction(tx, {
             userId,
             type: "wallet_topup",
@@ -816,9 +844,11 @@ export async function markSubscriptionIntentFailed(intentId: string): Promise<vo
 }
 
 /**
- * Paymob refund/void after subscription settlement. Wallet net for PSP subscribe
- * is usually zero (credit then charge); the real entitlement is the active row —
- * expire it immediately and durable-flag the intent. Idempotent via metadata.
+ * Paymob refund/void after subscription settlement (or pre-settle race).
+ * - pending/failed: durable `psp_reversed` so late success cannot settle.
+ * - completed: expire the charge-linked active sub; claw back orphan wallet
+ *   credit (`:orphan_topup`) via adjustment debit (not `refund` — UI treats
+ *   refund as credit). Net-zero topup+charge paths need no clawback.
  */
 export async function reverseSubscriptionAfterPspReversal(
   intentId: string,
@@ -827,26 +857,37 @@ export async function reverseSubscriptionAfterPspReversal(
     providerTxnId?: string | null;
   },
 ): Promise<void> {
-  const [intent] = await db
-    .select()
-    .from(paymentIntents)
-    .where(eq(paymentIntents.id, intentId))
-    .limit(1);
-  if (!intent || intent.purpose !== "subscription") return;
-
-  if (intent.status === "pending" || intent.status === "failed") {
-    await markSubscriptionIntentFailed(intentId);
-    return;
-  }
-  if (intent.status !== "completed") return;
-
-  const meta =
-    intent.metadata && typeof intent.metadata === "object" && !Array.isArray(intent.metadata)
-      ? ({ ...(intent.metadata as Record<string, unknown>) } as Record<string, unknown>)
-      : ({} as Record<string, unknown>);
-  if (meta.psp_reversed === true) return;
+  let notifyFailed = false;
 
   await db.transaction(async (tx) => {
+    const [intent] = await tx
+      .select()
+      .from(paymentIntents)
+      .where(eq(paymentIntents.id, intentId))
+      .for("update")
+      .limit(1);
+    if (!intent || intent.purpose !== "subscription") return;
+
+    const meta =
+      intent.metadata && typeof intent.metadata === "object" && !Array.isArray(intent.metadata)
+        ? ({ ...(intent.metadata as Record<string, unknown>) } as Record<string, unknown>)
+        : ({} as Record<string, unknown>);
+    if (meta.psp_reversed === true) return;
+
+    meta.psp_reversed = true;
+    meta.psp_reversal_reason = opts.reason;
+    if (opts.providerTxnId) meta.psp_reversal_txn_id = opts.providerTxnId;
+
+    if (intent.status === "pending" || intent.status === "failed") {
+      await tx
+        .update(paymentIntents)
+        .set({ status: "failed", metadata: meta })
+        .where(eq(paymentIntents.id, intent.id));
+      notifyFailed = intent.status === "pending";
+      return;
+    }
+    if (intent.status !== "completed") return;
+
     // Expire any active subscription created from this settlement charge key.
     const chargeKey = `${intent.id}:charge`;
     const [chargeTx] = await tx
@@ -871,14 +912,68 @@ export async function reverseSubscriptionAfterPspReversal(
           ),
         );
     }
-    meta.psp_reversed = true;
-    meta.psp_reversal_reason = opts.reason;
-    if (opts.providerTxnId) meta.psp_reversal_txn_id = opts.providerTxnId;
+
+    // Orphan path credited `${id}:orphan_topup` without a matching charge.
+    const orphanKey = `${intent.id}:orphan_topup`;
+    const [orphanCredit] = await tx
+      .select({
+        id: transactions.id,
+        amount: transactions.amount,
+        type: transactions.type,
+      })
+      .from(transactions)
+      .where(eq(transactions.idempotencyKey, orphanKey))
+      .limit(1);
+    if (orphanCredit && Number(orphanCredit.amount) > 0) {
+      const clawTarget = Number(orphanCredit.amount);
+      const [lockedUser] = await tx
+        .select({ bal: users.walletBalance })
+        .from(users)
+        .where(eq(users.id, intent.userId))
+        .for("update")
+        .limit(1);
+      const avail = Math.max(0, Number(lockedUser?.bal ?? 0));
+      const claw = Math.min(avail, clawTarget);
+      if (claw > 0) {
+        await applyTransaction(tx, {
+          userId: intent.userId,
+          type: "adjustment",
+          direction: "debit",
+          amount: claw.toFixed(2),
+          paymentMethod: intent.method as LedgerPaymentMethod,
+          referenceType: "payment_intent",
+          referenceId: intent.id,
+          description: `PSP ${opts.reason} clawback for orphan subscription top-up`,
+          idempotencyKey: `${intent.id}:psp_reversal_clawback:orphan`,
+          metadata: {
+            psp_reversal: opts.reason,
+            provider_txn_id: opts.providerTxnId ?? null,
+            original_idempotency_key: orphanKey,
+            clawback_amount: claw.toFixed(2),
+          },
+        });
+      }
+      if (claw < clawTarget) {
+        meta.psp_reversal_shortfall = true;
+        meta.psp_reversal_shortfall_amount = (clawTarget - claw).toFixed(2);
+        meta.psp_reversal_needs_manual_review = true;
+        console.error(
+          "[Paymob subscription reversal] orphan shortfall — ops must recover",
+          intentId,
+          meta.psp_reversal_shortfall_amount,
+        );
+      }
+    }
+
     await tx
       .update(paymentIntents)
       .set({ metadata: meta })
       .where(eq(paymentIntents.id, intent.id));
   });
+
+  if (notifyFailed) {
+    await notifyPaymentIntentFailed(intentId);
+  }
 }
 
 /* ── cancel ────────────────────────────────────────────── */

@@ -160,7 +160,8 @@ export function WalletPanel() {
         setPayState("done");
         refreshWallet();
       } else if (polled.status === "pending") {
-        topupAttemptKeyRef.current = null;
+        // Keep the attempt key — clearing it here opened a second Paymob
+        // checkout (and a second wallet credit) on the next tap.
         setPayState("pending");
         refreshWallet();
       } else {

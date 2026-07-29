@@ -13,7 +13,6 @@ import {
   isUniqueViolation,
   notFound,
   toMoney,
-  isInsufficientFunds,
 } from "../lib/billing";
 import { schedulePaymentSuccess, notifyPaymentIntentFailed } from "./BillingNotificationService";
 
@@ -119,6 +118,21 @@ export function paymobOrderIdFromMeta(metadata: unknown): string | null {
   }
   const id = (metadata as Record<string, unknown>).paymob_order_id;
   return typeof id === "string" && id.length > 0 ? id : null;
+}
+
+/** True when a refund/void already won — settlement must never credit afterward. */
+export function pspReversedFromMeta(metadata: unknown): boolean {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return false;
+  }
+  return (metadata as Record<string, unknown>).psp_reversed === true;
+}
+
+function asIntentMeta(metadata: unknown): Record<string, unknown> {
+  if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
+    return { ...(metadata as Record<string, unknown>) };
+  }
+  return {};
 }
 
 function assertTopupIdempotencyMatch(
@@ -561,8 +575,13 @@ export async function settleTopupIntent(
     throw invalidData("Not a wallet top-up intent");
   }
   if (intent.status === "completed") return; // idempotent replay
+  // Refund/void already recorded — never credit after PSP clawback won the race.
+  if (pspReversedFromMeta(intent.metadata)) {
+    return;
+  }
   // Verified success webhooks must still credit after a premature/out-of-order
   // failure mark — otherwise the buyer paid at the PSP with no wallet credit.
+  // Exception: psp_reversed (checked above) blocks credit even when status=failed.
   if (intent.status !== "pending" && intent.status !== "failed") {
     throw invalidData(`Cannot settle a ${intent.status} intent`);
   }
@@ -590,6 +609,24 @@ export async function settleTopupIntent(
 
   try {
     const applied = await db.transaction(async (tx) => {
+      // Lock intent first so a concurrent PSP reverse cannot lose the race to credit.
+      const [lockedIntent] = await tx
+        .select()
+        .from(paymentIntents)
+        .where(eq(paymentIntents.id, intent.id))
+        .for("update")
+        .limit(1);
+      if (!lockedIntent) return { replayed: true, aborted: true as const };
+      if (lockedIntent.status === "completed") {
+        return { replayed: true, aborted: true as const };
+      }
+      if (pspReversedFromMeta(lockedIntent.metadata)) {
+        return { replayed: true, aborted: true as const };
+      }
+      if (lockedIntent.status !== "pending" && lockedIntent.status !== "failed") {
+        throw invalidData(`Cannot settle a ${lockedIntent.status} intent`);
+      }
+
       // Re-check under row lock: delete between pre-check and credit must not credit.
       const [locked] = await tx
         .select({ id: users.id, deletedAt: users.deletedAt })
@@ -643,6 +680,9 @@ export async function settleTopupIntent(
       return result;
     });
 
+    if ("aborted" in applied && applied.aborted) {
+      return;
+    }
     if ("abortedDeleted" in applied && applied.abortedDeleted) {
       return;
     }
@@ -680,11 +720,11 @@ export async function markTopupIntentFailed(intentId: string): Promise<void> {
 }
 
 /**
- * Paymob refund/void after a successful settlement. Pending intents are simply
- * marked failed. Completed top-ups are reversed with a ledger debit keyed by
- * `${id}:psp_reversal` (idempotent). If the wallet cannot cover the full
- * reversal (buyer already spent the credit), we durable-flag shortfall for ops
- * and still ACK — never leave Paymob retrying forever without a local record.
+ * Paymob refund/void after a successful settlement. Pending intents are marked
+ * failed WITH durable `psp_reversed` so a late success webhook cannot credit.
+ * Completed top-ups are clawed back via an `adjustment` debit (not `refund` —
+ * schema/UI treat refund as a credit). Partial balance → debit what's left and
+ * flag shortfall for ops.
  */
 export async function reverseTopupAfterPspReversal(
   intentId: string,
@@ -693,66 +733,82 @@ export async function reverseTopupAfterPspReversal(
     providerTxnId?: string | null;
   },
 ): Promise<void> {
-  const [intent] = await db
-    .select()
-    .from(paymentIntents)
-    .where(eq(paymentIntents.id, intentId))
-    .limit(1);
-  if (!intent || intent.purpose !== "wallet_topup") return;
+  let notifyFailed = false;
 
-  if (intent.status === "pending" || intent.status === "failed") {
-    await markTopupIntentFailed(intentId);
-    return;
-  }
-  if (intent.status !== "completed") return;
+  await db.transaction(async (tx) => {
+    const [intent] = await tx
+      .select()
+      .from(paymentIntents)
+      .where(eq(paymentIntents.id, intentId))
+      .for("update")
+      .limit(1);
+    if (!intent || intent.purpose !== "wallet_topup") return;
 
-  const meta =
-    intent.metadata && typeof intent.metadata === "object" && !Array.isArray(intent.metadata)
-      ? ({ ...(intent.metadata as Record<string, unknown>) } as Record<string, unknown>)
-      : ({} as Record<string, unknown>);
-  if (meta.psp_reversed === true) return;
+    const meta = asIntentMeta(intent.metadata);
+    if (meta.psp_reversed === true) return;
 
-  const reversalKey = `${intent.id}:psp_reversal`;
-  try {
-    await db.transaction(async (tx) => {
+    meta.psp_reversed = true;
+    meta.psp_reversal_reason = opts.reason;
+    if (opts.providerTxnId) meta.psp_reversal_txn_id = opts.providerTxnId;
+
+    if (intent.status === "pending" || intent.status === "failed") {
+      // Durable reverse marker under row lock — late success cannot credit.
+      await tx
+        .update(paymentIntents)
+        .set({ status: "failed", metadata: meta })
+        .where(eq(paymentIntents.id, intentId));
+      notifyFailed = intent.status === "pending";
+      return;
+    }
+    if (intent.status !== "completed") return;
+
+    const reversalKey = `${intent.id}:psp_reversal`;
+    const [lockedUser] = await tx
+      .select({ bal: users.walletBalance })
+      .from(users)
+      .where(eq(users.id, intent.userId))
+      .for("update")
+      .limit(1);
+    const avail = Math.max(0, Number(lockedUser?.bal ?? 0));
+    const target = Number(intent.amount);
+    const claw = Math.min(avail, target);
+
+    if (claw > 0) {
       await applyTransaction(tx, {
         userId: intent.userId,
-        type: "refund",
+        type: "adjustment",
         direction: "debit",
-        amount: intent.amount,
+        amount: claw.toFixed(2),
         paymentMethod: intent.method as LedgerPaymentMethod,
         referenceType: "payment_intent",
         referenceId: intent.id,
-        description: `PSP ${opts.reason} reversal for top-up`,
+        description: `PSP ${opts.reason} clawback for top-up`,
         idempotencyKey: reversalKey,
         metadata: {
           psp_reversal: opts.reason,
           provider_txn_id: opts.providerTxnId ?? null,
+          clawback_amount: claw.toFixed(2),
         },
       });
-      meta.psp_reversed = true;
-      meta.psp_reversal_reason = opts.reason;
-      if (opts.providerTxnId) meta.psp_reversal_txn_id = opts.providerTxnId;
-      await tx
-        .update(paymentIntents)
-        .set({ metadata: meta })
-        .where(eq(paymentIntents.id, intent.id));
-    });
-  } catch (err) {
-    if (isInsufficientFunds(err)) {
+    }
+
+    if (claw < target) {
       meta.psp_reversal_shortfall = true;
-      meta.psp_reversal_reason = opts.reason;
-      await db
-        .update(paymentIntents)
-        .set({ metadata: meta })
-        .where(eq(paymentIntents.id, intent.id));
+      meta.psp_reversal_shortfall_amount = (target - claw).toFixed(2);
       console.error(
         "[Paymob reversal] wallet shortfall — ops must recover",
         intentId,
         opts.reason,
+        meta.psp_reversal_shortfall_amount,
       );
-      return;
     }
-    throw err;
+    await tx
+      .update(paymentIntents)
+      .set({ metadata: meta })
+      .where(eq(paymentIntents.id, intent.id));
+  });
+
+  if (notifyFailed) {
+    await notifyPaymentIntentFailed(intentId);
   }
 }

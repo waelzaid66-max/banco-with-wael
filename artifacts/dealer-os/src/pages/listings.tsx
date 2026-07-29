@@ -55,6 +55,8 @@ export default function ListingsPage() {
   const [boostDuration, setBoostDuration] = useState("7");
   /** Stable across retries of the same boost attempt (cleared on success). */
   const boostAttemptKeyRef = useRef<string | null>(null);
+  // Stable across React Query retries / double-clicks of the same bulk confirm.
+  const bulkBoostBatchRef = useRef<string | null>(null);
 
   const { data: listingsData, isLoading } = useGetDealerListings(
     { limit: 100 },
@@ -114,8 +116,12 @@ export default function ListingsPage() {
     const total = selectedIds.length;
     // Schema requires idempotency_key (single-boost dialog already sends one).
     // One batch token so React Query retries of the same mutate stay stable;
-    // each listing still gets a distinct key.
-    const batchToken = `bulk:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    // each listing still gets a distinct key. Persist in a ref so a second
+    // confirm click before the dialog closes does not open a new charge set.
+    if (!bulkBoostBatchRef.current) {
+      bulkBoostBatchRef.current = `bulk:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    }
+    const batchToken = bulkBoostBatchRef.current;
     const durationDays = parseInt(bulkBoostDuration);
     selectedIds.forEach(id => {
       boostMutation.mutate(
@@ -131,6 +137,7 @@ export default function ListingsPage() {
           onSuccess: () => {
             completed++;
             if (completed + failed === total) {
+              bulkBoostBatchRef.current = null;
               toast({ title: failed
                 ? t("listings.toast.boostedNfailed", { count: completed, failed })
                 : t("listings.toast.boostedN", { count: completed }) });
@@ -142,6 +149,7 @@ export default function ListingsPage() {
           onError: () => {
             failed++;
             if (completed + failed === total) {
+              bulkBoostBatchRef.current = null;
               toast({ title: t("listings.toast.boostedNfailed", { count: completed, failed }), variant: failed === total ? "destructive" : "default" });
               setBulkBoostOpen(false);
               refreshPromo();
