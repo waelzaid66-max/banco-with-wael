@@ -87,6 +87,7 @@ import { useColors } from "@/hooks/useColors";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   LISTING_DRAFT_KEY,
+  listingDraftStorageKey,
   parseListingDraft,
   serializeListingDraft,
   listingDraftHasContent,
@@ -159,7 +160,8 @@ export default function CreateListingScreen() {
   const { t, isRTL } = useI18n();
   const { bumpListings } = useSession();
   const insets = useSafeAreaInsets();
-  const { isSignedIn, isLoaded } = useUser();
+  const { isSignedIn, isLoaded, user } = useUser();
+  const draftKey = listingDraftStorageKey(user?.id);
   // Same safe-area contract as Search/Section — fake web 67 crushed chrome.
   const topPad = Math.max(insets.top, Platform.OS === "web" ? 12 : 0);
 
@@ -333,13 +335,25 @@ export default function CreateListingScreen() {
 
   // ── Auto-save draft (#2): persist the typed fields so an interrupted listing
   // can be resumed. Photos are NOT persisted (device-session URIs). A corrupt or
-  // stale blob is rejected by parseListingDraft, so it can never break the form. ──
+  // stale blob is rejected by parseListingDraft, so it can never break the form.
+  // Key is identity-scoped — never restore account A phones/prices into B. ──
   const draftReady = useRef(false);
   useEffect(() => {
     let cancelled = false;
+    draftReady.current = false;
     (async () => {
       try {
-        const d = parseListingDraft(await AsyncStorage.getItem(LISTING_DRAFT_KEY));
+        let raw = await AsyncStorage.getItem(draftKey);
+        // One-shot migrate pre-scoping global draft into this identity's key.
+        if (!raw && user?.id) {
+          const legacy = await AsyncStorage.getItem(LISTING_DRAFT_KEY);
+          if (legacy) {
+            await AsyncStorage.setItem(draftKey, legacy);
+            await AsyncStorage.removeItem(LISTING_DRAFT_KEY);
+            raw = legacy;
+          }
+        }
+        const d = parseListingDraft(raw);
         if (cancelled || !d) return;
         // Clamp: drafts saved before the photos+pricing merge may point past
         // the (now shorter) step list.
@@ -398,7 +412,7 @@ export default function CreateListingScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [draftKey, user?.id, startAsRequest]);
 
   // Debounced persist of the resumable fields — after the restore pass, and never
   // on the success screen or mid-submit. Photos/upload state are intentionally out.
@@ -428,7 +442,7 @@ export default function CreateListingScreen() {
     };
     if (!listingDraftHasContent(input)) return;
     const handle = setTimeout(() => {
-      AsyncStorage.setItem(LISTING_DRAFT_KEY, serializeListingDraft(input)).catch(() => {});
+      AsyncStorage.setItem(draftKey, serializeListingDraft(input)).catch(() => {});
     }, 600);
     return () => clearTimeout(handle);
   }, [
@@ -451,6 +465,7 @@ export default function CreateListingScreen() {
     plans,
     done,
     submitting,
+    draftKey,
   ]);
 
   const setPhoneNumberAt = (index: number, value: string) =>
@@ -1143,7 +1158,7 @@ export default function CreateListingScreen() {
       setCreatedId(res.data?.id);
       setDone(true);
       // Listing published — the saved draft is now stale; clear it.
-      AsyncStorage.removeItem(LISTING_DRAFT_KEY).catch(() => {});
+      AsyncStorage.removeItem(draftKey).catch(() => {});
       // Tell persistent listing surfaces (home feed, profile grid) to refetch so
       // the just-published listing appears immediately, no manual pull-to-refresh.
       bumpListings();
@@ -1204,7 +1219,7 @@ export default function CreateListingScreen() {
     setError(null);
     setCreatedId(undefined);
     setDone(false);
-    AsyncStorage.removeItem(LISTING_DRAFT_KEY).catch(() => {});
+    AsyncStorage.removeItem(draftKey).catch(() => {});
   };
 
   const inputStyle = [

@@ -466,3 +466,59 @@ test("search tab consumes parseMobileSearchNavParams + applySaved criteria", () 
     "legacy six-field-only nav gate must not remain",
   );
 });
+
+// Round 9: identity-scoped mute/draft, home market_country, web map clusters.
+test("SoundContext scopes mute prefs by Clerk userId", () => {
+  const src = fs.readFileSync(
+    path.join(APP_ROOT, "context", "SoundContext.tsx"),
+    "utf8",
+  );
+  assert.match(src, /scopedPrefKey/, "mute keys must be identity-scoped");
+  assert.match(src, /useAuth\(\)/, "SoundProvider must read Clerk userId");
+  assert.match(
+    src,
+    /\[userId\]/,
+    "prefs must rehydrate when identity changes",
+  );
+});
+
+test("listingDraftStorageKey isolates drafts per identity", () => {
+  const draft = fs.readFileSync(
+    path.join(APP_ROOT, "lib", "listingDraft.ts"),
+    "utf8",
+  );
+  const create = fs.readFileSync(
+    path.join(APP_ROOT, "app", "listings", "create.tsx"),
+    "utf8",
+  );
+  assert.match(draft, /listingDraftStorageKey/);
+  assert.match(draft, /:u:\$\{userId\}|:u:/);
+  assert.match(create, /listingDraftStorageKey\(user\?\.id\)/);
+  assert.match(create, /\[draftKey, user\?\.id, startAsRequest\]/);
+});
+
+test("home feed passes market_country from preferred market", () => {
+  const home = fs.readFileSync(
+    path.join(APP_ROOT, "app", "(tabs)", "index.tsx"),
+    "utf8",
+  );
+  assert.match(home, /loadPreferredMarketCountry/);
+  assert.match(home, /market_country:\s*marketCountry/);
+  assert.match(
+    home,
+    /\[category, industrialType, engineKey, marketCountry\]/,
+    "feed must refetch when preferred market resolves/changes",
+  );
+});
+
+test("web SearchResultsMap hosts server clusters via BANCO_MAP", () => {
+  const webMap = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "SearchResultsMap.web.tsx"),
+    "utf8",
+  );
+  assert.match(webMap, /getMapClusters/);
+  assert.match(webMap, /BANCO_MAP/);
+  assert.match(webMap, /setClusters/);
+  assert.match(webMap, /serverTotal/);
+  assert.match(webMap, /onOpenListingId/);
+});

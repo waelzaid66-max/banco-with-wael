@@ -1066,6 +1066,57 @@ const CHECKS = [
       /topupAttemptKeyRef/.test(s),
     why: "Frozen banco-web must still send top-up idempotency after Round 7 schema change",
   },
+  {
+    id: "P-push-prefs-identity-scoped",
+    file: "artifacts/banco-mobile/context/SoundContext.tsx",
+    test: (s) =>
+      /scopedPrefKey/.test(s) &&
+      /useAuth\(\)/.test(s) &&
+      /userId/.test(s),
+    why: "Push/sound mute prefs must not leak across Clerk identities",
+  },
+  {
+    id: "P-listing-draft-identity-scoped",
+    file: "artifacts/banco-mobile/lib/listingDraft.ts",
+    test: (s) =>
+      /listingDraftStorageKey/.test(s) &&
+      /:u:/.test(s) &&
+      /:guest/.test(s),
+    why: "Listing draft phones/prices must be keyed per identity",
+  },
+  {
+    id: "P-listing-draft-create-scoped",
+    file: "artifacts/banco-mobile/app/listings/create.tsx",
+    test: (s) =>
+      /listingDraftStorageKey\(user\?\.id\)/.test(s) &&
+      /draftKey/.test(s) &&
+      !/AsyncStorage\.(setItem|getItem|removeItem)\(\s*LISTING_DRAFT_KEY\s*,/.test(s),
+    why: "Create wizard must read/write identity-scoped draft keys (legacy migrate only)",
+  },
+  {
+    id: "P-home-feed-market-country",
+    file: "artifacts/banco-mobile/app/(tabs)/index.tsx",
+    test: (s) =>
+      /market_country:\s*marketCountry/.test(s) &&
+      /loadPreferredMarketCountry/.test(s),
+    why: "Home feed + rails must filter by preferred market_country like Search",
+  },
+  {
+    id: "P-web-map-server-clusters",
+    file: "artifacts/banco-mobile/components/search/SearchResultsMap.web.tsx",
+    test: (s) =>
+      /getMapClusters/.test(s) &&
+      /BANCO_MAP/.test(s) &&
+      /setClusters/.test(s) &&
+      /serverTotal/.test(s),
+    why: "Web search map must inject server clusters like native WebView host",
+  },
+  {
+    id: "P-lead-charge-idempotency",
+    file: "artifacts/api-server/src/services/LeadService.ts",
+    test: (s) => /idempotencyKey:\s*`lead_charge:\$\{lead\.id\}`/.test(s),
+    why: "CPL lead_charge must use lead-id idempotency key at wallet chokepoint",
+  },
 ];
 
 function main() {

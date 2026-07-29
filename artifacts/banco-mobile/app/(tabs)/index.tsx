@@ -71,6 +71,10 @@ import {
   visibleEngines,
   visibleIndustrialTypes,
 } from "@/lib/facets";
+import {
+  loadPreferredMarketCountry,
+  readPreferredMarketCountrySync,
+} from "@/lib/marketPreference";
 import { SkeletonCard } from "@/components/SkeletonCard";
 import { SmartAssetCard } from "@/components/SmartAssetCard";
 import {
@@ -313,6 +317,14 @@ export default function FeedScreen() {
   const isBusiness = ["dealer", "company", "enterprise"].includes(role);
   const [showLogoMenu, setShowLogoMenu] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
+  // Preferred market scopes home feed the same way Search does — without
+  // market_country, SA users see EG inventory (and reverse) on the home rails.
+  const [marketCountry, setMarketCountry] = useState(readPreferredMarketCountrySync);
+  useEffect(() => {
+    void loadPreferredMarketCountry().then((iso) => {
+      setMarketCountry(iso);
+    });
+  }, []);
 
   const notifQuery = useListNotifications({
     query: {
@@ -475,6 +487,7 @@ export default function FeedScreen() {
         const params: Parameters<typeof getFeed>[0] = {
           limit: PAGE_SIZE,
           session_id: sessionId,
+          market_country: marketCountry,
         };
         if (apiCat) {
           params.category = apiCat;
@@ -509,7 +522,7 @@ export default function FeedScreen() {
         if (reset) setError(true);
       }
     },
-    [category, industrialType, engineKey, sessionId, prefetchImages]
+    [category, industrialType, engineKey, sessionId, marketCountry, prefetchImages]
   );
 
   // Discovery rails — fetched once; independent of the category filter below.
@@ -518,13 +531,18 @@ export default function FeedScreen() {
   const loadRails = useCallback(async () => {
     const [trendingRes, poolRes, industrialRes, geoCity] = await Promise.all([
       getTrending().catch(() => ({ data: [] as FeedItem[] })),
-      getFeed({ limit: 40, session_id: sessionId }).catch(() => ({
+      getFeed({
+        limit: 40,
+        session_id: sessionId,
+        market_country: marketCountry,
+      }).catch(() => ({
         data: [] as FeedItem[],
       })),
       getFeed({
         category: "industrial" as GetFeedCategory,
         limit: 20,
         session_id: sessionId,
+        market_country: marketCountry,
       }).catch(() => ({ data: [] as FeedItem[] })),
       detectCity().catch(() => null as string | null),
     ]);
@@ -553,7 +571,7 @@ export default function FeedScreen() {
     setRecentlyAddedItems(pool.slice(0, 12));
 
     setIndustrialItems(industrialRes.data ?? []);
-  }, [sessionId]);
+  }, [sessionId, marketCountry]);
 
   const loadRecommendations = useCallback(async () => {
     if (!isSignedIn) {
@@ -597,7 +615,7 @@ export default function FeedScreen() {
     setCursor(undefined);
     setHasNext(true);
     fetchFeed(true).then(() => setLoading(false));
-  }, [category, industrialType, engineKey]);
+  }, [category, industrialType, engineKey, marketCountry]);
 
   const handleRetry = async () => {
     setLoading(true);

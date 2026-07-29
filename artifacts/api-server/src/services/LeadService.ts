@@ -238,6 +238,7 @@ export async function contactLead(input: ContactLeadInput): Promise<{ phone: str
         referenceType: "lead",
         referenceId: lead.id,
         description: `Lead charge (${input.actionType})`,
+        idempotencyKey: `lead_charge:${lead.id}`,
         invoice: {
           lineItems: [{ label: `Lead (${input.actionType})`, amount: cpl }],
         },
@@ -472,6 +473,7 @@ export async function processLead(input: TrackLeadInput): Promise<void> {
           referenceType: "lead",
           referenceId: lead.id,
           description: `Lead charge (${input.actionType})`,
+          idempotencyKey: `lead_charge:${lead.id}`,
           invoice: {
             lineItems: [{ label: `Lead (${input.actionType})`, amount: cpl }],
           },
