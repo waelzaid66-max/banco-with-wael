@@ -35,6 +35,7 @@
     "android": {
       "package": "com.bancoboom.app",
       "versionCode": 1,
+      "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.ACCESS_COARSE_LOCATION",

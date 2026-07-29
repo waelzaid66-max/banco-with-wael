@@ -194,7 +194,9 @@ test("search map restores locate-me control (fcd7d1c)", () => {
   );
   assert.match(html, /LocateControl/, "mapHtml must include LocateControl");
   assert.match(html, /locate-btn/, "locate button styles required");
+  assert.match(html, /locate_error/, "locate failures must post to host (N2)");
   assert.match(map, /geolocationEnabled/, "WebView must enable geolocation");
+  assert.match(map, /locate_error/, "native map must Alert on locate_error");
 });
 
 test("search map frames by market country center (b68c8af restore)", () => {

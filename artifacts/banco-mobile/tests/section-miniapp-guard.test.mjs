@@ -7,7 +7,7 @@
 //   4. Stack screens for section/* remain registered in app/_layout.tsx
 //
 // Run: pnpm --filter @workspace/banco-mobile run test:section-guard
-// Expectation: 46/46 PASS (owner-approved black Stay header + black-void flexGrow + country label
+// Expectation: 48/48 PASS (owner-approved black Stay header + black-void flexGrow + country label
 // + section header icon hits stay inside / padding 12 + hard category locks
 // + no fake web topPad 67 anywhere under banco-mobile
 // + Banks FI finish: intent=fi from profile, Join gated on membership
@@ -16,7 +16,7 @@
 // + Car brand/origin strips + Discover ENTER + car?engine=import
 // + Materials material/origin/market strips + FilterSheet showMaterial wired
 // + Stay auto-reset on back + rental strip + map latch + scoped property types
-// + Stay sort 34px + StayCard logical start/end
+// + Stay sort 30×30 + StayCard logical start/end
 // + SmartAssetCard start/end + Section activeFilterCount includes sort).
 
 import test from "node:test";

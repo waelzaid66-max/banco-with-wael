@@ -1,10 +1,11 @@
 import { FeedItem, getMapClusters } from "@workspace/api-client-react";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
 import type { WebViewMessageEvent } from "react-native-webview";
 
 import { apiCategoryFor } from "@/components/CategoryTabs";
+import { useI18n } from "@/context/LanguageContext";
 import { useColors } from "@/hooks/useColors";
 import {
   buildMapClusterParams,
@@ -56,6 +57,7 @@ export function SearchResultsMap({
   isSaved,
 }: SearchResultsMapProps) {
   const colors = useColors();
+  const { t } = useI18n();
   const webRef = useRef<WebView>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -229,6 +231,28 @@ export function SearchResultsMap({
         const msg = JSON.parse(event.nativeEvent.data) as MapBridgeMessage;
         if (msg.type === "ready" || msg.type === "error") {
           setReady(true);
+        } else if (msg.type === "locate_error") {
+          // Same honesty as FilterSheet near-me — never leave Android/iOS users
+          // with a dead locate button after permission deny/timeout.
+          Alert.alert(
+            t("search.locateFailedTitle"),
+            msg.reason === "denied"
+              ? t("search.locateDeniedBody")
+              : t("search.locateFailedBody"),
+            [
+              { text: t("common.cancel"), style: "cancel" },
+              ...(msg.reason === "denied"
+                ? [
+                    {
+                      text: t("profile.photoPermissionSettings"),
+                      onPress: () => {
+                        void Linking.openSettings();
+                      },
+                    },
+                  ]
+                : []),
+            ],
+          );
         } else if (msg.type === "viewport") {
           const vp = { ...msg.bounds, zoom: msg.zoom };
           lastViewportRef.current = vp;
@@ -242,7 +266,7 @@ export function SearchResultsMap({
         // Ignore malformed bridge messages.
       }
     },
-    [scheduleFetchClusters, onOpenListingId],
+    [scheduleFetchClusters, onOpenListingId, t],
   );
 
   const selected = useMemo(

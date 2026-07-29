@@ -140,6 +140,7 @@ export default function ProfileScreen() {
   const [lastName, setLastName] = useState("");
 
   const [showPhotoRationale, setShowPhotoRationale] = useState(false);
+  const [showCoverRationale, setShowCoverRationale] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [phone, setPhone] = useState("");
@@ -343,7 +344,9 @@ export default function ProfileScreen() {
 
   // Cover photo — reuses the shared media upload (returns a hosted URL) and
   // stores only the URL string in Clerk unsafeMetadata. No new endpoint.
+  // OS gallery prompt fires ONLY after in-app rationale (Play/iOS disclosure).
   const launchCoverPicker = async () => {
+    setShowCoverRationale(false);
     setShowMenu(false);
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -971,7 +974,10 @@ export default function ProfileScreen() {
         key: "cover",
         icon: "image",
         label: t("profile.changeCover"),
-        onPress: launchCoverPicker,
+        onPress: () => {
+          setShowMenu(false);
+          setShowCoverRationale(true);
+        },
       },
       {
         key: "listings",
@@ -1118,7 +1124,10 @@ export default function ProfileScreen() {
             ]}
           >
             <Pressable
-              onPress={launchCoverPicker}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowCoverRationale(true);
+              }}
               hitSlop={8}
               style={styles.coverActionBtn}
               accessibilityRole="button"
@@ -2070,6 +2079,23 @@ export default function ProfileScreen() {
           config={{
             icon: "image-outline",
             title: t("profile.photoAccessTitle"),
+            message: t("profile.photoAccessMessage"),
+            bullets: [
+              t("profile.photoAccessBullet1"),
+              t("profile.photoAccessBullet2"),
+              t("profile.photoAccessBullet3"),
+            ],
+            confirmLabel: t("profile.photoAccessConfirm"),
+          }}
+        />
+
+        <PermissionRationaleModal
+          visible={showCoverRationale}
+          onAcknowledge={launchCoverPicker}
+          onCancel={() => setShowCoverRationale(false)}
+          config={{
+            icon: "image-outline",
+            title: t("profile.coverAccessTitle"),
             message: t("profile.photoAccessMessage"),
             bullets: [
               t("profile.photoAccessBullet1"),

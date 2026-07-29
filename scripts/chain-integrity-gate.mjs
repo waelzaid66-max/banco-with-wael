@@ -138,6 +138,39 @@ const CHECKS = [
     why: "Android/iOS WebView must allow geolocation for locate-me",
   },
   {
+    id: "P-map-locate-error",
+    file: "artifacts/banco-mobile/components/search/mapHtml.ts",
+    test: (s) =>
+      /locate_error/.test(s) &&
+      /reason:\s*"denied"/.test(s) &&
+      /function \(err\)/.test(s),
+    why: "Locate-me must report deny/timeout to host (N2 Android/iOS honesty)",
+  },
+  {
+    id: "P-android-keyboard-resize",
+    file: "artifacts/banco-mobile/app.json",
+    test: (s) => /softwareKeyboardLayoutMode"\s*:\s*"resize"/.test(s),
+    why: "Android SoftInput resize so composers stay visible above keyboard",
+  },
+  {
+    id: "P-cover-photo-rationale",
+    file: "artifacts/banco-mobile/app/(tabs)/profile.tsx",
+    test: (s) =>
+      /showCoverRationale/.test(s) &&
+      /coverAccessTitle/.test(s) &&
+      /setShowCoverRationale\(true\)/.test(s),
+    why: "Cover gallery must use in-app rationale before OS prompt",
+  },
+  {
+    id: "P-chat-attach-rationale",
+    file: "artifacts/banco-mobile/app/messages/[id].tsx",
+    test: (s) =>
+      /showAttachRationale/.test(s) &&
+      /PermissionRationaleModal/.test(s) &&
+      /message-attach/.test(s),
+    why: "Chat attach must disclose before OS gallery prompt",
+  },
+  {
     id: "P-market-eu-flags",
     file: "artifacts/banco-mobile/constants/countryCodes.ts",
     test: (s) =>

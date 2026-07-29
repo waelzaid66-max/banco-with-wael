@@ -34,6 +34,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "@/components/AppText";
 import { AppTextInput } from "@/components/AppTextInput";
 import { EmojiPicker } from "@/components/EmojiPicker";
+import { PermissionRationaleModal } from "@/components/PermissionRationaleModal";
 import { useI18n } from "@/context/LanguageContext";
 import { useColors } from "@/hooks/useColors";
 import { uploadImageAsset } from "@/lib/upload";
@@ -106,6 +107,7 @@ export default function ThreadScreen() {
   // in the composer, so the thread keeps its full height while typing.
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [showAttachRationale, setShowAttachRationale] = useState(false);
   const [soldDone, setSoldDone] = useState(false);
   const [pending, setPending] = useState<PendingMessage[]>([]);
   const [previewAsset, setPreviewAsset] =
@@ -315,10 +317,9 @@ export default function ThreadScreen() {
     [deliver]
   );
 
-  // Step 1 of image send: pick from library and show a preview before sending —
-  // the user confirms the exact photo (and can cancel) instead of it firing off
-  // the moment it is picked.
+  // Step 1 of image send: in-app disclosure THEN OS gallery prompt (Play/iOS).
   const handleAttachImage = async () => {
+    setShowAttachRationale(false);
     if (uploading || !conversationId) return;
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -844,7 +845,10 @@ export default function ThreadScreen() {
             </Pressable>
           ) : null}
           <Pressable
-            onPress={handleAttachImage}
+            onPress={() => {
+              if (uploading || !conversationId) return;
+              setShowAttachRationale(true);
+            }}
             disabled={uploading}
             style={[styles.attachBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
             testID="message-attach"
@@ -899,6 +903,24 @@ export default function ThreadScreen() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+
+      <PermissionRationaleModal
+        visible={showAttachRationale}
+        onAcknowledge={() => {
+          void handleAttachImage();
+        }}
+        onCancel={() => setShowAttachRationale(false)}
+        config={{
+          icon: "image-outline",
+          title: t("chat.photoPermTitle"),
+          message: t("chat.photoPermBody"),
+          bullets: [
+            t("chat.photoAccessBullet1"),
+            t("chat.photoAccessBullet2"),
+          ],
+          confirmLabel: t("chat.photoAccessConfirm"),
+        }}
+      />
 
       {/* Image preview-before-send: confirm the exact photo (or cancel) instead
           of firing it off the moment it's picked. */}

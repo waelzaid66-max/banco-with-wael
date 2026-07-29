@@ -68,6 +68,10 @@ export function SearchResultsMap({
       try {
         const msg = JSON.parse(String(event.data)) as MapBridgeMessage;
         if (msg.type === "select" && typeof msg.id === "string") setSelectedId(msg.id);
+        else if (msg.type === "locate_error") {
+          // Web preview: soft console only — full Alert lives on native ASB/iOS.
+          console.warn("[map] locate_error", msg.reason);
+        }
       } catch {
         // Ignore non-map messages on the shared web message channel.
       }

@@ -54,7 +54,9 @@ export type MapBridgeMessage =
   | { type: "ready" }
   | { type: "error" }
   | { type: "select"; id: string }
-  | { type: "viewport"; bounds: MapViewportBounds; zoom: number };
+  | { type: "viewport"; bounds: MapViewportBounds; zoom: number }
+  /** Locate-me failed (permission deny / timeout / unavailable) — host shows Alert. */
+  | { type: "locate_error"; reason: "denied" | "unavailable" | "timeout" };
 
 const LEAFLET = "https://unpkg.com/leaflet@1.9.4/dist";
 const CLUSTER = "https://unpkg.com/leaflet.markercluster@1.5.3/dist";
@@ -245,7 +247,10 @@ export function buildMapHtml(
         b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke-linejoin="round" stroke-linecap="round" stroke-width="2"><circle cx="12" cy="12" r="7"></circle><line x1="12" y1="1" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="23"></line><line x1="1" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="23" y2="12"></line></svg>';
         L.DomEvent.disableClickPropagation(b);
         b.onclick = function () {
-          if (!navigator.geolocation) return;
+          if (!navigator.geolocation) {
+            post({ type: "locate_error", reason: "unavailable" });
+            return;
+          }
           navigator.geolocation.getCurrentPosition(function (p) {
             var ll = [p.coords.latitude, p.coords.longitude];
             map.setView(ll, 14);
@@ -253,7 +258,13 @@ export function buildMapHtml(
             meMarker = L.marker(ll, {
               icon: L.divIcon({ className: "", html: '<div class="me-dot"></div>', iconSize: [16, 16] })
             }).addTo(map);
-          }, function () {}, { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 });
+          }, function (err) {
+            // N2: never fail silently on Android/iOS WebView permission deny/timeout.
+            var reason = "unavailable";
+            if (err && err.code === 1) reason = "denied";
+            else if (err && err.code === 3) reason = "timeout";
+            post({ type: "locate_error", reason: reason });
+          }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 });
         };
         return b;
       }

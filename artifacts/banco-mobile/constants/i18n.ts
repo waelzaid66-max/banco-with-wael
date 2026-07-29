@@ -6,7 +6,6 @@ const en = {
     retry: "Retry",
     loading: "Loading…",
     seeAll: "See all",
-    more: "More options",
     cancel: "Cancel",
     delete: "Delete",
     save: "Save",
@@ -119,6 +118,9 @@ const en = {
   chat: {
     photoPermTitle: "Photo access needed",
     photoPermBody: "Allow photo access to send an image.",
+    photoAccessConfirm: "Choose photo",
+    photoAccessBullet1: "Used only to send a chat image you pick",
+    photoAccessBullet2: "We never browse your library on our own",
     uploadFailTitle: "Upload failed",
     uploadFailBody: "Couldn't send the image. Please try again.",
     markSold: "Mark sold",
@@ -396,10 +398,6 @@ const en = {
   search: {
     placeholder: "Search cars, property, machines…",
     filters: "Filters",
-    // Section label for the real-estate refinement row (compound / instalment
-    // plans / furnished). It must NOT reuse `filters` — that is the sheet's own
-    // title, and the same word at two levels of one screen reads as a bug.
-    options: "Options",
     category: "Category",
     location: "Location",
     price: "Price",
@@ -410,12 +408,6 @@ const en = {
     listingModeAll: "All",
     listingModeSale: "For sale",
     listingModeBuy: "Wanted",
-    // Resting labels for the two strip pills. A pill that just says "All" next
-    // to another pill that also says "All" tells the user nothing about which
-    // axis it controls — the label has to name the axis when nothing narrows it,
-    // then switch to the chosen value. Same pattern as Stay's "All types".
-    offerAny: "All offers",
-    typeAny: "All types",
     minPrice: "Min",
     maxPrice: "Max",
     paymentType: "Payment",
@@ -460,7 +452,11 @@ const en = {
     yearTo: "To",
     nearMe: "Near me",
     nearMeDenied: "Location permission is required to search near you.",
-    kmShort: "km",
+    locateFailedTitle: "Couldn't find your location",
+    locateDeniedBody:
+      "Allow location access so Locate me can centre the map. You can enable it in Settings.",
+    locateFailedBody:
+      "GPS timed out or is unavailable. Move outdoors or try again in a moment.",
     allEgypt: "All Egypt",
     discover: {
       categories: "Browse categories",
@@ -532,22 +528,6 @@ const en = {
     emptyTitle: "No import requests yet",
     emptyText: "Browse imported cars and contact a dealer to start your import journey",
     viewRfqs: "View my requests",
-    myOrdersTitle: "My import orders",
-    requestCta: "Request a car import",
-    stageCancelled: "Cancelled",
-    reqTitle: "Request a car import",
-    reqSub: "Tell us what you want to import — we'll source it and keep you posted through every stage.",
-    reqVehicle: "Vehicle",
-    reqVehiclePh: "e.g. Toyota Corolla 2022",
-    reqOrigin: "Import from (country)",
-    reqOriginPh: "e.g. Germany",
-    reqBudget: "Budget",
-    reqBudgetPh: "Your target budget",
-    reqNote: "Notes",
-    reqNotePh: "Colour, trim, condition — anything specific",
-    reqSubmit: "Submit request",
-    reqSuccess: "Request sent — we'll start reviewing it.",
-    reqError: "Couldn't send the request. Please try again.",
   },
   locationPicker: {
     title: "Location",
@@ -762,7 +742,6 @@ const en = {
     fiMode: "Financial institution",
     fiModeHint: "Open your financing inbox and institution hub — not a seller storefront",
     fiOpenBanks: "Open Banks & Financiers",
-    loadMoreListings: "Show more listings",
     postListing: "Post a listing",
     language: "Language",
     arabic: "العربية",
@@ -778,6 +757,7 @@ const en = {
     photoPermissionBody: "Allow photo access to add or change your photo.",
     photoPermissionSettings: "Open Settings",
     photoAccessTitle: "Access Your Photos",
+    coverAccessTitle: "Access photos for your cover",
     photoAccessMessage:
       "To set a profile picture, BANCO needs permission to open your photo library. We only access the photo you pick — nothing else, and never in the background.",
     photoAccessBullet1: "Used only for your profile picture",
@@ -827,7 +807,6 @@ const en = {
     deleteAuthPrompt: "Confirm your identity to delete your account",
     continueWithGoogle: "Continue with Google",
     continueWithApple: "Continue with Apple",
-    continueWithFacebook: "Continue with Facebook",
     orDivider: "or",
     secureNotice:
       "Bank-grade security. We never post on your behalf or share your data.",
@@ -2030,7 +2009,6 @@ const ar: typeof en = {
     retry: "إعادة المحاولة",
     loading: "بيحمّل…",
     seeAll: "الكل",
-    more: "خيارات إضافية",
     cancel: "إلغاء",
     delete: "حذف",
     save: "حفظ",
@@ -2143,6 +2121,9 @@ const ar: typeof en = {
   chat: {
     photoPermTitle: "محتاج إذن الصور",
     photoPermBody: "اسمح بالوصول للصور عشان تبعت صورة.",
+    photoAccessConfirm: "اختَر صورة",
+    photoAccessBullet1: "تُستخدم فقط لإرسال صورة تختارها في الشات",
+    photoAccessBullet2: "لا نتصفّح مكتبتك من تلقاء أنفسنا",
     uploadFailTitle: "فشل الرفع",
     uploadFailBody: "تعذّر إرسال الصورة. حاول تاني.",
     markSold: "تحديد كمباع",
@@ -2420,7 +2401,6 @@ const ar: typeof en = {
   search: {
     placeholder: "دوّر على عربيات، عقارات، ماكينات…",
     filters: "فلاتر",
-    options: "خيارات",
     category: "الفئة",
     location: "المكان",
     price: "السعر",
@@ -2431,8 +2411,6 @@ const ar: typeof en = {
     listingModeAll: "الكل",
     listingModeSale: "معروض للبيع",
     listingModeBuy: "مطلوب",
-    offerAny: "كل العروض",
-    typeAny: "كل الأنواع",
     minPrice: "من",
     maxPrice: "إلى",
     paymentType: "الدفع",
@@ -2477,7 +2455,11 @@ const ar: typeof en = {
     yearTo: "إلى",
     nearMe: "قريب مني",
     nearMeDenied: "يلزم السماح بالموقع للبحث بالقرب منك.",
-    kmShort: "كم",
+    locateFailedTitle: "تعذّر تحديد موقعك",
+    locateDeniedBody:
+      "اسمح بالوصول للموقع عشان زر موقعي يوسّط الخريطة. تقدر تفعّله من الإعدادات.",
+    locateFailedBody:
+      "انتهت مهلة الـ GPS أو غير متاح. اطلع لمكان مفتوح أو حاول تاني بعد لحظات.",
     allEgypt: "كل مصر",
     discover: {
       categories: "تصفّح الأقسام",
@@ -2548,22 +2530,6 @@ const ar: typeof en = {
     emptyTitle: "لا توجد طلبات استيراد بعد",
     emptyText: "تصفّح السيارات المستوردة واتصل بوكيل لبدء رحلة استيرادك",
     viewRfqs: "عرض طلباتي",
-    myOrdersTitle: "طلبات الاستيراد بتاعتي",
-    requestCta: "اطلب استيراد سيارة",
-    stageCancelled: "ملغي",
-    reqTitle: "اطلب استيراد سيارة",
-    reqSub: "قولنا عايز تستورد إيه — إحنا نجيبهولك ونطمّنك في كل مرحلة.",
-    reqVehicle: "السيارة",
-    reqVehiclePh: "مثلاً تويوتا كورولا 2022",
-    reqOrigin: "الاستيراد من (بلد)",
-    reqOriginPh: "مثلاً ألمانيا",
-    reqBudget: "الميزانية",
-    reqBudgetPh: "ميزانيتك المستهدفة",
-    reqNote: "ملاحظات",
-    reqNotePh: "اللون، الفئة، الحالة — أي حاجة محددة",
-    reqSubmit: "إرسال الطلب",
-    reqSuccess: "الطلب اتبعت — هنبدأ نراجعه.",
-    reqError: "الطلب مابعتش. حاول تاني.",
   },
   locationPicker: {
     title: "المكان",
@@ -2777,7 +2743,6 @@ const ar: typeof en = {
     fiMode: "مؤسسة مالية",
     fiModeHint: "افتح صندوق طلبات التمويل وهب المؤسسة — مش واجهة بائع",
     fiOpenBanks: "افتح البنوك والممولين",
-    loadMoreListings: "عرض إعلانات أكثر",
     postListing: "أضف إعلان",
     language: "اللغة",
     arabic: "العربية",
@@ -2793,6 +2758,7 @@ const ar: typeof en = {
     photoPermissionBody: "اسمح بالوصول للصور عشان تقدر تضيف أو تغيّر صورتك.",
     photoPermissionSettings: "افتح الإعدادات",
     photoAccessTitle: "الوصول إلى صورك",
+    coverAccessTitle: "الوصول للصور لغلاف حسابك",
     photoAccessMessage:
       "لتعيين صورة الملف الشخصي، يحتاج BANCO إذنًا لفتح مكتبة صورك. لا نصل إلا للصورة التي تختارها — لا شيء غير ذلك، وأبدًا في الخلفية.",
     photoAccessBullet1: "تُستخدم فقط لصورة ملفك الشخصي",
@@ -2842,7 +2808,6 @@ const ar: typeof en = {
     deleteAuthPrompt: "أكّد هويتك لحذف الحساب",
     continueWithGoogle: "المتابعة عبر Google",
     continueWithApple: "المتابعة عبر Apple",
-    continueWithFacebook: "المتابعة عبر Facebook",
     orDivider: "أو",
     secureNotice: "حماية بمستوى البنوك. عمرنا مننشر باسمك ولا نشارك بياناتك.",
     fraudNotice:
