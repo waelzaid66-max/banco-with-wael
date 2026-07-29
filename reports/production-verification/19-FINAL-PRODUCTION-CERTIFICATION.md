@@ -106,5 +106,5 @@ Code-path defects with reproducible source evidence from Phases / Rounds 1–5 h
 
 ## Decision
 
-**CONDITIONAL GO** for continued hardening and staged internal/staging deploy.  
-**NOT** final million-user production certification until UNVERIFIED device/ops surfaces and listed HIGH residuals are closed or owner-accepted.
+**CONDITIONAL GO** for staging / controlled production ramp.  
+**NOT** final million-user certification until device/ops UNVERIFIED surfaces and remaining OPEN HIGH residuals (top-up idempotency keys, saved-search structured matcher, web map twin) are closed or owner-accepted in writing.
