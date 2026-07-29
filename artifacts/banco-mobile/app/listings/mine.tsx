@@ -4,8 +4,12 @@ import {
   deleteListing,
   bumpListing,
   updateListing,
+  getGetListingQueryKey,
+  getGetMyListingsQueryKey,
+  getGetMyManagedListingsQueryKey,
   DealerListing,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { router, type Href } from "expo-router";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useState } from "react";
@@ -24,6 +28,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "@/components/AppText";
 import { PromoteButton } from "@/components/PromoteButton";
 import { useI18n } from "@/context/LanguageContext";
+import { useSession } from "@/context/SessionContext";
 import { useColors } from "@/hooks/useColors";
 
 type LoadState = "loading" | "ready" | "error";
@@ -72,6 +77,8 @@ function statusLabel(
 export default function MyListingsScreen() {
   const colors = useColors();
   const { t, lang } = useI18n();
+  const { bumpListings } = useSession();
+  const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   // Same safe-area contract as Search/Section — fake web 67 crushed chrome.
   const topPad = Math.max(insets.top, Platform.OS === "web" ? 12 : 0);
@@ -82,6 +89,24 @@ export default function MyListingsScreen() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [bumpingId, setBumpingId] = useState<string | null>(null);
   const [statusBusyId, setStatusBusyId] = useState<string | null>(null);
+
+  // Profile grid / feed / detail stay in sync after mine mutations (create/edit
+  // already bump; status/delete previously left those surfaces stale).
+  const notifyListingsChanged = useCallback(
+    (id?: string) => {
+      bumpListings();
+      void queryClient.invalidateQueries({ queryKey: getGetMyListingsQueryKey() });
+      void queryClient.invalidateQueries({
+        queryKey: getGetMyManagedListingsQueryKey(),
+      });
+      if (id) {
+        void queryClient.invalidateQueries({
+          queryKey: getGetListingQueryKey(id),
+        });
+      }
+    },
+    [bumpListings, queryClient],
+  );
 
   const load = useCallback(async () => {
     try {
@@ -108,6 +133,7 @@ export default function MyListingsScreen() {
       setDeletingId(id);
       await deleteListing(id);
       setItems((prev) => prev.filter((l) => l.id !== id));
+      notifyListingsChanged(id);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -115,7 +141,7 @@ export default function MyListingsScreen() {
     } finally {
       setDeletingId(null);
     }
-  }, [t]);
+  }, [notifyListingsChanged, t]);
 
   // "Renew" recycles an active listing: the server sets bumped_at=now so it
   // sorts by COALESCE(bumped_at, created_at) and rises in recent results. It
@@ -128,6 +154,7 @@ export default function MyListingsScreen() {
         await bumpListing(id);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert(t("mine.renewSuccessTitle"), t("mine.renewSuccessBody"));
+        notifyListingsChanged(id);
         // Reload so any server-derived change is reflected. A failure here is
         // only a refresh failure — the renew itself already succeeded.
         await load();
@@ -143,7 +170,7 @@ export default function MyListingsScreen() {
         setBumpingId(null);
       }
     },
-    [load, t],
+    [load, notifyListingsChanged, t],
   );
 
   const confirmDelete = useCallback(
@@ -168,21 +195,23 @@ export default function MyListingsScreen() {
     [runDelete, t],
   );
 
-  // Mirror dealer-os archive/activate via existing updateListing(status) —
-  // mobile previously only sold/delete/bump (MOBILE-ARCHIVE-UNWIRED).
+  // Lifecycle patches share updateListing(status) with listing detail / chat.
   const runStatus = useCallback(
-    async (id: string, status: "archived" | "active") => {
+    async (id: string, status: "archived" | "active" | "sold") => {
       try {
         setStatusBusyId(id);
         await updateListing(id, { status });
         setItems((prev) =>
           prev.map((l) => (l.id === id ? { ...l, status } : l)),
         );
+        notifyListingsChanged(id);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         if (status === "archived") {
           Alert.alert(t("mine.archiveFailedTitle"), t("mine.archiveFailedBody"));
+        } else if (status === "sold") {
+          Alert.alert(t("common.error"), t("chat.markSoldError"));
         } else {
           Alert.alert(
             t("mine.reactivateFailedTitle"),
@@ -193,7 +222,7 @@ export default function MyListingsScreen() {
         setStatusBusyId(null);
       }
     },
-    [t],
+    [notifyListingsChanged, t],
   );
 
   const confirmArchive = useCallback(
@@ -234,6 +263,21 @@ export default function MyListingsScreen() {
           },
         ],
       );
+    },
+    [runStatus, t],
+  );
+
+  const confirmSold = useCallback(
+    (item: DealerListing) => {
+      if (!item.id) return;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Alert.alert(t("chat.markSoldTitle"), t("chat.markSoldBody"), [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("chat.markSoldConfirm"),
+          onPress: () => runStatus(item.id as string, "sold"),
+        },
+      ]);
     },
     [runStatus, t],
   );
@@ -489,7 +533,40 @@ export default function MyListingsScreen() {
                       </Pressable>
                     ) : null}
                     {item.status === "active" && item.id ? (
-                      <PromoteButton listingId={item.id} variant="compact" />
+                      <PromoteButton
+                        listingId={item.id}
+                        variant="compact"
+                        onPromoted={() => {
+                          notifyListingsChanged(item.id as string);
+                          void load();
+                        }}
+                      />
+                    ) : null}
+                    {item.status === "active" && item.id ? (
+                      <Pressable
+                        onPress={() => confirmSold(item)}
+                        disabled={isStatusBusy}
+                        style={styles.renewBtn}
+                        hitSlop={8}
+                        testID={`sold-listing-${item.id}`}
+                      >
+                        {isStatusBusy ? (
+                          <ActivityIndicator size="small" color={colors.primary} />
+                        ) : (
+                          <>
+                            <Feather
+                              name="tag"
+                              size={15}
+                              color={colors.primary}
+                            />
+                            <AppText
+                              style={[styles.renewText, { color: colors.primary }]}
+                            >
+                              {t("chat.markSold")}
+                            </AppText>
+                          </>
+                        )}
+                      </Pressable>
                     ) : null}
                     {item.status === "active" && item.id ? (
                       <Pressable

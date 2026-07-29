@@ -8,6 +8,7 @@ import {
   getListConversationsQueryKey,
   getGetMessagesQueryKey,
   getGetListingQueryKey,
+  getGetMyListingsQueryKey,
   type Message,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -36,6 +37,7 @@ import { AppTextInput } from "@/components/AppTextInput";
 import { EmojiPicker } from "@/components/EmojiPicker";
 import { PermissionRationaleModal } from "@/components/PermissionRationaleModal";
 import { useI18n } from "@/context/LanguageContext";
+import { useSession } from "@/context/SessionContext";
 import { useColors } from "@/hooks/useColors";
 import { uploadImageAsset } from "@/lib/upload";
 
@@ -97,6 +99,7 @@ export default function ThreadScreen() {
   }>();
   const conversationId = params.id;
   const qc = useQueryClient();
+  const { bumpListings } = useSession();
 
   // Mark-sold is a seller-only action and only when the inbox handed us the
   // listing id + viewer role (it does). Buyers and deep-links won't see it.
@@ -372,11 +375,16 @@ export default function ThreadScreen() {
         text: t("chat.markSoldConfirm"),
         onPress: async () => {
           try {
-            await updateListing(params.listingId as string, { status: "sold" });
+            const listingId = params.listingId as string;
+            await updateListing(listingId, { status: "sold" });
             setSoldDone(true);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            qc.invalidateQueries({
-              queryKey: getGetListingQueryKey(params.listingId as string),
+            bumpListings();
+            void qc.invalidateQueries({
+              queryKey: getGetListingQueryKey(listingId),
+            });
+            void qc.invalidateQueries({
+              queryKey: getGetMyListingsQueryKey(),
             });
           } catch {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

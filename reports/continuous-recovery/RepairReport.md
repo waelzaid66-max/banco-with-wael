@@ -1,32 +1,34 @@
-# Repair Report — C-WEB-BASE
+# Repair Report — STATUS CACHE / SOLD / ACCOUNT SoT
 
 | Field | Value |
 |-------|-------|
-| Commit | `9965d12a4d532c755abf7642e90a2c1afa914226` |
+| Commit | `5d027bfdbd88cb89304c8ca869454d64c4d1273a` |
 | Branch | `main` |
 | Date | 2026-07-21 |
 | Production accepted | **NO** |
 
 
 ## Unique ID
-`REP-C-WEB-BASE-2026-07-21`
+`REP-STATUS-CACHE-SOLD-2026-07-21`
 
 ## Problem
-CA lacked bancoo's Replit web production path: browsers got Expo Go QR only; `<ClerkLoaded>` could white-screen forever on unauthorized origins; fonts could hang on web.
+1. Mine/detail/chat status mutations updated local UI only — profile grid/feed stayed stale.
+2. Mine + dealer-os could not mark sold (chat/detail only).
+3. `accountTypeChosen` was set before `updateMe` — failed sync + cold restart skipped retry forever.
 
 ## Evidence
-- Forensic card C-WEB-BASE / C-MEM-WEB
-- Diff bancoo`321af02` vs CA: `_layout.tsx`, `app.config.ts`, `scripts/build.js`, `server/serve.js`
+- Precision audit after `5d027bf`
+- Existing `updateListing({ status })` + `bumpListings` / RQ keys
 
 ## Root Cause
-History-stripped bancoo handoff contained the web stack; CA continuous line had native/EAS focus and never re-imported the Replit browser SPA path after wipe-era churn.
+Archive wave closed UI gaps but not cross-surface cache; Clerk flag written optimistically for anti-trap without SoT revert.
 
 ## Files Modified
 See fingerprint.lastRepair.files
 
 ## Validation
-- chain-integrity-gate: PASS (includes P-clerk-load-gate, P-web-export-build, P-web-serve-spa)
-- mobile node tests incl. session-restore: PASS
+- chain-integrity-gate: PASS
+- mobile node tests: PASS
 - typecheck/lint/full build: BLOCKED (no node_modules)
 
 ## Rollback

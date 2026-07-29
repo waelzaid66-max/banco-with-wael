@@ -1,12 +1,12 @@
 {
   "protocol": "Continuous Production Recovery",
-  "generatedAt": "2026-07-21T23:09:41.645Z",
+  "generatedAt": "2026-07-21T23:22:40.256Z",
   "repository": "waelzaid66-max/-BANCO-CA-OOM-",
   "branch": "main",
-  "commit": "9965d12a4d532c755abf7642e90a2c1afa914226",
-  "describe": "v1.4.0-stable-2026-07-18-216-g9965d12",
+  "commit": "5d027bfdbd88cb89304c8ca869454d64c4d1273a",
+  "describe": "v1.4.0-stable-2026-07-18-218-g5d027bf",
   "productionAccepted": false,
-  "iteration": "R-ARCHIVE-POSTSIGNUP-EDIT-INVALIDATE",
+  "iteration": "R-STATUS-CACHE-SOLD-ACCOUNT-SOT",
   "criticalAreas": {
     "authentication_clerk_email_google_apple": "PASS",
     "authentication_facebook_login": "N/A — not a product provider (social icon only)",
@@ -34,15 +34,15 @@
     "nodeModulesPresent": false
   },
   "lastRepair": {
-    "id": "REP-ARCHIVE-POSTSIGNUP-2026-07-21",
-    "summary": "Mobile archive/reactivate + post-signup no-nav-on-fail + edit listing RQ invalidate",
+    "id": "REP-STATUS-CACHE-SOLD-2026-07-21",
+    "summary": "Status mutation cache bump, mine/dealer mark-sold, accountTypeChosen after /me, promote refresh",
     "files": [
+      "artifacts/banco-mobile/app/(tabs)/profile.tsx",
       "artifacts/banco-mobile/app/listings/mine.tsx",
       "artifacts/banco-mobile/app/listing/[id].tsx",
-      "artifacts/banco-mobile/app/(tabs)/profile.tsx",
-      "artifacts/banco-mobile/app/listings/edit/[id].tsx",
-      "artifacts/banco-mobile/constants/i18n.ts",
-      "artifacts/banco-mobile/components/icons.tsx",
+      "artifacts/banco-mobile/app/messages/[id].tsx",
+      "artifacts/dealer-os/src/pages/listings.tsx",
+      "artifacts/dealer-os/src/i18n/strings.ts",
       "scripts/chain-integrity-gate.mjs"
     ]
   }

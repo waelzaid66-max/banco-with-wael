@@ -389,8 +389,22 @@ const CHECKS = [
     test: (s) =>
       /let synced = false/.test(s) &&
       /if \(!synced\) return/.test(s) &&
-      /post-signup account_type save failed/.test(s),
-    why: "Failed post-signup updateMe must not router.push onboarding",
+      /post-signup account_type save failed/.test(s) &&
+      /setNeedsAccountType\(true\)/.test(s),
+    why: "Failed post-signup updateMe must not navigate and must reopen retry gate",
+  },
+  {
+    id: "P-account-type-chosen-after-me",
+    file: "artifacts/banco-mobile/app/(tabs)/profile.tsx",
+    test: (s) => {
+      const i = s.indexOf("const chooseAccountType");
+      if (i < 0) return false;
+      const sl = s.slice(i, i + 2800);
+      const u = sl.indexOf("await updateMe({ account_type");
+      const c = sl.indexOf("accountTypeChosen: true");
+      return u >= 0 && c >= 0 && u < c;
+    },
+    why: "Clerk accountTypeChosen must be set only after /me updateMe succeeds",
   },
   {
     id: "P-mobile-archive-wired",
@@ -409,6 +423,42 @@ const CHECKS = [
       /handleReactivate/.test(s) &&
       /status: "archived"/.test(s),
     why: "Owner listing detail must archive/reactivate like mine",
+  },
+  {
+    id: "P-mine-mark-sold",
+    file: "artifacts/banco-mobile/app/listings/mine.tsx",
+    test: (s) =>
+      /confirmSold/.test(s) &&
+      /runStatus\(item\.id as string, "sold"\)/.test(s) &&
+      /notifyListingsChanged/.test(s),
+    why: "Mine must mark sold + invalidate profile/feed listings cache",
+  },
+  {
+    id: "P-status-mutation-bump",
+    file: "artifacts/banco-mobile/app/listing/[id].tsx",
+    test: (s) =>
+      /notifyListingsChanged/.test(s) &&
+      /bumpListings/.test(s) &&
+      /getGetMyListingsQueryKey/.test(s),
+    why: "Owner status mutations must bump + invalidate my listings",
+  },
+  {
+    id: "P-chat-sold-bump",
+    file: "artifacts/banco-mobile/app/messages/[id].tsx",
+    test: (s) =>
+      /bumpListings\(\)/.test(s) &&
+      /getGetMyListingsQueryKey/.test(s) &&
+      /status: "sold"/.test(s),
+    why: "Chat mark-sold must refresh profile/mine listings, not only detail",
+  },
+  {
+    id: "P-dealer-mark-sold",
+    file: "artifacts/dealer-os/src/pages/listings.tsx",
+    test: (s) =>
+      /handleMarkSold/.test(s) &&
+      /status: "sold"/.test(s) &&
+      /useUpdateListing/.test(s),
+    why: "Dealer-os must close deals via updateListing status=sold",
   },
 ];
 

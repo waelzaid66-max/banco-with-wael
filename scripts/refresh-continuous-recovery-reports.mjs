@@ -68,7 +68,7 @@ const fingerprint = {
   commit: HEAD,
   describe: DESCRIBE,
   productionAccepted: false,
-  iteration: "R-ARCHIVE-POSTSIGNUP-EDIT-INVALIDATE",
+  iteration: "R-STATUS-CACHE-SOLD-ACCOUNT-SOT",
   criticalAreas,
   validations: {
     chainGate: gate.ok ? "PASS" : "FAIL",
@@ -77,16 +77,16 @@ const fingerprint = {
     nodeModulesPresent: nodeModules,
   },
   lastRepair: {
-    id: "REP-ARCHIVE-POSTSIGNUP-2026-07-21",
+    id: "REP-STATUS-CACHE-SOLD-2026-07-21",
     summary:
-      "Mobile archive/reactivate + post-signup no-nav-on-fail + edit listing RQ invalidate",
+      "Status mutation cache bump, mine/dealer mark-sold, accountTypeChosen after /me, promote refresh",
     files: [
+      "artifacts/banco-mobile/app/(tabs)/profile.tsx",
       "artifacts/banco-mobile/app/listings/mine.tsx",
       "artifacts/banco-mobile/app/listing/[id].tsx",
-      "artifacts/banco-mobile/app/(tabs)/profile.tsx",
-      "artifacts/banco-mobile/app/listings/edit/[id].tsx",
-      "artifacts/banco-mobile/constants/i18n.ts",
-      "artifacts/banco-mobile/components/icons.tsx",
+      "artifacts/banco-mobile/app/messages/[id].tsx",
+      "artifacts/dealer-os/src/pages/listings.tsx",
+      "artifacts/dealer-os/src/i18n/strings.ts",
       "scripts/chain-integrity-gate.mjs",
     ],
   },
@@ -108,7 +108,7 @@ w(
   "ProductionState.md",
   `${hdr("Production State")}
 ## Current iteration
-**R-ARCHIVE-POSTSIGNUP-EDIT-INVALIDATE** — mobile archive parity, post-signup half-wire closed, edit listing cache invalidate.
+**R-STATUS-CACHE-SOLD-ACCOUNT-SOT** — status/sold cache sync, mine+dealer mark-sold, accountTypeChosen after /me.
 
 ## Critical area board
 ${Object.entries(criticalAreas)
@@ -122,28 +122,27 @@ Mission continues while any critical row is FAIL or unresolved BLOCKED that is o
 
 w(
   "RepairReport.md",
-  `${hdr("Repair Report — ARCHIVE / POST-SIGNUP / EDIT INVALIDATE")}
+  `${hdr("Repair Report — STATUS CACHE / SOLD / ACCOUNT SoT")}
 ## Unique ID
-\`REP-ARCHIVE-POSTSIGNUP-2026-07-21\`
+\`REP-STATUS-CACHE-SOLD-2026-07-21\`
 
 ## Problem
-1. Edit listing PATCH success only bumped session version — listing RQ cache could stay stale.
-2. Post-signup \`updateMe\` failure still \`router.push\` business onboarding (half-wired journey).
-3. Dealer-os could archive/activate; mobile mine/detail only sold/delete/bump.
+1. Mine/detail/chat status mutations updated local UI only — profile grid/feed stayed stale.
+2. Mine + dealer-os could not mark sold (chat/detail only).
+3. \`accountTypeChosen\` was set before \`updateMe\` — failed sync + cold restart skipped retry forever.
 
 ## Evidence
-- Laptop-style audit of tip \`9965d12\`
-- API already accepts \`UpdateListingBody.status\` active|sold|archived
-- Dealer \`handleStatusToggle\` archive/activate contract
+- Precision audit after \`5d027bf\`
+- Existing \`updateListing({ status })\` + \`bumpListings\` / RQ keys
 
 ## Root Cause
-Prior wave wired edit media + post-signup Alert but left navigation and cache incomplete; archive UI never ported to mobile.
+Archive wave closed UI gaps but not cross-surface cache; Clerk flag written optimistically for anti-trap without SoT revert.
 
 ## Files Modified
 See fingerprint.lastRepair.files
 
 ## Validation
-- chain-integrity-gate: ${gate.ok ? "PASS" : "FAIL"} (46 markers incl. archive/post-signup/invalidate)
+- chain-integrity-gate: ${gate.ok ? "PASS" : "FAIL"}
 - mobile node tests: ${mobile.ok ? "PASS" : "FAIL"}
 - typecheck/lint/full build: BLOCKED (no node_modules)
 
@@ -177,7 +176,8 @@ w(
 | S1–S4 / N0–N2 / C1–C3 | on CA |
 | Forensic bancoo baseline study | docs \`194e144\` era |
 | C-WEB-BASE ClerkLoadGate + web export | prior |
-| **ARCHIVE / POST-SIGNUP / EDIT INVALIDATE** | this iteration |
+| ARCHIVE / POST-SIGNUP / EDIT INVALIDATE | prior |
+| **STATUS CACHE / SOLD / ACCOUNT SoT** | this iteration |
 `,
 );
 
@@ -233,9 +233,10 @@ w(
 - S1/S2/S4, N0–N2, C1–C3 (prior)
 - **C-WEB-BASE** ClerkLoadGate + font wait + getToken.catch + exportWebBuild + serve web SPA
 - **EDIT-MEDIA / BUYER-PHONE / LANDING-CLERK-DOMAIN / ACCOUNT-TYPE-SYNC** (prior tip)
-- **EDIT-LISTING-INVALIDATE** — invalidate \`getGetListingQueryKey\` on edit save
-- **POST-SIGNUP-NO-NAV-ON-FAIL** — no onboarding push after failed \`updateMe\`
-- **MOBILE-ARCHIVE** — mine + listing detail archive/reactivate via \`updateListing({ status })\`
+- **EDIT-LISTING-INVALIDATE** / **MOBILE-ARCHIVE** / **POST-SIGNUP-NO-NAV** (prior)
+- **STATUS-MUTATION-CACHE** — mine/detail/chat bump + invalidate after status/delete/promote
+- **MINE-MARK-SOLD** + **DEALER-OS-MARK-SOLD** via existing \`updateListing({ status: "sold" })\`
+- **ACCOUNT-TYPE-CHOSEN-AFTER-ME** — Clerk flag only after \`/me\` success; reopen gate on fail
 `,
 );
 
@@ -245,10 +246,11 @@ w(
 1. Laptop/owner: \`CONFIRM_BANCOO_FORCE=YES\` + \`./scripts/publish-bancoo-production-main.sh\` (bancoo MAIN)
 2. Laptop: \`pnpm install --frozen-lockfile\` + \`laptop-validation-matrix.mjs --with-install\`
 3. Owner: sync bancooom + deploy + paste readyz (F1)
-4. Laptop: device N2 QA + audit paste \`PASTE-CURSOR-LAPTOP-AGENT-WAVE-ARCHIVE-POSTSIGNUP-AR.md\`
-5. Optional: VIDEO-POSTER-SCHEMA-UNWIRED — do **not** invent frame extract
-6. Optional: EXPO-APP-IDENTITY-DRIFT — owner branding decision
-7. Runtime prove web export on Replit after deps available
+4. Laptop: device N2 QA + audit paste \`PASTE-CURSOR-LAPTOP-AGENT-WAVE-STATUS-SOLD-SOT-AR.md\`
+5. Optional MED: dealer-os edit-media hydrate (UpdateListingBody.media already live on mobile)
+6. Optional: VIDEO-POSTER-SCHEMA-UNWIRED — do **not** invent frame extract
+7. Optional: EXPO-APP-IDENTITY-DRIFT — owner branding decision
+8. Runtime prove web export on Replit after deps available
 `,
 );
 

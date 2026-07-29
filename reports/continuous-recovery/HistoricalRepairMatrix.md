@@ -2,7 +2,7 @@
 
 | Field | Value |
 |-------|-------|
-| Commit | `9965d12a4d532c755abf7642e90a2c1afa914226` |
+| Commit | `5d027bfdbd88cb89304c8ca869454d64c4d1273a` |
 | Branch | `main` |
 | Date | 2026-07-21 |
 | Production accepted | **NO** |
@@ -13,5 +13,7 @@
 | 93b650b wipe | regression root |
 | S1–S4 / N0–N2 / C1–C3 | on CA |
 | Forensic bancoo baseline study | docs `194e144` era |
-| **C-WEB-BASE ClerkLoadGate + web export** | this iteration |
+| C-WEB-BASE ClerkLoadGate + web export | prior |
+| ARCHIVE / POST-SIGNUP / EDIT INVALIDATE | prior |
+| **STATUS CACHE / SOLD / ACCOUNT SoT** | this iteration |
 

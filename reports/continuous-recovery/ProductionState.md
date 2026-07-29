@@ -2,14 +2,14 @@
 
 | Field | Value |
 |-------|-------|
-| Commit | `9965d12a4d532c755abf7642e90a2c1afa914226` |
+| Commit | `5d027bfdbd88cb89304c8ca869454d64c4d1273a` |
 | Branch | `main` |
 | Date | 2026-07-21 |
 | Production accepted | **NO** |
 
 
 ## Current iteration
-**R-WEB-BASE-CLERK-GATE** — restored Replit browser SPA export + ClerkLoadGate from bancoo handoff after forensic carding.
+**R-STATUS-CACHE-SOLD-ACCOUNT-SOT** — status/sold cache sync, mine+dealer mark-sold, accountTypeChosen after /me.
 
 ## Critical area board
 - **authentication_clerk_email_google_apple:** PASS

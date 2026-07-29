@@ -21,10 +21,13 @@ import {
   getGetCompanyQueryKey,
   useGetMe,
   getGetMeQueryKey,
+  getGetListingQueryKey,
+  getGetMyListingsQueryKey,
   updateListing,
   ContactLeadBodyActionType,
   type CreateReportBodyReason,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import React, {
   useCallback,
   useEffect,
@@ -95,10 +98,24 @@ export default function ListingDetailScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
-  const { sessionId, isSaved, toggleSave, recordView, getCachedItem } =
+  const { sessionId, isSaved, toggleSave, recordView, getCachedItem, bumpListings } =
     useSession();
+  const queryClient = useQueryClient();
   const { playSound } = useSound();
   const { user, isSignedIn, isLoaded } = useUser();
+
+  const notifyListingsChanged = useCallback(
+    (listingId: string) => {
+      bumpListings();
+      void queryClient.invalidateQueries({
+        queryKey: getGetListingQueryKey(listingId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: getGetMyListingsQueryKey(),
+      });
+    },
+    [bumpListings, queryClient],
+  );
 
   const [listing, setListing] = useState<
     Awaited<ReturnType<typeof getListing>>["data"] | null
@@ -284,6 +301,7 @@ export default function ListingDetailScreen() {
           try {
             await updateListing(listing.id, { status: "sold" });
             setListing((prev) => (prev ? { ...prev, status: "sold" } : prev));
+            notifyListingsChanged(listing.id);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           } catch {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -312,6 +330,7 @@ export default function ListingDetailScreen() {
               setListing((prev) =>
                 prev ? { ...prev, status: "archived" } : prev,
               );
+              notifyListingsChanged(listing.id);
               Haptics.notificationAsync(
                 Haptics.NotificationFeedbackType.Success,
               );
@@ -348,6 +367,7 @@ export default function ListingDetailScreen() {
               setListing((prev) =>
                 prev ? { ...prev, status: "active" } : prev,
               );
+              notifyListingsChanged(listing.id);
               Haptics.notificationAsync(
                 Haptics.NotificationFeedbackType.Success,
               );
@@ -1322,7 +1342,11 @@ export default function ListingDetailScreen() {
                   </Pressable>
                 ) : null}
                 {isActive ? (
-                  <PromoteButton listingId={listing.id} variant="full" />
+                  <PromoteButton
+                    listingId={listing.id}
+                    variant="full"
+                    onPromoted={() => notifyListingsChanged(listing.id)}
+                  />
                 ) : null}
               </View>
             )

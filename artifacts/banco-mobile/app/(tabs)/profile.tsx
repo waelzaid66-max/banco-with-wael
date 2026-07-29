@@ -232,7 +232,8 @@ export default function ProfileScreen() {
             ...(user.unsafeMetadata ?? {}),
             termsAcceptedAt: new Date().toISOString(),
             termsVersion: CONSENT_VERSION,
-            accountTypeChosen: true,
+            // accountTypeChosen stays false until /me sync succeeds — otherwise
+            // a failed updateMe + cold restart skips the retry gate forever.
           },
         });
       } catch (e) {
@@ -248,11 +249,22 @@ export default function ProfileScreen() {
           ...(phoneToSave ? { phone: phoneToSave } : {}),
         });
         synced = true;
+        try {
+          await user.update({
+            unsafeMetadata: {
+              ...(user.unsafeMetadata ?? {}),
+              accountTypeChosen: true,
+            },
+          });
+        } catch (e) {
+          console.warn("[profile] accountTypeChosen post-sync failed", e);
+        }
       } catch (e) {
         console.warn("[profile] post-signup account_type save failed", e);
         // Do not silently leave DB role/phone out of sync after Clerk session
-        // is live — surface retry (BUYER-PHONE / role SoT depend on /me).
+        // is live — reopen the existing account-type gate (SSO parity).
         Alert.alert(t("profile.accountTypeError"));
+        setNeedsAccountType(true);
       }
       // Never continue into business onboarding on a failed /me sync — that
       // created a half-wired journey (Alert then still router.push).
@@ -554,22 +566,23 @@ export default function ProfileScreen() {
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSavingAccountType(true);
-    // Record the choice + dismiss the gate FIRST so a flaky/slow backend can never
-    // trap the user on this screen (df68258; wiped by 93b650b; restore incomplete).
-    try {
-      await user?.update({
-        unsafeMetadata: {
-          ...(user.unsafeMetadata ?? {}),
-          accountTypeChosen: true,
-        },
-      });
-      await user?.reload();
-    } catch (e) {
-      console.warn("[profile] accountTypeChosen flag save failed", e);
-    }
+    // Dismiss the gate while the request is in flight so a slow backend cannot
+    // trap the user (df68258). On /me failure we reopen + clear the Clerk flag
+    // so a cold restart cannot skip the retry forever.
     setNeedsAccountType(false);
     try {
       await updateMe({ account_type: type });
+      try {
+        await user?.update({
+          unsafeMetadata: {
+            ...(user.unsafeMetadata ?? {}),
+            accountTypeChosen: true,
+          },
+        });
+        await user?.reload();
+      } catch (e) {
+        console.warn("[profile] accountTypeChosen flag save failed", e);
+      }
       await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       // Dealer / company / financial-institution all continue to the business
@@ -581,8 +594,16 @@ export default function ProfileScreen() {
         router.push("/business/onboarding");
       }
     } catch {
-      // Anti-trap dismissed the gate before DB ack — reopen so the user can
-      // retry instead of believing the role change succeeded (S1 /me.role SoT).
+      try {
+        await user?.update({
+          unsafeMetadata: {
+            ...(user.unsafeMetadata ?? {}),
+            accountTypeChosen: false,
+          },
+        });
+      } catch (e) {
+        console.warn("[profile] accountTypeChosen revert failed", e);
+      }
       setNeedsAccountType(true);
       Alert.alert(t("profile.accountTypeError"));
     } finally {

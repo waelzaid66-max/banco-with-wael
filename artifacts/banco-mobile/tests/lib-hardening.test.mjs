@@ -173,13 +173,23 @@ test("account-type gate keeps Skip + dismiss-first anti-trap", () => {
   const fn = src.indexOf("const chooseAccountType");
   assert.ok(fn >= 0);
   // Include demote guard preamble before dismiss/updateMe (slice must be long enough).
-  const slice = src.slice(fn, fn + 2200);
+  const slice = src.slice(fn, fn + 2800);
   const dismiss = slice.indexOf("setNeedsAccountType(false)");
   const update = slice.indexOf("await updateMe({ account_type");
+  const chosen = slice.indexOf("accountTypeChosen: true");
   assert.ok(dismiss >= 0 && update >= 0, "chooseAccountType must dismiss + updateMe");
   assert.ok(
     dismiss < update,
     "must dismiss gate BEFORE updateMe (df68258 anti-trap)",
+  );
+  assert.ok(
+    chosen >= 0 && update < chosen,
+    "Clerk accountTypeChosen must follow successful updateMe (cold-restart SoT)",
+  );
+  assert.match(
+    src,
+    /setNeedsAccountType\(true\)/,
+    "post-signup / chooseAccountType failure must reopen retry gate",
   );
 });
 
