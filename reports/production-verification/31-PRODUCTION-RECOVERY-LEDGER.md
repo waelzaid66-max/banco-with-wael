@@ -4,7 +4,7 @@
 **Branch:** `cursor/w41-production-release-5cf0`  
 **Policy:** Recover / reconnect / certify — never rewrite, never invent, never fake green.  
 **Verdict at this ledger:** **CONDITIONAL GO — NOT FULL PRODUCTION CERTIFIED**  
-**Code tip merge-ready for tag `w.4.1`:** **YES** @ `aee476c` (+ docs tip after P2-H1 decision). Remaining blockers are **owner merge/tag** + **Coolify/EAS/device OPS**. P2-H1 TOFU = **deferred HIGH** — see `41-P2-H1-UNSIGNED-FIRST-BIND-TOFU.md` (no invent).
+**Code tip merge-ready for tag `w.4.1`:** **YES** @ `aee476c` (+ docs `0b7c418` H1/M7; this tip Phase 2 closeout). Remaining blockers: **owner merge/tag** + **Coolify/EAS/device OPS**. Residuals: P2-H1 `41-*`, P2-M7b `42-*`. Register: `43-PHASE2-RESIDUAL-CLOSEOUT.md`.
 
 ---
 
@@ -61,6 +61,8 @@
 | Release execution gate | `39-RELEASE-EXECUTION-GO-NOGO.md` — **GO merge**; FULL CERT after Coolify smoke |
 | P2-M1 facets market | OpenAPI + `getFacets` + mobile/web clients; chain **167/167**; vitest **386**; `40-P2-M1-*` |
 | P2-H1 TOFU evidence | **decision only** — `41-P2-H1-UNSIGNED-FIRST-BIND-TOFU.md`; **no code**; owner picks A/B/C |
+| P2-M7 landing hops | **decision** — `42-P2-M7-LANDING-DOMAIN-HOPS.md`; M7a 301-mitigated; M7b proven nginx gap; **no code** |
+| Phase 2 residual closeout | `43-PHASE2-RESIDUAL-CLOSEOUT.md` — M8+L* classified; gates 167/167 + 14/14 @ `0b7c418` |
 
 ---
 
@@ -72,6 +74,7 @@
 | Web account-delete UI (P2-M3) | **closed UI-only** on `banco-website` `/workspace/settings` — see `38-P2-M3-WEB-ACCOUNT-DELETE-UI.md` |
 | OpenAPI omit payments/readyz/livez (P2-M4) | **closed** on tip `b2ac785` (140 paths / 166 ops) |
 | Paymob unsigned first-bind TOFU (P2-H1) | **deferred HIGH** — evidence + options A/B/C in `41-*`; no invent without owner order |
+| Landing DomainRouter hops (P2-M7) | **M7a mitigated** (dealer-os→market 301); **M7b proven** `/banco-mobile` → landing fallback — `42-*`; owner A/B/C |
 | Merge PR → tag `w.4.1` → Coolify → smoke | **owner** — see `39-RELEASE-EXECUTION-GO-NOGO.md` |
 
 ### Code / release process
@@ -96,9 +99,9 @@
 
 | Gate | Result | When |
 |------|--------|------|
-| `chain-integrity-gate.mjs` | **167/167 PASS** | post P2-M1 (+3 facet market markers) |
-| API vitest (deleteAccount + full suite) | **386 passed / 3 skipped** | +1 facets market test |
-| production-confidence | **14/14 PASS** | post P2-M1 |
+| `chain-integrity-gate.mjs` | **167/167 PASS** | re-verified @ `0b7c418` (Phase 2 closeout) |
+| API vitest (deleteAccount + full suite) | **386 passed / 3 skipped** | post P2-M1 (unchanged; no API diff this tip) |
+| production-confidence | **14/14 PASS** | re-verified @ `0b7c418` |
 | banco-website tsc | **PASS** | post P2-M1 |
 | Mobile lib-hardening + universal-links | **33/33 PASS** | Phase 5 re-verify |
 | Coolify website bake parity | committed `ee4d2ba` | prior |

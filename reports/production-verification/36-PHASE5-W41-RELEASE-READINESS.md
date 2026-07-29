@@ -49,11 +49,12 @@
 
 | ID | Residual | Owner action |
 |----|----------|--------------|
-| P2-H1 | Paymob unsigned first-bind TOFU | Design signed correlation — no invent in-repo without order |
+| P2-H1 | Paymob unsigned first-bind TOFU | `41-*` — owner A/B/C; no invent |
 | P2-H2/H3 | S3 keys + migrate → readyz | Coolify OPS |
-| P2-M1 | Facets ignore `market_country` | Product/OpenAPI expansion later |
+| P2-M1 | Facets `market_country` | **Closed** — `40-*` |
 | P2-M3 | Web account-delete UI | **Closed** on tip `05d0dd1` — `/workspace/settings` |
 | P2-M5/M6 | Dual web / search LIVE false | Cutover + bake flags |
+| P2-M7 | Landing DomainRouter hops | `42-*` — M7a 301 OK; M7b proven residual |
 | Live Clerk/EAS/Paymob/device | UNVERIFIED | Dashboard + EAS + webhook QA |
 
 ---
