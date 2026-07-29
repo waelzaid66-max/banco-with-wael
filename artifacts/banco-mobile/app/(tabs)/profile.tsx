@@ -181,6 +181,7 @@ export default function ProfileScreen() {
   );
   const [needsAccountType, setNeedsAccountType] = useState(false);
   const [savingAccountType, setSavingAccountType] = useState(false);
+  const savingAccountTypeRef = useRef(false);
   const [pendingType, setPendingType] = useState<
     "individual" | "dealer" | "company" | "financial_institution"
   >("individual");
@@ -267,6 +268,8 @@ export default function ProfileScreen() {
     pendingLastNameRef.current = "";
     (async () => {
       try {
+        // Consent + name only — NEVER set accountTypeChosen before /me succeeds.
+        // A flag-before-sync cold restart permanently skips heal forever.
         try {
           await user.update({
             ...(firstNameToSave ? { firstName: firstNameToSave } : {}),
@@ -275,7 +278,6 @@ export default function ProfileScreen() {
               ...(user.unsafeMetadata ?? {}),
               termsAcceptedAt: new Date().toISOString(),
               termsVersion: CONSENT_VERSION,
-              accountTypeChosen: true,
             },
           });
         } catch (e) {
@@ -296,7 +298,7 @@ export default function ProfileScreen() {
           Alert.alert(
             t("profile.accountSetupRetryTitle") ?? "Setup incomplete",
             t("profile.accountSetupRetryMessage") ??
-              "Could not save your account type. Please try again from Settings.",
+              "Could not save your account type. Open Profile → Manage account type to retry.",
           );
           // Re-open account-type / retry surface — do not leave a half-wired session.
           setNeedsAccountType(true);
@@ -304,6 +306,16 @@ export default function ProfileScreen() {
         // Never continue into business onboarding on a failed /me sync — that
         // created a half-wired journey (Alert then still router.push).
         if (!synced) return;
+        try {
+          await user.update({
+            unsafeMetadata: {
+              ...(user.unsafeMetadata ?? {}),
+              accountTypeChosen: true,
+            },
+          });
+        } catch (e) {
+          console.warn("[profile] accountTypeChosen flag save failed", e);
+        }
         // Business signups continue straight into fast onboarding.
         if (goBusiness) {
           router.push("/business/onboarding");
@@ -333,13 +345,16 @@ export default function ProfileScreen() {
   // After in-session auth (SSO / email / MFA / reset), or on cold launch for
   // stuck legacy accounts missing accountTypeChosen, show the 4-type picker.
   // Skip while email-signup consent+updateMe pipeline owns the role write.
+  // Skip when /me already has a non-individual role (flag may have failed mid-flight).
   useEffect(() => {
     if (!user) return;
     authJustHappenedRef.current = false;
     if (consentPendingRef.current || signupInFlightRef.current) return;
     if (user.unsafeMetadata?.accountTypeChosen) return;
+    const role = meQuery.data?.data?.role;
+    if (role && role !== "individual") return;
     setNeedsAccountType(true);
-  }, [user, user?.unsafeMetadata?.accountTypeChosen]);
+  }, [user, user?.unsafeMetadata?.accountTypeChosen, meQuery.data?.data?.role]);
 
   // Step 3 of the picker flow: only fires AFTER the user has acknowledged the
   // in-app rationale, so the OS prompt never appears without a disclosure.
@@ -692,7 +707,8 @@ export default function ProfileScreen() {
   const chooseAccountType = async (
     type: "individual" | "dealer" | "company" | "financial_institution"
   ) => {
-    if (savingAccountType) return;
+    if (savingAccountTypeRef.current || savingAccountType) return;
+    savingAccountTypeRef.current = true;
     // DB role is authoritative (same contract as verification.tsx). Clerk metadata
     // can lag after updateMe — never use it alone to decide demotion guards.
     const currentRole =
@@ -706,6 +722,7 @@ export default function ProfileScreen() {
     // account_type=individual and the server used to accept it. Elevated
     // accounts must not silently lose FI/company via this path (S4).
     if (elevated && type === "individual") {
+      savingAccountTypeRef.current = false;
       Alert.alert(
         t("profile.demoteBlockedTitle"),
         t("profile.demoteBlockedBody"),
@@ -743,6 +760,7 @@ export default function ProfileScreen() {
       // Gate already dismissed — sync is retryable from Manage account type.
       Alert.alert(t("profile.accountTypeError"));
     } finally {
+      savingAccountTypeRef.current = false;
       setSavingAccountType(false);
     }
   };
@@ -2643,6 +2661,7 @@ export default function ProfileScreen() {
 
         <Pressable
           onPress={() => {
+            if (isSigningUp) return;
             setStep("form");
             setVerifyCode("");
             // Going back from verify abandons this signup attempt; drop the
@@ -2653,7 +2672,9 @@ export default function ProfileScreen() {
             pendingFirstNameRef.current = "";
             pendingLastNameRef.current = "";
           }}
+          disabled={isSigningUp}
           style={styles.switchBtn}
+          testID="verify-go-back"
         >
           <AppText style={[styles.switchText, { color: colors.mutedForeground }]}>
             <AppText style={[styles.switchLink, { color: colors.primary }]}>

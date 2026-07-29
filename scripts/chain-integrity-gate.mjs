@@ -407,6 +407,36 @@ const CHECKS = [
     why: "Clerk accountTypeChosen must be set only after /me updateMe succeeds",
   },
   {
+    id: "P-consent-type-chosen-after-me",
+    file: "artifacts/banco-mobile/app/(tabs)/profile.tsx",
+    test: (s) => {
+      const terms = s.indexOf("termsAcceptedAt: new Date().toISOString()");
+      const post = s.indexOf("post-signup account_type save failed");
+      if (terms < 0 || post < 0 || terms > post) return false;
+      // Consent metadata write before /me must not stamp accountTypeChosen.
+      if (s.slice(terms, post).includes("accountTypeChosen: true")) return false;
+      const after = s.slice(post, post + 1600);
+      const u = after.indexOf("await updateMe");
+      // Flag write appears after successful sync block (after !synced return).
+      const c = after.indexOf("accountTypeChosen: true");
+      return (
+        /if \(!synced\) return/.test(after) &&
+        c >= 0 &&
+        after.indexOf("accountTypeChosen: true") >
+          after.indexOf("if (!synced) return")
+      );
+    },
+    why: "Email signup consent must not set accountTypeChosen before /me succeeds",
+  },
+  {
+    id: "P-verify-go-back-locked",
+    file: "artifacts/banco-mobile/app/(tabs)/profile.tsx",
+    test: (s) =>
+      /testID="verify-go-back"/.test(s) &&
+      /disabled=\{isSigningUp\}/.test(s),
+    why: "Verify Go Back must not clear consent while finalize is in flight",
+  },
+  {
     id: "P-mobile-archive-wired",
     file: "artifacts/banco-mobile/app/listings/mine.tsx",
     test: (s) =>
@@ -532,6 +562,62 @@ const CHECKS = [
       !/createIntermediary/.test(s) &&
       !/createBank/.test(s),
     why: "FI onboarding must not auto-create intermediary orgs",
+  },
+  {
+    id: "P-auth-reject-tombstone",
+    file: "artifacts/api-server/src/middlewares/authGuard.ts",
+    test: (s) =>
+      /ACCOUNT_DELETED/.test(s) &&
+      /deletedAt/.test(s) &&
+      /findActiveUserByClerkId/.test(s),
+    why: "requireAuth must reject soft-deleted accounts (not only dealer/admin guards)",
+  },
+  {
+    id: "P-intent-before-psp",
+    file: "artifacts/api-server/src/services/PaymentIntentService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function createTopupIntent"));
+      const insertAt = fn.indexOf("insert(paymentIntents)");
+      const chargeAt = fn.indexOf("createProviderCharge");
+      return insertAt >= 0 && chargeAt >= 0 && insertAt < chargeAt;
+    },
+    why: "Durable payment_intents row must exist before PSP charge (no stranded money)",
+  },
+  {
+    id: "P-plug-redirect-not-rewrite",
+    file: "artifacts/banco-website/middleware.ts",
+    test: (s) =>
+      /NextResponse\.redirect\(url\)/.test(s) &&
+      !/NextResponse\.rewrite\(url\)/.test(s) &&
+      /REDIRECTED to \/maintenance/.test(s),
+    why: "Plug-off must redirect (not rewrite) so SiteChrome pathname matches maintenance",
+  },
+  {
+    id: "P-delete-revokes-fi-seats",
+    file: "artifacts/api-server/src/services/UserService.ts",
+    test: (s) =>
+      /financingSeats/.test(s) &&
+      /delete\(financingSeats\)/.test(s) &&
+      /eq\(financingSeats\.userId/.test(s),
+    why: "Account deletion must revoke FI seats (inbox PII)",
+  },
+  {
+    id: "P-ad-budget-atomic",
+    file: "artifacts/api-server/src/services/AdsService.ts",
+    test: (s) =>
+      /budget_exhausted/.test(s) &&
+      /budgetSpent\}\)::numeric/.test(s) &&
+      /budgetTotal\}\)::numeric/.test(s),
+    why: "Ad impression spend must be conditional UPDATE (no concurrent overspend)",
+  },
+  {
+    id: "P-fi-status-predicate",
+    file: "artifacts/api-server/src/services/FinancingService.ts",
+    test: (s) =>
+      /statusChanging/.test(s) &&
+      /eq\(financingRequests\.status, existing\.status\)/.test(s) &&
+      /CONFLICT/.test(s),
+    why: "FI request status updates must be conditional (no last-write-wins reopen)",
   },
 ];
 

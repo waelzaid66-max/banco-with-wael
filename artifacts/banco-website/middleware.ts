@@ -23,7 +23,9 @@ const clerkGuard = clerkMiddleware(async (auth, req) => {
 
 /**
  * Phase 6 plug gate — runs before Clerk.
- * When WEB_PLUG_ENABLED=false, public traffic is rewritten to /maintenance.
+ * When WEB_PLUG_ENABLED=false, public traffic is REDIRECTED to /maintenance
+ * (not rewritten) so the client pathname matches the maintenance surface and
+ * SiteChrome does not paint full chrome around a rewritten home URL.
  * /api/health and /api/healthz stay up so container/CDN probes still succeed.
  */
 function plugGate(req: NextRequest): NextResponse | null {
@@ -60,7 +62,7 @@ function plugGate(req: NextRequest): NextResponse | null {
 
   const url = req.nextUrl.clone();
   url.pathname = maintenancePathFor(pathname);
-  const res = NextResponse.rewrite(url);
+  const res = NextResponse.redirect(url);
   res.headers.set("Retry-After", "300");
   res.headers.set("X-Banco-Web-Plug", "off");
   return res;

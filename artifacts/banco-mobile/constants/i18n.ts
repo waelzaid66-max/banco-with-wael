@@ -876,7 +876,7 @@ const en = {
     accountTypeError: "Couldn't save your account type. Please try again.",
     accountSetupRetryTitle: "Setup incomplete",
     accountSetupRetryMessage:
-      "Could not save your account type. Please try again from Settings.",
+      "Could not save your account type. Open Profile → Manage account type to retry.",
     demoteBlockedTitle: "Can't switch to personal",
     demoteBlockedBody:
       "Company and financial-institution accounts can't be switched to personal from the app. Contact BANCO support if you need a change.",
@@ -2948,7 +2948,7 @@ const ar: typeof en = {
     accountTypeError: "تعذّر حفظ نوع الحساب. حاول تاني.",
     accountSetupRetryTitle: "الإعداد غير مكتمل",
     accountSetupRetryMessage:
-      "تعذّر حفظ نوع الحساب. حاول من الإعدادات.",
+      "تعذّر حفظ نوع الحساب. افتح الملف الشخصي ← إدارة نوع الحساب لإعادة المحاولة.",
     demoteBlockedTitle: "مش هينفع تتحوّل لشخصي",
     demoteBlockedBody:
       "حسابات الشركة والمؤسسة المالية ماينفعش تتحول لشخصي من التطبيق. تواصل مع دعم بانكو لو محتاج تغيير.",
