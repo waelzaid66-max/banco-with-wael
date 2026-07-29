@@ -153,7 +153,9 @@ export default function ProfileScreen() {
   const pendingFirstNameRef = useRef("");
   const pendingLastNameRef = useRef("");
 
-  const [oauthLoading, setOauthLoading] = useState<null | "google" | "apple">(
+  const [oauthLoading, setOauthLoading] = useState<
+    null | "google" | "apple" | "facebook"
+  >(
     null
   );
   const [needsAccountType, setNeedsAccountType] = useState(false);
@@ -520,13 +522,18 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleOAuth = async (provider: "google" | "apple") => {
+  const handleOAuth = async (provider: "google" | "apple" | "facebook") => {
     if (oauthLoading) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setOauthLoading(provider);
     try {
       const { createdSessionId, setActive: ssoSetActive } = await startSSOFlow({
-        strategy: provider === "google" ? "oauth_google" : "oauth_apple",
+        strategy:
+          provider === "google"
+            ? "oauth_google"
+            : provider === "facebook"
+              ? "oauth_facebook"
+              : "oauth_apple",
         redirectUrl: AuthSession.makeRedirectUri(),
       });
       if (createdSessionId && ssoSetActive) {
@@ -3013,6 +3020,32 @@ export default function ProfileScreen() {
             <Ionicons name="logo-google" size={18} color={colors.foreground} />
             <AppText style={[styles.oauthBtnText, { color: colors.foreground }]}>
               {t("profile.continueWithGoogle")}
+            </AppText>
+          </>
+        )}
+      </Pressable>
+
+      <Pressable
+        onPress={() => handleOAuth("facebook")}
+        disabled={!!oauthLoading}
+        style={[
+          styles.oauthBtn,
+          {
+            backgroundColor: colors.card,
+            borderColor: colors.border,
+            borderRadius: colors.radius,
+          },
+          isRTL && styles.rowReverse,
+        ]}
+        testID="oauth-facebook"
+      >
+        {oauthLoading === "facebook" ? (
+          <ActivityIndicator color={colors.foreground} size="small" />
+        ) : (
+          <>
+            <Ionicons name="logo-facebook" size={18} color={colors.foreground} />
+            <AppText style={[styles.oauthBtnText, { color: colors.foreground }]}>
+              {t("profile.continueWithFacebook")}
             </AppText>
           </>
         )}
