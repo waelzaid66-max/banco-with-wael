@@ -290,6 +290,7 @@ describe("verifyPaymobWebhook reads fresh DB config", () => {
     expect(v1.intentId).toBe(intentId);
     expect(v1.success).toBe(true);
     expect(v1.amountCents).toBe(75000);
+    expect(v1.currency).toBe("EGP");
   });
 
   it("rejects a signature made with the OLD secret after rotation", async () => {

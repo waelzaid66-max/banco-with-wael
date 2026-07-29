@@ -204,6 +204,10 @@ export async function startSubscription(input: StartSubscriptionInput) {
   const price = toMoney(plan.monthlyPrice);
   const idempotencyKey = input.idempotencyKey.trim();
   if (!idempotencyKey) throw invalidData("idempotency_key is required");
+  // Namespace away from payment_intents.id / top-up ledger keys (same UUID
+  // space) so a reused client key cannot replay a wallet_topup credit as a
+  // free subscription_charge.
+  const walletLedgerKey = `subscription_wallet:${idempotencyKey}`;
 
   if (input.paymentMethod === "wallet") {
     let sub: SubscriptionRow;
@@ -231,7 +235,7 @@ export async function startSubscription(input: StartSubscriptionInput) {
             referenceType: "subscription",
             referenceId: created.id,
             description: `Subscription: ${plan.name} (${PERIOD_DAYS}d)`,
-            idempotencyKey,
+            idempotencyKey: walletLedgerKey,
             invoice: {
               lineItems: [
                 { label: `${plan.name} subscription (${PERIOD_DAYS}d)`, amount: price },
@@ -269,7 +273,7 @@ export async function startSubscription(input: StartSubscriptionInput) {
       // Lost race for the one-active-subscription slot — or a client retry after
       // the first request already activated. Replay via the ledger idempotency key.
       if (isUniqueViolation(err)) {
-        const settled = await findSubscriptionByChargeKey(idempotencyKey);
+        const settled = await findSubscriptionByChargeKey(walletLedgerKey);
         if (settled && settled.sub.userId === input.userId) {
           return {
             mode: "active" as const,
@@ -278,6 +282,18 @@ export async function startSubscription(input: StartSubscriptionInput) {
           };
         }
         throw invalidData("You already have an active subscription.");
+      }
+      // Fingerprint mismatch / conflict from applyTransaction on concurrent
+      // same-key retries — resolve to the winner's subscription if present.
+      if ((err as { code?: string })?.code === "CONFLICT") {
+        const settled = await findSubscriptionByChargeKey(walletLedgerKey);
+        if (settled && settled.sub.userId === input.userId) {
+          return {
+            mode: "active" as const,
+            subscription: mapSubscription(settled.sub, settled.plan),
+            intent: null,
+          };
+        }
       }
       throw err;
     }

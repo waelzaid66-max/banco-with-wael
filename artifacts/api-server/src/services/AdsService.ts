@@ -1,11 +1,12 @@
 import { db } from "@workspace/db";
-import { ads, listings } from "@workspace/db/schema";
+import { ads, listings, users } from "@workspace/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { validateImpression, type ImpressionContext } from "./AbuseService";
 import { applyTransaction } from "./WalletService";
 import { consumePromoCredit } from "./PromoAdCreditService";
 import { resolveEffectivePlan, type UserRole } from "./PlanService";
 import { isUniqueViolation, notFound, toMoney } from "../lib/billing";
+import { publicVisibilityConditions } from "../lib/feedVisibility";
 
 /**
  * Boost (promote) a listing. The boost fee is read SERVER-SIDE from the
@@ -110,7 +111,11 @@ export async function boostListing(
   let result: BoostResult;
   try {
     result = await db.transaction(async (tx) => {
-      // Re-validate listing lifecycle under the same transaction that charges.
+      // Serialize against archive/status updates — a plain SELECT can pass
+      // "active" while a concurrent archive commits before the charge.
+      await tx.execute(
+        sql`SELECT id FROM listings WHERE id = ${listingId} AND user_id = ${sellerId} FOR UPDATE`,
+      );
       const [locked] = await tx
         .select({ id: listings.id, status: listings.status })
         .from(listings)
@@ -215,6 +220,7 @@ export async function recordImpression(
     .select({
       id: ads.id,
       sellerId: ads.sellerId,
+      listingId: ads.listingId,
       isActive: ads.isActive,
       budgetTotal: ads.budgetTotal,
       budgetSpent: ads.budgetSpent,
@@ -236,6 +242,24 @@ export async function recordImpression(
 
   if (!ad.isActive) {
     return { counted: true, billable: false, reason: "inactive", deactivated: true };
+  }
+
+  // Do not bill budget after the listing is hidden from public surfaces
+  // (flagged / shadow-banned / soft-deleted seller / archived).
+  const [publicListing] = await db
+    .select({ id: listings.id })
+    .from(listings)
+    .leftJoin(users, eq(listings.userId, users.id))
+    .where(
+      and(
+        eq(listings.id, ad.listingId),
+        eq(listings.status, "active"),
+        ...publicVisibilityConditions(),
+      ),
+    )
+    .limit(1);
+  if (!publicListing) {
+    return { counted: true, billable: false, reason: "listing_hidden", deactivated: false };
   }
 
   const decision = await validateImpression({ ...ctx, adId, sellerId: ad.sellerId });

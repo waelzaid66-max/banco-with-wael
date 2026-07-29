@@ -12,6 +12,7 @@ import { db } from "@workspace/db";
 import { bookings, listings, listingAttributes, users } from "@workspace/db/schema";
 import { and, eq, inArray, lt, gt, desc, sql, isNull } from "drizzle-orm";
 import { createNotification } from "./NotificationService";
+import { publicVisibilityConditions } from "../lib/feedVisibility";
 
 function codedError(code: string, message: string): Error {
   return Object.assign(new Error(message), { code });
@@ -89,6 +90,22 @@ export async function createBooking(
     .limit(1);
   if (!user) throw codedError("UNAUTHORIZED", "User not found");
 
+  // Soft-deleted / flagged / shadow-banned hosts must not receive bookings
+  // even when the listing row is still status=active.
+  const [visible] = await db
+    .select({ id: listings.id })
+    .from(listings)
+    .leftJoin(users, eq(listings.userId, users.id))
+    .where(
+      and(
+        eq(listings.id, listingId),
+        eq(listings.status, "active"),
+        ...publicVisibilityConditions(),
+      ),
+    )
+    .limit(1);
+  if (!visible) throw codedError("NOT_FOUND", "Listing not found");
+
   const [row] = await db
     .select({
       price: listings.basePriceCash,
@@ -137,12 +154,23 @@ export async function createBooking(
         price: listings.basePriceCash,
         ownerId: listings.userId,
         specs: listingAttributes.specs,
+        isFlagged: listings.isFlagged,
+        sellerDeletedAt: users.deletedAt,
+        sellerShadowBanned: users.isShadowBanned,
       })
       .from(listings)
       .leftJoin(listingAttributes, eq(listingAttributes.listingId, listings.id))
+      .leftJoin(users, eq(listings.userId, users.id))
       .where(eq(listings.id, listingId))
       .limit(1);
     if (!locked || locked.status !== "active") {
+      throw codedError("CONFLICT", "This listing is no longer bookable");
+    }
+    if (
+      locked.isFlagged === true ||
+      locked.sellerShadowBanned === true ||
+      locked.sellerDeletedAt != null
+    ) {
       throw codedError("CONFLICT", "This listing is no longer bookable");
     }
     const lockedTerm = (locked.specs as Record<string, unknown> | null)?.rental_term;

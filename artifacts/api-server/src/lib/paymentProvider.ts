@@ -284,6 +284,8 @@ export interface WebhookVerification {
   providerTxnId: string | null;
   /** Amount in piasters reported by the provider (tamper check). */
   amountCents: number | null;
+  /** Currency from the signed HMAC field (must be EGP for BANCO rails). */
+  currency: string | null;
 }
 
 /**
@@ -302,6 +304,7 @@ export async function verifyPaymobWebhook(params: {
     success: false,
     providerTxnId: null,
     amountCents: null,
+    currency: null,
   };
 
   // Always resolve fresh config so a rotated/swapped HMAC secret takes effect
@@ -354,6 +357,12 @@ export async function verifyPaymobWebhook(params: {
   const providerOrderId =
     rawOrderId != null && String(rawOrderId).length > 0 ? String(rawOrderId) : null;
 
+  const rawCurrency = obj.currency;
+  const currency =
+    typeof rawCurrency === "string" && rawCurrency.trim()
+      ? rawCurrency.trim().toUpperCase()
+      : null;
+
   return {
     valid: true,
     intentId,
@@ -361,6 +370,7 @@ export async function verifyPaymobWebhook(params: {
     success,
     providerTxnId: obj.id != null ? String(obj.id) : null,
     amountCents,
+    currency,
   };
 }
 

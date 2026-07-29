@@ -1120,7 +1120,11 @@ export default function FeedScreen() {
     // tab (search.tsx reads `sort` and commits it as criteria.sort).
     router.push({
       pathname: "/(tabs)/search",
-      params: { sort: key, ts: String(Date.now()) },
+      params: {
+        sort: key,
+        market_country: marketCountry,
+        ts: String(Date.now()),
+      },
     });
   };
 

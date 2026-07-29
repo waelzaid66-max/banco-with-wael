@@ -6,6 +6,7 @@ import {
   insufficientFunds,
   invalidData,
   notFound,
+  conflict,
 } from "../lib/billing";
 
 /** The transaction handle passed to a `db.transaction(async (tx) => …)` body. */
@@ -89,18 +90,36 @@ export async function applyTransaction(
   }
   const money = magnitude.toFixed(2);
 
-  // Idempotency fast-path: an existing entry means this was already applied.
+  // Idempotency fast-path: an existing entry means this was already applied —
+  // but ONLY when the fingerprint matches. A reused key across different
+  // operations (e.g. top-up UUID reused as a wallet subscription charge) must
+  // NEVER silently grant a free subscription or strand a paid top-up.
   if (input.idempotencyKey) {
+    const signedAmount = input.direction === "debit" ? `-${money}` : money;
     const [existing] = await tx
       .select({
         id: transactions.id,
-        balanceAfter: transactions.balanceAfter,
+        userId: transactions.userId,
+        type: transactions.type,
         amount: transactions.amount,
+        referenceType: transactions.referenceType,
+        referenceId: transactions.referenceId,
+        balanceAfter: transactions.balanceAfter,
       })
       .from(transactions)
       .where(eq(transactions.idempotencyKey, input.idempotencyKey))
       .limit(1);
     if (existing) {
+      const typeOk = existing.type === input.type;
+      const userOk = existing.userId === input.userId;
+      const amountOk = Number(existing.amount) === Number(signedAmount);
+      const refTypeOk =
+        (input.referenceType ?? null) === (existing.referenceType ?? null);
+      const refIdOk =
+        (input.referenceId ?? null) === (existing.referenceId ?? null);
+      if (!typeOk || !userOk || !amountOk || !refTypeOk || !refIdOk) {
+        throw conflict("Idempotency key already used for a different transaction");
+      }
       return {
         transactionId: existing.id,
         balanceAfter: existing.balanceAfter,

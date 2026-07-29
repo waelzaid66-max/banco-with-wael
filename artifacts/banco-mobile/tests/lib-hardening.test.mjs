@@ -521,6 +521,18 @@ test("home feed passes market_country from preferred market", () => {
   );
 });
 
+test("home sort navigation carries preferred market_country", () => {
+  const home = fs.readFileSync(
+    path.join(APP_ROOT, "app", "(tabs)", "index.tsx"),
+    "utf8",
+  );
+  assert.match(
+    home,
+    /params:\s*\{[\s\S]*sort:\s*key[\s\S]*market_country:\s*marketCountry/,
+    "Home sort → Search must not drop preferred market (defaults to EG otherwise)",
+  );
+});
+
 test("web SearchResultsMap hosts server clusters via BANCO_MAP", () => {
   const webMap = fs.readFileSync(
     path.join(APP_ROOT, "components", "search", "SearchResultsMap.web.tsx"),

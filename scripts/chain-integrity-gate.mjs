@@ -1157,6 +1157,74 @@ const CHECKS = [
     },
     why: "Trending must honor market_country like feed/search",
   },
+  {
+    id: "P-wallet-idempotency-fingerprint",
+    file: "artifacts/api-server/src/services/WalletService.ts",
+    test: (s) =>
+      /Idempotency key already used for a different transaction/.test(s) &&
+      /existing\.type === input\.type/.test(s),
+    why: "Ledger idempotency replay must fingerprint type/user/amount/reference",
+  },
+  {
+    id: "P-subscription-wallet-key-namespace",
+    file: "artifacts/api-server/src/services/SubscriptionService.ts",
+    test: (s) => /subscription_wallet:\$\{idempotencyKey\}/.test(s),
+    why: "Wallet subscription ledger keys must not collide with top-up intent UUIDs",
+  },
+  {
+    id: "P-boost-listing-for-update",
+    file: "artifacts/api-server/src/services/AdsService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function boostListing"));
+      return /FOR UPDATE/.test(fn);
+    },
+    why: "Boost charge must lock listing row against mid-flight archive",
+  },
+  {
+    id: "P-paymob-amount-before-claim",
+    file: "artifacts/api-server/src/controllers/paymentsController.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function paymobWebhookHandler"));
+      const amountAt = fn.indexOf("amountCents == null");
+      const currencyAt = fn.indexOf('currency !== "EGP"');
+      const claimAt = fn.indexOf("await claimPaymobOrderForIntent");
+      return amountAt > 0 && currencyAt > 0 && claimAt > amountAt && claimAt > currencyAt;
+    },
+    why: "Paymob must reject bad/missing amount/currency before binding order.id",
+  },
+  {
+    id: "P-booking-tombstone",
+    file: "artifacts/api-server/src/services/BookingService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function createBooking"));
+      return /publicVisibilityConditions/.test(fn) && /sellerDeletedAt/.test(fn);
+    },
+    why: "Bookings must fail-closed on soft-deleted/flagged/shadow-banned hosts",
+  },
+  {
+    id: "P-ad-impression-listing-visible",
+    file: "artifacts/api-server/src/services/AdsService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function recordImpression"));
+      return /listing_hidden/.test(fn) && /publicVisibilityConditions/.test(fn);
+    },
+    why: "Ad impression billing must stop when listing is publicly hidden",
+  },
+  {
+    id: "P-home-sort-market",
+    file: "artifacts/banco-mobile/app/(tabs)/index.tsx",
+    test: (s) =>
+      /sort:\s*key/.test(s) &&
+      /market_country:\s*marketCountry/.test(s),
+    why: "Home sort navigation must carry preferred market_country",
+  },
+  {
+    id: "P-web-trending-market",
+    file: "artifacts/banco-web/components/HomeTrendingStrip.tsx",
+    test: (s) =>
+      /useGetTrending\(\{\s*market_country:\s*DEFAULT_MARKET_COUNTRY/.test(s),
+    why: "Coolify banco-web trending must not mix markets",
+  },
 ];
 
 function main() {

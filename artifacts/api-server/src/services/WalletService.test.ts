@@ -1,7 +1,7 @@
 import { describe, it, expect, afterAll } from "vitest";
 import { eq, inArray } from "drizzle-orm";
 import { applyTransaction, getWalletBalance } from "./WalletService";
-import { db, createUser, deleteUsers, uniq } from "../__tests__/helpers";
+import { db, createUser, deleteUsers, uniq, randomUUID } from "../__tests__/helpers";
 import { transactions, invoices } from "@workspace/db/schema";
 
 const uids: string[] = [];
@@ -56,6 +56,37 @@ describe("applyTransaction (the money chokepoint)", () => {
     expect(second.replayed).toBe(true);
     expect(second.transactionId).toBe(first.transactionId);
     expect(Number(await getWalletBalance(uid))).toBe(200); // not 400
+  });
+
+  it("rejects cross-purpose reuse of the same idempotency key (Round 11)", async () => {
+    const uid = await user("500");
+    const key = uniq("cross");
+    await db.transaction((tx) =>
+      applyTransaction(tx, {
+        userId: uid,
+        type: "wallet_topup",
+        direction: "credit",
+        amount: 100,
+        idempotencyKey: key,
+        referenceType: "payment_intent",
+        referenceId: randomUUID(),
+      }),
+    );
+    await expect(
+      db.transaction((tx) =>
+        applyTransaction(tx, {
+          userId: uid,
+          type: "subscription_charge",
+          direction: "debit",
+          amount: 100,
+          idempotencyKey: key,
+          referenceType: "subscription",
+          referenceId: randomUUID(),
+        }),
+      ),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    // Balance must still reflect only the original top-up — no free debit/credit.
+    expect(Number(await getWalletBalance(uid))).toBe(600);
   });
 
   it("rolls back the balance and ledger when the surrounding transaction aborts", async () => {

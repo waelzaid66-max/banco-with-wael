@@ -49,6 +49,44 @@ export async function paymobWebhookHandler(req: Request, res: Response) {
       return res.status(200).json({ ok: true });
     }
 
+    const meta = await getIntentMeta(intentId);
+    if (!meta) {
+      console.error(
+        "[Paymob webhook] signed settlement for unknown intent",
+        intentId,
+      );
+      return res.status(503).json({ ok: false, error: "intent_not_found" });
+    }
+
+    // Economic guards MUST run before claimPaymobOrderForIntent — otherwise a
+    // wrong-amount webhook permanently binds order.id and strands the real pay.
+    if (
+      verification.amountCents == null ||
+      !Number.isFinite(verification.amountCents) ||
+      verification.amountCents <= 0
+    ) {
+      console.error(
+        "[Paymob webhook] missing/invalid signed amount_cents for intent",
+        intentId,
+      );
+      return res.status(200).json({ ok: true });
+    }
+    if (verification.currency !== "EGP") {
+      console.error(
+        "[Paymob webhook] non-EGP currency for intent",
+        intentId,
+        verification.currency,
+      );
+      return res.status(200).json({ ok: true });
+    }
+    if (Math.round(Number(meta.amount) * 100) !== verification.amountCents) {
+      console.error(
+        "[Paymob webhook] amount mismatch for intent",
+        intentId,
+      );
+      return res.status(200).json({ ok: true });
+    }
+
     const claim = await claimPaymobOrderForIntent(
       intentId,
       verification.providerOrderId,
@@ -66,27 +104,6 @@ export async function paymobWebhookHandler(req: Request, res: Response) {
         claim,
         intentId,
         verification.providerOrderId,
-      );
-      return res.status(200).json({ ok: true });
-    }
-
-    const meta = await getIntentMeta(intentId);
-    if (!meta) {
-      console.error(
-        "[Paymob webhook] signed settlement for unknown intent",
-        intentId,
-      );
-      return res.status(503).json({ ok: false, error: "intent_not_found" });
-    }
-
-    // Tamper / mismatch guard: the signed amount must equal the intent amount.
-    if (
-      verification.amountCents != null &&
-      Math.round(Number(meta.amount) * 100) !== verification.amountCents
-    ) {
-      console.error(
-        "[Paymob webhook] amount mismatch for intent",
-        intentId
       );
       return res.status(200).json({ ok: true });
     }
