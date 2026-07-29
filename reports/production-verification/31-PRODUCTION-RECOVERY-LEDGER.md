@@ -4,7 +4,7 @@
 **Branch:** `cursor/w41-production-release-5cf0`  
 **Policy:** Recover / reconnect / certify — never rewrite, never invent, never fake green.  
 **Verdict at this ledger:** **CONDITIONAL GO — NOT FULL PRODUCTION CERTIFIED**  
-**Code tip merge-ready for tag `w.4.1`:** **YES** @ `aee476c` (+ docs tips `bcede12` P2-H1, this tip P2-M7). Remaining blockers: **owner merge/tag** + **Coolify/EAS/device OPS**. Residuals: P2-H1 `41-*`, P2-M7b `42-*` (no invent).
+**Code tip merge-ready for tag `w.4.1`:** **YES** @ `aee476c` (+ docs `0b7c418` H1/M7; this tip Phase 2 closeout). Remaining blockers: **owner merge/tag** + **Coolify/EAS/device OPS**. Residuals: P2-H1 `41-*`, P2-M7b `42-*`. Register: `43-PHASE2-RESIDUAL-CLOSEOUT.md`.
 
 ---
 
@@ -62,6 +62,7 @@
 | P2-M1 facets market | OpenAPI + `getFacets` + mobile/web clients; chain **167/167**; vitest **386**; `40-P2-M1-*` |
 | P2-H1 TOFU evidence | **decision only** — `41-P2-H1-UNSIGNED-FIRST-BIND-TOFU.md`; **no code**; owner picks A/B/C |
 | P2-M7 landing hops | **decision** — `42-P2-M7-LANDING-DOMAIN-HOPS.md`; M7a 301-mitigated; M7b proven nginx gap; **no code** |
+| Phase 2 residual closeout | `43-PHASE2-RESIDUAL-CLOSEOUT.md` — M8+L* classified; gates 167/167 + 14/14 @ `0b7c418` |
 
 ---
 
@@ -98,9 +99,9 @@
 
 | Gate | Result | When |
 |------|--------|------|
-| `chain-integrity-gate.mjs` | **167/167 PASS** | post P2-M1 (+3 facet market markers) |
-| API vitest (deleteAccount + full suite) | **386 passed / 3 skipped** | +1 facets market test |
-| production-confidence | **14/14 PASS** | post P2-M1 |
+| `chain-integrity-gate.mjs` | **167/167 PASS** | re-verified @ `0b7c418` (Phase 2 closeout) |
+| API vitest (deleteAccount + full suite) | **386 passed / 3 skipped** | post P2-M1 (unchanged; no API diff this tip) |
+| production-confidence | **14/14 PASS** | re-verified @ `0b7c418` |
 | banco-website tsc | **PASS** | post P2-M1 |
 | Mobile lib-hardening + universal-links | **33/33 PASS** | Phase 5 re-verify |
 | Coolify website bake parity | committed `ee4d2ba` | prior |

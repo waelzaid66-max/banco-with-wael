@@ -1,20 +1,20 @@
 # 39 — Release execution GO / NO-GO (`w.4.1`)
 
 **Engineering order:** Code tip verified → **owner merge** → **tag** → **Coolify** → **smoke matrix** → FULL CERT only if smoke passes.  
-**Tip under test:** living tip on `cursor/w41-production-release-5cf0` (includes P2-M1)  
+**Tip under test:** living tip on `cursor/w41-production-release-5cf0` (code @ `aee476c` + docs through Phase 2 closeout)  
 **Policy:** No new product invent in this gate. OPS cannot be faked from CI.
 
 ---
 
 ## A. Code gate (agent — DONE this turn)
 
-| Check | Result @ `05d0dd1` |
+| Check | Result @ `0b7c418` (+ closeout docs tip) |
 |-------|---------------------|
-| chain-integrity | **167/167 PASS** |
-| API vitest | **386 passed / 3 skipped** |
-| production-confidence | **14/14 PASS** |
-| `banco-website` tsc | **PASS** |
-| Ahead of `main` | see living tip |
+| chain-integrity | **167/167 PASS** (re-verified) |
+| API vitest | **386 passed / 3 skipped** (post P2-M1; no API diff since) |
+| production-confidence | **14/14 PASS** (re-verified) |
+| Phase 2 register | **Closed for agent reconnect** — `43-*` |
+| Ahead of `main` | **58+** commits |
 | PR on GitHub | **NONE** — open compare URL |
 | Tag `w.4.1` | **NONE** |
 
@@ -95,7 +95,7 @@ Execute `37-COOLIFY-LIVE-SMOKE-MATRIX.md` at minimum: **S1–S3, S5–S9, S12–
 | Merge this tip to `main`? | **GO** |
 | Tag `w.4.1` after merge? | **GO** |
 | Claim production fully certified now? | **NO-GO** until B2+B3 |
-| More code invent before merge? | **NO-GO** — tip is merge-ready |
+| More code invent before merge? | **NO-GO** — tip is merge-ready; Phase 2 agent work exhausted (`43-*`) |
 
 ---
 
