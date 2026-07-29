@@ -325,6 +325,31 @@ const CHECKS = [
     test: (s) => /SECTION_ROUTE/.test(s) && /router\.push\(SECTION_ROUTE\[cat\]\)/.test(s),
     why: "Discover must ENTER mini-apps (anti-melt)",
   },
+  {
+    id: "P-clerk-load-gate",
+    file: "artifacts/banco-mobile/app/_layout.tsx",
+    test: (s) =>
+      /function ClerkLoadGate/.test(s) &&
+      /CLERK_LOAD_TIMEOUT_MS/.test(s) &&
+      /getToken\(\)\.catch\(\(\)\s*=>\s*null\)/.test(s) &&
+      /FONT_WAIT_MS/.test(s),
+    why: "ClerkLoadGate + font wait prevent infinite white screen (bancoo C-WEB-BASE)",
+  },
+  {
+    id: "P-web-export-build",
+    file: "artifacts/banco-mobile/scripts/build.js",
+    test: (s) => /function exportWebBuild/.test(s) && /exportWebBuild\(\)/.test(s),
+    why: "Replit deploy must export web SPA (not QR-only browsers)",
+  },
+  {
+    id: "P-web-serve-spa",
+    file: "artifacts/banco-mobile/server/serve.js",
+    test: (s) =>
+      /WEB_ROOT/.test(s) &&
+      /static-build.*web/.test(s) &&
+      /serveWebIndex|hasWebBuild/.test(s),
+    why: "serve.js must prefer static-build/web for browsers without expo-platform",
+  },
 ];
 
 function main() {

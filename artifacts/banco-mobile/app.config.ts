@@ -62,6 +62,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   // Web static export served under a path prefix (e.g. /banco-mobile/ on the
   // Replit deployment). Set ONLY by scripts/build.js during `expo export -p web`;
   // absent in dev and native builds so nothing changes there.
+  // Restored from bancoo production handoff (C-WEB-BASE) — evidence: white-screen
+  // / QR-only browser when web export path prefix is missing.
   ...(process.env.EXPO_WEB_BASE_URL
     ? {
         experiments: {
