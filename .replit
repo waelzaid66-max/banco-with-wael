@@ -1,8 +1,10 @@
-modules = ["nodejs-20", "nodejs-24", "python-3.11", "postgresql-16"]
+modules = ["nodejs-20", "python-3.12", "web", "postgresql-16"]
 
 [deployment]
 router = "application"
 deploymentTarget = "autoscale"
+run = ["bash", "scripts/replit-prod-start.sh"]
+build = ["bash", "scripts/replit-prod-build.sh"]
 
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]
@@ -18,19 +20,19 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "artifacts/banco-web: web"
+args = "Web App"
 
 [[workflows.workflow]]
-name = "artifacts/banco-web: web"
+name = "Web App"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "pnpm --filter @workspace/banco-web run dev"
-waitForPort = 3000
+args = "PORT=5000 pnpm --filter @workspace/banco-web run dev"
+waitForPort = 5000
 
 [workflows.workflow.metadata]
-outputType = "console"
+outputType = "webview"
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
@@ -46,12 +48,24 @@ localPort = 3000
 externalPort = 6800
 
 [[ports]]
+localPort = 3001
+externalPort = 3001
+
+[[ports]]
+localPort = 3002
+externalPort = 3002
+
+[[ports]]
+localPort = 3003
+externalPort = 3003
+
+[[ports]]
 localPort = 5000
 externalPort = 80
 
 [[ports]]
 localPort = 8080
-externalPort = 80
+externalPort = 8080
 
 [[ports]]
 localPort = 8081
@@ -59,7 +73,7 @@ externalPort = 8081
 
 [[ports]]
 localPort = 8082
-externalPort = 3003
+externalPort = 8082
 
 [[ports]]
 localPort = 8083
@@ -70,24 +84,20 @@ localPort = 8084
 externalPort = 6000
 
 [[ports]]
+localPort = 18150
+externalPort = 4200
+
+[[ports]]
 localPort = 21539
-externalPort = 3001
-
-[[ports]]
-localPort = 22357
-externalPort = 5000
-
-[[ports]]
-localPort = 23351
 externalPort = 3000
 
 [[ports]]
-localPort = 23352
-externalPort = 3002
+localPort = 22357
+externalPort = 8008
 
 [[ports]]
-localPort = 23353
-externalPort = 4200
+localPort = 23351
+externalPort = 8000
 
 [nix]
 channel = "stable-25_05"
@@ -101,15 +111,11 @@ defaultBucketID = "replit-objstore-41fc812e-9f5e-42cb-93cc-f15445fe1efa"
 [userenv.shared]
 ADMIN_EMAILS = "bancotoday@gmail.com,wael_zeed@yahoo.com"
 PAYMOB_MODE = "live"
-CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuYmFuY28udG9kYXkk"
-VITE_CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuYmFuY28udG9kYXkk"
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuYmFuY28udG9kYXkk"
 NEXT_PUBLIC_API_URL = "http://localhost:8080"
 NEXT_PUBLIC_SEARCH_ENABLED = "true"
 NEXT_PUBLIC_WEB_SEARCH_LIVE = "true"
 NEXT_PUBLIC_WEB_SEARCH_MAP = "false"
 NEXT_PUBLIC_SEARCH_ANALYTICS_MODE = "off"
-# CLERK_SECRET_KEY: set via Replit Secrets / CI secrets — removed from repo for security
 CORS_ALLOWED_ORIGINS = "https://banco.today,https://banco.deals,https://banco.autos"
 PUBLIC_APP_URL = "https://banco.today"
 PUBLIC_API_BASE_URL = "https://banco.today/"
@@ -122,3 +128,8 @@ EXPO_PUBLIC_DOMAIN = "banco.today"
 
 [userenv.development]
 AI_INTEGRATIONS_OPENAI_BASE_URL = "http://localhost:1106/modelfarm/openai"
+
+[userenv.production]
+CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuYmFuY28udG9kYXkk"
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuYmFuY28udG9kYXkk"
+VITE_CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuYmFuY28udG9kYXkk"
