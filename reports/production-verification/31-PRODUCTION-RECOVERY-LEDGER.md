@@ -3,7 +3,8 @@
 **SoT:** `waelzaid66-max/banco-with-wael`  
 **Branch:** `cursor/w41-production-release-5cf0`  
 **Policy:** Recover / reconnect / certify — never rewrite, never invent, never fake green.  
-**Verdict at this ledger:** **CONDITIONAL GO — NOT FULL PRODUCTION CERTIFIED**
+**Verdict at this ledger:** **CONDITIONAL GO — NOT FULL PRODUCTION CERTIFIED**  
+**Code tip merge-ready for tag `w.4.1`:** **YES** (Phase 5 package). Remaining blockers are **owner merge/tag** + **Coolify/EAS/device OPS**.
 
 ---
 
@@ -55,6 +56,7 @@
 | Phase 1–2 docs | `32-PHASE1-PRODUCTION-INVENTORY.md`; `33-PHASE2-PRODUCTION-AUDIT-REPORT.md` + auth/lifecycle annexes |
 | `d4cec74` Phase 3 reconnect | **P2-M2** `setAuthFailureHandler` on website/web/admin/dealer; **P2-M9** dealer NotFound Switch catch-all; see `34-PHASE3-PRODUCTION-RECOVERY-REPORT.md` |
 | `b2ac785` Phase 4 harden | **P2-M4** OpenAPI `/livez` `/readyz` `/v1/payments/*` + codegen; `ACCOUNT_DELETED`/`SERVICE_UNAVAILABLE` on ApiError; `errorResponse` union matches authGuard 503; see `35-PHASE4-PRODUCTION-HARDENING-REPORT.md` |
+| `0d49814` Phase 5 package | Release readiness + OPS handoff; gates re-verified; see `36-PHASE5-W41-RELEASE-READINESS.md` |
 
 ---
 
@@ -63,8 +65,9 @@
 | Facets `market_country` MED | deferred (OpenAPI + handler category-only — not inventing API surface this wave) |
 | Dual `banco-web`/`banco-website` cutover | owner |
 | Optional: set `NEXT_PUBLIC_WEB_SEARCH_LIVE/MAP=true` for live search (rebuild) | ops soft-launch |
-| Web account-delete UI (P2-M3) | deferred — mobile only; no invent in Phase 3/4 |
+| Web account-delete UI (P2-M3) | deferred — mobile only; invent only on explicit order |
 | OpenAPI omit payments/readyz/livez (P2-M4) | **closed** on tip `b2ac785` (140 paths / 166 ops) |
+| Merge PR → tag `w.4.1` → Coolify | **owner** — see Phase 5 |
 
 ### Code / release process
 
@@ -88,9 +91,10 @@
 
 | Gate | Result | When |
 |------|--------|------|
-| `chain-integrity-gate.mjs` | **164/164 PASS** | Phase 4 tip `b2ac785` |
-| API vitest (deleteAccount + full suite) | **385 passed / 3 skipped** | Phase 4 tip `b2ac785` |
-| production-confidence | **14/14 PASS** | Phase 4 tip `b2ac785` |
+| `chain-integrity-gate.mjs` | **164/164 PASS** | Phase 5 tip `0d49814` |
+| API vitest (deleteAccount + full suite) | **385 passed / 3 skipped** | Phase 5 tip `0d49814` |
+| production-confidence | **14/14 PASS** | Phase 5 tip `0d49814` |
+| Mobile lib-hardening + universal-links | **33/33 PASS** | Phase 5 re-verify |
 | Coolify website bake parity | committed `ee4d2ba` | prior |
 | Landing PATHS ↔ Coolify + Clerk hops | committed | PATHS `/market|/admin` + VITE_*; DomainRouter `banco.today/dealer-os` + `banco.today/banco-mobile` |
 | AWS web SPA blank-page root cause | repaired | BASE_PATH + `dist/public` parity with Coolify |
@@ -98,6 +102,7 @@
 | P2-M2 tombstone auto-signOut web/SPA | repaired `d4cec74` | mirrors mobile AuthTokenBridge |
 | P2-M9 dealer NotFound route | repaired `d4cec74` | Switch catch-all |
 | P2-M4 OpenAPI health/payments + error codes | hardened `b2ac785` | 140 paths / 166 ops; codegen |
+| Phase 5 release readiness package | `36-PHASE5-W41-RELEASE-READINESS.md` | owner merge → tag `w.4.1` |
 
 Do **not** mark FULL CERT without OPS/device evidence (Coolify live secrets, S3, SSL, EAS, Paymob webhook, Clerk providers).
 
