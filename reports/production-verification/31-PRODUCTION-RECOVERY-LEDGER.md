@@ -4,7 +4,7 @@
 **Branch:** `cursor/w41-production-release-5cf0`  
 **Policy:** Recover / reconnect / certify — never rewrite, never invent, never fake green.  
 **Verdict at this ledger:** **CONDITIONAL GO — NOT FULL PRODUCTION CERTIFIED**  
-**Code tip merge-ready for tag `w.4.1`:** **YES** @ `05d0dd1` (see `39-RELEASE-EXECUTION-GO-NOGO.md`). Remaining blockers are **owner merge/tag** + **Coolify/EAS/device OPS**.
+**Code tip merge-ready for tag `w.4.1`:** **YES** @ `aee476c` (+ docs tip after P2-H1 decision). Remaining blockers are **owner merge/tag** + **Coolify/EAS/device OPS**. P2-H1 TOFU = **deferred HIGH** — see `41-P2-H1-UNSIGNED-FIRST-BIND-TOFU.md` (no invent).
 
 ---
 
@@ -59,7 +59,8 @@
 | `0d49814` / `8317326` Phase 5 package | Release readiness + OPS handoff; gates re-verified; see `36-PHASE5-W41-RELEASE-READINESS.md` |
 | `05d0dd1` P2-M3 + smoke matrix | Website `/workspace/settings` delete UI; `37-COOLIFY-LIVE-SMOKE-MATRIX.md`; `38-P2-M3-*` |
 | Release execution gate | `39-RELEASE-EXECUTION-GO-NOGO.md` — **GO merge**; FULL CERT after Coolify smoke |
-| P2-M1 facets market | OpenAPI + `getFacets` + mobile/web clients; chain **167/167**; vitest **386** |
+| P2-M1 facets market | OpenAPI + `getFacets` + mobile/web clients; chain **167/167**; vitest **386**; `40-P2-M1-*` |
+| P2-H1 TOFU evidence | **decision only** — `41-P2-H1-UNSIGNED-FIRST-BIND-TOFU.md`; **no code**; owner picks A/B/C |
 
 ---
 
@@ -70,6 +71,7 @@
 | Optional: set `NEXT_PUBLIC_WEB_SEARCH_LIVE/MAP=true` for live search (rebuild) | ops soft-launch |
 | Web account-delete UI (P2-M3) | **closed UI-only** on `banco-website` `/workspace/settings` — see `38-P2-M3-WEB-ACCOUNT-DELETE-UI.md` |
 | OpenAPI omit payments/readyz/livez (P2-M4) | **closed** on tip `b2ac785` (140 paths / 166 ops) |
+| Paymob unsigned first-bind TOFU (P2-H1) | **deferred HIGH** — evidence + options A/B/C in `41-*`; no invent without owner order |
 | Merge PR → tag `w.4.1` → Coolify → smoke | **owner** — see `39-RELEASE-EXECUTION-GO-NOGO.md` |
 
 ### Code / release process
@@ -85,7 +87,7 @@
 - Set `BANCO_WEB_MARKET_URL=/market/` + `BANCO_WEB_ADMIN_URL=/admin/` (or absolute) on Coolify Next builds
 - SSL + domains + Clerk live social providers
 - Paymob live webhook; EAS submit; device push/OAuth/payment QA
-- Unsigned Paymob first-bind TOFU (HIGH deferred — no invention)
+- Unsigned Paymob first-bind TOFU (HIGH deferred — `41-*`; owner A fail-closed checkout / B order-fetch / C accept residual)
 - Product waves M2–N5 / P3–P7 after ship unless owner orders
 
 ---
@@ -122,7 +124,7 @@ Do **not** mark FULL CERT without OPS/device evidence (Coolify live secrets, S3,
 | Facets ignore `market_country` | disconnected + cert-deferred MED | HIGH | **No** — requires OpenAPI/schema/handler contract expansion (forbidden invent this wave) |
 | Dual `banco-web` + `banco-website` | intentional cutover (B-07 / FROZEN) | HIGH | **No** — owner domain cutover only |
 | `WEB_SEARCH_LIVE` default `false` | intentional soft-launch | HIGH | **No** — ops flip + rebuild |
-| Paymob unsigned first-bind TOFU | intentional HIGH deferred | HIGH | **No** — needs signed correlation / order fetch (no invention) |
+| Paymob unsigned first-bind TOFU | intentional HIGH deferred (`41-*`) | HIGH | **No** — owner must pick A/B/C; no invent |
 | Further Coolify SoT code disconnects | none proven HIGH after skeptical scan | MEDIUM→HIGH on “none found” after evidence pass | **No** |
 
 **Outcome:** Choosing **not** to modify application code is the correct production move. Remaining uncertainty is OPS/device/owner cutover — not missing modules on tip.

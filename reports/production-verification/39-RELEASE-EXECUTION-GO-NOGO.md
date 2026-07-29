@@ -35,7 +35,7 @@
 |----|------|------------|
 | — | Merge + tag + Coolify deploy | **you** |
 | P2-H2/H3 | S3 keys + migrate → readyz 200 | OPS |
-| P2-H1 | Paymob TOFU | Design later — no invent |
+| P2-H1 | Paymob TOFU | Deferred — evidence `41-*`; owner picks A/B/C |
 | P2-M5/M6 | Dual web / search LIVE false | Cutover / bake flags |
 | Live Clerk/EAS/Paymob/device | UNVERIFIED | Smoke `37-*` |
 
@@ -79,7 +79,7 @@ Execute `37-COOLIFY-LIVE-SMOKE-MATRIX.md` at minimum: **S1–S3, S5–S9, S12–
 
 | Priority | Work | Why later |
 |----------|------|-----------|
-| 1 | Paymob TOFU design (P2-H1) | Needs signed correlation — no invent without design |
+| 1 | Paymob TOFU (P2-H1) | See `41-*`: A fail-closed checkout / B order-fetch / C accept residual |
 | 2 | Owner cutover drop `banco-web` | Domain ownership |
 | 3 | Flip `WEB_SEARCH_LIVE/MAP=true` | Soft-launch product choice |
 | 4 | Product waves M2–N* | After ship unless ordered |
