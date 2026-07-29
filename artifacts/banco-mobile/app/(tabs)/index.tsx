@@ -28,7 +28,6 @@ import React, {
   useState,
 } from "react";
 import {
-  LayoutChangeEvent,
   Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -47,12 +46,8 @@ import Animated, {
   interpolate,
   useAnimatedStyle,
   useReducedMotion,
-  useAnimatedReaction,
   useSharedValue,
-  withDelay,
   withRepeat,
-  withSequence,
-  withSpring,
   withTiming,
 } from "react-native-reanimated";
 
@@ -86,7 +81,6 @@ import {
 } from "@/constants/feed";
 import { useI18n } from "@/context/LanguageContext";
 import { useSession } from "@/context/SessionContext";
-import { brandSpark } from "@/lib/brandSpark";
 import { useAuthGate } from "@/hooks/useAuthGate";
 import { useColors } from "@/hooks/useColors";
 
@@ -192,13 +186,14 @@ function Rail({ title, items, onCardPress, onSave, isSaved }: RailProps) {
 // small header gap between the BANCO wordmark and the action cluster — it never
 // touches, resizes, recolors, or competes with the BANCO logo.
 //
-// Behaviour — INTERACTIVE, not on a timer: the mark is hidden at rest and answers
-// a real user action (a B-reaction on a car, a booking) with ONE short 3D pop:
-//   • idle       : hidden (opacity 0).
-//   • on action  : swings in on a perspective/rotateY arc while a spring scales
-//                  it past 1 — that overshoot is the "pop" — then holds ~0.5s.
-//   • after      : fades back out over 380ms until the next action.
-// Only perspective/rotateY/scale/opacity animate (GPU thread, no layout reflow).
+// Behaviour (a calm branded "heartbeat" pulse, repeating every ~2.6s):
+//   • appears (opacity 0→1), gently grows (scale →1.10 max), shrinks back, and
+//     fades out (opacity →0), then repeats. More present/motivating than the old
+//     30s single glide, but subtle — never exaggerated.
+// Only scale + opacity animate (GPU thread, no layout). Max scale 1.10 on the
+// 16px mark ≈ +1.6px (~0.25mm), well under the owner's 1mm cap; `overflow:hidden`
+// on `styles.spark` clips it inside the header gap so it can never touch, resize,
+// or compete with the BANCO logo or the adjacent search/assistant cluster.
 // Uses the official B-OOM asset as-is (only its flat black backdrop was made
 // transparent so it sits cleanly on both the dark and light header). Respects
 // prefers-reduced-motion by showing the mark static instead of animating.
@@ -213,43 +208,43 @@ const BOOM_W = Math.round(BOOM_H * BOOM_ASPECT);
 
 function HeaderSpark() {
   const reduceMotion = useReducedMotion();
-  // At rest the mark is hidden. One real user action (B-reaction, booking…)
-  // drives this 0 → 1 → 0 once: the sub-brand answers what the user just did.
-  const pop = useSharedValue(0);
+  const t = useSharedValue(0);
 
-  // The trigger is a module-level shared value, NOT React state — writing it
-  // re-renders nothing, so a tap inside a long feed list can never cost a
-  // render anywhere in the tree. This reaction runs on the UI thread and only
-  // when the counter actually changes (prev === null is the initial read).
-  useAnimatedReaction(
-    () => brandSpark.value,
-    (curr, prev) => {
-      if (prev === null || curr === prev || reduceMotion) return;
-      pop.value = 0;
-      pop.value = withSequence(
-        // The spring overshoots past 1 — that overshoot IS the pop.
-        withSpring(1, { damping: 9, stiffness: 220, mass: 0.5 }),
-        withDelay(
-          520,
-          withTiming(0, { duration: 380, easing: Easing.out(Easing.quad) }),
-        ),
-      );
-    },
-    [reduceMotion],
-  );
+  useEffect(() => {
+    if (reduceMotion) return;
+    // Calm branded heartbeat: appear → gently grow → shrink → disappear, on a
+    // repeating ~2.6s pulse. Scale + opacity ONLY (GPU thread, no layout). The
+    // `overflow:hidden` on `styles.spark` clips the mark inside the header gap,
+    // so the pulse can never touch/resize the BANCO logo or the action cluster.
+    t.value = withRepeat(
+      withTiming(1, { duration: 2600, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      false
+    );
+  }, [t, reduceMotion]);
 
-  const logoStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(pop.value, [0, 0.3, 1], [0, 1, 1], Extrapolation.CLAMP),
-    transform: [
-      // Perspective + rotateY give real depth, so the mark swings in like a
-      // small 3D badge instead of just scaling. GPU-only: no layout, no reflow.
-      { perspective: 600 },
-      {
-        rotateY: `${interpolate(pop.value, [0, 1], [-42, 0], Extrapolation.CLAMP)}deg`,
-      },
-      { scale: interpolate(pop.value, [0, 1], [0.55, 1], Extrapolation.CLAMP) },
-    ],
-  }));
+  const logoStyle = useAnimatedStyle(() => {
+    return {
+      opacity: interpolate(
+        t.value,
+        [0, 0.15, 0.5, 0.85, 1],
+        [0, 0.9, 1, 0.9, 0],
+        Extrapolation.CLAMP
+      ),
+      transform: [
+        {
+          // Max scale 1.10 on the 16px mark ≈ +1.6px (~0.25mm) — a clear pulse
+          // well under the owner's 1mm cap; never exaggerated.
+          scale: interpolate(
+            t.value,
+            [0, 0.15, 0.5, 0.85, 1],
+            [0.98, 1, 1.1, 1, 0.98],
+            Extrapolation.CLAMP
+          ),
+        },
+      ],
+    };
+  });
 
   if (reduceMotion) {
     return (
