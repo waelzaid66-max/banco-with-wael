@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
 import { paymentIntents, transactions } from "@workspace/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import {
   applyTransaction,
   getWalletBalance,
@@ -39,12 +39,12 @@ export interface ConfirmTopupResult {
 }
 
 /**
- * Create a pending wallet top-up intent against the real PSP (Paymob). The
- * provider charge is opened first so the buyer gets a hosted checkout URL; no
- * money moves until the signed provider webhook settles the intent.
+ * Create a pending wallet top-up intent against the real PSP (Paymob).
  *
- * The intent id is generated up front and used as the unique merchant reference
- * (`special_reference`) so the webhook can map the settlement back to this row.
+ * Durable intent row is inserted FIRST so a process crash / DB blip after the
+ * PSP charge cannot leave a paid checkout with no settleable intent (webhook
+ * would otherwise ACK an unknown merchant reference and strand money).
+ * Provider charge is opened second; checkout URL is patched onto the row.
  */
 export async function createTopupIntent(
   input: CreateTopupInput
@@ -53,15 +53,6 @@ export async function createTopupIntent(
   if (Number(amount) <= 0) throw invalidData("Top-up amount must be positive");
 
   const intentId = randomUUID();
-  const charge = await createProviderCharge({
-    amount,
-    method: input.method,
-    intentId,
-    purpose: "wallet_topup",
-    userId: input.userId,
-    description: `Wallet top-up (${input.method})`,
-  });
-
   const [intent] = await db
     .insert(paymentIntents)
     .values({
@@ -71,19 +62,47 @@ export async function createTopupIntent(
       method: input.method,
       purpose: "wallet_topup",
       status: "pending",
-      providerRef: charge.providerRef,
-      metadata: { provider: "paymob", checkout_url: charge.checkoutUrl },
+      providerRef: null,
+      metadata: { provider: "paymob" },
     })
     .returning();
 
+  let charge;
+  try {
+    charge = await createProviderCharge({
+      amount,
+      method: input.method,
+      intentId,
+      purpose: "wallet_topup",
+      userId: input.userId,
+      description: `Wallet top-up (${input.method})`,
+    });
+  } catch (err) {
+    await db
+      .update(paymentIntents)
+      .set({ status: "failed", metadata: { provider: "paymob", charge_error: true } })
+      .where(and(eq(paymentIntents.id, intentId), eq(paymentIntents.status, "pending")));
+    throw err;
+  }
+
+  const [updated] = await db
+    .update(paymentIntents)
+    .set({
+      providerRef: charge.providerRef,
+      metadata: { provider: "paymob", checkout_url: charge.checkoutUrl },
+    })
+    .where(eq(paymentIntents.id, intentId))
+    .returning();
+
+  const row = updated ?? intent;
   return {
-    intent_id: intent.id,
-    amount: intent.amount,
-    method: intent.method,
-    status: intent.status,
-    provider_ref: intent.providerRef,
+    intent_id: row.id,
+    amount: row.amount,
+    method: row.method,
+    status: row.status,
+    provider_ref: row.providerRef,
     checkout_url: charge.checkoutUrl,
-    created_at: (intent.createdAt ?? new Date()).toISOString(),
+    created_at: (row.createdAt ?? new Date()).toISOString(),
   };
 }
 
@@ -173,7 +192,9 @@ export async function settleTopupIntent(
     throw invalidData("Not a wallet top-up intent");
   }
   if (intent.status === "completed") return; // idempotent replay
-  if (intent.status !== "pending") {
+  // Verified success webhooks must still credit after a premature/out-of-order
+  // failure mark — otherwise the buyer paid at the PSP with no wallet credit.
+  if (intent.status !== "pending" && intent.status !== "failed") {
     throw invalidData(`Cannot settle a ${intent.status} intent`);
   }
 
@@ -205,8 +226,8 @@ export async function settleTopupIntent(
         .where(
           and(
             eq(paymentIntents.id, intent.id),
-            eq(paymentIntents.status, "pending")
-          )
+            inArray(paymentIntents.status, ["pending", "failed"]),
+          ),
         );
 
       return result;

@@ -10,7 +10,7 @@
  */
 import { db } from "@workspace/db";
 import { bookings, listings, listingAttributes, users } from "@workspace/db/schema";
-import { and, eq, inArray, lt, gt, desc } from "drizzle-orm";
+import { and, eq, inArray, lt, gt, desc, sql } from "drizzle-orm";
 import { createNotification } from "./NotificationService";
 
 function codedError(code: string, message: string): Error {
@@ -125,40 +125,46 @@ export async function createBooking(
   );
   if (nights < 1) throw codedError("INVALID_DATA", "Check-out must be after check-in");
 
-  // Overlap = an active booking where checkIn < newCheckOut AND checkOut > newCheckIn.
-  const [clash] = await db
-    .select({ id: bookings.id })
-    .from(bookings)
-    .where(
-      and(
-        eq(bookings.listingId, listingId),
-        inArray(bookings.status, [...ACTIVE_STATUSES]),
-        lt(bookings.checkIn, checkOut),
-        gt(bookings.checkOut, checkIn),
-      ),
-    )
-    .limit(1);
-  if (clash) throw codedError("CONFLICT", "Those dates are already booked");
-
   const perNight = Number(row.price);
   const hasPrice = Number.isFinite(perNight) && perNight > 0;
   const total = hasPrice ? perNight * nights : 0;
 
-  const [b] = await db
-    .insert(bookings)
-    .values({
-      listingId,
-      guestId: user.id,
-      checkIn,
-      checkOut,
-      nights,
-      pricePerNight: hasPrice ? String(perNight) : null,
-      totalPrice: hasPrice ? String(total) : null,
-      guests: input.guests && input.guests > 0 ? input.guests : 1,
-      note: input.note ?? null,
-      status: "requested",
-    })
-    .returning();
+  // Serialize overlap check + insert per listing so concurrent guests cannot
+  // both pass the check-then-insert race (TOCTOU double-book).
+  const b = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT id FROM listings WHERE id = ${listingId} FOR UPDATE`);
+
+    const [clash] = await tx
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.listingId, listingId),
+          inArray(bookings.status, [...ACTIVE_STATUSES]),
+          lt(bookings.checkIn, checkOut),
+          gt(bookings.checkOut, checkIn),
+        ),
+      )
+      .limit(1);
+    if (clash) throw codedError("CONFLICT", "Those dates are already booked");
+
+    const [created] = await tx
+      .insert(bookings)
+      .values({
+        listingId,
+        guestId: user.id,
+        checkIn,
+        checkOut,
+        nights,
+        pricePerNight: hasPrice ? String(perNight) : null,
+        totalPrice: hasPrice ? String(total) : null,
+        guests: input.guests && input.guests > 0 ? input.guests : 1,
+        note: input.note ?? null,
+        status: "requested",
+      })
+      .returning();
+    return created;
+  });
 
   // Notify the host that a stay was requested — makes the inbox live. Best-effort
   // and deferred so it never blocks or fails the booking (createNotification also
@@ -305,8 +311,19 @@ export async function updateBookingStatus(
   const [updated] = await db
     .update(bookings)
     .set({ status: spec.to })
-    .where(eq(bookings.id, bookingId))
+    .where(and(eq(bookings.id, bookingId), inArray(bookings.status, [...spec.from])))
     .returning();
+
+  // Concurrent transition won the race — re-read and treat as conflict or noop.
+  if (!updated) {
+    const [fresh] = await db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1);
+    if (fresh && fresh.status === spec.to) return toDTO(fresh);
+    throw codedError("CONFLICT", `Cannot ${action} a ${fresh?.status ?? "missing"} booking`);
+  }
 
   // Close the notification loop: creation already notifies the host; lifecycle
   // transitions notify the OTHER party (host actions → guest; guest cancel →

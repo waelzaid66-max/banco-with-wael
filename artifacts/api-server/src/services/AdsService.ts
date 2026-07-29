@@ -229,7 +229,6 @@ export async function recordImpression(
   }
 
   const cost = Number(ad.costPerImpression ?? 0);
-  const spent = Number(ad.budgetSpent ?? 0);
   const total = ad.budgetTotal != null ? Number(ad.budgetTotal) : null;
 
   // No budget cap configured → count as billable but nothing to deduct/deactivate.
@@ -241,17 +240,35 @@ export async function recordImpression(
     return { counted: true, billable: true, deactivated: false };
   }
 
-  const newSpent = spent + cost;
-  const exhausted = newSpent >= total;
-
-  await db
+  // Atomic spend: only one concurrent impression can win the remaining budget.
+  // Read-modify-write overspent under parallel billable impressions.
+  const [spentRow] = await db
     .update(ads)
     .set({
       billableImpressions: sql`${ads.billableImpressions} + 1`,
-      budgetSpent: String(newSpent),
-      isActive: exhausted ? false : ad.isActive,
+      budgetSpent: sql`(${ads.budgetSpent})::numeric + ${String(cost)}::numeric`,
+      isActive: sql`CASE
+        WHEN (${ads.budgetSpent})::numeric + ${String(cost)}::numeric >= (${ads.budgetTotal})::numeric
+        THEN false
+        ELSE ${ads.isActive}
+      END`,
     })
-    .where(eq(ads.id, adId));
+    .where(
+      and(
+        eq(ads.id, adId),
+        eq(ads.isActive, true),
+        sql`(${ads.budgetSpent})::numeric + ${String(cost)}::numeric <= (${ads.budgetTotal})::numeric`,
+      ),
+    )
+    .returning({ isActive: ads.isActive });
 
-  return { counted: true, billable: true, deactivated: exhausted };
+  if (!spentRow) {
+    return { counted: true, billable: false, reason: "budget_exhausted", deactivated: false };
+  }
+
+  return {
+    counted: true,
+    billable: true,
+    deactivated: spentRow.isActive === false,
+  };
 }

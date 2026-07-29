@@ -9,7 +9,7 @@ import {
   interactions,
   locations,
 } from "@workspace/db/schema";
-import { eq, and, desc, asc, sql, count } from "drizzle-orm";
+import { eq, and, desc, asc, sql, count, or, isNull, lte } from "drizzle-orm";
 import { normalizePaymentOptions, computeOffers } from "./PaymentService";
 import { normalizeListing, detectDuplicate, computeTrustScore, validateMedia } from "./NormalizationService";
 import { checkListingRate, auditListingFlag } from "./AbuseService";
@@ -544,20 +544,42 @@ export async function bumpListing(
   // Cooldown is measured from the LAST recycle. A listing that has never been
   // recycled can be bumped immediately — that is the whole point (lifting an old
   // listing); a fresh one is already at the top so the bump is effectively a no-op.
+  // Enforce atomically via conditional UPDATE so concurrent bumps cannot both pass
+  // an in-memory cooldown check (TOCTOU).
   const now = Date.now();
-  const last = listing.bumpedAt ? new Date(listing.bumpedAt).getTime() : null;
-  if (last !== null && now - last < BUMP_COOLDOWN_MS) {
+  const cooldownCutoff = new Date(now - BUMP_COOLDOWN_MS);
+  const bumpedAt = new Date(now);
+
+  const [updated] = await db
+    .update(listings)
+    .set({ bumpedAt })
+    .where(
+      and(
+        eq(listings.id, listingId),
+        or(isNull(listings.bumpedAt), lte(listings.bumpedAt, cooldownCutoff)),
+      ),
+    )
+    .returning({ bumpedAt: listings.bumpedAt });
+
+  if (!updated) {
+    const [fresh] = await db
+      .select({ bumpedAt: listings.bumpedAt })
+      .from(listings)
+      .where(eq(listings.id, listingId))
+      .limit(1);
+    const last = fresh?.bumpedAt
+      ? new Date(fresh.bumpedAt).getTime()
+      : listing.bumpedAt
+        ? new Date(listing.bumpedAt).getTime()
+        : now;
     throw Object.assign(
       new Error("This listing was recycled recently. Please try again later."),
       {
         code: "RATE_LIMITED",
         nextBumpAvailableAt: new Date(last + BUMP_COOLDOWN_MS).toISOString(),
-      }
+      },
     );
   }
-
-  const bumpedAt = new Date(now);
-  await db.update(listings).set({ bumpedAt }).where(eq(listings.id, listingId));
 
   return {
     id: listingId,

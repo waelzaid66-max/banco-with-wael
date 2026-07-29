@@ -778,10 +778,35 @@ export async function updateInstitutionRequest(params: {
     set.branchId = params.branchId;
   }
 
-  await db
+  // Status changes must be conditional on the observed status so concurrent
+  // agents cannot reopen a closed row via last-write-wins (same class as booking).
+  const statusChanging =
+    params.status !== undefined && params.status !== existing.status;
+  const whereClause = statusChanging
+    ? and(
+        eq(financingRequests.leadId, params.leadId),
+        eq(financingRequests.status, existing.status),
+      )
+    : eq(financingRequests.leadId, params.leadId);
+
+  const updatedRows = await db
     .update(financingRequests)
     .set(set)
-    .where(eq(financingRequests.leadId, params.leadId));
+    .where(whereClause)
+    .returning({ leadId: financingRequests.leadId });
+
+  if (statusChanging && updatedRows.length === 0) {
+    const fresh = await getFinancingRequestByLeadId(params.leadId);
+    if (fresh && params.status && fresh.status === params.status) {
+      return fresh;
+    }
+    throw Object.assign(
+      new Error(
+        `Cannot update a ${fresh?.status ?? "missing"} finance request — refresh and retry`,
+      ),
+      { code: "CONFLICT" },
+    );
+  }
 
   writeAudit({
     eventType: "admin_action",

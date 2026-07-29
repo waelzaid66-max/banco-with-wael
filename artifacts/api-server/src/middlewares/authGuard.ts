@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { users } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { errorResponse } from "../validators/schemas";
 import { hasPermission, type Permission, type StaffRole } from "../lib/permissions";
 
@@ -18,6 +18,23 @@ declare global {
   }
 }
 
+type DbUserRow = typeof users.$inferSelect;
+
+/** Active (non-tombstoned) user only — soft-deleted rows must not authorize. */
+async function findActiveUserByClerkId(clerkId: string): Promise<DbUserRow | undefined> {
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
+    .limit(1);
+  return user;
+}
+
+/**
+ * Authenticate via Clerk JWT, then fail closed for soft-deleted accounts.
+ * Missing DB rows are allowed (first-touch `getOrCreateUser` paths); tombstones
+ * are not — a lingering Clerk session must not keep deleted users operational.
+ */
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   const auth = getAuth(req);
   const clerkId = auth?.userId;
@@ -28,7 +45,29 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   }
 
   req.userId = clerkId;
-  next();
+
+  db.select({ id: users.id, role: users.role, deletedAt: users.deletedAt })
+    .from(users)
+    .where(eq(users.clerkId, clerkId))
+    .limit(1)
+    .then(([user]) => {
+      if (user?.deletedAt) {
+        res
+          .status(401)
+          .json(errorResponse("ACCOUNT_DELETED", "This account has been deleted"));
+        return;
+      }
+      if (user) {
+        req.dbUserId = user.id;
+        req.userRole = user.role;
+      }
+      next();
+    })
+    .catch(() => {
+      res
+        .status(503)
+        .json(errorResponse("SERVICE_UNAVAILABLE", "Authentication unavailable"));
+    });
 }
 
 export function requireDealerRole(req: Request, res: Response, next: NextFunction): void {
@@ -42,11 +81,8 @@ export function requireDealerRole(req: Request, res: Response, next: NextFunctio
 
   req.userId = clerkId;
 
-  db.select()
-    .from(users)
-    .where(eq(users.clerkId, clerkId))
-    .limit(1)
-    .then(([user]) => {
+  findActiveUserByClerkId(clerkId)
+    .then((user) => {
       if (!user) {
         res.status(401).json(errorResponse("UNAUTHORIZED", "User not found"));
         return;
@@ -75,11 +111,8 @@ export function requireAdminRole(req: Request, res: Response, next: NextFunction
 
   req.userId = clerkId;
 
-  db.select()
-    .from(users)
-    .where(eq(users.clerkId, clerkId))
-    .limit(1)
-    .then(([user]) => {
+  findActiveUserByClerkId(clerkId)
+    .then((user) => {
       if (!user) {
         res.status(401).json(errorResponse("UNAUTHORIZED", "User not found"));
         return;
@@ -128,19 +161,17 @@ export async function resolveDbUser(req: Request, res: Response, next: NextFunct
   if (!req.userId) return next();
 
   try {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.clerkId, req.userId))
-      .limit(1);
-
+    const user = await findActiveUserByClerkId(req.userId);
     if (user) {
       req.dbUserId = user.id;
       req.userRole = user.role;
     }
+    // Tombstoned or missing: leave dbUserId unset (anonymous attribution).
     next();
   } catch {
-    next();
+    // Fail closed for identity attribution — do not pretend the request is anonymous
+    // when the database is unavailable (would drop audit trails / ads identity).
+    res.status(503).json(errorResponse("SERVICE_UNAVAILABLE", "User resolution unavailable"));
   }
 }
 
@@ -158,11 +189,7 @@ export async function requireDbUser(req: Request, res: Response, next: NextFunct
   req.userId = clerkId;
 
   try {
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.clerkId, clerkId))
-      .limit(1);
+    const user = await findActiveUserByClerkId(clerkId);
 
     if (!user) {
       res.status(401).json(errorResponse("UNAUTHORIZED", "User not found"));

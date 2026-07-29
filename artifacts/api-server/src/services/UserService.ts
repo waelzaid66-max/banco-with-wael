@@ -8,6 +8,7 @@ import {
   messages,
   notifications,
   pushTokens,
+  financingSeats,
 } from "@workspace/db/schema";
 import { eq, and, ne, isNull, isNotNull, or, inArray, sql } from "drizzle-orm";
 import { clerkClient } from "@clerk/express";
@@ -24,7 +25,16 @@ export async function getOrCreateUser(clerkId: string, data?: { name?: string; e
     .where(eq(users.clerkId, clerkId))
     .limit(1);
 
-  if (existing) return existing;
+  if (existing) {
+    // Soft-deleted accounts must not regain API access via first-touch paths
+    // while a Clerk session still exists (Clerk delete can lag or fail).
+    if (existing.deletedAt) {
+      throw Object.assign(new Error("Account has been deleted"), {
+        code: "ACCOUNT_DELETED",
+      });
+    }
+    return existing;
+  }
 
   // First-touch upsert: the mobile app can fire several authenticated calls in
   // parallel on first open, so two inserts may race. ON CONFLICT keeps the
@@ -49,6 +59,11 @@ export async function getOrCreateUser(clerkId: string, data?: { name?: string; e
       .from(users)
       .where(eq(users.clerkId, clerkId))
       .limit(1);
+    if (row?.deletedAt) {
+      throw Object.assign(new Error("Account has been deleted"), {
+        code: "ACCOUNT_DELETED",
+      });
+    }
     return row;
   }
 
@@ -63,11 +78,12 @@ export async function getOrCreateUser(clerkId: string, data?: { name?: string; e
   return created;
 }
 
+/** Active (non-tombstoned) user by Clerk id — soft-deleted rows are invisible. */
 export async function getDbUser(clerkId: string) {
   const [user] = await db
     .select()
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   return user ?? null;
 }
@@ -298,6 +314,8 @@ export async function deleteAccount(clerkId: string): Promise<{ deleted: boolean
         phone: null,
         companyDetails: null,
         isVerified: false,
+        isAdmin: false,
+        staffRole: "user",
         deletedAt: now,
       })
       .where(eq(users.id, user.id));
@@ -354,6 +372,10 @@ export async function deleteAccount(clerkId: string): Promise<{ deleted: boolean
 
     // The deleted account's devices must stop receiving pushes immediately.
     await tx.delete(pushTokens).where(eq(pushTokens.userId, user.id));
+
+    // Revoke FI operational seats so a lingering Clerk JWT cannot keep reading
+    // the institution inbox / buyer PII after soft-delete.
+    await tx.delete(financingSeats).where(eq(financingSeats.userId, user.id));
   });
 
   // Best-effort storage cleanup AFTER the tombstone is durable: delete the

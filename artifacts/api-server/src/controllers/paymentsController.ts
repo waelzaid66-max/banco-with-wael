@@ -15,9 +15,10 @@ import {
  * payment. The HMAC signature is verified before any field is trusted; an
  * invalid signature is rejected with 401 and never touches the ledger.
  *
- * Valid-but-unactionable deliveries (unknown intent, amount mismatch, already
- * settled) are acknowledged with 200 so the provider stops retrying. Genuine
- * processing failures return 500 so the provider retries later.
+ * Valid-but-unactionable deliveries (amount mismatch, already settled) are
+ * acknowledged with 200 so the provider stops retrying. Unknown intents return
+ * 503 so the provider retries (never ACK a signed payment with no durable row).
+ * Genuine processing failures also return 500/503 for retry.
  */
 export async function paymobWebhookHandler(req: Request, res: Response) {
   const body = (req.body ?? {}) as { obj?: Record<string, unknown> };
@@ -37,8 +38,14 @@ export async function paymobWebhookHandler(req: Request, res: Response) {
   try {
     const meta = await getIntentMeta(verification.intentId);
     if (!meta) {
-      // Unknown intent — ack to stop retries.
-      return res.status(200).json({ ok: true });
+      // Unknown intent after a signed webhook: do NOT ACK 200 — that permanently
+      // strands money if the intent row was delayed/missing. Return 503 so the
+      // provider retries while ops investigates.
+      console.error(
+        "[Paymob webhook] signed settlement for unknown intent",
+        verification.intentId,
+      );
+      return res.status(503).json({ ok: false, error: "intent_not_found" });
     }
 
     // Tamper / mismatch guard: the signed amount must equal the intent amount.

@@ -8,7 +8,7 @@ import {
   listings,
   type Plan,
 } from "@workspace/db/schema";
-import { and, asc, count, eq, gte } from "drizzle-orm";
+import { and, asc, count, eq, gte, inArray } from "drizzle-orm";
 import {
   applyTransaction,
   getWalletBalance,
@@ -269,18 +269,10 @@ export async function startSubscription(input: StartSubscriptionInput) {
     };
   }
 
-  // External rail → open a real PSP charge and create a pending subscription
-  // intent (no money moves until the signed provider webhook settles it). The
-  // intent id is generated up front so it can be the unique merchant reference.
+  // External rail → durable pending intent FIRST, then open the PSP charge.
+  // Insert-before-charge prevents paid checkouts with no settleable row when
+  // the process dies between Paymob and Postgres.
   const intentId = randomUUID();
-  const charge = await createProviderCharge({
-    amount: price,
-    method: input.paymentMethod,
-    intentId,
-    purpose: "subscription",
-    userId: input.userId,
-    description: `Subscription: ${plan.name}`,
-  });
   const [intent] = await db
     .insert(paymentIntents)
     .values({
@@ -290,24 +282,52 @@ export async function startSubscription(input: StartSubscriptionInput) {
       method: input.paymentMethod,
       purpose: "subscription",
       status: "pending",
-      providerRef: charge.providerRef,
+      providerRef: null,
       planId: plan.id,
-      metadata: { provider: "paymob", checkout_url: charge.checkoutUrl },
+      metadata: { provider: "paymob" },
     })
     .returning();
 
+  let charge;
+  try {
+    charge = await createProviderCharge({
+      amount: price,
+      method: input.paymentMethod,
+      intentId,
+      purpose: "subscription",
+      userId: input.userId,
+      description: `Subscription: ${plan.name}`,
+    });
+  } catch (err) {
+    await db
+      .update(paymentIntents)
+      .set({ status: "failed", metadata: { provider: "paymob", charge_error: true } })
+      .where(and(eq(paymentIntents.id, intentId), eq(paymentIntents.status, "pending")));
+    throw err;
+  }
+
+  const [updated] = await db
+    .update(paymentIntents)
+    .set({
+      providerRef: charge.providerRef,
+      metadata: { provider: "paymob", checkout_url: charge.checkoutUrl },
+    })
+    .where(eq(paymentIntents.id, intentId))
+    .returning();
+
+  const row = updated ?? intent;
   return {
     mode: "intent" as const,
     subscription: null,
     intent: {
-      intent_id: intent.id,
+      intent_id: row.id,
       plan_slug: plan.slug,
-      amount: intent.amount,
-      method: intent.method as EgyptianRail,
-      status: intent.status,
-      provider_ref: intent.providerRef,
+      amount: row.amount,
+      method: row.method as EgyptianRail,
+      status: row.status,
+      provider_ref: row.providerRef,
       checkout_url: charge.checkoutUrl,
-      created_at: (intent.createdAt ?? new Date()).toISOString(),
+      created_at: (row.createdAt ?? new Date()).toISOString(),
     },
   };
 }
@@ -371,7 +391,7 @@ export async function settleSubscriptionIntentByWebhook(
   if (!intent) throw notFound("Payment intent not found");
   if (intent.purpose !== "subscription") throw invalidData("Not a subscription intent");
   if (intent.status === "completed") return; // idempotent replay
-  if (intent.status !== "pending") {
+  if (intent.status !== "pending" && intent.status !== "failed") {
     throw invalidData(`Cannot settle a ${intent.status} intent`);
   }
   if (!intent.planId) throw invalidData("Subscription intent is missing its plan");
@@ -387,7 +407,12 @@ export async function settleSubscriptionIntentByWebhook(
     await db
       .update(paymentIntents)
       .set({ status: "completed", completedAt: new Date() })
-      .where(and(eq(paymentIntents.id, intent.id), eq(paymentIntents.status, "pending")));
+      .where(
+        and(
+          eq(paymentIntents.id, intent.id),
+          inArray(paymentIntents.status, ["pending", "failed"]),
+        ),
+      );
     return;
   }
 
@@ -443,7 +468,12 @@ export async function settleSubscriptionIntentByWebhook(
       await tx
         .update(paymentIntents)
         .set({ status: "completed", completedAt: new Date() })
-        .where(and(eq(paymentIntents.id, intent.id), eq(paymentIntents.status, "pending")));
+        .where(
+          and(
+            eq(paymentIntents.id, intent.id),
+            inArray(paymentIntents.status, ["pending", "failed"]),
+          ),
+        );
 
       return {
         transactionId: charge.transactionId,
@@ -462,8 +492,52 @@ export async function settleSubscriptionIntentByWebhook(
     });
   } catch (err) {
     if (isUniqueViolation(err)) {
-      // Concurrent delivery already activated, or the active-subscription slot
-      // is taken — either way this webhook is a no-op.
+      // Concurrent delivery already activated this charge key — complete intent.
+      if (await findSubscriptionByChargeKey(chargeKey)) {
+        await db
+          .update(paymentIntents)
+          .set({ status: "completed", completedAt: new Date() })
+          .where(
+            and(
+              eq(paymentIntents.id, intent.id),
+              inArray(paymentIntents.status, ["pending", "failed"]),
+            ),
+          );
+        return;
+      }
+      // Active-subscription unique slot taken by another sub: still credit the
+      // verified PSP payment as a wallet top-up so money is not stranded, then
+      // complete the intent (never ACK success while leaving intent pending).
+      try {
+        await db.transaction(async (tx) => {
+          await applyTransaction(tx, {
+            userId,
+            type: "wallet_topup",
+            direction: "credit",
+            amount: intent.amount,
+            paymentMethod: intent.method as LedgerPaymentMethod,
+            referenceType: "payment_intent",
+            referenceId: intent.id,
+            description: `Subscription payment credited (active plan already held)`,
+            idempotencyKey: `${intent.id}:orphan_topup`,
+            metadata: opts.providerTxnId
+              ? { provider_txn_id: opts.providerTxnId, orphan_reason: "active_slot_taken" }
+              : { orphan_reason: "active_slot_taken" },
+          });
+          await tx
+            .update(paymentIntents)
+            .set({ status: "completed", completedAt: new Date() })
+            .where(
+              and(
+                eq(paymentIntents.id, intent.id),
+                inArray(paymentIntents.status, ["pending", "failed"]),
+              ),
+            );
+        });
+      } catch (err2) {
+        if (isUniqueViolation(err2)) return;
+        throw err2;
+      }
       return;
     }
     throw err;
