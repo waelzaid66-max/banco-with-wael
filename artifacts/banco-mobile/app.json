@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "BANCO",
-    "slug": "bancoboom",
+    "slug": "banco-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.bancooom.app",
+      "bundleIdentifier": "com.bancoboom.app",
       "buildNumber": "1",
       "usesAppleSignIn": true,
       "associatedDomains": [
@@ -33,9 +33,8 @@
       }
     },
     "android": {
-      "package": "com.bancooom.app",
+      "package": "com.bancoboom.app",
       "versionCode": 1,
-      "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.ACCESS_COARSE_LOCATION",
@@ -50,11 +49,23 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            { "scheme": "https", "host": "banco.today" },
-            { "scheme": "https", "host": "banco.deals" },
-            { "scheme": "https", "host": "banco.autos" }
+            {
+              "scheme": "https",
+              "host": "banco.today"
+            },
+            {
+              "scheme": "https",
+              "host": "banco.deals"
+            },
+            {
+              "scheme": "https",
+              "host": "banco.autos"
+            }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -83,7 +94,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "BANCO uses your location only when you tap “use my location” to set a listing’s place, or to find listings near you."
+          "locationWhenInUsePermission": "BANCO uses your location only when you tap \"use my location\" to set a listing's place, or to find listings near you."
         }
       ],
       [
@@ -108,11 +119,12 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
+    "backgroundColor": "#000000",
+    "owner": "waelzaid",
     "extra": {
       "eas": {
         "projectId": "45f092c8-52f9-4272-880f-48e6b721126f"
       }
-    },
-    "owner": "waelzaid"
+    }
   }
 }
