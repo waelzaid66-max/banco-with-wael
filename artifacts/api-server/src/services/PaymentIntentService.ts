@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
 import { paymentIntents, transactions, users } from "@workspace/db/schema";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import {
   applyTransaction,
   getWalletBalance,
@@ -129,6 +129,64 @@ export async function getIntentMeta(
     .where(eq(paymentIntents.id, intentId))
     .limit(1);
   return intent ?? null;
+}
+
+/**
+ * Bind a signed Paymob `order.id` to exactly one local payment_intent.
+ * merchant_order_id / extras.intent_id are UNSIGNED — without this claim an
+ * intercepted webhook body could remap settlement onto another same-amount intent.
+ */
+export async function claimPaymobOrderForIntent(
+  intentId: string,
+  providerOrderId: string,
+): Promise<"ok" | "not_found" | "order_bound_elsewhere" | "intent_order_mismatch"> {
+  return db.transaction(async (tx) => {
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext(${`paymob_order:${providerOrderId}`}))`,
+    );
+
+    const [intent] = await tx
+      .select({
+        id: paymentIntents.id,
+        metadata: paymentIntents.metadata,
+      })
+      .from(paymentIntents)
+      .where(eq(paymentIntents.id, intentId))
+      .limit(1);
+    if (!intent) return "not_found";
+
+    const meta =
+      intent.metadata && typeof intent.metadata === "object" && !Array.isArray(intent.metadata)
+        ? ({ ...(intent.metadata as Record<string, unknown>) } as Record<string, unknown>)
+        : ({} as Record<string, unknown>);
+
+    const existingOrder =
+      typeof meta.paymob_order_id === "string" ? meta.paymob_order_id : null;
+    if (existingOrder && existingOrder !== providerOrderId) {
+      return "intent_order_mismatch";
+    }
+
+    const [conflict] = await tx
+      .select({ id: paymentIntents.id })
+      .from(paymentIntents)
+      .where(
+        and(
+          sql`${paymentIntents.id} <> ${intentId}::uuid`,
+          sql`${paymentIntents.metadata}->>'paymob_order_id' = ${providerOrderId}`,
+        ),
+      )
+      .limit(1);
+    if (conflict) return "order_bound_elsewhere";
+
+    if (existingOrder === providerOrderId) return "ok";
+
+    meta.paymob_order_id = providerOrderId;
+    await tx
+      .update(paymentIntents)
+      .set({ metadata: meta })
+      .where(eq(paymentIntents.id, intentId));
+    return "ok";
+  });
 }
 
 /**

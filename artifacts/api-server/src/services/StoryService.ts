@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { stories, storyViews, users } from "@workspace/db/schema";
-import { eq, and, gt, or, desc, inArray, sql } from "drizzle-orm";
+import { eq, and, gt, or, desc, inArray, sql, isNull } from "drizzle-orm";
 
 const STORY_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -23,7 +23,7 @@ async function resolveUserId(clerkId: string): Promise<string | null> {
   const [u] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   return u?.id ?? null;
 }
@@ -100,7 +100,7 @@ export async function listActiveStories(clerkId?: string): Promise<StoryDTO[]> {
     })
     .from(stories)
     .innerJoin(users, eq(stories.userId, users.id))
-    .where(and(gt(stories.expiresAt, now), visibility))
+    .where(and(gt(stories.expiresAt, now), isNull(users.deletedAt), visibility))
     .orderBy(desc(stories.createdAt))
     .limit(200);
 

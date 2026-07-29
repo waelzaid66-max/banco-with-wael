@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { verifyPaymobWebhook } from "../lib/paymentProvider";
 import {
   getIntentMeta,
+  claimPaymobOrderForIntent,
   settleTopupIntent,
   markTopupIntentFailed,
 } from "../services/PaymentIntentService";
@@ -34,13 +35,35 @@ export async function paymobWebhookHandler(req: Request, res: Response) {
     console.warn("[Paymob webhook] signed but no intent id present");
     return res.status(200).json({ ok: true });
   }
+  if (!verification.providerOrderId) {
+    console.error("[Paymob webhook] signed payload missing order.id");
+    return res.status(200).json({ ok: true });
+  }
 
   try {
+    const claim = await claimPaymobOrderForIntent(
+      verification.intentId,
+      verification.providerOrderId,
+    );
+    if (claim === "not_found") {
+      console.error(
+        "[Paymob webhook] signed settlement for unknown intent",
+        verification.intentId,
+      );
+      return res.status(503).json({ ok: false, error: "intent_not_found" });
+    }
+    if (claim !== "ok") {
+      console.error(
+        "[Paymob webhook] order/intent binding rejected",
+        claim,
+        verification.intentId,
+        verification.providerOrderId,
+      );
+      return res.status(200).json({ ok: true });
+    }
+
     const meta = await getIntentMeta(verification.intentId);
     if (!meta) {
-      // Unknown intent after a signed webhook: do NOT ACK 200 — that permanently
-      // strands money if the intent row was delayed/missing. Return 503 so the
-      // provider retries while ops investigates.
       console.error(
         "[Paymob webhook] signed settlement for unknown intent",
         verification.intentId,

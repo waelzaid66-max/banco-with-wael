@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { listingComments, listings, users } from "@workspace/db/schema";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { createNotification } from "./NotificationService";
 import { checkCommentRate } from "./AbuseService";
 import { publicVisibilityConditions } from "../lib/feedVisibility";
@@ -25,7 +25,7 @@ async function getUserId(clerkId: string): Promise<string> {
   const [user] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   if (!user) throw codedError("UNAUTHORIZED", "User not found");
   return user.id;
@@ -60,7 +60,14 @@ export async function listComments(listingId: string): Promise<CommentDTO[]> {
       createdAt: listingComments.createdAt,
     })
     .from(listingComments)
-    .where(eq(listingComments.listingId, listingId))
+    .innerJoin(users, eq(listingComments.authorId, users.id))
+    .where(
+      and(
+        eq(listingComments.listingId, listingId),
+        isNull(users.deletedAt),
+        ne(listingComments.body, ""),
+      ),
+    )
     .orderBy(asc(listingComments.createdAt));
 
   if (rows.length === 0) return [];

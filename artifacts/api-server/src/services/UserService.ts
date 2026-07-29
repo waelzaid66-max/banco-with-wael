@@ -9,6 +9,10 @@ import {
   notifications,
   pushTokens,
   financingSeats,
+  stories,
+  listingComments,
+  sellerReviews,
+  paymentIntents,
 } from "@workspace/db/schema";
 import { eq, and, ne, isNull, isNotNull, or, inArray, sql } from "drizzle-orm";
 import { clerkClient } from "@clerk/express";
@@ -306,6 +310,31 @@ export async function deleteAccount(clerkId: string): Promise<{ deleted: boolean
     .map((r) => r.url)
     .filter((u): u is string => !!u);
 
+  // Story media + KYC document URLs captured before the privacy wipe nulls them.
+  const storyRows = await db
+    .select({ url: stories.mediaUrl })
+    .from(stories)
+    .where(eq(stories.userId, user.id));
+  const storyMediaUrls = storyRows.map((r) => r.url).filter((u): u is string => !!u);
+
+  const [kycUser] = await db
+    .select({ companyDetails: users.companyDetails })
+    .from(users)
+    .where(eq(users.id, user.id))
+    .limit(1);
+  const kycUrls: string[] = [];
+  const details = kycUser?.companyDetails;
+  if (details && typeof details === "object" && !Array.isArray(details)) {
+    const docs = (details as Record<string, unknown>).documents;
+    if (docs && typeof docs === "object" && !Array.isArray(docs)) {
+      for (const v of Object.values(docs as Record<string, unknown>)) {
+        if (typeof v === "string" && v.length > 0) kycUrls.push(v);
+      }
+    }
+    const photo = (details as Record<string, unknown>).identity_photo_url;
+    if (typeof photo === "string" && photo.length > 0) kycUrls.push(photo);
+  }
+
   // Atomic local anonymization + personal-data wipe.
   await db.transaction(async (tx) => {
     // Anonymize the user record. We keep the row (soft delete) so seller
@@ -334,6 +363,22 @@ export async function deleteAccount(clerkId: string): Promise<{ deleted: boolean
     // Remove the user's personal collections/behavior history entirely.
     await tx.delete(savedListings).where(eq(savedListings.userId, user.id));
     await tx.delete(userBehavior).where(eq(userBehavior.userId, user.id));
+
+    // Public content authored by the deleted user must not remain discoverable.
+    await tx.delete(stories).where(eq(stories.userId, user.id));
+    await tx.delete(sellerReviews).where(eq(sellerReviews.authorId, user.id));
+    await tx
+      .update(listingComments)
+      .set({ body: "" })
+      .where(eq(listingComments.authorId, user.id));
+
+    // Pending PSP checkouts must not settle onto a tombstone later.
+    await tx
+      .update(paymentIntents)
+      .set({ status: "failed" })
+      .where(
+        and(eq(paymentIntents.userId, user.id), eq(paymentIntents.status, "pending")),
+      );
 
     // Chat privacy (Play/GDPR account deletion): blank the CONTENT of every
     // message this user sent (empty tombstone — thread structure survives so
@@ -387,12 +432,13 @@ export async function deleteAccount(clerkId: string): Promise<{ deleted: boolean
   // actual chat media objects so blobs can't outlive the DB scrub. A storage
   // failure is logged loudly but never resurrects the account — the DB, the
   // source of truth, is already scrubbed.
-  if (chatMediaUrls.length > 0) {
-    const media = await getObjectStorageService().deleteServingUrls(chatMediaUrls);
+  const purgeUrls = [...chatMediaUrls, ...storyMediaUrls, ...kycUrls];
+  if (purgeUrls.length > 0) {
+    const media = await getObjectStorageService().deleteServingUrls(purgeUrls);
     if (media.failed > 0) {
       logger.error(
         { user_id: user.id, ...media },
-        "Chat media cleanup incomplete after account deletion",
+        "Media cleanup incomplete after account deletion",
       );
     }
   }

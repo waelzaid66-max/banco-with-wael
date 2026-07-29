@@ -101,8 +101,10 @@ services:
         condition: service_healthy
     networks:
       - banco_net
+    # Loopback-only host publish: public traffic must enter via Coolify/Nginx.
+    # Binding 0.0.0.0 made express-rate-limit trust spoofable X-Forwarded-For.
     ports:
-      - "${API_HOST_PORT:-8080}:8080"
+      - "127.0.0.1:${API_HOST_PORT:-8080}:8080"
     environment:
       PORT: "8080"
       NODE_ENV: production
@@ -116,6 +118,7 @@ services:
       PAYMENT_CONFIG_ENCRYPTION_KEY: ${PAYMENT_CONFIG_ENCRYPTION_KEY:?PAYMENT_CONFIG_ENCRYPTION_KEY is required}
       # CORS: list of allowed origins (comma-separated public URLs of all frontends).
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+      # Set to https://api.example.com whenever Paymob is enabled (charge creation fail-closes without it).
       PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-}
       PUBLIC_APP_URL: ${PUBLIC_APP_URL:-}
       ADMIN_EMAILS: ${ADMIN_EMAILS:-}

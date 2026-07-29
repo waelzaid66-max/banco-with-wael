@@ -113,6 +113,13 @@ async function requireConfig(): Promise<ActivePaymentConfig> {
       "Payment gateway has no configured payment methods. Please try again later."
     );
   }
+  // Without a public HTTPS callback host, Paymob never delivers settlement
+  // webhooks — charges would strand as pending forever. Fail closed.
+  if (!cfg.callbackBaseUrl || !/^https:\/\//i.test(cfg.callbackBaseUrl)) {
+    throw invalidData(
+      "PUBLIC_API_BASE_URL must be an https URL before payments can be opened."
+    );
+  }
   return cfg;
 }
 
@@ -267,8 +274,10 @@ function hmacFieldValue(v: unknown): string {
 export interface WebhookVerification {
   /** True only when the HMAC signature matched. */
   valid: boolean;
-  /** Our payment_intent id, recovered from the order/extras. */
+  /** Our payment_intent id, recovered from the order/extras (UNSIGNED — bind via providerOrderId). */
   intentId: string | null;
+  /** Paymob order id from the signed HMAC field `order.id`. */
+  providerOrderId: string | null;
   /** Settlement outcome — true only for a fully successful transaction. */
   success: boolean;
   /** Paymob transaction id (for audit/metadata). */
@@ -289,6 +298,7 @@ export async function verifyPaymobWebhook(params: {
   const result: WebhookVerification = {
     valid: false,
     intentId: null,
+    providerOrderId: null,
     success: false,
     providerTxnId: null,
     amountCents: null,
@@ -340,9 +350,14 @@ export async function verifyPaymobWebhook(params: {
         ? Number(rawAmount)
         : null;
 
+  const rawOrderId = getPath(obj, "order.id");
+  const providerOrderId =
+    rawOrderId != null && String(rawOrderId).length > 0 ? String(rawOrderId) : null;
+
   return {
     valid: true,
     intentId,
+    providerOrderId,
     success,
     providerTxnId: obj.id != null ? String(obj.id) : null,
     amountCents,

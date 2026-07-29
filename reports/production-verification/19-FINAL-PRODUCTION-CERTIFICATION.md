@@ -3,7 +3,7 @@
 **Authority:** Chief Production Architect / Final Production Certification  
 **Repository SoT:** `waelzaid66-max/banco-with-wael`  
 **Branch:** `cursor/phase-x-production-hardening-5cf0`  
-**Tip at certification write:** post Round 5 tip (see git log)  
+**Tip at certification write:** Round 6 tip (see git log)  
 **Policy:** Zero invented features. PASS only with evidence. UNVERIFIED when device/ops required. SVG icon architecture must not be migrated.
 
 ---
@@ -20,7 +20,7 @@ Code-path defects with reproducible source evidence from Phases / Rounds 1–5 h
 
 | Gate | Result | Evidence |
 |------|--------|----------|
-| `node scripts/chain-integrity-gate.mjs` | **98/98 PASS** | Marker set includes Round 5 repairs |
+| `node scripts/chain-integrity-gate.mjs` | **103/103 PASS** | Includes Round 6 Paymob/privacy/deploy markers |
 | API `pnpm test` (vitest) | **346 passed / 3 skipped** | `artifacts/api-server` |
 | Mobile `pnpm test` | **PASS** | icons/lib/resilience/links/session/section/i18n |
 | SVG icon registry | **PASS (static)** | `components/icons.tsx` lucide→svg; chain `P-svg-icon-registry` |
@@ -74,11 +74,23 @@ Code-path defects with reproducible source evidence from Phases / Rounds 1–5 h
 | Saved-search structured filters ignored by AlertService matcher | HIGH | Larger matcher product; documented deferred |
 | Mobile saved-search navigation drops rich criteria | HIGH | Needs nav param pipeline completion |
 | Web `SearchResultsMap.web` incomplete vs native clusters | HIGH | Twin implementation; needs shared cluster controller |
-| Soft-delete leaves stories/comments/reviews public text | HIGH | Privacy scrub incomplete; needs deletion-transaction expansion |
-| Top-up/subscription intents lack client idempotency keys | HIGH | Schema + client coordination remaining |
-| Coolify `PUBLIC_API_BASE_URL` empty → Paymob no webhook URL | HIGH | Ops configuration; fail-closed readiness recommended |
-| Rate limiter trust proxy / published :8080 spoofability | HIGH | Deploy topology |
+| Soft-delete leaves stories/comments/reviews public text | HIGH | **FIXED (Round 6)** — delete scrub + read guards |
+| Top-up/subscription intents lack client idempotency keys | HIGH | **OPEN** — schema + client coordination remaining |
+| Coolify `PUBLIC_API_BASE_URL` empty → Paymob no webhook URL | HIGH | **FIXED (Round 6)** — charge creation fail-closes without https callback |
+| Rate limiter trust proxy / published :8080 spoofability | HIGH | **FIXED (Round 6)** — loopback bind + `RATE_LIMITED` contract |
+| Paymob webhook unsigned intent remapping | CRITICAL | **FIXED (Round 6)** — signed `order.id` exclusive bind |
 | Device cold/warm/kill/biometric/APNs/FCM visual QA | — | **UNVERIFIED** |
+
+---
+
+## Round 6 (final release hardening)
+
+| Defect | Severity | Status |
+|--------|----------|--------|
+| HMAC-valid webhook remaps settlement via unsigned merchant_order_id | CRITICAL | **FIXED** — `claimPaymobOrderForIntent` advisory-locked bind |
+| Account deletion left stories/reviews/comments + KYC blobs | HIGH | **FIXED** — scrub + storage purge + pending intent fail |
+| Paymob charge without `PUBLIC_API_BASE_URL` stranded pending | HIGH | **FIXED** — require https callback before charge |
+| 429 used `INVALID_DATA`; API port world-bound | HIGH | **FIXED** — `RATE_LIMITED` + Coolify loopback publish |
 
 ---
 

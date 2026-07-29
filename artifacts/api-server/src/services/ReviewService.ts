@@ -5,7 +5,7 @@ import {
   leadHistory,
   users,
 } from "@workspace/db/schema";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql, isNull } from "drizzle-orm";
 import { createNotification } from "./NotificationService";
 import { recomputeDealerQuality } from "./QualityService";
 
@@ -44,7 +44,7 @@ async function getUserId(clerkId: string): Promise<string> {
   const [user] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   if (!user) throw codedError("UNAUTHORIZED", "User not found");
   return user.id;
@@ -101,7 +101,7 @@ export async function listReviews(
   const [seller] = await db
     .select({ id: users.id, isShadowBanned: users.isShadowBanned })
     .from(users)
-    .where(eq(users.id, sellerId))
+    .where(and(eq(users.id, sellerId), isNull(users.deletedAt)))
     .limit(1);
   // A shadow-banned seller's public surface is suppressed (mirror CompanyService).
   if (!seller || seller.isShadowBanned === true)
@@ -117,7 +117,8 @@ export async function listReviews(
       createdAt: sellerReviews.createdAt,
     })
     .from(sellerReviews)
-    .where(eq(sellerReviews.sellerId, sellerId))
+    .innerJoin(users, eq(sellerReviews.authorId, users.id))
+    .where(and(eq(sellerReviews.sellerId, sellerId), isNull(users.deletedAt)))
     .orderBy(desc(sellerReviews.createdAt))
     .limit(100);
 

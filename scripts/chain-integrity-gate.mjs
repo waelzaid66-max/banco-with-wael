@@ -927,6 +927,51 @@ const CHECKS = [
     test: (s) => /material: query\.material/.test(s),
     why: "Feed must forward material filter (search parity)",
   },
+  {
+    id: "P-paymob-order-bind",
+    file: "artifacts/api-server/src/services/PaymentIntentService.ts",
+    test: (s) =>
+      /claimPaymobOrderForIntent/.test(s) &&
+      /paymob_order_id/.test(s) &&
+      /pg_advisory_xact_lock/.test(s),
+    why: "Signed Paymob order.id must bind to exactly one local intent",
+  },
+  {
+    id: "P-paymob-require-callback",
+    file: "artifacts/api-server/src/lib/paymentProvider.ts",
+    test: (s) =>
+      /PUBLIC_API_BASE_URL must be an https URL/.test(s) &&
+      /callbackBaseUrl/.test(s),
+    why: "Paymob charges must fail closed without https PUBLIC_API_BASE_URL",
+  },
+  {
+    id: "P-delete-scrub-public-content",
+    file: "artifacts/api-server/src/services/UserService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function deleteAccount"));
+      return (
+        /delete\(stories\)/.test(fn) &&
+        /sellerReviews\.authorId/.test(fn) &&
+        /listingComments/.test(fn) &&
+        /paymentIntents/.test(fn)
+      );
+    },
+    why: "Account deletion must scrub stories/reviews/comments and kill pending intents",
+  },
+  {
+    id: "P-rate-limited-contract",
+    file: "artifacts/api-server/src/middlewares/rateLimiter.ts",
+    test: (s) =>
+      /RATE_LIMITED/.test(s) &&
+      !/INVALID_DATA/.test(s),
+    why: "429 responses must use RATE_LIMITED error contract",
+  },
+  {
+    id: "P-coolify-api-loopback",
+    file: "docker-compose.coolify.yml",
+    test: (s) => /127\.0\.0\.1:\$\{API_HOST_PORT/.test(s),
+    why: "Coolify API host port must not be world-bindable (rate-limit spoof)",
+  },
 ];
 
 function main() {
