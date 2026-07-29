@@ -245,6 +245,26 @@ const CHECKS = [
     why: "FI branch agent AuthZ must remain",
   },
   {
+    id: "P-fi-admin-queue",
+    file: "artifacts/admin-os/src/pages/users.tsx",
+    test: (s) =>
+      /users-role-filter/.test(s) &&
+      /users-fi-queue/.test(s) &&
+      /fiInboxUnlinked/.test(s) &&
+      /GetAdminUsersRole\.financial_institution/.test(s) &&
+      /ownedByOther/.test(s),
+    why: "Admin FI awaiting-link queue + unlinked badge + no overwrite other owners (N1.3)",
+  },
+  {
+    id: "P-fi-inbox-forbidden-unlinked",
+    file: "artifacts/api-server/src/services/FinancingService.test.ts",
+    test: (s) =>
+      /denies institution inbox for FI role without owner\/seat link/.test(s) &&
+      /listInstitutionRequests/.test(s) &&
+      /FORBIDDEN/.test(s),
+    why: "Regression: unlinked FI must get FORBIDDEN on institution inbox",
+  },
+  {
     id: "P-section-route-discover",
     file: "artifacts/banco-mobile/components/SearchDiscover.tsx",
     test: (s) => /SECTION_ROUTE/.test(s) && /router\.push\(SECTION_ROUTE\[cat\]\)/.test(s),

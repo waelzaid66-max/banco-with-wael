@@ -8,6 +8,7 @@ import {
   createBranch,
   createSeat,
   updateInstitutionRequest,
+  listInstitutionRequests,
 } from "./FinancingService";
 import { db, createUser, deleteUsers, uniq, randomUUID } from "../__tests__/helpers";
 import {
@@ -332,5 +333,13 @@ describe("FinancingService — institution AuthZ + status machine (F-SEC-01 / R2
         adminUserId: admin,
       }),
     ).rejects.toMatchObject({ code: "INVALID_DATA" });
+  });
+
+  it("denies institution inbox for FI role without owner/seat link (N1.3)", async () => {
+    const fi = await createUser({ role: "financial_institution" });
+    uids.push(fi);
+    await expect(
+      listInstitutionRequests({ dbUserId: fi, limit: 10 }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 });

@@ -10,6 +10,7 @@ import {
   getGetAdminUsersQueryKey,
   getGetMeQueryKey,
   getGetFinancingIntermediariesQueryKey,
+  GetAdminUsersRole,
   type AdminUser,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -229,13 +230,23 @@ function KycReviewDialog({
               <SelectContent>
                 {intermediaries
                   .filter((im): im is typeof im & { id: string } => !!im.id)
-                  .map((im) => (
-                    <SelectItem key={im.id} value={im.id} disabled={im.is_active === false}>
-                      {im.name}
-                      {im.owner_user_id ? ` · ${t("usersPage.fiLinkAlreadyOwned")}` : ""}
-                      {im.is_active === false ? ` · ${t("usersPage.fiLinkInactive")}` : ""}
-                    </SelectItem>
-                  ))}
+                  .map((im) => {
+                    // N1.3 integrity: do not overwrite another FI's owner link from this UI.
+                    // Same-user re-link stays allowed; inactive rows stay blocked.
+                    const ownedByOther =
+                      !!im.owner_user_id && im.owner_user_id !== user.id;
+                    return (
+                      <SelectItem
+                        key={im.id}
+                        value={im.id}
+                        disabled={im.is_active === false || ownedByOther}
+                      >
+                        {im.name}
+                        {im.owner_user_id ? ` · ${t("usersPage.fiLinkAlreadyOwned")}` : ""}
+                        {im.is_active === false ? ` · ${t("usersPage.fiLinkInactive")}` : ""}
+                      </SelectItem>
+                    );
+                  })}
               </SelectContent>
             </Select>
             <Button
@@ -273,6 +284,8 @@ function KycReviewDialog({
 
 export default function UsersPage() {
   const [search, setSearch] = useState("");
+  // N1.3: account-role filter (API already supports `role`) — FI queue visibility.
+  const [roleFilter, setRoleFilter] = useState<"all" | GetAdminUsersRole>("all");
   const [reviewUser, setReviewUser] = useState<AdminUser | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -286,15 +299,35 @@ export default function UsersPage() {
   const canBan = hasPermission(myStaffRole, "ban_users");
   const canLinkFi = hasPermission(myStaffRole, "manage_financing");
 
-  const { data: usersResp, isLoading } = useGetAdminUsers({ search: search || undefined });
+  const usersParams = {
+    search: search || undefined,
+    role: roleFilter === "all" ? undefined : roleFilter,
+  };
+  const { data: usersResp, isLoading } = useGetAdminUsers(usersParams, {
+    query: { queryKey: getGetAdminUsersQueryKey(usersParams) },
+  });
   const users = usersResp?.data ?? [];
+
+  // Owner-id set for inbox-linked badge (owner path only — seats are staff, not FI accounts).
+  const { data: intermListResp } = useGetFinancingIntermediaries({
+    query: {
+      queryKey: getGetFinancingIntermediariesQueryKey(),
+      enabled: canLinkFi,
+      staleTime: 60_000,
+    },
+  });
+  const linkedOwnerIds = new Set(
+    (intermListResp?.data ?? [])
+      .map((im) => im.owner_user_id)
+      .filter((id): id is string => typeof id === "string" && id.length > 0),
+  );
 
   const toggleBan = useSetUserBan();
   const setRole = useSetUserRole();
   const setVerified = useSetUserVerified();
 
   const refresh = () =>
-    queryClient.invalidateQueries({ queryKey: getGetAdminUsersQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetAdminUsersQueryKey(usersParams) });
 
   const handleToggleBan = (id: string, currentlyBanned: boolean) => {
     toggleBan.mutate(
@@ -358,24 +391,71 @@ export default function UsersPage() {
     );
   };
 
-  const showActions = canVerify || canBan;
+  const showActions = canVerify || canBan || canLinkFi;
   const colCount = 5 + (canManageRoles ? 1 : 0) + (showActions ? 1 : 0);
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t("usersPage.title")}</h1>
           <p className="text-muted-foreground mt-2">{t("usersPage.subtitle")}</p>
         </div>
-        <div className="relative w-64">
-          <Search className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={t("usersPage.searchPh")}
-            className="pl-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            value={roleFilter}
+            onValueChange={(v) => setRoleFilter(v as "all" | GetAdminUsersRole)}
+          >
+            <SelectTrigger className="w-[200px] h-10" data-testid="users-role-filter">
+              <SelectValue placeholder={t("usersPage.filterRolePh")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t("usersPage.filterRoleAll")}</SelectItem>
+              <SelectItem value={GetAdminUsersRole.individual}>
+                {t("usersPage.filterRoleIndividual")}
+              </SelectItem>
+              <SelectItem value={GetAdminUsersRole.dealer}>
+                {t("usersPage.filterRoleDealer")}
+              </SelectItem>
+              <SelectItem value={GetAdminUsersRole.company}>
+                {t("usersPage.filterRoleCompany")}
+              </SelectItem>
+              <SelectItem value={GetAdminUsersRole.enterprise}>
+                {t("usersPage.filterRoleEnterprise")}
+              </SelectItem>
+              <SelectItem value={GetAdminUsersRole.financial_institution}>
+                {t("usersPage.filterRoleFi")}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          {canLinkFi ? (
+            <Button
+              type="button"
+              variant={
+                roleFilter === GetAdminUsersRole.financial_institution
+                  ? "default"
+                  : "outline"
+              }
+              size="sm"
+              className="h-10"
+              data-testid="users-fi-queue"
+              onClick={() =>
+                setRoleFilter(GetAdminUsersRole.financial_institution)
+              }
+            >
+              <Link2 className="w-4 h-4 me-2" />
+              {t("usersPage.fiQueueCta")}
+            </Button>
+          ) : null}
+          <div className="relative w-64">
+            <Search className="absolute start-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={t("usersPage.searchPh")}
+              className="pl-9"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
@@ -409,6 +489,9 @@ export default function UsersPage() {
               users.map((user: NonNullable<typeof users>[number]) => {
                 const isSelf = !!myId && user.id === myId;
                 const staffRole = (user.staff_role ?? "user") as StaffRole;
+                const isFiAccount = user.role === "financial_institution";
+                const fiInboxUnlinked =
+                  isFiAccount && !!user.id && !linkedOwnerIds.has(user.id);
                 const hasKyc =
                   !!user.company_details &&
                   (!!user.company_details.business_name ||
@@ -493,13 +576,22 @@ export default function UsersPage() {
                             {t("usersPage.kycPending")}
                           </Badge>
                         )}
+                        {fiInboxUnlinked && (
+                          <Badge
+                            variant="outline"
+                            className="bg-blue-500/10 text-blue-500 border-blue-500/30"
+                            data-testid={`fi-inbox-unlinked-${user.id}`}
+                          >
+                            {t("usersPage.fiInboxUnlinked")}
+                          </Badge>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>{user.listing_count}</TableCell>
                     {showActions && (
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {(canVerify || hasKyc) && (
+                          {(canVerify || hasKyc || (canLinkFi && isFiAccount)) && (
                             <Button
                               variant="outline"
                               size="sm"
