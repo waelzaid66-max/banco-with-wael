@@ -205,6 +205,13 @@ export async function createReview(
     );
   }
 
+  const [prior] = await db
+    .select({ id: sellerReviews.id })
+    .from(sellerReviews)
+    .where(and(eq(sellerReviews.sellerId, sellerId), eq(sellerReviews.authorId, authorId)))
+    .limit(1);
+  const isNewReview = !prior;
+
   const [row] = await db
     .insert(sellerReviews)
     .values({ sellerId, authorId, rating, body: text ?? null })
@@ -221,18 +228,21 @@ export async function createReview(
     .limit(1);
   const authorName = author?.name ?? "User";
 
-  await createNotification({
-    userId: sellerId,
-    type: "review",
-    title: `${authorName} قيّمك · rated you ${rating}★`,
-    body:
-      text && text.length > 0
-        ? text.length > 80
-          ? `${text.slice(0, 79)}…`
-          : text
-        : `تقييم جديد ${rating}★ · New ${rating}-star rating`,
-    data: { seller_id: sellerId, review_id: row.id, rating },
-  });
+  // Notify only on first review — re-rates must not storm the seller inbox.
+  if (isNewReview) {
+    await createNotification({
+      userId: sellerId,
+      type: "review",
+      title: `${authorName} قيّمك · rated you ${rating}★`,
+      body:
+        text && text.length > 0
+          ? text.length > 80
+            ? `${text.slice(0, 79)}…`
+            : text
+          : `تقييم جديد ${rating}★ · New ${rating}-star rating`,
+      data: { seller_id: sellerId, review_id: row.id, rating },
+    });
+  }
 
   // Reviews feed the dealer quality / trust metric — recompute off the hot path.
   recomputeDealerQuality(sellerId);

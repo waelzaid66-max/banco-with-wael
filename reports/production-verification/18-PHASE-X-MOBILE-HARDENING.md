@@ -74,13 +74,27 @@ Single implementation family: `SearchResultsMap` + `.web` + `mapHtml` (Leaflet).
 
 ---
 
+## Round 3 (precision continuation)
+
+| Defect | Severity | Status |
+|--------|----------|--------|
+| `market_country` accepted by Zod/SQL but dropped in `parsedFromSearchQuery` + mobile `buildSearchParams` | CRITICAL | **FIXED** — controller + `ParsedSearchQuery` + mobile emit |
+| `material` filter missing from `engineFilterFields` / SQL attribute builder | HIGH | **FIXED** — schema + `buildAttributeConditions` + controller wire |
+| Push mute across cold start left token registered (empty `tokenRef`) | HIGH | **FIXED** — re-resolve token + unregister while signed-in & muted |
+| React Query always "focused" on RN (background poll drain) | HIGH | **FIXED** — `ReactQueryFocusBridge` mounted under `QueryClientProvider` |
+| LanguageProvider rendered before AsyncStorage language ready | MED | **FIXED** — gate children on `ready` |
+| Review re-rate notified seller again | MED | **FIXED** — notify only when no prior row |
+| Booking/Listing clerk lookups ignored soft-delete | MED | **FIXED** — `isNull(users.deletedAt)` on booking + listing clerk resolves |
+
+---
+
 ## Verification evidence (this turn)
 
 | Gate | Result |
 |------|--------|
-| `node scripts/chain-integrity-gate.mjs` | **79/79 PASS** |
-| API vitest | **346 passed / 3 skipped** |
-| Mobile routing + accounts + icons + resilience | **32/32 PASS** (selected suite) |
+| `node scripts/chain-integrity-gate.mjs` | **pending re-run after Round 3** |
+| API vitest | **pending re-run after Round 3** |
+| Mobile routing + accounts + icons + resilience | **32/32 PASS** (selected suite; Round 2) |
 | SVG icons | Unchanged — registry only |
 
 ---
@@ -95,4 +109,4 @@ Cold/warm start, kill, memory pressure, rotation, large fonts, dark/light pixel 
 
 ## Decision
 
-**CONDITIONAL GO** for mobile code hardening continues. Phase X closed proven incident-class notification/auth/dynamic defects without inventing features or touching SVG icon architecture. MFA-on-delete step-up UI remains an explicit deferred residual.
+**CONDITIONAL GO** for mobile code hardening continues. Phase X closed proven incident-class notification/auth/dynamic/search defects without inventing features or touching SVG icon architecture. MFA-on-delete step-up UI remains an explicit deferred residual.

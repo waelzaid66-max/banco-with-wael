@@ -12,7 +12,7 @@ import { Platform } from "react-native";
 
 import { useSound } from "@/context/SoundContext";
 import { routeForNotification } from "@/lib/notificationRouting";
-import { setCachedPushToken } from "@/lib/pushTokenCache";
+import { getCachedPushToken, setCachedPushToken } from "@/lib/pushTokenCache";
 
 /**
  * Remote push wiring (Task #102).
@@ -151,11 +151,36 @@ export function PushNotificationsBridge() {
         .catch((err) => {
           console.warn("[Push] registration skipped:", err);
         });
-    } else if (tokenRef.current) {
-      const token = tokenRef.current;
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    // Mute (or signed-out): clear server registration. Cold start after kill
+    // leaves tokenRef empty even when AsyncStorage says muted — re-resolve
+    // the device token while still authenticated, then unregister.
+    if (isSignedIn && !notificationsEnabled) {
+      const known = tokenRef.current ?? getCachedPushToken();
       tokenRef.current = null;
       setCachedPushToken(null);
-      unregisterPushToken({ token }).catch(() => {});
+      const unregister = (token: string) => {
+        if (cancelled) return;
+        unregisterPushToken({ token }).catch(() => {});
+      };
+      if (known) {
+        unregister(known);
+      } else {
+        obtainExpoPushToken()
+          .then((token) => {
+            if (token) unregister(token);
+          })
+          .catch(() => {});
+      }
+    } else {
+      // Signed out — local clear only. Caller must unregister BEFORE signOut
+      // (otherwise this would 401 with a dead session).
+      tokenRef.current = null;
+      setCachedPushToken(null);
     }
 
     return () => {

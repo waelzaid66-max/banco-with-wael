@@ -10,7 +10,7 @@
  */
 import { db } from "@workspace/db";
 import { bookings, listings, listingAttributes, users } from "@workspace/db/schema";
-import { and, eq, inArray, lt, gt, desc, sql } from "drizzle-orm";
+import { and, eq, inArray, lt, gt, desc, sql, isNull } from "drizzle-orm";
 import { createNotification } from "./NotificationService";
 
 function codedError(code: string, message: string): Error {
@@ -85,7 +85,7 @@ export async function createBooking(
   const [user] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   if (!user) throw codedError("UNAUTHORIZED", "User not found");
 
@@ -207,7 +207,7 @@ export async function listBookings(
   const [me] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   if (!me) throw codedError("UNAUTHORIZED", "User not found");
 
@@ -276,7 +276,7 @@ export async function updateBookingStatus(
   const [me] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   if (!me) throw codedError("UNAUTHORIZED", "User not found");
 

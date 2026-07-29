@@ -40,6 +40,8 @@ function parsedFromSearchQuery(query: z.infer<typeof SearchQuerySchema>) {
   if (query.industry) parsed.industry = query.industry;
   if (query.origin_type) parsed.origin_type = query.origin_type;
   if (query.is_request !== undefined) parsed.is_request = query.is_request;
+  if (query.market_country) parsed.market_country = query.market_country;
+  if (query.material) parsed.material = query.material;
   // sort always has a value (schema default "recommended").
   parsed.sort = query.sort;
   return parsed;

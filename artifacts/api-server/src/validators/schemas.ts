@@ -870,6 +870,8 @@ const engineFilterFields = {
     .regex(/^[A-Za-z]{2}$/)
     .transform((s) => s.toUpperCase())
     .optional(),
+  // Commodity material (specs.material) — materials/raw_material browse.
+  material: z.string().trim().min(1).max(80).optional(),
 } as const;
 
 // Result ordering for the search results screen. `recommended` (default) and

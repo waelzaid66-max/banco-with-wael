@@ -742,6 +742,77 @@ const CHECKS = [
       /signOut/.test(s),
     why: "Lingering JWT after soft-delete must force client sign-out",
   },
+  {
+    id: "P-search-market-country-wired",
+    file: "artifacts/api-server/src/controllers/searchController.ts",
+    test: (s) =>
+      /query\.market_country/.test(s) &&
+      /parsed\.market_country/.test(s) &&
+      /query\.material/.test(s) &&
+      /parsed\.material/.test(s),
+    why: "Search controller must forward market_country + material into ParsedSearchQuery",
+  },
+  {
+    id: "P-search-material-sql",
+    file: "artifacts/api-server/src/services/SearchService.ts",
+    test: (s) =>
+      /market_country\?:/.test(s) &&
+      /f\.material/.test(s) &&
+      /specs\}->>'material'/.test(s),
+    why: "Search SQL must apply material + market_country attribute filters",
+  },
+  {
+    id: "P-mobile-emit-market-country",
+    file: "artifacts/banco-mobile/lib/searchParams.ts",
+    test: (s) =>
+      /market_country/.test(s) &&
+      /marketCountry\.trim\(\)/.test(s) &&
+      !/UI-only market selector/.test(s),
+    why: "Mobile buildSearchParams must emit market_country to the API",
+  },
+  {
+    id: "P-rq-focus-bridge",
+    file: "artifacts/banco-mobile/app/_layout.tsx",
+    test: (s) =>
+      /focusManager\.setFocused/.test(s) &&
+      /ReactQueryFocusBridge/.test(s) &&
+      /<ReactQueryFocusBridge\s*\/>/.test(s),
+    why: "React Query must pause background polls via AppState focus bridge",
+  },
+  {
+    id: "P-push-mute-cold-unregister",
+    file: "artifacts/banco-mobile/hooks/usePushNotifications.tsx",
+    test: (s) =>
+      /getCachedPushToken/.test(s) &&
+      /isSignedIn && !notificationsEnabled/.test(s) &&
+      /obtainExpoPushToken/.test(s) &&
+      /unregisterPushToken/.test(s),
+    why: "Muted push after cold start must still resolve token and unregister",
+  },
+  {
+    id: "P-review-notify-first-only",
+    file: "artifacts/api-server/src/services/ReviewService.ts",
+    test: (s) =>
+      /isNewReview/.test(s) &&
+      /Notify only on first review/.test(s) &&
+      /onConflictDoUpdate/.test(s),
+    why: "Re-rate must not storm seller with duplicate review notifications",
+  },
+  {
+    id: "P-booking-reject-tombstone",
+    file: "artifacts/api-server/src/services/BookingService.ts",
+    test: (s) => {
+      const create = s.slice(s.indexOf("export async function createBooking"));
+      const list = s.slice(s.indexOf("export async function listBookings"));
+      const update = s.slice(s.indexOf("export async function updateBookingStatus"));
+      return (
+        /isNull\(users\.deletedAt\)/.test(create) &&
+        /isNull\(users\.deletedAt\)/.test(list) &&
+        /isNull\(users\.deletedAt\)/.test(update)
+      );
+    },
+    why: "Booking mutations must reject soft-deleted clerk sessions",
+  },
 ];
 
 function main() {

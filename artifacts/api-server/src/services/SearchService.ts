@@ -54,6 +54,8 @@ export interface ParsedSearchQuery {
   origin_type?: string;
   // Commodity material (specs.material) — materials/raw_material browse only.
   material?: string;
+  // Market country (ISO-3166 alpha-2). Applied via buildAttributeConditions.
+  market_country?: string;
   // Near-me / radius search. All three are required together; when present,
   // results are limited to listings whose EFFECTIVE coordinate (the listing's
   // own override, else its area centroid) lies within radius_km of the point.
@@ -189,6 +191,7 @@ export function buildAttributeConditions(f: {
   max_year?: number;
   industry?: string;
   origin_type?: string;
+  material?: string;
   market_country?: string;
 }): SQL[] {
   const conditions: SQL[] = [];
@@ -259,6 +262,10 @@ export function buildAttributeConditions(f: {
     conditions.push(
       sql`COALESCE(${listingAttributes.originType}::text, ${listingAttributes.specs}->>'origin_type') = ${f.origin_type}`
     );
+  }
+  // Commodity material — materials browse only (specs.material free string).
+  if (f.material) {
+    conditions.push(sql`${listingAttributes.specs}->>'material' = ${f.material}`);
   }
   // brand / model are matched against the English listing title (titles are
   // canonical "<Brand> <Model> <Year>"), keeping the NLP `q` param free for

@@ -13,12 +13,12 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
 import { setAuthTokenGetter, setAuthFailureHandler, setBaseUrl } from "@workspace/api-client-react";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -119,6 +119,24 @@ function AuthTokenBridge() {
     return () => setAuthFailureHandler(null);
   }, [signOut]);
 
+  return null;
+}
+
+/**
+ * Pause React Query refetchInterval while the app is backgrounded. Without
+ * this bridge RN is always "focused", so message/notif/feed polls keep firing
+ * under memory pressure and drain battery/auth.
+ */
+function ReactQueryFocusBridge() {
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    const onChange = (status: string) => {
+      focusManager.setFocused(status === "active");
+    };
+    const sub = AppState.addEventListener("change", onChange);
+    onChange(AppState.currentState);
+    return () => sub.remove();
+  }, []);
   return null;
 }
 
@@ -384,6 +402,7 @@ export default function RootLayout() {
           <ClerkLoadGate waitExpired={clerkWaitExpired}>
             <QueryClientProvider client={queryClient}>
               <AuthTokenBridge />
+              <ReactQueryFocusBridge />
               <ThemeProvider>
                 <LanguageProvider>
                   <AuthGateProvider>

@@ -263,7 +263,7 @@ export async function createListing(
   const [user] = await db
     .select({ id: users.id, isVerified: users.isVerified, role: users.role })
     .from(users)
-    .where(eq(users.clerkId, userId))
+    .where(and(eq(users.clerkId, userId), isNull(users.deletedAt)))
     .limit(1);
 
   if (!user) {
@@ -517,7 +517,7 @@ export async function bumpListing(
   const [user] = await db
     .select({ id: users.id, isShadowBanned: users.isShadowBanned })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   if (!user) throw Object.assign(new Error("User not found"), { code: "UNAUTHORIZED" });
 
@@ -982,7 +982,7 @@ export async function getMyManagedListings(
   const [user] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   if (!user) return { items: [], cursor: undefined, has_next: false };
   return getDealerListings(user.id, options);
@@ -1101,7 +1101,7 @@ export async function updateListing(
   const [user] = await db
     .select({ id: users.id, isVerified: users.isVerified })
     .from(users)
-    .where(eq(users.clerkId, clerkUserId))
+    .where(and(eq(users.clerkId, clerkUserId), isNull(users.deletedAt)))
     .limit(1);
 
   if (!user) throw Object.assign(new Error("User not found"), { code: "UNAUTHORIZED" });
@@ -1376,7 +1376,7 @@ export async function deleteListing(
   const [user] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkUserId))
+    .where(and(eq(users.clerkId, clerkUserId), isNull(users.deletedAt)))
     .limit(1);
 
   if (!user) throw Object.assign(new Error("User not found"), { code: "UNAUTHORIZED" });
