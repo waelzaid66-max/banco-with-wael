@@ -148,6 +148,49 @@ test("home logo/sort menus stay touch-safe (no nested responder trap)", () => {
   );
 });
 
+test("account-type gate keeps Skip + dismiss-first anti-trap", () => {
+  const src = fs.readFileSync(PROFILE, "utf8");
+  assert.match(src, /testID="onboard-skip"/, "Skip control must remain (224ef4f)");
+  const fn = src.indexOf("const chooseAccountType");
+  assert.ok(fn >= 0);
+  const slice = src.slice(fn, fn + 1200);
+  const dismiss = slice.indexOf("setNeedsAccountType(false)");
+  const update = slice.indexOf("await updateMe({ account_type");
+  assert.ok(dismiss >= 0 && update >= 0, "chooseAccountType must dismiss + updateMe");
+  assert.ok(
+    dismiss < update,
+    "must dismiss gate BEFORE updateMe (df68258 anti-trap)",
+  );
+});
+
+test("search map restores locate-me control (fcd7d1c)", () => {
+  const html = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "mapHtml.ts"),
+    "utf8",
+  );
+  const map = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "SearchResultsMap.tsx"),
+    "utf8",
+  );
+  assert.match(html, /LocateControl/, "mapHtml must include LocateControl");
+  assert.match(html, /locate-btn/, "locate button styles required");
+  assert.match(map, /geolocationEnabled/, "WebView must enable geolocation");
+});
+
+test("European market countries have flags for compressed picker", () => {
+  const src = fs.readFileSync(
+    path.join(APP_ROOT, "constants", "countryCodes.ts"),
+    "utf8",
+  );
+  for (const iso of ["FR", "DE", "ES", "IT"]) {
+    assert.match(
+      src,
+      new RegExp(`iso:\\s*"${iso}"[\\s\\S]*?flag:\\s*"`),
+      `${iso} must have a flag emoji for MarketCountryButton`,
+    );
+  }
+});
+
 test("billing, wallet, and invoices are registered stack routes", () => {
   const src = fs.readFileSync(LAYOUT, "utf8");
   const routes = ["billing", "wallet", "invoices", "invoices/[id]"];

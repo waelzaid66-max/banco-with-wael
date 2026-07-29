@@ -218,6 +218,18 @@ export function buildMapHtml(
   .marker-cluster-small,
   .marker-cluster-medium,
   .marker-cluster-large { background: rgba(0,0,0,0.18); }
+  .locate-btn {
+    width: 40px; height: 40px; background: ${theme.card};
+    border: 1px solid ${theme.border}; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.35); cursor: pointer; margin-bottom: 8px;
+  }
+  .locate-btn svg { width: 20px; height: 20px; stroke: ${theme.primary}; }
+  .me-dot {
+    width: 16px; height: 16px; background: #2F80ED; border: 3px solid #fff;
+    border-radius: 50%; box-shadow: 0 0 0 6px rgba(47,128,237,0.25);
+    transform: translate(-50%, -50%);
+  }
 </style>
 </head>
 <body>
@@ -252,6 +264,32 @@ export function buildMapHtml(
       attribution: "&copy; OpenStreetMap"
     }).addTo(map);
 ${nearScript}
+
+    // "Locate me" control — centres the map on the device GPS and drops a
+    // you-are-here dot (fcd7d1c; wiped by 93b650b; restored surgically).
+    var meMarker = null;
+    var LocateControl = L.Control.extend({
+      options: { position: "bottomright" },
+      onAdd: function () {
+        var b = L.DomUtil.create("div", "locate-btn");
+        b.setAttribute("title", "My location");
+        b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke-linejoin="round" stroke-linecap="round" stroke-width="2"><circle cx="12" cy="12" r="7"></circle><line x1="12" y1="1" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="23"></line><line x1="1" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="23" y2="12"></line></svg>';
+        L.DomEvent.disableClickPropagation(b);
+        b.onclick = function () {
+          if (!navigator.geolocation) return;
+          navigator.geolocation.getCurrentPosition(function (p) {
+            var ll = [p.coords.latitude, p.coords.longitude];
+            map.setView(ll, 14);
+            if (meMarker) { map.removeLayer(meMarker); }
+            meMarker = L.marker(ll, {
+              icon: L.divIcon({ className: "", html: '<div class="me-dot"></div>', iconSize: [16, 16] })
+            }).addTo(map);
+          }, function () {}, { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 });
+        };
+        return b;
+      }
+    });
+    map.addControl(new LocateControl());
 
     // Layer 1 — the loaded page, shown instantly so the map is never blank.
     var group = L.markerClusterGroup

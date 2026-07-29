@@ -274,6 +274,7 @@ export function SearchResultsMap({
         onMessage={onMessage}
         javaScriptEnabled
         domStorageEnabled
+        geolocationEnabled
         androidLayerType="hardware"
         style={styles.web}
       />

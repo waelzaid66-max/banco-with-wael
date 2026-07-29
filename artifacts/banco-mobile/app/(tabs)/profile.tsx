@@ -566,21 +566,23 @@ export default function ProfileScreen() {
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSavingAccountType(true);
+    // Record the choice + dismiss the gate FIRST so a flaky/slow backend can never
+    // trap the user on this screen (df68258; wiped by 93b650b; restore incomplete).
+    try {
+      await user?.update({
+        unsafeMetadata: {
+          ...(user.unsafeMetadata ?? {}),
+          accountTypeChosen: true,
+        },
+      });
+      await user?.reload();
+    } catch (e) {
+      console.warn("[profile] accountTypeChosen flag save failed", e);
+    }
+    setNeedsAccountType(false);
     try {
       await updateMe({ account_type: type });
-      try {
-        await user?.update({
-          unsafeMetadata: {
-            ...(user.unsafeMetadata ?? {}),
-            accountTypeChosen: true,
-          },
-        });
-        await user?.reload();
-      } catch (e) {
-        console.warn("[profile] accountTypeChosen flag save failed", e);
-      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setNeedsAccountType(false);
       // Dealer / company / financial-institution all continue to the business
       // onboarding, where verification (KYC / bank approval) is collected.
       // FI must pass intent=fi so activity + account_type stay bank — never dealer.
@@ -590,6 +592,7 @@ export default function ProfileScreen() {
         router.push("/business/onboarding");
       }
     } catch {
+      // Gate already dismissed — sync is retryable from settings/profile.
       Alert.alert(t("profile.accountTypeError"));
     } finally {
       setSavingAccountType(false);
@@ -678,14 +681,39 @@ export default function ProfileScreen() {
 
   if (user && needsAccountType) {
     return (
-      <ScrollView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        contentContainerStyle={[
-          styles.authContent,
-          { paddingTop: topPad + 40 },
-        ]}
-        keyboardShouldPersistTaps="handled"
-      >
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Skip / dismiss — continues as individual (224ef4f; wiped by 93b650b) */}
+        <View
+          style={{
+            paddingTop: topPad + 6,
+            paddingHorizontal: 16,
+            paddingBottom: 4,
+            alignItems: isRTL ? "flex-start" : "flex-end",
+          }}
+        >
+          <Pressable
+            onPress={() => chooseAccountType("individual")}
+            disabled={savingAccountType}
+            hitSlop={12}
+            style={{ padding: 8 }}
+            testID="onboard-skip"
+          >
+            <AppText
+              style={{
+                color: colors.mutedForeground,
+                fontSize: 14,
+                fontFamily: "Inter_500Medium",
+              }}
+            >
+              {isRTL ? "تخطى" : "Skip"}
+            </AppText>
+          </Pressable>
+        </View>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={[styles.authContent, { paddingTop: 20 }]}
+          keyboardShouldPersistTaps="handled"
+        >
         <BancoLogo height={40} style={styles.authLogoImg} />
         <AppText style={[styles.authTitle, { color: colors.foreground }]}>
           {t("profile.chooseAccountType")}
@@ -816,6 +844,7 @@ export default function ProfileScreen() {
           )}
         </Pressable>
       </ScrollView>
+      </View>
     );
   }
 

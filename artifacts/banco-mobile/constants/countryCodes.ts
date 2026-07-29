@@ -45,6 +45,12 @@ export const PHONE_COUNTRIES: PhoneCountry[] = [
   { iso: "TR", dial: "90", flag: "🇹🇷", nameEn: "Türkiye", nameAr: "تركيا", sample: "5012345678", min: 10, max: 10, trunk: "0" },
   { iso: "GB", dial: "44", flag: "🇬🇧", nameEn: "United Kingdom", nameAr: "بريطانيا", sample: "7400123456", min: 10, max: 10, trunk: "0" },
   { iso: "US", dial: "1", flag: "🇺🇸", nameEn: "United States", nameAr: "أمريكا", sample: "2015550123", min: 10, max: 10 },
+  // Market-catalog Europe (MARKET_COUNTRIES FR/DE/ES/IT) — flags were missing so
+  // MarketCountryButton fell back to a globe icon in the compressed strip.
+  { iso: "FR", dial: "33", flag: "🇫🇷", nameEn: "France", nameAr: "فرنسا", sample: "612345678", min: 9, max: 9, trunk: "0" },
+  { iso: "DE", dial: "49", flag: "🇩🇪", nameEn: "Germany", nameAr: "ألمانيا", sample: "1512345678", min: 10, max: 11, trunk: "0" },
+  { iso: "ES", dial: "34", flag: "🇪🇸", nameEn: "Spain", nameAr: "إسبانيا", sample: "612345678", min: 9, max: 9 },
+  { iso: "IT", dial: "39", flag: "🇮🇹", nameEn: "Italy", nameAr: "إيطاليا", sample: "3123456789", min: 9, max: 10 },
 ];
 
 export const DEFAULT_COUNTRY: PhoneCountry = PHONE_COUNTRIES[0];
