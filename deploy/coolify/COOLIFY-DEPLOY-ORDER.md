@@ -12,7 +12,7 @@ Required:
 - `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` (EAS builds)
 - `SESSION_SECRET`
 - `PAYMENT_CONFIG_ENCRYPTION_KEY`
-- Object storage — **required for Coolify**: `OBJECT_STORAGE_PROVIDER=s3` plus S3 endpoint/keys (`OBJECT_STORAGE_*`). If unset, API defaults to Replit sidecar `:1106` and media uploads fail.
+- Object storage — **required for Coolify**: `OBJECT_STORAGE_PROVIDER=s3` plus S3 endpoint/keys (`OBJECT_STORAGE_*`). If unset in production (non-Replit), the API **refuses to start**. `OBJECT_STORAGE_PROVIDER=replit` is also rejected when Coolify/Cloud Run/AWS markers are present.
 
 Optional:
 

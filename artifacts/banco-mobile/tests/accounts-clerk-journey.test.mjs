@@ -87,6 +87,8 @@ test("object storage warns when provider unset (Replit default trap)", () => {
   const src = read("artifacts/api-server/src/lib/objectStorageProvider.ts");
   assert.match(src, /OBJECT_STORAGE_PROVIDER is unset/);
   assert.match(src, /OBJECT_STORAGE_PROVIDER=s3/);
+  assert.match(src, /unset in production/);
+  assert.match(src, /forbidden on Coolify/);
 });
 
 test("routerOrigin prefers PUBLIC_APP_URL over bare replit.com", () => {
