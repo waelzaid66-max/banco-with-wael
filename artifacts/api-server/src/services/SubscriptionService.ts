@@ -643,6 +643,25 @@ export async function settleSubscriptionIntentByWebhook(
 
   try {
     const settled = await db.transaction(async (tx) => {
+      const [locked] = await tx
+        .select({ id: users.id, deletedAt: users.deletedAt })
+        .from(users)
+        .where(eq(users.id, userId))
+        .for("update")
+        .limit(1);
+      if (!locked || locked.deletedAt) {
+        await tx
+          .update(paymentIntents)
+          .set({ status: "failed" })
+          .where(
+            and(
+              eq(paymentIntents.id, intent.id),
+              inArray(paymentIntents.status, ["pending", "failed"]),
+            ),
+          );
+        return null;
+      }
+
       await applyTransaction(tx, {
         userId,
         type: "wallet_topup",
@@ -705,6 +724,8 @@ export async function settleSubscriptionIntentByWebhook(
         balanceAfter: charge.balanceAfter,
       };
     });
+
+    if (!settled) return;
 
     schedulePaymentSuccess({
       userId,

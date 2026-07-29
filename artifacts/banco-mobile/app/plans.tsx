@@ -165,7 +165,8 @@ export default function PlansScreen() {
         setPayState("done");
         load();
       } else if (polled.status === "pending") {
-        subscribeAttemptKeyRef.current = null;
+        // Keep the attempt key — clearing it here opened a second Paymob
+        // checkout; a second paid intent can strand money against active-sub.
         setPayState("pending");
         load();
       } else {

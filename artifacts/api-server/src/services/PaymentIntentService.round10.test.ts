@@ -209,4 +209,33 @@ describe("Failed top-up resume preserves Paymob order bind (Round 12)", () => {
       (bound.metadata as Record<string, unknown>).checkout_url,
     ).toBeTruthy();
   });
+
+  it("merges paymob_order_id without wiping checkout_url (Round 13)", async () => {
+    const userId = await createUser();
+    uids.push(userId);
+    const key = randomUUID();
+    await db.insert(paymentIntents).values({
+      id: key,
+      userId,
+      amount: "90.00",
+      method: "fawry",
+      purpose: "wallet_topup",
+      status: "pending",
+      providerRef: "intention_x",
+      metadata: {
+        provider: "paymob",
+        checkout_url: "https://accept.paymob.com/checkout/keep-me",
+        provider_opening: true,
+      },
+    });
+    expect(await claimPaymobOrderForIntent(key, "order_merge_r13")).toBe("ok");
+    const [row] = await db
+      .select()
+      .from(paymentIntents)
+      .where(eq(paymentIntents.id, key));
+    const meta = row.metadata as Record<string, unknown>;
+    expect(meta.paymob_order_id).toBe("order_merge_r13");
+    expect(meta.checkout_url).toBe("https://accept.paymob.com/checkout/keep-me");
+    expect(meta.provider_opening).toBe(true);
+  });
 });

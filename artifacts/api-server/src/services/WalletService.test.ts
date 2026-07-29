@@ -2,7 +2,7 @@ import { describe, it, expect, afterAll } from "vitest";
 import { eq, inArray } from "drizzle-orm";
 import { applyTransaction, getWalletBalance } from "./WalletService";
 import { db, createUser, deleteUsers, uniq, randomUUID } from "../__tests__/helpers";
-import { transactions, invoices } from "@workspace/db/schema";
+import { transactions, invoices, users } from "@workspace/db/schema";
 
 const uids: string[] = [];
 async function user(walletBalance = "0"): Promise<string> {
@@ -87,6 +87,24 @@ describe("applyTransaction (the money chokepoint)", () => {
     ).rejects.toMatchObject({ code: "CONFLICT" });
     // Balance must still reflect only the original top-up — no free debit/credit.
     expect(Number(await getWalletBalance(uid))).toBe(600);
+  });
+
+  it("refuses to credit a soft-deleted owner (Round 13)", async () => {
+    const uid = await user("0");
+    await db
+      .update(users)
+      .set({ deletedAt: new Date() })
+      .where(eq(users.id, uid));
+    await expect(
+      db.transaction((tx) =>
+        applyTransaction(tx, {
+          userId: uid,
+          type: "wallet_topup",
+          direction: "credit",
+          amount: 100,
+        }),
+      ),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 
   it("rolls back the balance and ledger when the surrounding transaction aborts", async () => {

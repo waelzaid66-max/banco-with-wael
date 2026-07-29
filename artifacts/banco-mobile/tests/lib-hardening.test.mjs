@@ -544,3 +544,29 @@ test("web SearchResultsMap hosts server clusters via BANCO_MAP", () => {
   assert.match(webMap, /serverTotal/);
   assert.match(webMap, /onOpenListingId/);
 });
+
+test("wallet keeps top-up attempt key while intent is pending (Round 13)", () => {
+  const src = fs.readFileSync(path.join(APP_ROOT, "app", "wallet.tsx"), "utf8");
+  const idx = src.indexOf('polled.status === "pending"');
+  assert.ok(idx > 0, "wallet must handle pending poll status");
+  const block = src.slice(idx, idx + 280);
+  assert.match(block, /setPayState\("pending"\)/);
+  assert.doesNotMatch(
+    block,
+    /topupAttemptKeyRef\.current\s*=\s*null/,
+    "clearing the attempt key on pending opens a second Paymob checkout",
+  );
+});
+
+test("plans keeps subscribe attempt key while intent is pending (Round 13)", () => {
+  const src = fs.readFileSync(path.join(APP_ROOT, "app", "plans.tsx"), "utf8");
+  const idx = src.indexOf('polled.status === "pending"');
+  assert.ok(idx > 0, "plans must handle pending poll status");
+  const block = src.slice(idx, idx + 280);
+  assert.match(block, /setPayState\("pending"\)/);
+  assert.doesNotMatch(
+    block,
+    /subscribeAttemptKeyRef\.current\s*=\s*null/,
+    "clearing the attempt key on pending opens a second Paymob checkout",
+  );
+});

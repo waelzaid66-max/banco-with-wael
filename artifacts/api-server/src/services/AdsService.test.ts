@@ -174,6 +174,54 @@ describe("boostListing (ad spend protection)", () => {
     expect(inv).toHaveLength(1);
     expect(Number(inv[0].amount)).toBeCloseTo(remainder, 2);
   });
+
+  it("rejects cross-listing reuse of the same boost idempotency key (Round 13)", async () => {
+    const { sellerId, listingId } = await dealerWithListing("0");
+    const plan = await resolveEffectivePlan(sellerId, "dealer");
+    await db
+      .update(users)
+      .set({ walletBalance: (Number(plan.boostPrice) * 2).toFixed(2) })
+      .where(eq(users.id, sellerId));
+    const listingB = randomUUID();
+    await db.insert(listings).values({
+      id: listingB,
+      userId: sellerId,
+      title: uniq("boostB"),
+      category: "car",
+      basePriceCash: "500000",
+      location: "Cairo",
+    });
+    const key = uniq("boostkey");
+    await boostListing(listingId, sellerId, "dealer", "featured", 7, key);
+    await expect(
+      boostListing(listingB, sellerId, "dealer", "featured", 7, key),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    // Second listing must not have received a free ad.
+    const adsB = await db.select().from(ads).where(eq(ads.listingId, listingB));
+    expect(adsB).toHaveLength(0);
+  });
+
+  it("rejects cross-tenant collision on the global boost idempotency key (Round 13)", async () => {
+    const a = await dealerWithListing("0");
+    const b = await dealerWithListing("0");
+    const plan = await resolveEffectivePlan(a.sellerId, "dealer");
+    await db
+      .update(users)
+      .set({ walletBalance: plan.boostPrice })
+      .where(eq(users.id, a.sellerId));
+    await db
+      .update(users)
+      .set({ walletBalance: plan.boostPrice })
+      .where(eq(users.id, b.sellerId));
+    const key = uniq("sharedboost");
+    await boostListing(a.listingId, a.sellerId, "dealer", "featured", 7, key);
+    await expect(
+      boostListing(b.listingId, b.sellerId, "dealer", "featured", 7, key),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    expect(Number(await getWalletBalance(b.sellerId))).toBe(Number(plan.boostPrice));
+    const adsB = await db.select().from(ads).where(eq(ads.listingId, b.listingId));
+    expect(adsB).toHaveLength(0);
+  });
 });
 
 afterAll(async () => {

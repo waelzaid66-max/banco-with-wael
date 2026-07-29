@@ -343,7 +343,12 @@ export async function verifyPaymobWebhook(params: {
   const success =
     obj.success === true &&
     obj.error_occured === false &&
-    obj.pending !== true;
+    obj.pending !== true &&
+    // Signed outcome flags — HMAC includes these but older code ignored them,
+    // so refunded/voided/auth-only webhooks could still settle wallet credit.
+    obj.is_refunded !== true &&
+    obj.is_voided !== true &&
+    !(obj.is_auth === true && obj.is_capture !== true);
 
   const rawAmount = obj.amount_cents;
   const amountCents =

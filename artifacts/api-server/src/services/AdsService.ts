@@ -5,7 +5,7 @@ import { validateImpression, type ImpressionContext } from "./AbuseService";
 import { applyTransaction } from "./WalletService";
 import { consumePromoCredit } from "./PromoAdCreditService";
 import { resolveEffectivePlan, type UserRole } from "./PlanService";
-import { isUniqueViolation, notFound, toMoney } from "../lib/billing";
+import { isUniqueViolation, notFound, toMoney, conflict } from "../lib/billing";
 import { publicVisibilityConditions } from "../lib/feedVisibility";
 
 /**
@@ -57,7 +57,9 @@ export async function boostListing(
   idempotencyKey?: string | null,
 ): Promise<BoostResult> {
   // Replay guard: a boost retried with the same key returns the original ad and
-  // never re-consumes promo or re-charges the wallet.
+  // never re-consumes promo or re-charges the wallet — but ONLY when the
+  // fingerprint (listing + ad type) matches. Key reuse across listings must not
+  // silently return a free "success" for the wrong inventory.
   if (idempotencyKey) {
     const [existing] = await db
       .select({
@@ -73,6 +75,9 @@ export async function boostListing(
       )
       .limit(1);
     if (existing) {
+      if (existing.listingId !== listingId || existing.adType !== adType) {
+        throw conflict("Idempotency key already used for a different boost");
+      }
       return toBoostResult(existing, durationDays, "0.00", "0.00");
     }
   }
@@ -182,7 +187,9 @@ export async function boostListing(
     });
   } catch (err) {
     // Concurrent boost with the same key: the unique constraint aborted the
-    // second insert before any charge. Return the ad the winner created.
+    // second insert before any charge. Return the ad the winner created — but
+    // ONLY for this seller + matching listing/adType. A cross-tenant key
+    // collision must never look like a free successful boost.
     if (idempotencyKey && isUniqueViolation(err)) {
       const [existing] = await db
         .select({
@@ -190,11 +197,19 @@ export async function boostListing(
           listingId: ads.listingId,
           adType: ads.adType,
           expiresAt: ads.expiresAt,
+          sellerId: ads.sellerId,
         })
         .from(ads)
         .where(eq(ads.boostIdempotencyKey, idempotencyKey))
         .limit(1);
       if (existing) {
+        if (
+          existing.sellerId !== sellerId ||
+          existing.listingId !== listingId ||
+          existing.adType !== adType
+        ) {
+          throw conflict("Idempotency key already used for a different boost");
+        }
         return toBoostResult(existing, durationDays, "0.00", "0.00");
       }
     }

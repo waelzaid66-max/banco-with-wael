@@ -25,9 +25,15 @@ echo "==> [2/6] Building images"
 docker compose -f "$COMPOSE" --env-file "$ENV_FILE" build
 
 echo "==> [3/6] Applying database schema (drizzle push)"
-# Runs the schema push inside a one-off api-image container that has the toolchain.
-docker compose -f "$COMPOSE" --env-file "$ENV_FILE" run --rm --no-deps \
-  -e DATABASE_URL api node -e "console.log('DB reachable check');" || true
+# db-migrate.sh reads DATABASE_URL from the host shell. Compose --env-file does
+# NOT export into this process — without this, AWS CD fails (or silently uses a
+# stale ambient DATABASE_URL) while .env.production already has the real value.
+DATABASE_URL="$(grep -E '^DATABASE_URL=' "$ENV_FILE" | head -n1 | cut -d= -f2-)"
+if [ -z "${DATABASE_URL}" ]; then
+  echo "FATAL: DATABASE_URL missing from $ENV_FILE after SSM render" >&2
+  exit 1
+fi
+export DATABASE_URL
 deploy/aws/scripts/db-migrate.sh
 
 echo "==> [4/6] Starting services"

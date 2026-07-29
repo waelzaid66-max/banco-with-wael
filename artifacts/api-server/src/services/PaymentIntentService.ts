@@ -396,6 +396,8 @@ export async function claimPaymobOrderForIntent(
       sql`SELECT pg_advisory_xact_lock(hashtext(${`paymob_order:${providerOrderId}`}))`,
     );
 
+    // Lock the intent row so two different orders cannot both observe
+    // paymob_order_id=null and last-write-wins a full metadata replace.
     const [intent] = await tx
       .select({
         id: paymentIntents.id,
@@ -403,6 +405,7 @@ export async function claimPaymobOrderForIntent(
       })
       .from(paymentIntents)
       .where(eq(paymentIntents.id, intentId))
+      .for("update")
       .limit(1);
     if (!intent) return "not_found";
 
@@ -417,7 +420,7 @@ export async function claimPaymobOrderForIntent(
       return "intent_order_mismatch";
     }
 
-    const [conflict] = await tx
+    const [conflictRow] = await tx
       .select({ id: paymentIntents.id })
       .from(paymentIntents)
       .where(
@@ -427,14 +430,20 @@ export async function claimPaymobOrderForIntent(
         ),
       )
       .limit(1);
-    if (conflict) return "order_bound_elsewhere";
+    if (conflictRow) return "order_bound_elsewhere";
 
     if (existingOrder === providerOrderId) return "ok";
 
-    meta.paymob_order_id = providerOrderId;
+    // Merge only the order id — never replace the whole JSONB blob (would wipe
+    // checkout_url / provider_opening written by concurrent resume paths).
     await tx
       .update(paymentIntents)
-      .set({ metadata: meta })
+      .set({
+        metadata: sql`
+          COALESCE(${paymentIntents.metadata}, '{}'::jsonb)
+          || jsonb_build_object('paymob_order_id', ${providerOrderId}::text)
+        `,
+      })
       .where(eq(paymentIntents.id, intentId));
     return "ok";
   });
@@ -523,6 +532,8 @@ export async function settleTopupIntent(
   }
 
   // Soft-deleted owners must not receive wallet credit from late PSP webhooks.
+  // Pre-check avoids opening a useless txn; the credit UPDATE also requires
+  // deleted_at IS NULL (WalletService) so a delete that races this window fails closed.
   const [owner] = await db
     .select({ id: users.id })
     .from(users)
@@ -543,6 +554,26 @@ export async function settleTopupIntent(
 
   try {
     const applied = await db.transaction(async (tx) => {
+      // Re-check under row lock: delete between pre-check and credit must not credit.
+      const [locked] = await tx
+        .select({ id: users.id, deletedAt: users.deletedAt })
+        .from(users)
+        .where(eq(users.id, intent.userId))
+        .for("update")
+        .limit(1);
+      if (!locked || locked.deletedAt) {
+        await tx
+          .update(paymentIntents)
+          .set({ status: "failed" })
+          .where(
+            and(
+              eq(paymentIntents.id, intent.id),
+              inArray(paymentIntents.status, ["pending", "failed"]),
+            ),
+          );
+        return { replayed: true, abortedDeleted: true as const };
+      }
+
       const result = await applyTransaction(tx, {
         userId: intent.userId,
         type: "wallet_topup",
@@ -575,6 +606,10 @@ export async function settleTopupIntent(
 
       return result;
     });
+
+    if ("abortedDeleted" in applied && applied.abortedDeleted) {
+      return;
+    }
 
     if (!applied.replayed) {
       schedulePaymentSuccess({

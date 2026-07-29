@@ -1281,6 +1281,64 @@ const CHECKS = [
       /status: 503/.test(s),
     why: "Production web without Clerk key must fail closed on protected routes",
   },
+  {
+    id: "P-paymob-reject-refund-void-auth",
+    file: "artifacts/api-server/src/lib/paymentProvider.ts",
+    test: (s) =>
+      /is_refunded !== true/.test(s) &&
+      /is_voided !== true/.test(s) &&
+      /is_auth === true && obj\.is_capture !== true/.test(s),
+    why: "Paymob success must reject refunded/voided/auth-only signed outcomes",
+  },
+  {
+    id: "P-wallet-credit-blocks-deleted",
+    file: "artifacts/api-server/src/services/WalletService.ts",
+    test: (s) =>
+      /Soft-deleted owners must never receive credits/.test(s) &&
+      /isNull\(users\.deletedAt\)/.test(s),
+    why: "Ledger credits must require deleted_at IS NULL",
+  },
+  {
+    id: "P-paymob-claim-for-update-merge",
+    file: "artifacts/api-server/src/services/PaymentIntentService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function claimPaymobOrderForIntent"));
+      return (
+        /\.for\("update"\)/.test(fn) &&
+        /jsonb_build_object\('paymob_order_id'/.test(fn)
+      );
+    },
+    why: "Paymob order claim must lock intent and merge order id into metadata",
+  },
+  {
+    id: "P-boost-idempotency-fingerprint",
+    file: "artifacts/api-server/src/services/AdsService.ts",
+    test: (s) =>
+      /Idempotency key already used for a different boost/.test(s) &&
+      /existing\.sellerId !== sellerId/.test(s),
+    why: "Boost key replay must fingerprint seller/listing/adType (no cross-tenant free boost)",
+  },
+  {
+    id: "P-mobile-keep-topup-key-pending",
+    file: "artifacts/banco-mobile/app/wallet.tsx",
+    test: (s) => {
+      const pending = s.slice(s.indexOf('polled.status === "pending"'));
+      const block = pending.slice(0, pending.indexOf("} else {"));
+      return (
+        /setPayState\("pending"\)/.test(block) &&
+        !/topupAttemptKeyRef\.current = null/.test(block)
+      );
+    },
+    why: "Mobile must not clear top-up attempt key while intent is still pending",
+  },
+  {
+    id: "P-aws-migrate-exports-database-url",
+    file: "deploy/aws/scripts/deploy.sh",
+    test: (s) =>
+      /DATABASE_URL="\$\(grep -E '\^DATABASE_URL='/.test(s) &&
+      /export DATABASE_URL/.test(s),
+    why: "AWS deploy must export SSM-rendered DATABASE_URL before db-migrate",
+  },
 ];
 
 function main() {

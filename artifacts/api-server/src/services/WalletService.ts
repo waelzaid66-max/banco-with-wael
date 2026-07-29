@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { users, transactions, invoices } from "@workspace/db/schema";
-import { and, desc, eq, gte, lt, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lt, lte, or, sql } from "drizzle-orm";
 import {
   generateInvoiceNumber,
   insufficientFunds,
@@ -148,10 +148,12 @@ export async function applyTransaction(
     }
     balanceAfter = rows[0].balance;
   } else {
+    // Soft-deleted owners must never receive credits (defense in depth for
+    // settlement races where deletedAt flips between the outer check and here).
     const rows = await tx
       .update(users)
       .set({ walletBalance: sql`${users.walletBalance} + ${money}::numeric` })
-      .where(eq(users.id, input.userId))
+      .where(and(eq(users.id, input.userId), isNull(users.deletedAt)))
       .returning({ balance: users.walletBalance });
     if (rows.length === 0) {
       throw notFound("Wallet owner not found");

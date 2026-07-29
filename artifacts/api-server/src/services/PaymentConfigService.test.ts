@@ -8,7 +8,7 @@ import {
 } from "vitest";
 import { createHmac } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { db, createUser, deleteUsers } from "../__tests__/helpers";
+import { db, createUser, deleteUsers, randomUUID } from "../__tests__/helpers";
 import {
   paymentProviderConfig,
   type PaymentProviderConfigRow,
@@ -340,5 +340,42 @@ describe("verifyPaymobWebhook reads fresh DB config", () => {
     expect((await verifyPaymobWebhook({ obj, providedHmac: "deadbeef" })).valid).toBe(
       false
     );
+  });
+});
+
+describe("verifyPaymobWebhook settlement outcome flags (Round 13)", () => {
+  it("marks refunded, voided, and auth-only payloads as success=false", async () => {
+    await upsertConfig(
+      {
+        enabled: true,
+        publicKey: "pub",
+        secretKey: "sk",
+        hmacSecret: "hmac_round13",
+      },
+      adminId,
+    );
+    const intentId = randomUUID();
+    const base = buildWebhookObj(intentId);
+
+    for (const [label, patch] of [
+      ["refunded", { is_refunded: true }],
+      ["voided", { is_voided: true }],
+      ["auth_only", { is_auth: true, is_capture: false }],
+    ] as const) {
+      const obj = { ...base, ...patch };
+      const hmac = sign(obj, "hmac_round13");
+      const v = await verifyPaymobWebhook({ obj, providedHmac: hmac });
+      expect(v.valid, label).toBe(true);
+      expect(v.success, label).toBe(false);
+    }
+
+    // Capture after auth is a real settlement event.
+    const captured = { ...base, is_auth: true, is_capture: true };
+    const ok = await verifyPaymobWebhook({
+      obj: captured,
+      providedHmac: sign(captured, "hmac_round13"),
+    });
+    expect(ok.valid).toBe(true);
+    expect(ok.success).toBe(true);
   });
 });
