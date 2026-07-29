@@ -94,6 +94,10 @@ services:
     build:
       context: .
       dockerfile: deploy/coolify/Dockerfile.api
+      args:
+        # F1 deploy pin — Coolify often exposes SOURCE_COMMIT; prefer explicit GIT_SHA.
+        GIT_SHA: ${GIT_SHA:-${SOURCE_COMMIT:-}}
+        BUILD_ID: ${BUILD_ID:-${SOURCE_COMMIT:-}}
     image: banco-api:latest
     restart: always
     depends_on:
@@ -133,12 +137,22 @@ services:
       PAYMOB_SECRET_KEY: ${PAYMOB_SECRET_KEY:-}
       PAYMOB_HMAC_SECRET: ${PAYMOB_HMAC_SECRET:-}
       PAYMOB_INTEGRATION_IDS: ${PAYMOB_INTEGRATION_IDS:-}
-      # Object storage (optional — required for media uploads)
+      # Object storage (optional — required for media uploads).
+      # Hostinger VPS has no IAM role — static keys must reach the container when
+      # OBJECT_STORAGE_PROVIDER=s3 (see objectStorage.s3 + COOLIFY deploy docs).
       OBJECT_STORAGE_PROVIDER: ${OBJECT_STORAGE_PROVIDER:-}
       AWS_REGION: ${AWS_REGION:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       S3_BUCKET: ${S3_BUCKET:-}
       PUBLIC_OBJECT_SEARCH_PATHS: ${PUBLIC_OBJECT_SEARCH_PATHS:-}
       PRIVATE_OBJECT_DIR: ${PRIVATE_OBJECT_DIR:-}
+      # Coolify markers — objectStorageProvider forbids replit when these are set.
+      COOLIFY_URL: ${COOLIFY_URL:-}
+      COOLIFY_FQDN: ${COOLIFY_FQDN:-}
+      # Runtime deploy pin (also baked via build args when Coolify supplies them).
+      GIT_SHA: ${GIT_SHA:-${SOURCE_COMMIT:-}}
+      BUILD_ID: ${BUILD_ID:-${SOURCE_COMMIT:-}}
       # Observability
       ERROR_ALERT_WEBHOOK: ${ERROR_ALERT_WEBHOOK:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -188,6 +202,8 @@ services:
       NODE_ENV: production
       # Runtime-only secrets for Clerk (server-side only, never in the browser bundle)
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
+      # Kill-switch (web-plug-config) — ops can unplug without image rebuild.
+      WEB_PLUG_ENABLED: ${WEB_PLUG_ENABLED:-true}
     healthcheck:
       test: ["CMD", "node", "-e",
         "fetch('http://127.0.0.1:3000/api/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
@@ -232,6 +248,7 @@ services:
       PORT: "3000"
       NODE_ENV: production
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
+      WEB_PLUG_ENABLED: ${WEB_PLUG_ENABLED:-true}
     healthcheck:
       test: ["CMD", "node", "-e",
         "fetch('http://127.0.0.1:3000/api/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
