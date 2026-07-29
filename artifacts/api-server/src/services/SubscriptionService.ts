@@ -471,8 +471,13 @@ export async function startSubscription(input: StartSubscriptionInput) {
     .update(paymentIntents)
     .set({
       metadata: sql`
-        COALESCE(${paymentIntents.metadata}, '{}'::jsonb)
-        || '{"provider":"paymob","provider_opening":true}'::jsonb
+        (COALESCE(${paymentIntents.metadata}, '{}'::jsonb)
+          - 'provider_opening_at')
+        || jsonb_build_object(
+          'provider', 'paymob',
+          'provider_opening', true,
+          'provider_opening_at', (extract(epoch from now()))::text
+        )
       `,
     })
     .where(
@@ -481,7 +486,11 @@ export async function startSubscription(input: StartSubscriptionInput) {
         eq(paymentIntents.status, "pending"),
         isNull(paymentIntents.providerRef),
         sql`COALESCE(${paymentIntents.metadata}->>'checkout_url', '') = ''`,
-        sql`COALESCE(${paymentIntents.metadata}->>'provider_opening', '') <> 'true'`,
+        sql`(
+          COALESCE(${paymentIntents.metadata}->>'provider_opening', '') <> 'true'
+          OR COALESCE((${paymentIntents.metadata}->>'provider_opening_at')::double precision, 0)
+            < extract(epoch from now()) - 120
+        )`,
       ),
     )
     .returning({ id: paymentIntents.id });
@@ -530,7 +539,10 @@ export async function startSubscription(input: StartSubscriptionInput) {
     .update(paymentIntents)
     .set({
       providerRef: charge.providerRef,
-      metadata: checkoutBoundPaymentMetadataSql(charge.checkoutUrl),
+      metadata: checkoutBoundPaymentMetadataSql(
+        charge.checkoutUrl,
+        charge.providerOrderId,
+      ),
     })
     .where(eq(paymentIntents.id, intentId))
     .returning();
@@ -801,6 +813,72 @@ export async function markSubscriptionIntentFailed(intentId: string): Promise<vo
   if (updated.length > 0) {
     await notifyPaymentIntentFailed(intentId);
   }
+}
+
+/**
+ * Paymob refund/void after subscription settlement. Wallet net for PSP subscribe
+ * is usually zero (credit then charge); the real entitlement is the active row —
+ * expire it immediately and durable-flag the intent. Idempotent via metadata.
+ */
+export async function reverseSubscriptionAfterPspReversal(
+  intentId: string,
+  opts: {
+    reason: "refunded" | "voided";
+    providerTxnId?: string | null;
+  },
+): Promise<void> {
+  const [intent] = await db
+    .select()
+    .from(paymentIntents)
+    .where(eq(paymentIntents.id, intentId))
+    .limit(1);
+  if (!intent || intent.purpose !== "subscription") return;
+
+  if (intent.status === "pending" || intent.status === "failed") {
+    await markSubscriptionIntentFailed(intentId);
+    return;
+  }
+  if (intent.status !== "completed") return;
+
+  const meta =
+    intent.metadata && typeof intent.metadata === "object" && !Array.isArray(intent.metadata)
+      ? ({ ...(intent.metadata as Record<string, unknown>) } as Record<string, unknown>)
+      : ({} as Record<string, unknown>);
+  if (meta.psp_reversed === true) return;
+
+  await db.transaction(async (tx) => {
+    // Expire any active subscription created from this settlement charge key.
+    const chargeKey = `${intent.id}:charge`;
+    const [chargeTx] = await tx
+      .select({ id: transactions.id })
+      .from(transactions)
+      .where(eq(transactions.idempotencyKey, chargeKey))
+      .limit(1);
+    if (chargeTx) {
+      await tx
+        .update(subscriptions)
+        .set({
+          status: "cancelled",
+          cancelledAt: new Date(),
+          autoRenew: false,
+          expiresAt: new Date(),
+        })
+        .where(
+          and(
+            eq(subscriptions.userId, intent.userId),
+            eq(subscriptions.transactionId, chargeTx.id),
+            eq(subscriptions.status, "active"),
+          ),
+        );
+    }
+    meta.psp_reversed = true;
+    meta.psp_reversal_reason = opts.reason;
+    if (opts.providerTxnId) meta.psp_reversal_txn_id = opts.providerTxnId;
+    await tx
+      .update(paymentIntents)
+      .set({ metadata: meta })
+      .where(eq(paymentIntents.id, intent.id));
+  });
 }
 
 /* ── cancel ────────────────────────────────────────────── */

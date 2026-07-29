@@ -377,5 +377,16 @@ describe("verifyPaymobWebhook settlement outcome flags (Round 13)", () => {
     });
     expect(ok.valid).toBe(true);
     expect(ok.success).toBe(true);
+    expect(ok.isRefunded).toBe(false);
+    expect(ok.isVoided).toBe(false);
+
+    const refunded = { ...base, is_refunded: true, success: true };
+    const rv = await verifyPaymobWebhook({
+      obj: refunded,
+      providedHmac: sign(refunded, "hmac_round13"),
+    });
+    expect(rv.valid).toBe(true);
+    expect(rv.success).toBe(false);
+    expect(rv.isRefunded).toBe(true);
   });
 });

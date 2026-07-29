@@ -275,8 +275,14 @@ async function fetchOffers(
       created_at: rfqOffers.createdAt,
     })
     .from(rfqOffers)
-    .leftJoin(users, eq(rfqOffers.supplierId, users.id))
-    .where(and(...conditions))
+    .innerJoin(users, eq(rfqOffers.supplierId, users.id))
+    .where(
+      and(
+        ...conditions,
+        isNull(users.deletedAt),
+        sql`${users.isShadowBanned} IS NOT TRUE`,
+      ),
+    )
     .orderBy(desc(rfqOffers.createdAt));
 
   return rows.map((o) => ({
@@ -307,6 +313,16 @@ export async function submitOffer(
   input: SubmitOfferInput
 ): Promise<{ id: string; submitted: boolean }> {
   const supplierId = await resolveUserId(clerkId);
+  const [supplierRow] = await db
+    .select({ isShadowBanned: users.isShadowBanned })
+    .from(users)
+    .where(eq(users.id, supplierId))
+    .limit(1);
+  if (supplierRow?.isShadowBanned === true) {
+    throw Object.assign(new Error("Account cannot submit offers"), {
+      code: "FORBIDDEN",
+    });
+  }
 
   const [rfq] = await db
     .select({
@@ -421,6 +437,24 @@ export async function acceptOffer(
       .limit(1);
     if (!locked || locked.status !== "open") {
       throw Object.assign(new Error("This RFQ is no longer open"), { code: "CONFLICT" });
+    }
+
+    // Supplier may have been deleted/shadow-banned after offering.
+    const [supplier] = await tx
+      .select({
+        id: users.id,
+        deletedAt: users.deletedAt,
+        isShadowBanned: users.isShadowBanned,
+      })
+      .from(users)
+      .where(eq(users.id, offer.supplierId))
+      .for("update")
+      .limit(1);
+    if (!supplier || supplier.deletedAt != null || supplier.isShadowBanned === true) {
+      throw Object.assign(
+        new Error("This offer is no longer available"),
+        { code: "CONFLICT" },
+      );
     }
 
     const awarded = await tx

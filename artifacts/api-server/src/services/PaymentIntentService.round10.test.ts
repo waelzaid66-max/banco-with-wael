@@ -239,3 +239,49 @@ describe("Failed top-up resume preserves Paymob order bind (Round 12)", () => {
     expect(meta.provider_opening).toBe(true);
   });
 });
+
+describe("PSP post-settlement reversal (Round 14)", () => {
+  it("debits a completed top-up on refund webhook path (idempotent)", async () => {
+    const { reverseTopupAfterPspReversal } = await import("./PaymentIntentService");
+    const { applyTransaction, getWalletBalance } = await import("./WalletService");
+    const userId = await createUser();
+    uids.push(userId);
+    const key = randomUUID();
+
+    await db.transaction((tx) =>
+      applyTransaction(tx, {
+        userId,
+        type: "wallet_topup",
+        direction: "credit",
+        amount: 200,
+        idempotencyKey: key,
+        referenceType: "payment_intent",
+        referenceId: key,
+      }),
+    );
+    await db.insert(paymentIntents).values({
+      id: key,
+      userId,
+      amount: "200.00",
+      method: "fawry",
+      purpose: "wallet_topup",
+      status: "completed",
+      providerRef: "intention_paid",
+      completedAt: new Date(),
+      metadata: { provider: "paymob", paymob_order_id: "ord_r14" },
+    });
+
+    await reverseTopupAfterPspReversal(key, { reason: "refunded", providerTxnId: "txn_r" });
+    expect(Number(await getWalletBalance(userId))).toBe(0);
+
+    // Idempotent second delivery.
+    await reverseTopupAfterPspReversal(key, { reason: "refunded", providerTxnId: "txn_r" });
+    expect(Number(await getWalletBalance(userId))).toBe(0);
+
+    const [row] = await db
+      .select()
+      .from(paymentIntents)
+      .where(eq(paymentIntents.id, key));
+    expect((row.metadata as Record<string, unknown>).psp_reversed).toBe(true);
+  });
+});

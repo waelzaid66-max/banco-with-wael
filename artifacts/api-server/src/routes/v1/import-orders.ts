@@ -6,7 +6,7 @@ import {
   updateImportOrderStageHandler,
   cancelImportOrderHandler,
 } from "../../controllers/importOrderController";
-import { requireAuth, requireAdminRole } from "../../middlewares/authGuard";
+import { requireAuth, requireAdminRole, requirePermission } from "../../middlewares/authGuard";
 import {
   publicRateLimiter,
   writeRateLimiter,
@@ -18,7 +18,15 @@ router.post("/", writeRateLimiter, requireAuth, createImportOrderHandler);
 // "/mine" must be registered before "/:id" so it is not captured as an id.
 router.get("/mine", publicRateLimiter, requireAuth, listMyImportOrdersHandler);
 router.get("/:id", publicRateLimiter, requireAuth, getImportOrderHandler);
-router.patch("/:id/stage", writeRateLimiter, requireAuth, requireAdminRole, updateImportOrderStageHandler);
+// Stage/quote changes are commercial ops — moderators/support must not advance them.
+router.patch(
+  "/:id/stage",
+  writeRateLimiter,
+  requireAuth,
+  requireAdminRole,
+  requirePermission("manage_financing"),
+  updateImportOrderStageHandler,
+);
 router.post("/:id/cancel", writeRateLimiter, requireAuth, cancelImportOrderHandler);
 
 export default router;

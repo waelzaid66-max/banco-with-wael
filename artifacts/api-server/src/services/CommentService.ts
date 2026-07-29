@@ -46,7 +46,13 @@ export async function listComments(listingId: string): Promise<CommentDTO[]> {
     .select({ id: listings.id, sellerId: listings.userId })
     .from(listings)
     .innerJoin(users, eq(users.id, listings.userId))
-    .where(and(eq(listings.id, listingId), ...publicVisibilityConditions()))
+    .where(
+      and(
+        eq(listings.id, listingId),
+        eq(listings.status, "active"),
+        ...publicVisibilityConditions(),
+      ),
+    )
     .limit(1);
   if (!listing) throw codedError("NOT_FOUND", "Listing not found");
 
@@ -112,13 +118,18 @@ export async function createComment(
   const rate = await checkCommentRate({ userId: authorId });
   if (!rate.ok) throw codedError("RATE_LIMITED", "Too many comments, please slow down");
 
-  // Block posting onto suppressed inventory (flagged listing / shadow-banned
-  // seller) — same guard as the read path.
+  // Block posting onto non-active or suppressed inventory — same guard as reads.
   const [listing] = await db
     .select({ id: listings.id, title: listings.title, sellerId: listings.userId })
     .from(listings)
     .innerJoin(users, eq(users.id, listings.userId))
-    .where(and(eq(listings.id, listingId), ...publicVisibilityConditions()))
+    .where(
+      and(
+        eq(listings.id, listingId),
+        eq(listings.status, "active"),
+        ...publicVisibilityConditions(),
+      ),
+    )
     .limit(1);
   if (!listing) throw codedError("NOT_FOUND", "Listing not found");
 

@@ -1339,6 +1339,72 @@ const CHECKS = [
       /export DATABASE_URL/.test(s),
     why: "AWS deploy must export SSM-rendered DATABASE_URL before db-migrate",
   },
+  {
+    id: "P-paymob-post-settlement-reversal",
+    file: "artifacts/api-server/src/controllers/paymentsController.ts",
+    test: (s) =>
+      /isRefunded \|\| verification\.isVoided/.test(s) &&
+      /reverseTopupAfterPspReversal/.test(s) &&
+      /reverseSubscriptionAfterPspReversal/.test(s),
+    why: "Refund/void webhooks must reverse completed settlements, not no-op mark-failed",
+  },
+  {
+    id: "P-provider-opening-lease",
+    file: "artifacts/api-server/src/services/PaymentIntentService.ts",
+    test: (s) =>
+      /provider_opening_at/.test(s) &&
+      /PROVIDER_OPENING_LEASE_SEC/.test(s),
+    why: "provider_opening CAS must expire so crashed openers are not permanent locks",
+  },
+  {
+    id: "P-lead-listing-for-update",
+    file: "artifacts/api-server/src/services/LeadService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function contactLead"));
+      return (
+        /SELECT id FROM listings WHERE id = \$\{input\.listingId\}::uuid FOR UPDATE/.test(fn) &&
+        /publicVisibilityConditions\(\)/.test(fn)
+      );
+    },
+    why: "CPL contact must re-lock listing visibility inside the charge transaction",
+  },
+  {
+    id: "P-rfq-accept-supplier-tombstone",
+    file: "artifacts/api-server/src/services/RfqService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function acceptOffer"));
+      return (
+        /isShadowBanned/.test(fn) &&
+        /deletedAt/.test(fn) &&
+        /This offer is no longer available/.test(fn)
+      );
+    },
+    why: "RFQ award must fail closed on deleted/shadow-banned suppliers",
+  },
+  {
+    id: "P-import-stage-permission",
+    file: "artifacts/api-server/src/routes/v1/import-orders.ts",
+    test: (s) =>
+      /requirePermission\("manage_financing"\)/.test(s) &&
+      /updateImportOrderStageHandler/.test(s),
+    why: "Import stage/quote changes must require manage_financing, not bare admin role",
+  },
+  {
+    id: "P-comments-active-listing",
+    file: "artifacts/api-server/src/services/CommentService.ts",
+    test: (s) =>
+      /eq\(listings\.status, "active"\)/.test(s) &&
+      /publicVisibilityConditions\(\)/.test(s),
+    why: "Public comments must require active + public visibility",
+  },
+  {
+    id: "P-paymob-prebind-intention-order",
+    file: "artifacts/api-server/src/lib/paymentProvider.ts",
+    test: (s) =>
+      /intention_order_id/.test(s) &&
+      /providerOrderId/.test(s),
+    why: "Intention create must capture order id when Paymob returns it (first-bind TOFU)",
+  },
 ];
 
 function main() {

@@ -6,10 +6,12 @@ import {
   findIntentIdByPaymobOrderId,
   settleTopupIntent,
   markTopupIntentFailed,
+  reverseTopupAfterPspReversal,
 } from "../services/PaymentIntentService";
 import {
   settleSubscriptionIntentByWebhook,
   markSubscriptionIntentFailed,
+  reverseSubscriptionAfterPspReversal,
 } from "../services/SubscriptionService";
 
 /**
@@ -115,6 +117,21 @@ export async function paymobWebhookHandler(req: Request, res: Response) {
         });
       } else {
         await settleTopupIntent(intentId, {
+          providerTxnId: verification.providerTxnId,
+        });
+      }
+    } else if (verification.isRefunded || verification.isVoided) {
+      // Post-settlement refund/void: mark-failed is a no-op on completed intents
+      // and would leave wallet credit / active subscription in place.
+      const reason = verification.isRefunded ? "refunded" : "voided";
+      if (meta.purpose === "subscription") {
+        await reverseSubscriptionAfterPspReversal(intentId, {
+          reason,
+          providerTxnId: verification.providerTxnId,
+        });
+      } else {
+        await reverseTopupAfterPspReversal(intentId, {
+          reason,
           providerTxnId: verification.providerTxnId,
         });
       }

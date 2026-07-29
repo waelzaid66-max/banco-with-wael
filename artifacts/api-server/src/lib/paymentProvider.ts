@@ -68,6 +68,12 @@ export interface ProviderChargeResult {
   providerRef: string;
   /** Hosted Unified Checkout URL the buyer is sent to. */
   checkoutUrl: string;
+  /**
+   * Paymob order id when the Intention API returns it (e.g. intention_order_id).
+   * Pre-binding this at checkout creation closes first-webhook TOFU remaps that
+   * rely on unsigned merchant_order_id before any claim exists.
+   */
+  providerOrderId?: string | null;
 }
 
 const HTTP_TIMEOUT_MS = 15_000;
@@ -211,6 +217,9 @@ export async function createProviderCharge(
   const data = (await resp.json().catch(() => null)) as {
     client_secret?: string;
     id?: string | number;
+    intention_order_id?: string | number;
+    order_id?: string | number;
+    order?: { id?: string | number };
   } | null;
 
   if (!data?.client_secret || data.id == null) {
@@ -225,7 +234,12 @@ export async function createProviderCharge(
     `${cfg.apiBase}/unifiedcheckout/?publicKey=${encodeURIComponent(cfg.publicKey)}` +
     `&clientSecret=${encodeURIComponent(data.client_secret)}`;
 
-  return { providerRef: String(data.id), checkoutUrl };
+  const rawOrder =
+    data.intention_order_id ?? data.order_id ?? data.order?.id ?? null;
+  const providerOrderId =
+    rawOrder != null && String(rawOrder).length > 0 ? String(rawOrder) : null;
+
+  return { providerRef: String(data.id), checkoutUrl, providerOrderId };
 }
 
 /* ── webhook signature verification ─────────────────────── */
@@ -280,6 +294,10 @@ export interface WebhookVerification {
   providerOrderId: string | null;
   /** Settlement outcome — true only for a fully successful transaction. */
   success: boolean;
+  /** Signed refund flag — completed intents need ledger reversal, not mark-failed. */
+  isRefunded: boolean;
+  /** Signed void flag — same reversal path as refund. */
+  isVoided: boolean;
   /** Paymob transaction id (for audit/metadata). */
   providerTxnId: string | null;
   /** Amount in piasters reported by the provider (tamper check). */
@@ -302,6 +320,8 @@ export async function verifyPaymobWebhook(params: {
     intentId: null,
     providerOrderId: null,
     success: false,
+    isRefunded: false,
+    isVoided: false,
     providerTxnId: null,
     amountCents: null,
     currency: null,
@@ -373,6 +393,8 @@ export async function verifyPaymobWebhook(params: {
     intentId,
     providerOrderId,
     success,
+    isRefunded: obj.is_refunded === true,
+    isVoided: obj.is_voided === true,
     providerTxnId: obj.id != null ? String(obj.id) : null,
     amountCents,
     currency,

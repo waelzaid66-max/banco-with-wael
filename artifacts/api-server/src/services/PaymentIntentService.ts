@@ -13,6 +13,7 @@ import {
   isUniqueViolation,
   notFound,
   toMoney,
+  isInsufficientFunds,
 } from "../lib/billing";
 import { schedulePaymentSuccess, notifyPaymentIntentFailed } from "./BillingNotificationService";
 
@@ -62,6 +63,7 @@ export function resumeFailedPaymentMetadataSql() {
     (COALESCE(${paymentIntents.metadata}, '{}'::jsonb)
       - 'checkout_url'
       - 'provider_opening'
+      - 'provider_opening_at'
       - 'charge_error')
     || '{"provider":"paymob","resumed":true}'::jsonb
   `;
@@ -73,16 +75,35 @@ export function chargeErrorPaymentMetadataSql() {
     (COALESCE(${paymentIntents.metadata}, '{}'::jsonb)
       - 'checkout_url'
       - 'provider_opening'
+      - 'provider_opening_at'
       - 'resumed')
     || '{"provider":"paymob","charge_error":true}'::jsonb
   `;
 }
 
 /** Bind hosted checkout URL without erasing `paymob_order_id`. */
-export function checkoutBoundPaymentMetadataSql(checkoutUrl: string) {
+export function checkoutBoundPaymentMetadataSql(
+  checkoutUrl: string,
+  providerOrderId?: string | null,
+) {
+  if (providerOrderId) {
+    return sql`
+      (COALESCE(${paymentIntents.metadata}, '{}'::jsonb)
+        - 'provider_opening'
+        - 'provider_opening_at'
+        - 'charge_error'
+        - 'resumed')
+      || jsonb_build_object(
+        'provider', 'paymob',
+        'checkout_url', ${checkoutUrl}::text,
+        'paymob_order_id', ${providerOrderId}::text
+      )
+    `;
+  }
   return sql`
     (COALESCE(${paymentIntents.metadata}, '{}'::jsonb)
       - 'provider_opening'
+      - 'provider_opening_at'
       - 'charge_error'
       - 'resumed')
     || jsonb_build_object(
@@ -294,7 +315,10 @@ export async function createTopupIntent(
     .update(paymentIntents)
     .set({
       providerRef: charge.providerRef,
-      metadata: checkoutBoundPaymentMetadataSql(charge.checkoutUrl),
+      metadata: checkoutBoundPaymentMetadataSql(
+        charge.checkoutUrl,
+        charge.providerOrderId,
+      ),
     })
     .where(eq(paymentIntents.id, intentId))
     .returning();
@@ -305,15 +329,23 @@ export async function createTopupIntent(
 
 /**
  * CAS: mark intent as opening a PSP checkout. Returns true only for the winner.
- * Requires pending + no providerRef + no checkout_url + not already opening.
+ * Requires pending + no providerRef + no checkout_url + not already opening
+ * (or the opening lease expired — crash recovery without a schema migration).
  */
+const PROVIDER_OPENING_LEASE_SEC = 120;
+
 async function claimProviderOpening(intentId: string): Promise<boolean> {
   const [row] = await db
     .update(paymentIntents)
     .set({
       metadata: sql`
-        COALESCE(${paymentIntents.metadata}, '{}'::jsonb)
-        || '{"provider":"paymob","provider_opening":true}'::jsonb
+        (COALESCE(${paymentIntents.metadata}, '{}'::jsonb)
+          - 'provider_opening_at')
+        || jsonb_build_object(
+          'provider', 'paymob',
+          'provider_opening', true,
+          'provider_opening_at', (extract(epoch from now()))::text
+        )
       `,
     })
     .where(
@@ -322,7 +354,11 @@ async function claimProviderOpening(intentId: string): Promise<boolean> {
         eq(paymentIntents.status, "pending"),
         isNull(paymentIntents.providerRef),
         sql`COALESCE(${paymentIntents.metadata}->>'checkout_url', '') = ''`,
-        sql`COALESCE(${paymentIntents.metadata}->>'provider_opening', '') <> 'true'`,
+        sql`(
+          COALESCE(${paymentIntents.metadata}->>'provider_opening', '') <> 'true'
+          OR COALESCE((${paymentIntents.metadata}->>'provider_opening_at')::double precision, 0)
+            < extract(epoch from now()) - ${PROVIDER_OPENING_LEASE_SEC}
+        )`,
       ),
     )
     .returning({ id: paymentIntents.id });
@@ -640,5 +676,83 @@ export async function markTopupIntentFailed(intentId: string): Promise<void> {
 
   if (updated.length > 0) {
     await notifyPaymentIntentFailed(intentId);
+  }
+}
+
+/**
+ * Paymob refund/void after a successful settlement. Pending intents are simply
+ * marked failed. Completed top-ups are reversed with a ledger debit keyed by
+ * `${id}:psp_reversal` (idempotent). If the wallet cannot cover the full
+ * reversal (buyer already spent the credit), we durable-flag shortfall for ops
+ * and still ACK — never leave Paymob retrying forever without a local record.
+ */
+export async function reverseTopupAfterPspReversal(
+  intentId: string,
+  opts: {
+    reason: "refunded" | "voided";
+    providerTxnId?: string | null;
+  },
+): Promise<void> {
+  const [intent] = await db
+    .select()
+    .from(paymentIntents)
+    .where(eq(paymentIntents.id, intentId))
+    .limit(1);
+  if (!intent || intent.purpose !== "wallet_topup") return;
+
+  if (intent.status === "pending" || intent.status === "failed") {
+    await markTopupIntentFailed(intentId);
+    return;
+  }
+  if (intent.status !== "completed") return;
+
+  const meta =
+    intent.metadata && typeof intent.metadata === "object" && !Array.isArray(intent.metadata)
+      ? ({ ...(intent.metadata as Record<string, unknown>) } as Record<string, unknown>)
+      : ({} as Record<string, unknown>);
+  if (meta.psp_reversed === true) return;
+
+  const reversalKey = `${intent.id}:psp_reversal`;
+  try {
+    await db.transaction(async (tx) => {
+      await applyTransaction(tx, {
+        userId: intent.userId,
+        type: "refund",
+        direction: "debit",
+        amount: intent.amount,
+        paymentMethod: intent.method as LedgerPaymentMethod,
+        referenceType: "payment_intent",
+        referenceId: intent.id,
+        description: `PSP ${opts.reason} reversal for top-up`,
+        idempotencyKey: reversalKey,
+        metadata: {
+          psp_reversal: opts.reason,
+          provider_txn_id: opts.providerTxnId ?? null,
+        },
+      });
+      meta.psp_reversed = true;
+      meta.psp_reversal_reason = opts.reason;
+      if (opts.providerTxnId) meta.psp_reversal_txn_id = opts.providerTxnId;
+      await tx
+        .update(paymentIntents)
+        .set({ metadata: meta })
+        .where(eq(paymentIntents.id, intent.id));
+    });
+  } catch (err) {
+    if (isInsufficientFunds(err)) {
+      meta.psp_reversal_shortfall = true;
+      meta.psp_reversal_reason = opts.reason;
+      await db
+        .update(paymentIntents)
+        .set({ metadata: meta })
+        .where(eq(paymentIntents.id, intent.id));
+      console.error(
+        "[Paymob reversal] wallet shortfall — ops must recover",
+        intentId,
+        opts.reason,
+      );
+      return;
+    }
+    throw err;
   }
 }
