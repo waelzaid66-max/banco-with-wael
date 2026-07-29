@@ -39,7 +39,7 @@ const nodeModules = fs.existsSync(path.join(ROOT, "node_modules"));
 
 const criticalAreas = {
   authentication_clerk_email_google_apple: "PASS",
-  authentication_facebook_login: "N/A — not a product provider (social icon only)",
+  authentication_facebook_login: "N/A — tenant forbids invent; see audit/production-gates/FACEBOOK-LOGIN-AND-FI-AUTOCREATE-SECURITY-2026-07-21-AR.md",
   profile_me_role_demote_skip_menu: "PASS",
   profile_cover_rationale: "PASS",
   media_upload_create_update_503: "PASS",
@@ -68,7 +68,7 @@ const fingerprint = {
   commit: HEAD,
   describe: DESCRIBE,
   productionAccepted: false,
-  iteration: "R-STATUS-CACHE-SOLD-ACCOUNT-SOT",
+  iteration: "R-MEDIA-IDENTITY-SECURITY-GATES",
   criticalAreas,
   validations: {
     chainGate: gate.ok ? "PASS" : "FAIL",
@@ -77,17 +77,18 @@ const fingerprint = {
     nodeModulesPresent: nodeModules,
   },
   lastRepair: {
-    id: "REP-STATUS-CACHE-SOLD-2026-07-21",
+    id: "REP-MEDIA-IDENTITY-GATES-2026-07-21",
     summary:
-      "Status mutation cache bump, mine/dealer mark-sold, accountTypeChosen after /me, promote refresh",
+      "Dealer edit media, feed-safe video posters, poster claim assert, Expo BANCO/com.bancooom.app; FB+FI gates documented not invented",
     files: [
-      "artifacts/banco-mobile/app/(tabs)/profile.tsx",
-      "artifacts/banco-mobile/app/listings/mine.tsx",
-      "artifacts/banco-mobile/app/listing/[id].tsx",
-      "artifacts/banco-mobile/app/messages/[id].tsx",
-      "artifacts/dealer-os/src/pages/listings.tsx",
-      "artifacts/dealer-os/src/i18n/strings.ts",
-      "scripts/chain-integrity-gate.mjs",
+      "artifacts/dealer-os/src/components/listing-form-sheet.tsx",
+      "artifacts/api-server/src/services/SearchService.ts",
+      "artifacts/api-server/src/services/ListingService.ts",
+      "artifacts/banco-mobile/app/listings/create.tsx",
+      "artifacts/banco-mobile/components/listings/ListingMediaEditor.tsx",
+      "artifacts/banco-mobile/components/MediaGallery.tsx",
+      "artifacts/banco-mobile/app.json",
+      "audit/production-gates/",
     ],
   },
 };
@@ -108,7 +109,7 @@ w(
   "ProductionState.md",
   `${hdr("Production State")}
 ## Current iteration
-**R-STATUS-CACHE-SOLD-ACCOUNT-SOT** — status/sold cache sync, mine+dealer mark-sold, accountTypeChosen after /me.
+**R-MEDIA-IDENTITY-SECURITY-GATES** — dealer edit media, video poster (no frame extract), Expo canonical identity; FB/FI not invented.
 
 ## Critical area board
 ${Object.entries(criticalAreas)
@@ -224,6 +225,9 @@ w(
 | KI-BANCOOOM-EMPTY | OPEN/FAIL | GCP mirror empty |
 | KI-F1-LIVE | OPEN/BLOCKED | no live readyz from this VM |
 | KI-WEB-EXPORT-RUNTIME | OPEN/BLOCKED | full \`expo export\` web not executed here (needs deps) |
+| KI-EXPO-PACKAGE-MIGRATE | OPEN/VERIFY | package now \`com.bancooom.app\` — Laptop must confirm no prior store listing under \`com.bancoboom.app\` |
+| KI-FB-LOGIN | N/A CLOSED | Not a product provider — tenant forbids invent |
+| KI-FI-AUTOCREATE | N/A CLOSED | Intentionally never — admin link only |
 `,
 );
 
@@ -234,9 +238,11 @@ w(
 - **C-WEB-BASE** ClerkLoadGate + font wait + getToken.catch + exportWebBuild + serve web SPA
 - **EDIT-MEDIA / BUYER-PHONE / LANDING-CLERK-DOMAIN / ACCOUNT-TYPE-SYNC** (prior tip)
 - **EDIT-LISTING-INVALIDATE** / **MOBILE-ARCHIVE** / **POST-SIGNUP-NO-NAV** (prior)
-- **STATUS-MUTATION-CACHE** — mine/detail/chat bump + invalidate after status/delete/promote
-- **MINE-MARK-SOLD** + **DEALER-OS-MARK-SOLD** via existing \`updateListing({ status: "sold" })\`
-- **ACCOUNT-TYPE-CHOSEN-AFTER-ME** — Clerk flag only after \`/me\` success; reopen gate on fail
+- **STATUS-MUTATION-CACHE** / **MARK-SOLD** / **ACCOUNT-TYPE-CHOSEN-AFTER-ME** (prior)
+- **DEALER-EDIT-MEDIA** — hydrate + PATCH \`UpdateListingBody.media\`
+- **VIDEO-POSTER** — feed \`pickListingThumbnailUrl\` + client sibling-image poster + claim assert (no frame extract)
+- **EXPO-IDENTITY** — name \`BANCO\`, package \`com.bancooom.app\`, scheme \`bancooom\`
+- **FB Login / FI auto-create** — documented security gates; **not invented** (correct)
 `,
 );
 
@@ -244,13 +250,14 @@ w(
   "PendingRepairs.md",
   `${hdr("Pending Repairs")}
 1. Laptop/owner: \`CONFIRM_BANCOO_FORCE=YES\` + \`./scripts/publish-bancoo-production-main.sh\` (bancoo MAIN)
-2. Laptop: \`pnpm install --frozen-lockfile\` + \`laptop-validation-matrix.mjs --with-install\`
+2. Laptop: \`pnpm install --frozen-lockfile\` + typecheck/lint/build + \`laptop-validation-matrix.mjs --with-install\`
 3. Owner: sync bancooom + deploy + paste readyz (F1)
-4. Laptop: device N2 QA + audit paste \`PASTE-CURSOR-LAPTOP-AGENT-WAVE-STATUS-SOLD-SOT-AR.md\`
-5. Optional MED: dealer-os edit-media hydrate (UpdateListingBody.media already live on mobile)
-6. Optional: VIDEO-POSTER-SCHEMA-UNWIRED — do **not** invent frame extract
-7. Optional: EXPO-APP-IDENTITY-DRIFT — owner branding decision
-8. Runtime prove web export on Replit after deps available
+4. Laptop: device N2 QA + audit \`PASTE-CURSOR-LAPTOP-AGENT-WAVE-MEDIA-IDENTITY-GATES-AR.md\`
+5. Laptop: confirm no store listing already under \`com.bancoboom.app\` before shipping new package id
+6. Owner-only if desired: enable Facebook in Clerk+Meta (do **not** stub)
+7. Owner-only: FI org create/link ops runbook execution (no auto-create)
+8. Optional: Expo slug rename \`bancoboom\` → brand slug (EAS continuity decision)
+9. Runtime prove web export on Replit after deps available
 `,
 );
 

@@ -42,7 +42,34 @@ type MediaItem = {
   preview: string;
   url: string | null;
   status: "uploading" | "done" | "error";
+  /** Hydrated videos from mobile keep type; dealer uploads are always image. */
+  type?: "image" | "video";
+  thumbnail_url?: string | null;
 };
+
+function revokePreview(url: string) {
+  if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+}
+
+/** Build Update/Create media[] — videos reuse first image URL as poster (no frame extract). */
+function buildMediaPayload(items: MediaItem[]) {
+  const done = items.filter((m) => m.status === "done" && m.url);
+  const firstImage = done.find((m) => (m.type ?? "image") === "image");
+  const firstImageIdx = done.findIndex((m) => (m.type ?? "image") === "image");
+  return done.map((m, i) => {
+    const type = m.type ?? "image";
+    const base = {
+      type: type as "image" | "video",
+      url: m.url as string,
+      is_thumbnail: type === "image" && i === firstImageIdx,
+    };
+    if (type === "video") {
+      const poster = m.thumbnail_url || firstImage?.url;
+      return poster ? { ...base, thumbnail_url: poster } : base;
+    }
+    return base;
+  });
+}
 
 type SpecOption = { value: string; label: string };
 type SpecField = { key: string; label: string; numeric?: boolean; options?: SpecOption[] };
@@ -176,7 +203,7 @@ export function ListingFormSheet({
   }, [media]);
   useEffect(
     () => () => {
-      mediaRef.current.forEach((m) => URL.revokeObjectURL(m.preview));
+      mediaRef.current.forEach((m) => revokePreview(m.preview));
     },
     [],
   );
@@ -192,7 +219,7 @@ export function ListingFormSheet({
       setLocation("");
       setSpecs({});
       setOriginalSpecs({});
-      mediaRef.current.forEach((m) => URL.revokeObjectURL(m.preview));
+      mediaRef.current.forEach((m) => revokePreview(m.preview));
       setMedia([]);
       setPayments([]);
     }
@@ -223,6 +250,21 @@ export function ListingFormSheet({
       if (v !== null && v !== undefined && typeof v !== "object") asStrings[k] = String(v);
     }
     setSpecs(asStrings);
+    // Hydrate media for edit — UpdateListingBody.media is a live contract
+    // (mobile already PATCHes it). Preserve video rows; dealer upload stays images-only.
+    if (Array.isArray(detail.media)) {
+      mediaRef.current.forEach((m) => revokePreview(m.preview));
+      setMedia(
+        detail.media.map((m, i) => ({
+          id: m.id ?? `existing-${i}`,
+          preview: m.url,
+          url: m.url,
+          status: "done" as const,
+          type: m.type === "video" ? "video" : "image",
+          thumbnail_url: m.thumbnail_url ?? null,
+        })),
+      );
+    }
   }, [detailData]);
 
   const fields = SPEC_FIELDS[category];
@@ -265,10 +307,17 @@ export function ListingFormSheet({
           ? crypto.randomUUID()
           : `${Date.now()}-${Math.random()}`;
       const preview = URL.createObjectURL(file);
-      setMedia((m) => [...m, { id, preview, url: null, status: "uploading" }]);
+      setMedia((m) => [
+        ...m,
+        { id, preview, url: null, status: "uploading", type: "image" },
+      ]);
       try {
         const url = await uploadImageFile(file);
-        setMedia((m) => m.map((it) => (it.id === id ? { ...it, url, status: "done" } : it)));
+        setMedia((m) =>
+          m.map((it) =>
+            it.id === id ? { ...it, url, status: "done", type: "image" } : it,
+          ),
+        );
       } catch (err) {
         setMedia((m) => m.map((it) => (it.id === id ? { ...it, status: "error" } : it)));
         toast({
@@ -283,7 +332,7 @@ export function ListingFormSheet({
   const removeMedia = (id: string) => {
     setMedia((m) => {
       const it = m.find((x) => x.id === id);
-      if (it) URL.revokeObjectURL(it.preview);
+      if (it) revokePreview(it.preview);
       return m.filter((x) => x.id !== id);
     });
   };
@@ -294,9 +343,11 @@ export function ListingFormSheet({
       toast({ title: err, variant: "destructive" });
       return;
     }
-    const mediaArr = media
-      .filter((m) => m.status === "done" && m.url)
-      .map((m, i) => ({ type: "image" as const, url: m.url as string, is_thumbnail: i === 0 }));
+    const mediaArr = buildMediaPayload(media);
+    if (mediaArr.length === 0 || !mediaArr.some((m) => m.type === "image")) {
+      toast({ title: "At least one photo is required", variant: "destructive" });
+      return;
+    }
 
     const numOrUndef = (s: string) => (s !== "" && isFinite(Number(s)) ? Number(s) : undefined);
     const paymentArr = payments
@@ -345,12 +396,19 @@ export function ListingFormSheet({
       toast({ title: err, variant: "destructive" });
       return;
     }
+    const mediaArr = buildMediaPayload(media);
+    if (mediaArr.length === 0 || !mediaArr.some((m) => m.type === "image")) {
+      toast({ title: "At least one photo is required", variant: "destructive" });
+      return;
+    }
     const body: UpdateListingBody = {
       title: title.trim(),
       description: description.trim(),
       location: location.trim(),
       // Preserve unknown spec keys: PATCH may replace the whole specs object.
       specs: { ...originalSpecs, ...buildSpecsObject() },
+      // Replace-all media (same contract as mobile ListingMediaEditor).
+      media: mediaArr,
     };
     // Only send price when the user actually changed it (price_raw is lossy).
     if (price !== initialPrice) {
@@ -490,143 +548,159 @@ export function ListingFormSheet({
               </div>
             </div>
 
-            {/* Media + financing are create-only (not in UpdateListingBody). */}
-            {!isEdit && (
-              <>
-                <div>
-                  <Separator className="bg-border" />
-                  <div className="flex items-center justify-between mt-4 mb-3">
-                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                      <ImageIcon className="w-4 h-4" /> Photos
-                    </h3>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="border-border h-7"
-                      onClick={() => fileInputRef.current?.click()}
-                      data-testid="form-add-media"
+            {/* Photos: create + edit (UpdateListingBody.media). Financing: create-only. */}
+            <div>
+              <Separator className="bg-border" />
+              <div className="flex items-center justify-between mt-4 mb-3">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4" /> Photos
+                </h3>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="border-border h-7"
+                  onClick={() => fileInputRef.current?.click()}
+                  data-testid="form-add-media"
+                >
+                  <Upload className="w-3.5 h-3.5 mr-1" /> Upload
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp,image/avif"
+                  multiple
+                  className="hidden"
+                  data-testid="form-media-input"
+                  onChange={(e) => {
+                    onFilesSelected(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+              </div>
+              {media.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Upload photos from your device. The first photo is the thumbnail. JPG, PNG, WebP, GIF or AVIF.
+                </p>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  {media.map((m, i) => (
+                    <div
+                      key={m.id}
+                      className="relative aspect-square rounded-md overflow-hidden border border-border bg-input"
+                      data-testid={`form-media-${i}`}
                     >
-                      <Upload className="w-3.5 h-3.5 mr-1" /> Upload
-                    </Button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/gif,image/webp,image/avif"
-                      multiple
-                      className="hidden"
-                      data-testid="form-media-input"
-                      onChange={(e) => {
-                        onFilesSelected(e.target.files);
-                        e.target.value = "";
-                      }}
-                    />
-                  </div>
-                  {media.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">
-                      Upload photos from your device. The first photo is the thumbnail. JPG, PNG, WebP, GIF or AVIF.
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-3 gap-2">
-                      {media.map((m, i) => (
-                        <div
-                          key={m.id}
-                          className="relative aspect-square rounded-md overflow-hidden border border-border bg-input"
-                          data-testid={`form-media-${i}`}
+                      <img
+                        src={
+                          m.type === "video" && m.thumbnail_url
+                            ? m.thumbnail_url
+                            : m.preview
+                        }
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                      {m.status === "uploading" && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                          <Loader2 className="w-5 h-5 animate-spin text-white" />
+                        </div>
+                      )}
+                      {m.status === "error" && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-destructive/70 text-white text-[10px] px-1 text-center">
+                          Failed
+                        </div>
+                      )}
+                      {m.type === "video" && m.status === "done" && (
+                        <Badge
+                          variant="outline"
+                          className="absolute bottom-1 left-1 border-white/20 bg-black/60 text-white text-[10px]"
                         >
-                          <img src={m.preview} alt="" className="w-full h-full object-cover" />
-                          {m.status === "uploading" && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                              <Loader2 className="w-5 h-5 animate-spin text-white" />
-                            </div>
-                          )}
-                          {m.status === "error" && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-destructive/70 text-white text-[10px] px-1 text-center">
-                              Failed
-                            </div>
-                          )}
-                          {i === 0 && m.status === "done" && (
-                            <Badge
-                              variant="outline"
-                              className="absolute bottom-1 left-1 border-white/20 bg-black/60 text-white text-[10px]"
-                            >
-                              Thumbnail
-                            </Badge>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => removeMedia(m.id)}
-                            className="absolute top-1 right-1 h-6 w-6 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
-                            data-testid={`form-media-remove-${i}`}
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
+                          Video
+                        </Badge>
+                      )}
+                      {(m.type ?? "image") === "image" &&
+                        m.status === "done" &&
+                        media.findIndex((x) => (x.type ?? "image") === "image") === i && (
+                        <Badge
+                          variant="outline"
+                          className="absolute bottom-1 left-1 border-white/20 bg-black/60 text-white text-[10px]"
+                        >
+                          Thumbnail
+                        </Badge>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeMedia(m.id)}
+                        className="absolute top-1 right-1 h-6 w-6 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80"
+                        data-testid={`form-media-remove-${i}`}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
                     </div>
-                  )}
+                  ))}
                 </div>
+              )}
+            </div>
 
-                <div>
-                  <Separator className="bg-border" />
-                  <div className="flex items-center justify-between mt-4 mb-3">
-                    <h3 className="text-sm font-semibold text-foreground">Financing options</h3>
-                    <Button type="button" size="sm" variant="outline" className="border-border h-7" onClick={() => setPayments((p) => [...p, emptyPaymentRow()])} data-testid="form-add-payment">
-                      <Plus className="w-3.5 h-3.5 mr-1" /> Add
-                    </Button>
-                  </div>
-                  <div className="space-y-3">
-                    {payments.length === 0 && (
-                      <p className="text-xs text-muted-foreground">Cash is always available. Add installment or bank-finance options below.</p>
-                    )}
-                    {payments.map((p, i) => (
-                      <div key={i} className="rounded-md border border-border p-3 space-y-3">
-                        <div className="flex items-center gap-2">
-                          <Select value={p.mode} onValueChange={(v) => setPayments((arr) => arr.map((row, idx) => (idx === i ? { ...row, mode: v as PaymentRow["mode"] } : row)))}>
-                            <SelectTrigger className="bg-input border-border" data-testid={`form-payment-mode-${i}`}>
-                              <SelectValue placeholder="Payment mode" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Object.entries(PAYMENT_MODE_LABELS).map(([v, l]) => (
-                                <SelectItem key={v} value={v}>{l}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button type="button" size="icon" variant="ghost" className="h-8 w-8 flex-shrink-0" onClick={() => setPayments((arr) => arr.filter((_, idx) => idx !== i))}>
-                            <Trash2 className="w-4 h-4 text-muted-foreground" />
-                          </Button>
-                        </div>
-                        {p.mode && p.mode !== "cash" && (
-                          <>
-                            <div className="grid grid-cols-3 gap-2">
-                              <div className="space-y-1">
-                                <Label className="text-xs">Down payment</Label>
-                                <Input type="number" value={p.down_payment} onChange={(e) => setPayments((arr) => arr.map((row, idx) => (idx === i ? { ...row, down_payment: e.target.value } : row)))} className="bg-input border-border" />
-                              </div>
-                              <div className="space-y-1">
-                                <Label className="text-xs">Monthly</Label>
-                                <Input type="number" value={p.monthly_payment} onChange={(e) => setPayments((arr) => arr.map((row, idx) => (idx === i ? { ...row, monthly_payment: e.target.value } : row)))} className="bg-input border-border" />
-                              </div>
-                              <div className="space-y-1">
-                                <Label className="text-xs">Months</Label>
-                                <Input type="number" value={p.duration_months} onChange={(e) => setPayments((arr) => arr.map((row, idx) => (idx === i ? { ...row, duration_months: e.target.value } : row)))} className="bg-input border-border" />
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <Label className="text-xs">Islamic-compliant (Sharia)</Label>
-                              <Switch
-                                checked={p.is_islamic_compliant}
-                                onCheckedChange={(c) => setPayments((arr) => arr.map((row, idx) => (idx === i ? { ...row, is_islamic_compliant: c } : row)))}
-                                data-testid={`form-payment-islamic-${i}`}
-                              />
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+            {!isEdit && (
+              <div>
+                <Separator className="bg-border" />
+                <div className="flex items-center justify-between mt-4 mb-3">
+                  <h3 className="text-sm font-semibold text-foreground">Financing options</h3>
+                  <Button type="button" size="sm" variant="outline" className="border-border h-7" onClick={() => setPayments((p) => [...p, emptyPaymentRow()])} data-testid="form-add-payment">
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Add
+                  </Button>
                 </div>
-              </>
+                <div className="space-y-3">
+                  {payments.length === 0 && (
+                    <p className="text-xs text-muted-foreground">Cash is always available. Add installment or bank-finance options below.</p>
+                  )}
+                  {payments.map((p, i) => (
+                    <div key={i} className="rounded-md border border-border p-3 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Select value={p.mode} onValueChange={(v) => setPayments((arr) => arr.map((row, idx) => (idx === i ? { ...row, mode: v as PaymentRow["mode"] } : row)))}>
+                          <SelectTrigger className="bg-input border-border" data-testid={`form-payment-mode-${i}`}>
+                            <SelectValue placeholder="Payment mode" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(PAYMENT_MODE_LABELS).map(([v, l]) => (
+                              <SelectItem key={v} value={v}>{l}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button type="button" size="icon" variant="ghost" className="h-8 w-8 flex-shrink-0" onClick={() => setPayments((arr) => arr.filter((_, idx) => idx !== i))}>
+                          <Trash2 className="w-4 h-4 text-muted-foreground" />
+                        </Button>
+                      </div>
+                      {p.mode && p.mode !== "cash" && (
+                        <>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="space-y-1">
+                              <Label className="text-xs">Down payment</Label>
+                              <Input type="number" value={p.down_payment} onChange={(e) => setPayments((arr) => arr.map((row, idx) => (idx === i ? { ...row, down_payment: e.target.value } : row)))} className="bg-input border-border" />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Monthly</Label>
+                              <Input type="number" value={p.monthly_payment} onChange={(e) => setPayments((arr) => arr.map((row, idx) => (idx === i ? { ...row, monthly_payment: e.target.value } : row)))} className="bg-input border-border" />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Months</Label>
+                              <Input type="number" value={p.duration_months} onChange={(e) => setPayments((arr) => arr.map((row, idx) => (idx === i ? { ...row, duration_months: e.target.value } : row)))} className="bg-input border-border" />
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs">Islamic-compliant (Sharia)</Label>
+                            <Switch
+                              checked={p.is_islamic_compliant}
+                              onCheckedChange={(c) => setPayments((arr) => arr.map((row, idx) => (idx === i ? { ...row, is_islamic_compliant: c } : row)))}
+                              data-testid={`form-payment-islamic-${i}`}
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         )}

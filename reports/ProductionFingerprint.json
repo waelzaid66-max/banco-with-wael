@@ -1,15 +1,15 @@
 {
   "protocol": "Continuous Production Recovery",
-  "generatedAt": "2026-07-21T23:22:40.256Z",
+  "generatedAt": "2026-07-21T23:41:12.008Z",
   "repository": "waelzaid66-max/-BANCO-CA-OOM-",
   "branch": "main",
-  "commit": "5d027bfdbd88cb89304c8ca869454d64c4d1273a",
-  "describe": "v1.4.0-stable-2026-07-18-218-g5d027bf",
+  "commit": "fe2c53f5cf991ca59bf8d23e876294f83921b6ca",
+  "describe": "v1.4.0-stable-2026-07-18-220-gfe2c53f",
   "productionAccepted": false,
-  "iteration": "R-STATUS-CACHE-SOLD-ACCOUNT-SOT",
+  "iteration": "R-MEDIA-IDENTITY-SECURITY-GATES",
   "criticalAreas": {
     "authentication_clerk_email_google_apple": "PASS",
-    "authentication_facebook_login": "N/A — not a product provider (social icon only)",
+    "authentication_facebook_login": "N/A — tenant forbids invent; see audit/production-gates/FACEBOOK-LOGIN-AND-FI-AUTOCREATE-SECURITY-2026-07-21-AR.md",
     "profile_me_role_demote_skip_menu": "PASS",
     "profile_cover_rationale": "PASS",
     "media_upload_create_update_503": "PASS",
@@ -34,16 +34,17 @@
     "nodeModulesPresent": false
   },
   "lastRepair": {
-    "id": "REP-STATUS-CACHE-SOLD-2026-07-21",
-    "summary": "Status mutation cache bump, mine/dealer mark-sold, accountTypeChosen after /me, promote refresh",
+    "id": "REP-MEDIA-IDENTITY-GATES-2026-07-21",
+    "summary": "Dealer edit media, feed-safe video posters, poster claim assert, Expo BANCO/com.bancooom.app; FB+FI gates documented not invented",
     "files": [
-      "artifacts/banco-mobile/app/(tabs)/profile.tsx",
-      "artifacts/banco-mobile/app/listings/mine.tsx",
-      "artifacts/banco-mobile/app/listing/[id].tsx",
-      "artifacts/banco-mobile/app/messages/[id].tsx",
-      "artifacts/dealer-os/src/pages/listings.tsx",
-      "artifacts/dealer-os/src/i18n/strings.ts",
-      "scripts/chain-integrity-gate.mjs"
+      "artifacts/dealer-os/src/components/listing-form-sheet.tsx",
+      "artifacts/api-server/src/services/SearchService.ts",
+      "artifacts/api-server/src/services/ListingService.ts",
+      "artifacts/banco-mobile/app/listings/create.tsx",
+      "artifacts/banco-mobile/components/listings/ListingMediaEditor.tsx",
+      "artifacts/banco-mobile/components/MediaGallery.tsx",
+      "artifacts/banco-mobile/app.json",
+      "audit/production-gates/"
     ]
   }
 }

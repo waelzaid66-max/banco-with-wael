@@ -1037,6 +1037,16 @@ export default function CreateListingScreen() {
         const cap = captions[p.uri]?.trim();
         if (cap) mediaCaptions[entry.url] = cap;
       });
+      // VIDEO-POSTER (no frame extract): reuse the cover/first image URL as the
+      // video thumbnail_url so feed cards never receive a raw video as <Image>.
+      const posterUrl = media.find((m) => m.type === "image")?.url;
+      if (posterUrl) {
+        for (const m of media) {
+          if (m.type === "video" && !m.thumbnail_url) {
+            m.thumbnail_url = posterUrl;
+          }
+        }
+      }
 
       const specsClean: Record<string, unknown> = {};
       // Contact is the one spec dimension a buyer request also needs.

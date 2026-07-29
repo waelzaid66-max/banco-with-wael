@@ -2,18 +2,18 @@
 
 | Field | Value |
 |-------|-------|
-| Commit | `5d027bfdbd88cb89304c8ca869454d64c4d1273a` |
+| Commit | `fe2c53f5cf991ca59bf8d23e876294f83921b6ca` |
 | Branch | `main` |
 | Date | 2026-07-21 |
 | Production accepted | **NO** |
 
 
 ## Current iteration
-**R-STATUS-CACHE-SOLD-ACCOUNT-SOT** — status/sold cache sync, mine+dealer mark-sold, accountTypeChosen after /me.
+**R-MEDIA-IDENTITY-SECURITY-GATES** — dealer edit media, video poster (no frame extract), Expo canonical identity; FB/FI not invented.
 
 ## Critical area board
 - **authentication_clerk_email_google_apple:** PASS
-- **authentication_facebook_login:** N/A — not a product provider (social icon only)
+- **authentication_facebook_login:** N/A — tenant forbids invent; see audit/production-gates/FACEBOOK-LOGIN-AND-FI-AUTOCREATE-SECURITY-2026-07-21-AR.md
 - **profile_me_role_demote_skip_menu:** PASS
 - **profile_cover_rationale:** PASS
 - **media_upload_create_update_503:** PASS

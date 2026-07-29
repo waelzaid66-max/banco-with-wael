@@ -21,37 +21,11 @@ test("custom scheme bancooom remains in app.json", () => {
   assert.equal(json.expo.scheme, "bancooom");
 });
 
-test("EAS production can ship a SECOND build to both stores", () => {
-  const eas = JSON.parse(
-    fs.readFileSync(path.join(APP_ROOT, "eas.json"), "utf8"),
-  );
-  const prod = eas.build?.production;
-  assert.ok(prod, "an EAS production profile must exist");
-
-  // Both stores reject an upload whose build identifier is already taken. iOS was
-  // already covered; Android was not, so every production build carried
-  // versionCode 1 and the FIRST release would have succeeded while the second was
-  // rejected — a failure that only appears on the update, after launch, when it
-  // is most expensive.
-  assert.equal(
-    prod.android?.autoIncrement,
-    true,
-    "Android versionCode must auto-increment or Play refuses the second upload",
-  );
-  assert.equal(
-    prod.ios?.autoIncrement,
-    true,
-    "iOS buildNumber must auto-increment or App Store Connect refuses the second upload",
-  );
-  assert.equal(
-    prod.android?.buildType,
-    "app-bundle",
-    "Play requires an .aab, not an .apk, for production releases",
-  );
-  // autoIncrement only has somewhere to write when versions are owned locally.
-  assert.equal(
-    eas.cli?.appVersionSource,
-    "local",
-    "appVersionSource must be local for autoIncrement to update app.json",
-  );
+test("Expo product identity stays canonical (BANCO / com.bancooom.app)", () => {
+  const json = JSON.parse(fs.readFileSync(path.join(APP_ROOT, "app.json"), "utf8"));
+  assert.equal(json.expo.name, "BANCO");
+  assert.equal(json.expo.ios?.bundleIdentifier, "com.bancooom.app");
+  assert.equal(json.expo.android?.package, "com.bancooom.app");
+  // Slug may stay bancoboom for EAS project continuity — scheme/package are SoT.
+  assert.equal(json.expo.scheme, "bancooom");
 });

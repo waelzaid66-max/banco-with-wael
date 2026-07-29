@@ -20,11 +20,12 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 interface VideoSlideProps {
   url: string;
+  posterUrl?: string | null;
   height: number;
   isActive: boolean;
 }
 
-function VideoSlide({ url, height, isActive }: VideoSlideProps) {
+function VideoSlide({ url, posterUrl, height, isActive }: VideoSlideProps) {
   const player = useVideoPlayer(url, (p: VideoPlayer) => {
     p.loop = true;
     p.muted = true;
@@ -40,6 +41,18 @@ function VideoSlide({ url, height, isActive }: VideoSlideProps) {
       player.pause();
     };
   }, [isActive, player]);
+
+  // Inactive + poster: show still image (decoder stays paused). Active: video.
+  if (!isActive && posterUrl) {
+    return (
+      <Image
+        source={{ uri: posterUrl }}
+        style={{ width: SCREEN_WIDTH, height }}
+        contentFit="cover"
+        transition={150}
+      />
+    );
+  }
 
   return (
     <VideoView
@@ -106,6 +119,7 @@ export function MediaGallery({ media, height = 300 }: MediaGalleryProps) {
             {item.type === "video" ? (
               <VideoSlide
                 url={item.url}
+                posterUrl={item.thumbnail_url}
                 height={height}
                 isActive={idx === activeIndex}
               />

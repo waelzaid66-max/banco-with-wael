@@ -460,6 +460,75 @@ const CHECKS = [
       /useUpdateListing/.test(s),
     why: "Dealer-os must close deals via updateListing status=sold",
   },
+  {
+    id: "P-dealer-edit-media",
+    file: "artifacts/dealer-os/src/components/listing-form-sheet.tsx",
+    test: (s) =>
+      /buildMediaPayload/.test(s) &&
+      /detail\.media/.test(s) &&
+      /media: mediaArr/.test(s) &&
+      !/Media \+ financing are create-only/.test(s),
+    why: "Dealer edit must hydrate + PATCH media (UpdateListingBody.media)",
+  },
+  {
+    id: "P-feed-safe-thumbnail",
+    file: "artifacts/api-server/src/services/SearchService.ts",
+    test: (s) =>
+      /pickListingThumbnailUrl/.test(s) &&
+      /thumbnailUrl: m\.thumbnailUrl/.test(s),
+    why: "Feed enrich must never use raw video URL as card Image",
+  },
+  {
+    id: "P-video-poster-client",
+    file: "artifacts/banco-mobile/app/listings/create.tsx",
+    test: (s) =>
+      /thumbnail_url = posterUrl/.test(s) &&
+      /VIDEO-POSTER/.test(s),
+    why: "Create must set video thumbnail_url from sibling cover image",
+  },
+  {
+    id: "P-poster-claim-assert",
+    file: "artifacts/api-server/src/services/ListingService.ts",
+    test: (s) =>
+      /if \(m\.thumbnail_url\)/.test(s) &&
+      /assertCallerMayUseUpload\(m\.thumbnail_url/.test(s),
+    why: "thumbnail_url must be ownership-asserted like media.url",
+  },
+  {
+    id: "P-expo-identity-canonical",
+    file: "artifacts/banco-mobile/app.json",
+    test: (s) => {
+      try {
+        const j = JSON.parse(s);
+        return (
+          j?.expo?.name === "BANCO" &&
+          j?.expo?.scheme === "bancooom" &&
+          j?.expo?.ios?.bundleIdentifier === "com.bancooom.app" &&
+          j?.expo?.android?.package === "com.bancooom.app"
+        );
+      } catch {
+        return false;
+      }
+    },
+    why: "Display name BANCO + package com.bancooom.app + scheme bancooom",
+  },
+  {
+    id: "P-no-facebook-oauth",
+    file: "artifacts/banco-mobile/app/(tabs)/profile.tsx",
+    test: (s) =>
+      !/oauth_facebook/.test(s) &&
+      /oauth_google/.test(s),
+    why: "Must not invent Facebook Login (tenant forbids)",
+  },
+  {
+    id: "P-no-fi-autocreate-onboarding",
+    file: "artifacts/banco-mobile/app/business/onboarding.tsx",
+    test: (s) =>
+      /financial_institution/.test(s) &&
+      !/createIntermediary/.test(s) &&
+      !/createBank/.test(s),
+    why: "FI onboarding must not auto-create intermediary orgs",
+  },
 ];
 
 function main() {
