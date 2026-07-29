@@ -196,17 +196,22 @@ import type {
   ListStories200,
   ListTransactions200,
   ListTransactionsParams,
+  LiveStatus,
   MarkConversationRead200,
   MarkNotificationsRead200,
   MarkNotificationsReadBody,
   ModerateListing200,
   ModerateListingBody,
   PaymentConfigUpdate,
+  PaymobWebhookAck,
+  PaymobWebhookBody,
+  PaymobWebhookParams,
   PromoCampaignUpdate,
   PromoteUpload200,
   PromoteUploadBody,
   ReactToMessage200,
   ReactToMessageBody,
+  ReadyStatus,
   RegisterPushToken200,
   RegisterPushTokenBody,
   RenewPromoCampaign200,
@@ -441,6 +446,319 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getHealthCheckQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getLiveCheckUrl = () => {
+
+
+
+
+  return `/api/livez`
+}
+
+/**
+ * Process is up. Does not touch the database. Includes optional deploy pin (gitSha/buildId) when baked into the image.
+ * @summary Liveness probe
+ */
+export const liveCheck = async ( options?: RequestInit): Promise<LiveStatus> => {
+
+  return customFetch<LiveStatus>(getLiveCheckUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getLiveCheckQueryKey = () => {
+    return [
+    `/api/livez`
+    ] as const;
+    }
+
+
+export const getLiveCheckQueryOptions = <TData = Awaited<ReturnType<typeof liveCheck>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof liveCheck>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getLiveCheckQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof liveCheck>>> = ({ signal }) => liveCheck({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof liveCheck>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type LiveCheckQueryResult = NonNullable<Awaited<ReturnType<typeof liveCheck>>>
+export type LiveCheckQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Liveness probe
+ */
+
+export function useLiveCheck<TData = Awaited<ReturnType<typeof liveCheck>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof liveCheck>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getLiveCheckQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getReadyCheckUrl = () => {
+
+
+
+
+  return `/api/readyz`
+}
+
+/**
+ * Returns 200 only when the database is reachable and money-path tables exist (payment_intents, transactions, promo_ad_transactions). Otherwise 503 so load balancers stop routing. Includes optional deploy pin.
+ * @summary Readiness probe
+ */
+export const readyCheck = async ( options?: RequestInit): Promise<ReadyStatus> => {
+
+  return customFetch<ReadyStatus>(getReadyCheckUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getReadyCheckQueryKey = () => {
+    return [
+    `/api/readyz`
+    ] as const;
+    }
+
+
+export const getReadyCheckQueryOptions = <TData = Awaited<ReturnType<typeof readyCheck>>, TError = ErrorType<ReadyStatus>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof readyCheck>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getReadyCheckQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof readyCheck>>> = ({ signal }) => readyCheck({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof readyCheck>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ReadyCheckQueryResult = NonNullable<Awaited<ReturnType<typeof readyCheck>>>
+export type ReadyCheckQueryError = ErrorType<ReadyStatus>
+
+
+/**
+ * @summary Readiness probe
+ */
+
+export function useReadyCheck<TData = Awaited<ReturnType<typeof readyCheck>>, TError = ErrorType<ReadyStatus>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof readyCheck>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getReadyCheckQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPaymobWebhookUrl = (params?: PaymobWebhookParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/payments/webhook?${stringifiedParams}` : `/api/v1/payments/webhook`
+}
+
+/**
+ * Server-to-server settle path. No Clerk auth — authenticated by Paymob HMAC (query `hmac`). Invalid signature → 401. This is the only path that settles wallet top-ups and subscriptions.
+ * @summary Paymob transaction-processed webhook
+ */
+export const paymobWebhook = async (paymobWebhookBody?: PaymobWebhookBody,
+    params?: PaymobWebhookParams, options?: RequestInit): Promise<PaymobWebhookAck> => {
+
+  return customFetch<PaymobWebhookAck>(getPaymobWebhookUrl(params),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(paymobWebhookBody)
+  }
+);}
+
+
+
+
+export const getPaymobWebhookMutationOptions = <TError = ErrorType<PaymobWebhookAck>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymobWebhook>>, TError,{data?: BodyType<PaymobWebhookBody>;params?: PaymobWebhookParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof paymobWebhook>>, TError,{data?: BodyType<PaymobWebhookBody>;params?: PaymobWebhookParams}, TContext> => {
+
+const mutationKey = ['paymobWebhook'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof paymobWebhook>>, {data?: BodyType<PaymobWebhookBody>;params?: PaymobWebhookParams}> = (props) => {
+          const {data,params} = props ?? {};
+
+          return  paymobWebhook(data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PaymobWebhookMutationResult = NonNullable<Awaited<ReturnType<typeof paymobWebhook>>>
+    export type PaymobWebhookMutationBody = BodyType<PaymobWebhookBody> | undefined
+    export type PaymobWebhookMutationError = ErrorType<PaymobWebhookAck>
+
+    /**
+ * @summary Paymob transaction-processed webhook
+ */
+export const usePaymobWebhook = <TError = ErrorType<PaymobWebhookAck>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof paymobWebhook>>, TError,{data?: BodyType<PaymobWebhookBody>;params?: PaymobWebhookParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof paymobWebhook>>,
+        TError,
+        {data?: BodyType<PaymobWebhookBody>;params?: PaymobWebhookParams},
+        TContext
+      > => {
+      return useMutation(getPaymobWebhookMutationOptions(options));
+    }
+
+export const getPaymentReturnUrl = () => {
+
+
+
+
+  return `/api/v1/payments/return`
+}
+
+/**
+ * Informational page after hosted Paymob checkout. Settlement is handled by the webhook; clients poll intent status separately.
+ * @summary Post-checkout HTML landing
+ */
+export const paymentReturn = async ( options?: RequestInit): Promise<string> => {
+
+  return customFetch<string>(getPaymentReturnUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getPaymentReturnQueryKey = () => {
+    return [
+    `/api/v1/payments/return`
+    ] as const;
+    }
+
+
+export const getPaymentReturnQueryOptions = <TData = Awaited<ReturnType<typeof paymentReturn>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof paymentReturn>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPaymentReturnQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof paymentReturn>>> = ({ signal }) => paymentReturn({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof paymentReturn>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type PaymentReturnQueryResult = NonNullable<Awaited<ReturnType<typeof paymentReturn>>>
+export type PaymentReturnQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Post-checkout HTML landing
+ */
+
+export function usePaymentReturn<TData = Awaited<ReturnType<typeof paymentReturn>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof paymentReturn>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getPaymentReturnQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -2447,6 +2765,8 @@ export function useGetTrending<TData = Awaited<ReturnType<typeof getTrending>>, 
 
 
 
+
+
 export const getGetRecommendationsUrl = (params?: GetRecommendationsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -2524,6 +2844,7 @@ export function useGetRecommendations<TData = Awaited<ReturnType<typeof getRecom
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
 
 
 

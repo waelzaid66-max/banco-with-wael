@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: payments
+    description: Paymob webhook settle path and post-checkout return landing
   - name: feed
     description: Adaptive feed
   - name: listings
@@ -41,13 +43,77 @@ components:
           type: string
           enum: [ok, degraded]
 
+    DeployPinFields:
+      type: object
+      description: Optional deploy identity baked at image build (null when unset — never invented).
+      properties:
+        gitSha:
+          type: string
+          nullable: true
+        buildId:
+          type: string
+          nullable: true
+
+    LiveStatus:
+      allOf:
+        - $ref: "#/components/schemas/HealthStatus"
+        - $ref: "#/components/schemas/DeployPinFields"
+      description: Process liveness with deploy pin. Does not touch the database.
+
+    ReadyStatus:
+      type: object
+      required: [status, checks]
+      description: Readiness — database reachable and money-path tables present.
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        checks:
+          type: object
+          additionalProperties:
+            type: string
+            enum: [ok, down]
+          properties:
+            database:
+              type: string
+              enum: [ok, down]
+            money_schema:
+              type: string
+              enum: [ok, down]
+        gitSha:
+          type: string
+          nullable: true
+        buildId:
+          type: string
+          nullable: true
+
+    PaymobWebhookAck:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        error:
+          type: string
+          description: Present on some non-settlement failures (e.g. intent_not_found).
+
     ApiError:
       type: object
       required: [code, message]
       properties:
         code:
           type: string
-          enum: [INVALID_DATA, NOT_FOUND, UNAUTHORIZED, INTERNAL_ERROR, FORBIDDEN, RATE_LIMITED, INVALID_TOKEN, CONFLICT]
+          enum:
+            - INVALID_DATA
+            - NOT_FOUND
+            - UNAUTHORIZED
+            - INTERNAL_ERROR
+            - FORBIDDEN
+            - RATE_LIMITED
+            - INVALID_TOKEN
+            - CONFLICT
+            - ACCOUNT_DELETED
+            - SERVICE_UNAVAILABLE
         message:
           type: string
 
@@ -3644,6 +3710,114 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /livez:
+    get:
+      operationId: liveCheck
+      tags: [health]
+      summary: Liveness probe
+      description: >-
+        Process is up. Does not touch the database. Includes optional deploy pin
+        (gitSha/buildId) when baked into the image.
+      responses:
+        "200":
+          description: Alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LiveStatus"
+
+  /readyz:
+    get:
+      operationId: readyCheck
+      tags: [health]
+      summary: Readiness probe
+      description: >-
+        Returns 200 only when the database is reachable and money-path tables
+        exist (payment_intents, transactions, promo_ad_transactions). Otherwise
+        503 so load balancers stop routing. Includes optional deploy pin.
+      responses:
+        "200":
+          description: Ready for traffic
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyStatus"
+        "503":
+          description: Database unreachable or money schema incomplete
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyStatus"
+
+  /v1/payments/webhook:
+    post:
+      operationId: paymobWebhook
+      tags: [payments]
+      summary: Paymob transaction-processed webhook
+      description: >-
+        Server-to-server settle path. No Clerk auth — authenticated by Paymob
+        HMAC (query `hmac`). Invalid signature → 401. This is the only path that
+        settles wallet top-ups and subscriptions.
+      parameters:
+        - name: hmac
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Paymob HMAC over the signed object fields
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                obj:
+                  type: object
+                  additionalProperties: true
+      responses:
+        "200":
+          description: Acknowledged (settled, ignored, or non-retryable)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymobWebhookAck"
+        "401":
+          description: Invalid HMAC
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymobWebhookAck"
+        "500":
+          description: Processing failure — provider should retry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymobWebhookAck"
+        "503":
+          description: Signed but intent not durable yet — provider should retry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymobWebhookAck"
+
+  /v1/payments/return:
+    get:
+      operationId: paymentReturn
+      tags: [payments]
+      summary: Post-checkout HTML landing
+      description: >-
+        Informational page after hosted Paymob checkout. Settlement is handled
+        by the webhook; clients poll intent status separately.
+      responses:
+        "200":
+          description: HTML landing page
+          content:
+            text/html:
+              schema:
+                type: string
 
   /v1/me:
     get:

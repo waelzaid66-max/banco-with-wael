@@ -48,7 +48,7 @@ router.get("/healthz", (_req, res) => {
   res.json(data);
 });
 
-// Alias kept for clarity alongside /readyz. Includes deploy pin (not OpenAPI-bound).
+// Alias kept for clarity alongside /readyz. Includes deploy pin (OpenAPI: LiveStatus).
 router.get("/livez", (_req, res) => {
   res.json({ status: "ok", ...deployPin() });
 });

@@ -43,7 +43,9 @@ export function errorResponse(
     // Soft-deleted account with a lingering Clerk JWT.
     | "ACCOUNT_DELETED"
     // Duplicate resource (e.g. seating a user twice in the same institution).
-    | "CONFLICT",
+    | "CONFLICT"
+    // Transient auth/DB resolution failure (HTTP 503) — used by authGuard.
+    | "SERVICE_UNAVAILABLE",
   message: string
 ): GlobalResponse<never[]> {
   return { data: [], error: { code, message }, meta: {} };
