@@ -81,7 +81,7 @@ See also: `17-HIDDEN-DEFECTS.md`.
 ## Evidence commands
 
 ```bash
-node scripts/chain-integrity-gate.mjs                 # 66/66
+node scripts/chain-integrity-gate.mjs                 # 68/68
 node scripts/production-confidence-check.mjs          # 14/14
 node scripts/website-ci-local.mjs                     # 11/11
 node --test artifacts/banco-mobile/tests/*.mjs        # 136/136
