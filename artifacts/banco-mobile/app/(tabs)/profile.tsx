@@ -248,6 +248,9 @@ export default function ProfileScreen() {
         });
       } catch (e) {
         console.warn("[profile] post-signup account_type save failed", e);
+        // Do not silently leave DB role/phone out of sync after Clerk session
+        // is live — surface retry (BUYER-PHONE / role SoT depend on /me).
+        Alert.alert(t("profile.accountTypeError"));
       }
       // Business signups continue straight into fast onboarding.
       if (goBusiness) {
@@ -573,7 +576,9 @@ export default function ProfileScreen() {
         router.push("/business/onboarding");
       }
     } catch {
-      // Gate already dismissed — sync is retryable from settings/profile.
+      // Anti-trap dismissed the gate before DB ack — reopen so the user can
+      // retry instead of believing the role change succeeded (S1 /me.role SoT).
+      setNeedsAccountType(true);
       Alert.alert(t("profile.accountTypeError"));
     } finally {
       setSavingAccountType(false);

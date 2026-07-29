@@ -350,6 +350,31 @@ const CHECKS = [
       /serveWebIndex|hasWebBuild/.test(s),
     why: "serve.js must prefer static-build/web for browsers without expo-platform",
   },
+  {
+    id: "P-edit-media-wired",
+    file: "artifacts/banco-mobile/app/listings/edit/[id].tsx",
+    test: (s) =>
+      /ListingMediaEditor/.test(s) &&
+      /buildMediaPayload/.test(s) &&
+      /media,/.test(s),
+    why: "Edit listing must PATCH media via ListingMediaEditor (EDIT-MEDIA-DEAD)",
+  },
+  {
+    id: "P-landing-clerk-domain",
+    file: "artifacts/landing/src/App.tsx",
+    test: (s) =>
+      /banco\.today\/dealer-os/.test(s) &&
+      /banco\.today\/banco-mobile/.test(s),
+    why: "deals/autos must hop to banco.today for Clerk live origin",
+  },
+  {
+    id: "P-buyer-phone-from-me",
+    file: "artifacts/banco-mobile/app/listing/[id].tsx",
+    test: (s) =>
+      /meQuery\.data\?\.data\?\.phone/.test(s) &&
+      /buyer_phone/.test(s),
+    why: "Lead/booking buyer phone must prefer /me.phone (profile SoT)",
+  },
 ];
 
 function main() {

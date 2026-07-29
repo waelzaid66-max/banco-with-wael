@@ -169,12 +169,24 @@ export default function ListingDetailScreen() {
   const rowDir = isRTL ? "row-reverse" : "row";
   const textAlign = isRTL ? "right" : "left";
 
-  // Best-effort buyer identity from the signed-in Clerk user; only included
-  // when present so guests can still submit anonymously.
+  // Identify the viewer so the owner sees a "mark sold" control instead of the
+  // buyer offer CTA. me.id and seller.id are both backend user ids.
+  // /me also carries phone SoT (profile save writes updateMe.phone — Clerk
+  // primaryPhoneNumber is often empty because we never createPhoneNumber).
+  const meQuery = useGetMe({
+    query: { enabled: !!isSignedIn, queryKey: getGetMeQueryKey() },
+  });
+  const meId = meQuery.data?.data?.id ?? null;
+
+  // Best-effort buyer identity from signed-in user; guests stay anonymous.
   const buyerIdentity: { buyer_name?: string; buyer_phone?: string } = {};
   const buyerName = (user?.fullName ?? user?.firstName ?? "").trim();
   if (buyerName) buyerIdentity.buyer_name = buyerName;
-  const buyerPhone = (user?.primaryPhoneNumber?.phoneNumber ?? "").trim();
+  const buyerPhone = (
+    meQuery.data?.data?.phone ||
+    user?.primaryPhoneNumber?.phoneNumber ||
+    ""
+  ).trim();
   if (buyerPhone) buyerIdentity.buyer_phone = buyerPhone;
 
   // Public seller trust stats. Enabled only once the listing (and its seller id)
@@ -184,13 +196,6 @@ export default function ListingDetailScreen() {
     query: { enabled: !!sellerId, queryKey: getGetCompanyQueryKey(sellerId) },
   });
   const company = companyRes?.data ?? null;
-
-  // Identify the viewer so the owner sees a "mark sold" control instead of the
-  // buyer offer CTA. me.id and seller.id are both backend user ids.
-  const meQuery = useGetMe({
-    query: { enabled: !!isSignedIn, queryKey: getGetMeQueryKey() },
-  });
-  const meId = meQuery.data?.data?.id ?? null;
 
   const loadListing = useCallback(async () => {
     if (!id) return;

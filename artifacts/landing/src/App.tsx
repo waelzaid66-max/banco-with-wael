@@ -42,8 +42,9 @@ function useScrollY() {
 function DomainRouter({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const h = window.location.hostname.toLowerCase().replace(/^www\./, "");
-    // تسجيل الدخول (Clerk live) مربوط بنطاق banco.today فقط — النطاقات الأخرى
-    // تُحوَّل لمسار banco.today مباشرة حتى يعمل الحساب والدخول بشكل كامل.
+    // Clerk live keys are bound to banco.today only. Relative redirects on
+    // banco.deals / banco.autos keep the user on a non-authorized origin →
+    // white-screen / broken SSO. Restored from bancoo production handoff.
     if (h === "banco.deals") {
       window.location.replace("https://banco.today/dealer-os/");
     } else if (h === "banco.autos") {
