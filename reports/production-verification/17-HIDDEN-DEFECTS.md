@@ -24,6 +24,9 @@
 | H12 | HIGH | Verify Go Back cleared consent during finalize | Disable + lock while signing up |
 | H13 | HIGH | Plug **rewrite** left pathname `/` → SiteChrome over maintenance | **Redirect** (web + website twins) |
 | H14 | MED | Compose/GCP sent traffic on liveness-only probes | API compose → `/api/readyz`; GCP startup → `readyz` |
+| H15 | HIGH | Chat media insert before upload ownership assert | Assert before `insert(messages)`; `UploadOwnershipError.code=FORBIDDEN` |
+| H16 | HIGH | Company brand URLs written before ownership assert | Assert before `companyProfiles` upsert |
+| H17 | MED | Web `site-env` API fallback `:5000` vs rewrite `:8080` | Aligned both to `localhost:8080` (web + website) |
 
 ---
 
@@ -31,7 +34,7 @@
 
 | Gate | Result |
 |------|--------|
-| `node scripts/chain-integrity-gate.mjs` | **66/66 PASS** (new markers H1/H2/H7/H8/H6/H13) |
+| `node scripts/chain-integrity-gate.mjs` | **68/68 PASS** |
 | `pnpm --filter @workspace/api-server run test` | **346 passed / 3 skipped** |
 | `node --test artifacts/banco-mobile/tests/accounts-clerk-journey.test.mjs` | **13/13 PASS** |
 
@@ -42,6 +45,7 @@
 | Risk | Why deferred |
 |------|----------------|
 | In-process feed/abuse session Maps + memory rate-limit | Needs Redis/shared store for multi-replica; architectural |
+| Weekly digest job lacks per-dealer/week idempotency | Session advisory lock can drop; needs durable send ledger |
 | No Clerk `user.deleted` webhook → live listings after dashboard delete | External Clerk dashboard + webhook wiring (ops) |
 | `NEXT_PUBLIC_*` bake-only in Coolify images | Ops discipline / rebuild on key change |
 | Live Paymob / EAS / OAuth / device push | PENDING_RUNTIME |
