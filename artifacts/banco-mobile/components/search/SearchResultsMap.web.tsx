@@ -92,7 +92,7 @@ export function SearchResultsMap({
         ref={iframeRef}
         title="search-map"
         srcDoc={html}
-        sandbox="allow-scripts"
+        sandbox="allow-scripts allow-same-origin"
         style={{ border: "none", width: "100%", height: "100%" }}
       />
       <MapOverlayChrome

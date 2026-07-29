@@ -117,6 +117,95 @@ export async function listMyImportOrders(
   }));
 }
 
+const STAGE_TRANSITIONS: Record<string, string[]> = {
+  order: ["review", "cancelled"],
+  review: ["confirm", "cancelled"],
+  confirm: ["shipping", "cancelled"],
+  shipping: ["customs", "cancelled"],
+  customs: ["delivered", "cancelled"],
+  delivered: [],
+  cancelled: [],
+};
+
+export async function updateImportOrderStage(
+  orderId: string,
+  newStage: string,
+  opts?: { quoteAmount?: number }
+): Promise<ImportOrder> {
+  const [row] = await db
+    .select()
+    .from(importOrders)
+    .where(eq(importOrders.id, orderId))
+    .limit(1);
+  if (!row)
+    throw Object.assign(new Error("Import order not found"), { code: "NOT_FOUND" });
+
+  const allowed = STAGE_TRANSITIONS[row.stage] ?? [];
+  if (!allowed.includes(newStage))
+    throw Object.assign(
+      new Error(`Cannot transition from "${row.stage}" to "${newStage}"`),
+      { code: "INVALID_DATA" }
+    );
+
+  const updateData: Record<string, unknown> = {
+    stage: newStage,
+    updatedAt: new Date(),
+  };
+  if (opts?.quoteAmount != null) updateData.quoteAmount = String(opts.quoteAmount);
+
+  const [updated] = await db
+    .update(importOrders)
+    .set(updateData)
+    .where(eq(importOrders.id, orderId))
+    .returning();
+
+  const stageMessages: Record<string, string> = {
+    review: "Your import order is under review.",
+    confirm: "Your import order has been confirmed!",
+    shipping: "Your vehicle is now shipping.",
+    customs: "Your vehicle is in customs clearance.",
+    delivered: "Your vehicle has been delivered!",
+    cancelled: "Your import order has been cancelled.",
+  };
+  await createNotification({
+    userId: updated.userId,
+    type: "car_import",
+    title: "Import order update",
+    body: stageMessages[newStage] ?? `Order moved to ${newStage}.`,
+  });
+
+  return toDto(updated);
+}
+
+export async function cancelImportOrder(
+  clerkId: string,
+  orderId: string
+): Promise<ImportOrder> {
+  const userId = await resolveUserId(clerkId);
+  const [row] = await db
+    .select()
+    .from(importOrders)
+    .where(and(eq(importOrders.id, orderId), eq(importOrders.userId, userId)))
+    .limit(1);
+  if (!row)
+    throw Object.assign(new Error("Import order not found"), { code: "NOT_FOUND" });
+
+  const allowed = STAGE_TRANSITIONS[row.stage] ?? [];
+  if (!allowed.includes("cancelled"))
+    throw Object.assign(
+      new Error(`Cannot cancel order in stage "${row.stage}"`),
+      { code: "INVALID_DATA" }
+    );
+
+  const [updated] = await db
+    .update(importOrders)
+    .set({ stage: "cancelled", updatedAt: new Date() })
+    .where(eq(importOrders.id, orderId))
+    .returning();
+
+  return toDto(updated);
+}
+
 // A single import order owned by the signed-in buyer (IDOR-scoped by userId).
 export async function getImportOrder(
   clerkId: string,

@@ -283,6 +283,10 @@ export default function ProfileScreen() {
         });
       } catch (e) {
         console.warn("[profile] post-signup account_type save failed", e);
+        Alert.alert(
+          t("profile.accountSetupRetryTitle") ?? "Setup incomplete",
+          t("profile.accountSetupRetryMessage") ?? "Could not save your account type. Please try again from Settings.",
+        );
       }
       // Business signups continue straight into fast onboarding.
       if (goBusiness) {

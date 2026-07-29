@@ -4,6 +4,8 @@ import {
   createImportOrder,
   listMyImportOrders,
   getImportOrder,
+  updateImportOrderStage,
+  cancelImportOrder,
 } from "../services/ImportOrderService";
 import {
   successResponse,
@@ -66,5 +68,32 @@ export async function getImportOrderHandler(req: Request, res: Response) {
     return res.json(successResponse(validated));
   } catch (err) {
     return mapError(res, err, "[ImportOrder get]");
+  }
+}
+
+// PATCH /v1/import-orders/:id/stage — admin/ops advances order stage.
+export async function updateImportOrderStageHandler(req: Request, res: Response) {
+  try {
+    const id = req.params.id as string;
+    const { stage, quote_amount } = req.body as { stage: string; quote_amount?: number };
+    if (!stage)
+      return res.status(400).json(errorResponse("INVALID_DATA", "stage is required"));
+    const result = await updateImportOrderStage(id, stage, { quoteAmount: quote_amount });
+    const validated = validateResponse(ImportOrderSchema, result);
+    return res.json(successResponse(validated));
+  } catch (err) {
+    return mapError(res, err, "[ImportOrder updateStage]");
+  }
+}
+
+// POST /v1/import-orders/:id/cancel — buyer cancels their own order.
+export async function cancelImportOrderHandler(req: Request, res: Response) {
+  try {
+    const id = req.params.id as string;
+    const result = await cancelImportOrder(req.userId!, id);
+    const validated = validateResponse(ImportOrderSchema, result);
+    return res.json(successResponse(validated));
+  } catch (err) {
+    return mapError(res, err, "[ImportOrder cancel]");
   }
 }
