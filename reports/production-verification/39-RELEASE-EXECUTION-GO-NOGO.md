@@ -102,5 +102,6 @@ Execute `37-COOLIFY-LIVE-SMOKE-MATRIX.md` at minimum: **S1–S3, S5–S9, S12–
 ## STOP
 
 Agent code work for `w.4.1` recovery line is **complete** at this gate.  
+Phase 2 register closed for reconnect — see `43-PHASE2-RESIDUAL-CLOSEOUT.md`.  
 **Next human actions only:** B1 → B2 → B3.  
-Reply after Coolify smoke (or paste failures) for triage; or order post-ship item #1 (facets).
+Reply after Coolify smoke (or paste failures); or name post-ship order (H1 A/B, M7 A/B, cutover, product invent).
