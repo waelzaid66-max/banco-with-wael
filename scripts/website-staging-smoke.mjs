@@ -8,7 +8,8 @@
  * Optional:
  *   BANCO_LISTING_SMOKE_ID=uuid  — GET /listing/{id} must return 200 + Product JSON-LD
  *   BANCO_WEB_EXPECT_PLUG=on|off — require health.plug (default: on)
- *   BANCO_WEB_SMOKE_MAINTENANCE=1 — also assert /maintenance renders when plugged
+ *   BANCO_WEB_SMOKE_MAINTENANCE=1 — require /maintenance markers (else plug-on → home redirect is OK)
+ *   BANCO_WEB_EXPECT_PLUG=off — require maintenance markers (plug detached)
  *
  * Exit: 0 pass, 1 fail, 2 missing BANCO_WEB_URL
  */
@@ -136,13 +137,30 @@ async function checkRoute(item) {
         }
       }
     } else if (item.kind === "maintenance") {
-      // Always reachable as a page; when unplugged, / also rewrites here.
-      if (
-        !body.includes('data-banco-journey="maintenance"') &&
-        !body.includes("temporarily offline") &&
-        !body.includes("متوقف مؤقتاً")
-      ) {
-        fail(item.label, "missing maintenance page markers");
+      // When plug is ON, middleware redirects /maintenance → home (intentional).
+      // Markers are required when plug is OFF, or when BANCO_WEB_SMOKE_MAINTENANCE=1
+      // forces an unplugged assertion.
+      const forceMaintenance =
+        process.env.BANCO_WEB_SMOKE_MAINTENANCE === "1" || EXPECT_PLUG === "off";
+      const hasMarkers =
+        body.includes('data-banco-journey="maintenance"') ||
+        body.includes("temporarily offline") ||
+        body.includes("متوقف مؤقتاً");
+      if (forceMaintenance) {
+        if (!hasMarkers) {
+          fail(item.label, "missing maintenance page markers");
+        }
+      } else if (hasMarkers) {
+        // Unexpected but still a valid maintenance surface.
+      } else {
+        // Followed redirect to home while plugged in — accept home brand markers.
+        if (
+          !body.includes("BANCO") &&
+          !body.includes("بانكو") &&
+          !body.includes('data-banco-brand')
+        ) {
+          fail(item.label, "expected home redirect when plug on, missing brand markers");
+        }
       }
     } else if (item.kind === "manifest") {
       let json;
