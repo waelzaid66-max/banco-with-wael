@@ -172,8 +172,14 @@ export default function ListingsPage() {
 
   const handleBoostSubmit = () => {
     if (!boostListingId) return;
+    const idempotency_key = `boost:${boostListingId}:${boostType}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
     boostMutation.mutate({
-      data: { listing_id: boostListingId, ad_type: boostType, duration_days: parseInt(boostDuration) }
+      data: {
+        listing_id: boostListingId,
+        ad_type: boostType,
+        duration_days: parseInt(boostDuration),
+        idempotency_key,
+      }
     }, {
       onSuccess: (res) => {
         const promoUsed = Number(res?.data?.promo_used ?? "0");

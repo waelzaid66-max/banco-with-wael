@@ -102,11 +102,17 @@ Single implementation family: `SearchResultsMap` + `.web` + `mapHtml` (Leaflet).
 
 ---
 
+## Round 5 (certification pass)
+
+See `19-FINAL-PRODUCTION-CERTIFICATION.md`. Highlights: identity-scoped session storage, RQ cache clear on user change, plan expiry, settle tombstone, alert once-per-user, boost idempotency required, feed material wire, booking/import/B2B notify CAS hardening.
+
+---
+
 ## Verification evidence (this turn)
 
 | Gate | Result |
 |------|--------|
-| `node scripts/chain-integrity-gate.mjs` | **91/91 PASS** |
+| `node scripts/chain-integrity-gate.mjs` | **98/98 PASS** |
 | API vitest | **346 passed / 3 skipped** |
 | Mobile full `pnpm test` | **PASS** |
 | SVG icons | Unchanged — registry only |

@@ -35,6 +35,11 @@ const RECENT_QUERIES_MAX = 8;
 const RECENT_MAX = 20;
 const STORAGE_DEBOUNCE_MS = 400;
 
+/** Per-identity AsyncStorage key — prevents account A saves leaking into B. */
+function scopedKey(base: string, userId: string | null | undefined): string {
+  return userId ? `${base}:u:${userId}` : `${base}:guest`;
+}
+
 export type SavedItem = FeedItem & { savedAt: number };
 
 export type ListingDetailData = NonNullable<
@@ -152,7 +157,7 @@ interface SessionContextValue {
 const SessionContext = createContext<SessionContextValue | null>(null);
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, userId } = useAuth();
   const { requireAuth } = useAuthGate();
   const [savedItems, setSavedItems] = useState<SavedItem[]>([]);
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
@@ -214,34 +219,47 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const persistSaves = useCallback(
     (items: SavedItem[]) => {
-      scheduleStorageWrite(SAVES_KEY, JSON.stringify(items));
+      scheduleStorageWrite(scopedKey(SAVES_KEY, userId), JSON.stringify(items));
     },
-    [scheduleStorageWrite],
+    [scheduleStorageWrite, userId],
   );
 
-  // Initial load from the local cache (instant, works offline / for guests).
+  // Hydrate (and wipe) whenever Clerk identity changes — never reuse another
+  // account's in-memory or AsyncStorage saves/searches/recents.
   useEffect(() => {
-    AsyncStorage.getItem(SAVES_KEY)
-      .then((raw) => {
-        if (raw) setSavedItems(JSON.parse(raw) as SavedItem[]);
-      })
-      .catch(() => {});
-    AsyncStorage.getItem(SEARCHES_KEY)
-      .then((raw) => {
-        if (raw) setSavedSearches(JSON.parse(raw) as SavedSearch[]);
-      })
-      .catch(() => {});
-    AsyncStorage.getItem(RECENT_KEY)
-      .then((raw) => {
-        if (raw) setRecentlyViewed(JSON.parse(raw) as FeedItem[]);
-      })
-      .catch(() => {});
-    AsyncStorage.getItem(RECENT_QUERIES_KEY)
-      .then((raw) => {
-        if (raw) setRecentQueries(JSON.parse(raw) as string[]);
-      })
-      .catch(() => {});
-  }, []);
+    let cancelled = false;
+    setSavedItems([]);
+    setSavedSearches([]);
+    setRecentlyViewed([]);
+    setRecentQueries([]);
+    feedCacheRef.current.clear();
+
+    const load = async (key: string, apply: (raw: string) => void) => {
+      try {
+        const raw = await AsyncStorage.getItem(key);
+        if (!cancelled && raw) apply(raw);
+      } catch {
+        /* offline / unavailable storage */
+      }
+    };
+
+    void load(scopedKey(SAVES_KEY, userId), (raw) =>
+      setSavedItems(JSON.parse(raw) as SavedItem[]),
+    );
+    void load(scopedKey(SEARCHES_KEY, userId), (raw) =>
+      setSavedSearches(JSON.parse(raw) as SavedSearch[]),
+    );
+    void load(scopedKey(RECENT_KEY, userId), (raw) =>
+      setRecentlyViewed(JSON.parse(raw) as FeedItem[]),
+    );
+    void load(scopedKey(RECENT_QUERIES_KEY, userId), (raw) =>
+      setRecentQueries(JSON.parse(raw) as string[]),
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   // Committed text searches, newest first. Deduped case-insensitively so
   // re-searching "BMW" just moves it to the front instead of duplicating it.
@@ -253,16 +271,17 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         0,
         RECENT_QUERIES_MAX,
       );
-      scheduleStorageWrite(RECENT_QUERIES_KEY, JSON.stringify(next));
+      scheduleStorageWrite(scopedKey(RECENT_QUERIES_KEY, userId), JSON.stringify(next));
       return next;
     });
-  }, [scheduleStorageWrite]);
+  }, [scheduleStorageWrite, userId]);
 
   // When signed in, reconcile the local cache with the server-side saves.
   // Union semantics: push local-only saves up, pull (and enrich) server-only
-  // saves down. Never silently drop a save.
+  // saves down. Never silently drop a save. Scoped to userId so a prior
+  // account's leftovers cannot be toggled into the new account.
   useEffect(() => {
-    if (!isSignedIn) return;
+    if (!isSignedIn || !userId) return;
     let cancelled = false;
 
     (async () => {
@@ -279,7 +298,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       const currentIds = new Set(current.map((i) => i.id));
       const serverSet = new Set(serverIds);
 
-      // 1) Local-only saves (made while signed out) → persist them server-side.
+      // 1) Local-only saves (made while signed out on THIS identity) → persist.
       for (const item of current) {
         if (!serverSet.has(item.id)) {
           toggleSaveListing({ listing_id: item.id }).catch(() => {});
@@ -315,7 +334,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [isSignedIn, persistSaves]);
+  }, [isSignedIn, userId, persistSaves]);
 
   const isSaved = useCallback(
     (id: string) => savedItems.some((i) => i.id === id),
@@ -386,7 +405,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           return prev;
         }
         const next = [...prev, { ...input, id, savedAt: Date.now() }];
-        scheduleStorageWrite(SEARCHES_KEY, JSON.stringify(next));
+        scheduleStorageWrite(scopedKey(SEARCHES_KEY, userId), JSON.stringify(next));
         return next;
       });
       if (alreadySaved) return;
@@ -416,19 +435,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
           if (!remoteId) return;
           setSavedSearches((prev) => {
             const next = prev.map((s) => (s.id === id ? { ...s, remoteId } : s));
-            scheduleStorageWrite(SEARCHES_KEY, JSON.stringify(next));
+            scheduleStorageWrite(scopedKey(SEARCHES_KEY, userId), JSON.stringify(next));
             return next;
           });
         })
         .catch(() => {
           setSavedSearches((prev) => {
             const next = prev.filter((s) => s.id !== id);
-            scheduleStorageWrite(SEARCHES_KEY, JSON.stringify(next));
+            scheduleStorageWrite(scopedKey(SEARCHES_KEY, userId), JSON.stringify(next));
             return next;
           });
         });
     },
-    [isSignedIn, requireAuth, scheduleStorageWrite],
+    [isSignedIn, userId, requireAuth, scheduleStorageWrite],
   );
 
   const removeSearch = useCallback((id: string) => {
@@ -436,7 +455,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setSavedSearches((prev) => {
       removed = prev.find((s) => s.id === id);
       const next = prev.filter((s) => s.id !== id);
-      scheduleStorageWrite(SEARCHES_KEY, JSON.stringify(next));
+      scheduleStorageWrite(scopedKey(SEARCHES_KEY, userId), JSON.stringify(next));
       return next;
     });
     // Delete the server row too, or the user keeps receiving alerts for a search
@@ -450,11 +469,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setSavedSearches((prev) => {
         if (!removed || prev.some((s) => s.id === removed!.id)) return prev;
         const next = [...prev, removed];
-        scheduleStorageWrite(SEARCHES_KEY, JSON.stringify(next));
+        scheduleStorageWrite(scopedKey(SEARCHES_KEY, userId), JSON.stringify(next));
         return next;
       });
     });
-  }, [scheduleStorageWrite]);
+  }, [scheduleStorageWrite, userId]);
 
   const recordView = useCallback((detail: ListingDetailData) => {
     const item = feedItemFromDetail(detail);
@@ -463,10 +482,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         0,
         RECENT_MAX
       );
-      scheduleStorageWrite(RECENT_KEY, JSON.stringify(next));
+      scheduleStorageWrite(scopedKey(RECENT_KEY, userId), JSON.stringify(next));
       return next;
     });
-  }, [scheduleStorageWrite]);
+  }, [scheduleStorageWrite, userId]);
 
   const getCachedItem = useCallback(
     (id: string): FeedItem | null =>

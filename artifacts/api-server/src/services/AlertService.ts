@@ -51,14 +51,30 @@ export async function notifyNewMatch(listing: {
 
     const now = Date.now();
     const titleLower = listing.title.toLowerCase();
+    const cooldownCutoff = new Date(now - NEW_MATCH_COOLDOWN_MS);
 
     for (const search of candidates) {
       // Free-text term (if any) must appear in the listing title.
       if (search.query && !titleLower.includes(search.query.trim().toLowerCase())) continue;
 
-      // Per-search cooldown to prevent notification storms.
-      const last = search.lastNotifiedListingAt ? search.lastNotifiedListingAt.getTime() : 0;
-      if (now - last < NEW_MATCH_COOLDOWN_MS) continue;
+      // One alert per user per listing — overlapping saved searches must not storm.
+      if (notified.has(search.userId)) continue;
+
+      // Atomic cooldown claim — concurrent publishes cannot both pass a stale read.
+      const claimed = await db
+        .update(savedSearches)
+        .set({ lastNotifiedListingAt: new Date() })
+        .where(
+          and(
+            eq(savedSearches.id, search.id),
+            or(
+              isNull(savedSearches.lastNotifiedListingAt),
+              lte(savedSearches.lastNotifiedListingAt, cooldownCutoff),
+            ),
+          ),
+        )
+        .returning({ id: savedSearches.id });
+      if (claimed.length === 0) continue;
 
       await createNotification({
         userId: search.userId,
@@ -68,11 +84,6 @@ export async function notifyNewMatch(listing: {
         data: { listing_id: listing.id, saved_search_id: search.id },
       });
       notified.add(search.userId);
-
-      await db
-        .update(savedSearches)
-        .set({ lastNotifiedListingAt: new Date() })
-        .where(eq(savedSearches.id, search.id));
 
       // Best-effort email — never blocks or throws into the caller.
       void (async () => {

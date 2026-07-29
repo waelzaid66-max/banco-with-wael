@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
-import { paymentIntents, transactions } from "@workspace/db/schema";
-import { and, eq, inArray } from "drizzle-orm";
+import { paymentIntents, transactions, users } from "@workspace/db/schema";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import {
   applyTransaction,
   getWalletBalance,
@@ -196,6 +196,25 @@ export async function settleTopupIntent(
   // failure mark — otherwise the buyer paid at the PSP with no wallet credit.
   if (intent.status !== "pending" && intent.status !== "failed") {
     throw invalidData(`Cannot settle a ${intent.status} intent`);
+  }
+
+  // Soft-deleted owners must not receive wallet credit from late PSP webhooks.
+  const [owner] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(eq(users.id, intent.userId), isNull(users.deletedAt)))
+    .limit(1);
+  if (!owner) {
+    await db
+      .update(paymentIntents)
+      .set({ status: "failed" })
+      .where(
+        and(
+          eq(paymentIntents.id, intent.id),
+          inArray(paymentIntents.status, ["pending", "failed"]),
+        ),
+      );
+    return;
   }
 
   try {

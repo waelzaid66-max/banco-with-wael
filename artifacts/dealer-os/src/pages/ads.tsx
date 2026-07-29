@@ -65,8 +65,16 @@ export default function AdsPage() {
 
   function handleBoost() {
     if (!selectedId) return;
+    const idempotency_key = `boost:${selectedId}:${adType}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
     boostMutation.mutate(
-      { data: { listing_id: selectedId, ad_type: adType, duration_days: parseInt(duration) } },
+      {
+        data: {
+          listing_id: selectedId,
+          ad_type: adType,
+          duration_days: parseInt(duration),
+          idempotency_key,
+        },
+      },
       {
         onSuccess: () => {
           toast({

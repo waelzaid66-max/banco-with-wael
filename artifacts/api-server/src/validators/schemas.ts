@@ -1333,7 +1333,8 @@ export const BoostListingSchema = z.object({
     .enum(["featured", "native_feed", "top_search"])
     .default("native_feed"),
   duration_days: z.number().int().min(1).max(30).default(7),
-  idempotency_key: z.string().min(1).max(200).optional(),
+  // Required — retries without a key double-charge wallet/promo.
+  idempotency_key: z.string().min(8).max(200),
 });
 
 export const ImpressionSchema = z.object({

@@ -413,6 +413,18 @@ export async function submitInterest(
     throw Object.assign(new Error("This opportunity is not open for interest"), { code: "CONFLICT" });
   }
 
+  const [prior] = await db
+    .select({ id: investmentInterests.id })
+    .from(investmentInterests)
+    .where(
+      and(
+        eq(investmentInterests.investmentId, investmentId),
+        eq(investmentInterests.userId, userId),
+      ),
+    )
+    .limit(1);
+  const isNewInterest = !prior;
+
   const [interest] = await db
     .insert(investmentInterests)
     .values({
@@ -433,13 +445,15 @@ export async function submitInterest(
     })
     .returning({ id: investmentInterests.id });
 
-  void createNotification({
-    userId: inv.ownerId,
-    type: "investment",
-    title: "اهتمام استثماري جديد · New investment interest",
-    body: `هناك مهتم بفرصة «${inv.title}» · Someone is interested in your opportunity`,
-    data: { investment_id: investmentId, kind: input.kind },
-  });
+  if (isNewInterest) {
+    void createNotification({
+      userId: inv.ownerId,
+      type: "investment",
+      title: "اهتمام استثماري جديد · New investment interest",
+      body: `هناك مهتم بفرصة «${inv.title}» · Someone is interested in your opportunity`,
+      data: { investment_id: investmentId, kind: input.kind },
+    });
+  }
 
   return { id: interest.id, submitted: true };
 }

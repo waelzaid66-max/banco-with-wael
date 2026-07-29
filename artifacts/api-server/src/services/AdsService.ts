@@ -64,9 +64,12 @@ export async function boostListing(
         listingId: ads.listingId,
         adType: ads.adType,
         expiresAt: ads.expiresAt,
+        sellerId: ads.sellerId,
       })
       .from(ads)
-      .where(eq(ads.boostIdempotencyKey, idempotencyKey))
+      .where(
+        and(eq(ads.boostIdempotencyKey, idempotencyKey), eq(ads.sellerId, sellerId)),
+      )
       .limit(1);
     if (existing) {
       return toBoostResult(existing, durationDays, "0.00", "0.00");
@@ -107,6 +110,18 @@ export async function boostListing(
   let result: BoostResult;
   try {
     result = await db.transaction(async (tx) => {
+      // Re-validate listing lifecycle under the same transaction that charges.
+      const [locked] = await tx
+        .select({ id: listings.id, status: listings.status })
+        .from(listings)
+        .where(and(eq(listings.id, listingId), eq(listings.userId, sellerId)))
+        .limit(1);
+      if (!locked || locked.status !== "active") {
+        throw Object.assign(new Error("Only active listings can be promoted"), {
+          code: "INVALID_DATA",
+        });
+      }
+
       // Insert the ad first so the charge can reference it (FK-free polymorphic
       // link). A failed debit rolls this insert back.
       const [created] = await tx

@@ -102,12 +102,19 @@ function ClerkLoadGate({
 }
 
 function AuthTokenBridge() {
-  const { getToken, signOut } = useAuth();
+  const { getToken, signOut, userId } = useAuth();
   useEffect(() => {
     // getToken can reject while clerk-js is still initializing (or failed to
     // init). API calls must degrade to anonymous, never crash the request.
     setAuthTokenGetter(() => getToken().catch(() => null));
   }, [getToken]);
+
+  // Drop private React Query cache on identity change so user B never briefly
+  // sees user A's /me, notifications, or messages from a shared QueryClient.
+  useEffect(() => {
+    void queryClient.cancelQueries();
+    queryClient.clear();
+  }, [userId]);
 
   useEffect(() => {
     // Soft-deleted accounts reject with 401 ACCOUNT_DELETED while Clerk JWT

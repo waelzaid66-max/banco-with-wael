@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { plans, subscriptions, listings, type Plan } from "@workspace/db/schema";
-import { and, count, eq, gte, sql } from "drizzle-orm";
+import { and, count, eq, gte, gt, sql } from "drizzle-orm";
 import { invalidData } from "../lib/billing";
 
 export type UserRole =
@@ -50,7 +50,14 @@ export async function resolveEffectivePlan(
   const [sub] = await db
     .select({ planId: subscriptions.planId })
     .from(subscriptions)
-    .where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, "active")))
+    .where(
+      and(
+        eq(subscriptions.userId, userId),
+        eq(subscriptions.status, "active"),
+        // Do not trust status alone — cron may lag; expired rows must not grant entitlements.
+        gt(subscriptions.expiresAt, new Date()),
+      ),
+    )
     .limit(1);
 
   if (sub) {

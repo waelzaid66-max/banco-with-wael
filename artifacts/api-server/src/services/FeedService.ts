@@ -163,6 +163,7 @@ export async function getFeed(options: {
   industry?: string;
   originType?: string;
   marketCountry?: string;
+  material?: string;
   hasInstallment?: boolean;
   // Buyer request/wanted filter (undefined → both sales and requests).
   isRequest?: boolean;
@@ -203,6 +204,7 @@ export async function getFeed(options: {
       industry: options.industry,
       origin_type: options.originType,
       market_country: options.marketCountry,
+      material: options.material,
       has_installment: options.hasInstallment,
     })
   );

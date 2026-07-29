@@ -125,14 +125,37 @@ export async function createBooking(
   );
   if (nights < 1) throw codedError("INVALID_DATA", "Check-out must be after check-in");
 
-  const perNight = Number(row.price);
-  const hasPrice = Number.isFinite(perNight) && perNight > 0;
-  const total = hasPrice ? perNight * nights : 0;
-
   // Serialize overlap check + insert per listing so concurrent guests cannot
   // both pass the check-then-insert race (TOCTOU double-book).
   const b = await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT id FROM listings WHERE id = ${listingId} FOR UPDATE`);
+
+    const [locked] = await tx
+      .select({
+        status: listings.status,
+        category: listings.category,
+        price: listings.basePriceCash,
+        ownerId: listings.userId,
+        specs: listingAttributes.specs,
+      })
+      .from(listings)
+      .leftJoin(listingAttributes, eq(listingAttributes.listingId, listings.id))
+      .where(eq(listings.id, listingId))
+      .limit(1);
+    if (!locked || locked.status !== "active") {
+      throw codedError("CONFLICT", "This listing is no longer bookable");
+    }
+    const lockedTerm = (locked.specs as Record<string, unknown> | null)?.rental_term;
+    if (locked.category !== "real_estate" || lockedTerm !== "furnished_daily") {
+      throw codedError("INVALID_DATA", "This listing is not a daily/furnished rental");
+    }
+    if (locked.ownerId === user.id) {
+      throw codedError("FORBIDDEN", "You can't book your own listing");
+    }
+
+    const lockedPerNight = Number(locked.price);
+    const lockedHasPrice = Number.isFinite(lockedPerNight) && lockedPerNight > 0;
+    const lockedTotal = lockedHasPrice ? lockedPerNight * nights : 0;
 
     const [clash] = await tx
       .select({ id: bookings.id })
@@ -156,8 +179,8 @@ export async function createBooking(
         checkIn,
         checkOut,
         nights,
-        pricePerNight: hasPrice ? String(perNight) : null,
-        totalPrice: hasPrice ? String(total) : null,
+        pricePerNight: lockedHasPrice ? String(lockedPerNight) : null,
+        totalPrice: lockedHasPrice ? String(lockedTotal) : null,
         guests: input.guests && input.guests > 0 ? input.guests : 1,
         note: input.note ?? null,
         status: "requested",

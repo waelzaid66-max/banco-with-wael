@@ -206,8 +206,20 @@ export async function cancelImportOrder(
   const [updated] = await db
     .update(importOrders)
     .set({ stage: "cancelled", updatedAt: new Date() })
-    .where(eq(importOrders.id, orderId))
+    .where(
+      and(
+        eq(importOrders.id, orderId),
+        eq(importOrders.userId, userId),
+        eq(importOrders.stage, row.stage),
+      ),
+    )
     .returning();
+
+  if (!updated) {
+    throw Object.assign(new Error("Import order stage changed concurrently"), {
+      code: "CONFLICT",
+    });
+  }
 
   return toDto(updated);
 }

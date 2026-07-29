@@ -6,9 +6,10 @@ import {
   paymentIntents,
   transactions,
   listings,
+  users,
   type Plan,
 } from "@workspace/db/schema";
-import { and, asc, count, eq, gte, inArray } from "drizzle-orm";
+import { and, asc, count, eq, gte, gt, inArray, isNull } from "drizzle-orm";
 import {
   applyTransaction,
   getWalletBalance,
@@ -102,7 +103,13 @@ async function getActiveSubscription(userId: string): Promise<SubscriptionRow | 
   const [sub] = await db
     .select()
     .from(subscriptions)
-    .where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, "active")))
+    .where(
+      and(
+        eq(subscriptions.userId, userId),
+        eq(subscriptions.status, "active"),
+        gt(subscriptions.expiresAt, new Date()),
+      ),
+    )
     .limit(1);
   return sub ?? null;
 }
@@ -395,6 +402,25 @@ export async function settleSubscriptionIntentByWebhook(
     throw invalidData(`Cannot settle a ${intent.status} intent`);
   }
   if (!intent.planId) throw invalidData("Subscription intent is missing its plan");
+
+  // Soft-deleted owners must not receive an active subscription from late webhooks.
+  const [owner] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(eq(users.id, intent.userId), isNull(users.deletedAt)))
+    .limit(1);
+  if (!owner) {
+    await db
+      .update(paymentIntents)
+      .set({ status: "failed" })
+      .where(
+        and(
+          eq(paymentIntents.id, intent.id),
+          inArray(paymentIntents.status, ["pending", "failed"]),
+        ),
+      );
+    return;
+  }
 
   const [plan] = await db.select().from(plans).where(eq(plans.id, intent.planId)).limit(1);
   if (!plan) throw notFound("Plan not found");

@@ -426,6 +426,18 @@ export async function respondToRequest(
     throw Object.assign(new Error("This request is no longer open"), { code: "CONFLICT" });
   }
 
+  const [prior] = await db
+    .select({ id: globalSupplyResponses.id })
+    .from(globalSupplyResponses)
+    .where(
+      and(
+        eq(globalSupplyResponses.requestId, requestId),
+        eq(globalSupplyResponses.supplierId, supplierId),
+      ),
+    )
+    .limit(1);
+  const isNewResponse = !prior;
+
   const [response] = await db
     .insert(globalSupplyResponses)
     .values({
@@ -457,13 +469,15 @@ export async function respondToRequest(
     })
     .returning({ id: globalSupplyResponses.id });
 
-  void createNotification({
-    userId: req.buyerId,
-    type: "global_supply",
-    title: "رد مورّد جديد · New supply response",
-    body: `ردّ مورّد على طلبك «${req.productText}» · A supplier responded to your request`,
-    data: { request_id: requestId, response_id: response.id },
-  });
+  if (isNewResponse) {
+    void createNotification({
+      userId: req.buyerId,
+      type: "global_supply",
+      title: "رد مورّد جديد · New supply response",
+      body: `ردّ مورّد على طلبك «${req.productText}» · A supplier responded to your request`,
+      data: { request_id: requestId, response_id: response.id },
+    });
+  }
 
   return { id: response.id, submitted: true };
 }

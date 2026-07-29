@@ -868,6 +868,65 @@ const CHECKS = [
       /Soft-deleted accounts are also suppressed/.test(s),
     why: "Deleted businesses must not remain public/followable",
   },
+  {
+    id: "P-session-scoped-storage",
+    file: "artifacts/banco-mobile/context/SessionContext.tsx",
+    test: (s) =>
+      /scopedKey/.test(s) &&
+      /userId/.test(s) &&
+      /:u:/.test(s) &&
+      /feedCacheRef\.current\.clear/.test(s),
+    why: "Account switch must not leak saves/searches across users",
+  },
+  {
+    id: "P-rq-clear-on-identity",
+    file: "artifacts/banco-mobile/app/_layout.tsx",
+    test: (s) =>
+      /queryClient\.clear\(\)/.test(s) &&
+      /cancelQueries/.test(s) &&
+      /userId/.test(s),
+    why: "React Query must drop private cache on Clerk identity change",
+  },
+  {
+    id: "P-plan-respects-expiry",
+    file: "artifacts/api-server/src/services/PlanService.ts",
+    test: (s) =>
+      /gt\(subscriptions\.expiresAt/.test(s) &&
+      /eq\(subscriptions\.status, "active"\)/.test(s),
+    why: "Expired subscriptions must not grant entitlements while cron lags",
+  },
+  {
+    id: "P-settle-reject-tombstone",
+    file: "artifacts/api-server/src/services/PaymentIntentService.ts",
+    test: (s) =>
+      /isNull\(users\.deletedAt\)/.test(s) &&
+      /Soft-deleted owners must not receive wallet credit/.test(s),
+    why: "Late PSP webhooks must not credit soft-deleted accounts",
+  },
+  {
+    id: "P-alert-once-per-user",
+    file: "artifacts/api-server/src/services/AlertService.ts",
+    test: (s) =>
+      /notified\.has\(search\.userId\)/.test(s) &&
+      /Atomic cooldown claim/.test(s) &&
+      /cooldownCutoff/.test(s),
+    why: "Overlapping saved searches must not multiply new_match storms",
+  },
+  {
+    id: "P-boost-idempotency-required",
+    file: "artifacts/api-server/src/validators/schemas.ts",
+    test: (s) => {
+      const block = s.slice(s.indexOf("export const BoostListingSchema"));
+      return /idempotency_key: z\.string\(\)\.min\(8\)/.test(block);
+    },
+    why: "Boost retries without idempotency key must be rejected",
+  },
+  {
+    id: "P-feed-material-wired",
+    file: "artifacts/api-server/src/controllers/feedController.ts",
+    test: (s) => /material: query\.material/.test(s),
+    why: "Feed must forward material filter (search parity)",
+  },
 ];
 
 function main() {

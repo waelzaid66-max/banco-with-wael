@@ -303,6 +303,13 @@ export async function submitOffer(
     throw Object.assign(new Error("This RFQ is no longer open"), { code: "CONFLICT" });
   }
 
+  const [prior] = await db
+    .select({ id: rfqOffers.id })
+    .from(rfqOffers)
+    .where(and(eq(rfqOffers.rfqId, rfqId), eq(rfqOffers.supplierId, supplierId)))
+    .limit(1);
+  const isNewOffer = !prior;
+
   const [offer] = await db
     .insert(rfqOffers)
     .values({
@@ -328,13 +335,16 @@ export async function submitOffer(
     })
     .returning({ id: rfqOffers.id });
 
-  void createNotification({
-    userId: rfq.buyerId,
-    type: "rfq",
-    title: "عرض جديد على طلبك · New RFQ offer",
-    body: `وصلك عرض جديد على «${rfq.title}» · You received a new offer`,
-    data: { rfq_id: rfqId, offer_id: offer.id },
-  });
+  // Notify only on first offer — upsert edits must not storm the buyer inbox.
+  if (isNewOffer) {
+    void createNotification({
+      userId: rfq.buyerId,
+      type: "rfq",
+      title: "عرض جديد على طلبك · New RFQ offer",
+      body: `وصلك عرض جديد على «${rfq.title}» · You received a new offer`,
+      data: { rfq_id: rfqId, offer_id: offer.id },
+    });
+  }
 
   return { id: offer.id, submitted: true };
 }
