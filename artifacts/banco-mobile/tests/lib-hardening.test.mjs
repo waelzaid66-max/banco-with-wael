@@ -67,6 +67,20 @@ test("payment and subscription notifications route to billing hub", () => {
   );
 });
 
+test("message notification deep-link forwards listingId when stamped", () => {
+  const src = fs.readFileSync(NOTIF_ROUTING, "utf8");
+  assert.match(
+    src,
+    /type === "message"[\s\S]*?listingId:\s*d\.listing_id/,
+    "push/feed message taps must pass listingId (server stamps listing_id)",
+  );
+  assert.match(
+    src,
+    /financing_lead_id[\s\S]*?\/business\/banks/,
+    "FI handoff pings must open Banks hub",
+  );
+});
+
 test("rental hub is a registered stack route", () => {
   const layout = fs.readFileSync(LAYOUT, "utf8");
   assert.match(layout, /name="rentals\/hub"/, "rentals/hub must be in root stack");

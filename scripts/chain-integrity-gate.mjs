@@ -210,6 +210,35 @@ const CHECKS = [
     why: "Push delivery path must remain",
   },
   {
+    id: "P-push-chokepoint",
+    file: "artifacts/api-server/src/services/NotificationService.ts",
+    test: (s) =>
+      /sendPushToUser/.test(s) &&
+      /createNotification/.test(s) &&
+      /data:\s*\{\s*type:\s*input\.type/.test(s),
+    why: "Push must fan out only via createNotification with data.type",
+  },
+  {
+    id: "P-push-expo-go-guard",
+    file: "artifacts/banco-mobile/hooks/usePushNotifications.tsx",
+    test: (s) =>
+      /isExpoGo/.test(s) &&
+      /ExecutionEnvironment\.StoreClient/.test(s) &&
+      /routeForNotification/.test(s),
+    why: "Expo Go must stay no-remote-push; taps use shared router",
+  },
+  {
+    id: "P-push-routing-shared",
+    file: "artifacts/banco-mobile/lib/notificationRouting.ts",
+    test: (s) =>
+      /export function routeForNotification/.test(s) &&
+      /type === "message"/.test(s) &&
+      /listingId:\s*d\.listing_id/.test(s) &&
+      /financing_lead_id/.test(s) &&
+      /payment_success/.test(s),
+    why: "Shared feed+push router must keep message listingId + banks + billing",
+  },
+  {
     id: "P-fi-agent-authz",
     file: "artifacts/api-server/src/services/FinancingService.ts",
     test: (s) => /agentCanAccessRequest/.test(s),
