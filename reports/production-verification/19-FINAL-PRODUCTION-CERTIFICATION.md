@@ -20,8 +20,8 @@ Rounds 1–15 closed proven code-path defects. Round 15 closed **CRITICAL** reve
 
 | Gate | Result | Evidence |
 |------|--------|----------|
-| `node scripts/chain-integrity-gate.mjs` | see tip run | Round 15 markers (+ R14) |
-| API `pnpm test` (vitest) | see tip run | Reverse-race + orphan + save tombstone |
+| `node scripts/chain-integrity-gate.mjs` | **158/158 PASS** | Round 15 reverse-race, orphan, keys, tombstones, SSM wait |
+| API `pnpm test` (vitest) | **381 passed / 3 skipped** | Reverse-race + orphan + save tombstone suites |
 | Mobile lib-hardening | prior PASS | Attempt key on pending (R13); plans key (R15) |
 | Cross-repo cherry-pick | **NONE** | SoT ahead — no blind merge |
 | SVG icon registry | **PASS (static)** | No SVG→PNG migration |

@@ -72,5 +72,5 @@ Re-read R14 residuals → money reverse/settle race + orphan credit → client i
 | Gate | Result |
 |------|--------|
 | Chain | **158/158 PASS** |
-| API vitest | pending tip run |
+| API vitest | **381 passed / 3 skipped** |
 | Cross-repo cherry-pick | **NONE** |
