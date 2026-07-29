@@ -55,8 +55,10 @@ router.get("/livez", (_req, res) => {
 
 /**
  * Readiness: should this instance receive traffic? Returns 200 only when the
- * database is actually reachable; otherwise 503 so load balancers stop routing
- * to it. The DB probe is time-boxed so readiness never hangs.
+ * database is actually reachable AND money-path tables exist; otherwise 503 so
+ * load balancers stop routing to it. A bare `SELECT 1` previously went green on
+ * an empty/migrated-wrong Postgres that could not settle top-ups.
+ * The DB probe is time-boxed so readiness never hangs.
  * Includes gitSha/buildId so ops can pin live traffic to a known commit (F1).
  */
 router.get("/readyz", async (_req, res) => {
@@ -75,6 +77,29 @@ router.get("/readyz", async (_req, res) => {
     checks.database = "down";
     healthy = false;
     logger.error({ err }, "Readiness check failed: database unreachable");
+  }
+
+  if (checks.database === "ok") {
+    try {
+      await Promise.race([
+        (async () => {
+          // Fail closed if money tables are missing (wrong DB / incomplete migrate).
+          await db.execute(sql`SELECT 1 FROM payment_intents LIMIT 0`);
+          await db.execute(sql`SELECT 1 FROM transactions LIMIT 0`);
+          await db.execute(sql`SELECT 1 FROM promo_ad_transactions LIMIT 0`);
+        })(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("schema check timed out")), DB_CHECK_TIMEOUT_MS),
+        ),
+      ]);
+      checks.money_schema = "ok";
+    } catch (err) {
+      checks.money_schema = "down";
+      healthy = false;
+      logger.error({ err }, "Readiness check failed: money schema incomplete");
+    }
+  } else {
+    checks.money_schema = "down";
   }
 
   res.status(healthy ? 200 : 503).json({

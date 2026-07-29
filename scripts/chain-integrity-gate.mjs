@@ -1225,6 +1225,62 @@ const CHECKS = [
       /useGetTrending\(\{\s*market_country:\s*DEFAULT_MARKET_COUNTRY/.test(s),
     why: "Coolify banco-web trending must not mix markets",
   },
+  {
+    id: "P-promo-consume-fingerprint",
+    file: "artifacts/api-server/src/services/PromoAdCreditService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function consumePromoCredit"));
+      return (
+        /Idempotency key already used for a different promo consume/.test(fn) &&
+        /existing\.userId === userId/.test(fn) &&
+        /existing\.type === "consume"/.test(fn)
+      );
+    },
+    why: "Promo consume replay must fingerprint user/type/reference (post-delete key reuse)",
+  },
+  {
+    id: "P-paymob-resume-preserves-order",
+    file: "artifacts/api-server/src/services/PaymentIntentService.ts",
+    test: (s) =>
+      /resumeFailedPaymentMetadataSql/.test(s) &&
+      /paymobOrderIdFromMeta/.test(s) &&
+      /already has a provider order/.test(s) &&
+      /checkoutBoundPaymentMetadataSql/.test(s),
+    why: "Failed Paymob resume must not wipe paymob_order_id / open a second paid order",
+  },
+  {
+    id: "P-dealer-bulk-boost-idempotency",
+    file: "artifacts/dealer-os/src/pages/listings.tsx",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("const handleBulkBoost"));
+      return /idempotency_key:\s*`boost:\$\{id\}/.test(fn);
+    },
+    why: "Dealer-os bulk boost must send required idempotency_key per listing",
+  },
+  {
+    id: "P-prod-compose-api-loopback",
+    file: "docker-compose.prod.yml",
+    test: (s) => /127\.0\.0\.1:\$\{API_HOST_PORT/.test(s),
+    why: "Prod compose must not world-bind API :8080 (X-Forwarded-For trust)",
+  },
+  {
+    id: "P-readyz-money-schema",
+    file: "artifacts/api-server/src/routes/health.ts",
+    test: (s) =>
+      /money_schema/.test(s) &&
+      /SELECT 1 FROM payment_intents LIMIT 0/.test(s) &&
+      /SELECT 1 FROM transactions LIMIT 0/.test(s),
+    why: "readyz must fail closed when money tables are missing",
+  },
+  {
+    id: "P-web-clerk-fail-closed",
+    file: "artifacts/banco-web/middleware.ts",
+    test: (s) =>
+      /NODE_ENV === "production"/.test(s) &&
+      /isProtectedRoute\(req\)/.test(s) &&
+      /status: 503/.test(s),
+    why: "Production web without Clerk key must fail closed on protected routes",
+  },
 ];
 
 function main() {

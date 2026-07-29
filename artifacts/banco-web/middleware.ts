@@ -71,9 +71,8 @@ function plugGate(req: NextRequest): NextResponse | null {
 // Clerk's publishable key is inlined at build time. When it is absent — the CI
 // SEO/Lighthouse smoke, static previews, keyless local runs — clerkMiddleware
 // throws on every request, so no page (not even the public home) can render.
-// Fall back to a pass-through in that case so public pages stay servable;
-// protected routes are still gated on every build that ships a key (all real
-// production builds), so production behaviour is unchanged.
+// Fall back to a pass-through for public routes in that case. In production,
+// protected routes must FAIL CLOSED (503) — never silently skip auth.protect().
 export default function middleware(req: NextRequest, event: NextFetchEvent) {
   const gated = plugGate(req);
 
@@ -83,6 +82,12 @@ export default function middleware(req: NextRequest, event: NextFetchEvent) {
   }
 
   if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+    if (process.env.NODE_ENV === "production" && isProtectedRoute(req)) {
+      return new NextResponse("Authentication is not configured", {
+        status: 503,
+        headers: { "Cache-Control": "no-store" },
+      });
+    }
     return NextResponse.next();
   }
 

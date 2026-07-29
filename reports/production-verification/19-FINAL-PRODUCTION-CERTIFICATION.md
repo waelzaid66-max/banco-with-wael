@@ -3,7 +3,7 @@
 **Authority:** Chief Production Architect / Final Production Certification  
 **Repository SoT:** `waelzaid66-max/banco-with-wael`  
 **Branch:** `cursor/phase-x-production-hardening-5cf0`  
-**Tip at certification write:** Round 11 tip (see git log)  
+**Tip at certification write:** Round 12 tip (see git log)  
 **Policy:** Zero invented features. PASS only with evidence. Deep hunt before patch. UNVERIFIED when device/ops required.
 
 ---
@@ -12,7 +12,7 @@
 
 **CONDITIONAL GO — NOT FULL PRODUCTION CERTIFIED.**
 
-Rounds 1–11 closed proven code-path defects with gates and (from R10+) executed vitest. Round 11 fixed a **CRITICAL** wallet idempotency fingerprint hole plus HIGH PSP/tombstone/market residuals after multi-agent hunt + source re-verification. Device/ops remain **UNVERIFIED**.
+Rounds 1–12 closed proven code-path defects with gates and (from R10+) executed vitest. Round 12 closed a **CRITICAL** promo-credit idempotency fingerprint hole plus HIGH PSP metadata stranding, dealer bulk boost keys, and ops fail-closed surfaces (compose loopback, readyz money schema, Clerk production protect). Device/ops remain **UNVERIFIED**.
 
 ---
 
@@ -20,28 +20,27 @@ Rounds 1–11 closed proven code-path defects with gates and (from R10+) execute
 
 | Gate | Result | Evidence |
 |------|--------|----------|
-| `node scripts/chain-integrity-gate.mjs` | **132/132 PASS** | Round 11 wallet fingerprint, PSP amount-before-claim, boost FOR UPDATE, booking/ad tombstones, home/web market |
-| API `pnpm test` (vitest) | **362 passed / 3 skipped** | Cross-purpose idempotency + booking tombstone suites |
-| Mobile `pnpm test` | **PASS** | Home sort market guard |
+| `node scripts/chain-integrity-gate.mjs` | **138/138 PASS** | Round 12 promo fingerprint, Paymob resume merge, dealer bulk keys, compose/readyz/Clerk |
+| API `pnpm test` (vitest) | **366 passed / 3 skipped** | Promo fingerprint + failed-resume suites |
+| Mobile `pnpm test` | prior PASS | Home sort market guard (R11) |
 | SVG icon registry | **PASS (static)** | No SVG→PNG migration |
 
 ---
 
-## Round 11 (deep hunt)
+## Round 12 (full production hardening)
 
 | Defect | Severity | Status |
 |--------|----------|--------|
-| Ledger idempotency ignored type/user/amount/ref | CRITICAL | **FIXED** + vitest |
-| Boost archive mid-flight TOCTOU | HIGH | **FIXED** (`FOR UPDATE`) |
-| Paymob claim before amount/currency guards | HIGH | **FIXED** |
-| Bookings on soft-deleted/flagged hosts | HIGH | **FIXED** + vitest |
-| Ad impression billing on hidden listings | HIGH | **FIXED** |
-| Home sort dropped market_country | HIGH | **FIXED** |
-| Coolify web trending/hub unscoped | HIGH | **FIXED** |
+| Promo consume idempotency ignored user/ref | CRITICAL | **FIXED** + vitest |
+| Failed Paymob resume wiped `paymob_order_id` | HIGH | **FIXED** + vitest |
+| Dealer-os bulk boost missing idempotency_key | HIGH | **FIXED** |
+| Prod compose world-bound API :8080 | HIGH | **FIXED** |
+| readyz green without money tables | HIGH | **FIXED** |
+| Clerk keyless production open protected routes | HIGH | **FIXED** |
 
-See `reports/production-verification/24-ROUND-11-DEEP-HUNT-WALLET-PSP-TOMBSTONE.md`.
+See `reports/production-verification/25-ROUND-12-PROMO-PSP-OPS-HARDENING.md`.
 
-Prior rounds 5–10 FIXED rows remain closed (docs 19–23).
+Prior rounds 5–11 FIXED rows remain closed (docs 19–24).
 
 ---
 

@@ -4,8 +4,9 @@ import {
   monthIndexFrom,
   startOfNextMonth,
   getPromoSummary,
+  consumePromoCredit,
 } from "./PromoAdCreditService";
-import { db, createUser, deleteUsers } from "../__tests__/helpers";
+import { db, createUser, deleteUsers, uniq, randomUUID } from "../__tests__/helpers";
 import { users } from "@workspace/db/schema";
 
 /**
@@ -83,5 +84,81 @@ describe("PromoAdCreditService.getPromoSummary — effective balance respects ex
     const dead = await getPromoSummary(userId);
     expect(Number(dead.balance)).toBe(0);
     expect(dead.expires_at).toBeNull();
+  });
+});
+
+describe("consumePromoCredit idempotency fingerprint (Round 12)", () => {
+  it("rejects key reuse against a different reference (post-delete boost undercharge)", async () => {
+    const userId = await createUser({ role: "dealer" });
+    uids.push(userId);
+    const future = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await db
+      .update(users)
+      .set({
+        promoAdBalance: "200.00",
+        promoAdBalanceExpiresAt: future,
+        isVerified: true,
+      })
+      .where(eq(users.id, userId));
+
+    const key = `${uniq("boost")}:promo`;
+    const adA = randomUUID();
+    const adB = randomUUID();
+
+    const first = await db.transaction((tx) =>
+      consumePromoCredit(
+        tx,
+        userId,
+        50,
+        { referenceType: "ad", referenceId: adA, description: "boost A" },
+        key,
+      ),
+    );
+    expect(first.replayed).toBe(false);
+    expect(Number(first.promo_used)).toBe(50);
+
+    await expect(
+      db.transaction((tx) =>
+        consumePromoCredit(
+          tx,
+          userId,
+          50,
+          { referenceType: "ad", referenceId: adB, description: "boost B" },
+          key,
+        ),
+      ),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+
+    const bal = await getPromoSummary(userId);
+    expect(Number(bal.balance)).toBe(150);
+  });
+
+  it("replays when fingerprint matches (same user/ref)", async () => {
+    const userId = await createUser({ role: "dealer" });
+    uids.push(userId);
+    const future = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await db
+      .update(users)
+      .set({
+        promoAdBalance: "80.00",
+        promoAdBalanceExpiresAt: future,
+        isVerified: true,
+      })
+      .where(eq(users.id, userId));
+
+    const key = `${uniq("boost")}:promo`;
+    const adId = randomUUID();
+    const ref = { referenceType: "ad", referenceId: adId, description: "boost" };
+
+    const first = await db.transaction((tx) =>
+      consumePromoCredit(tx, userId, 30, ref, key),
+    );
+    const second = await db.transaction((tx) =>
+      consumePromoCredit(tx, userId, 30, ref, key),
+    );
+    expect(first.replayed).toBe(false);
+    expect(second.replayed).toBe(true);
+    expect(second.promo_used).toBe(first.promo_used);
+    expect(Number(await getPromoSummary(userId).then((s) => s.balance))).toBe(50);
   });
 });

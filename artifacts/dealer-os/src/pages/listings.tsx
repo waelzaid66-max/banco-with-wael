@@ -112,9 +112,21 @@ export default function ListingsPage() {
     let completed = 0;
     let failed = 0;
     const total = selectedIds.length;
+    // Schema requires idempotency_key (single-boost dialog already sends one).
+    // One batch token so React Query retries of the same mutate stay stable;
+    // each listing still gets a distinct key.
+    const batchToken = `bulk:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    const durationDays = parseInt(bulkBoostDuration);
     selectedIds.forEach(id => {
       boostMutation.mutate(
-        { data: { listing_id: id, ad_type: bulkBoostType, duration_days: parseInt(bulkBoostDuration) } },
+        {
+          data: {
+            listing_id: id,
+            ad_type: bulkBoostType,
+            duration_days: durationDays,
+            idempotency_key: `boost:${id}:${bulkBoostType}:${durationDays}:${batchToken}`,
+          },
+        },
         {
           onSuccess: () => {
             completed++;

@@ -117,3 +117,96 @@ describe("Paymob order binding + concurrent top-up (Round 10)", () => {
     expect(rows).toHaveLength(1);
   });
 });
+
+describe("Failed top-up resume preserves Paymob order bind (Round 12)", () => {
+  it("refuses to reopen PSP when paymob_order_id is already bound", async () => {
+    const userId = await createUser();
+    uids.push(userId);
+    const key = randomUUID();
+    const orderId = `order_${randomUUID().slice(0, 8)}`;
+
+    await db.insert(paymentIntents).values({
+      id: key,
+      userId,
+      amount: "250.00",
+      method: "fawry",
+      purpose: "wallet_topup",
+      status: "failed",
+      providerRef: "intention_old",
+      metadata: {
+        provider: "paymob",
+        paymob_order_id: orderId,
+        charge_error: true,
+      },
+    });
+
+    createProviderChargeMock.mockImplementation(async () => {
+      throw new Error("must not open a second Paymob checkout");
+    });
+
+    await expect(
+      createTopupIntent({
+        userId,
+        amount: 250,
+        method: "fawry",
+        idempotencyKey: key,
+      }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+
+    expect(createProviderChargeMock).not.toHaveBeenCalled();
+
+    const [row] = await db
+      .select()
+      .from(paymentIntents)
+      .where(eq(paymentIntents.id, key));
+    expect(row.status).toBe("pending");
+    expect(
+      (row.metadata as Record<string, unknown>).paymob_order_id,
+    ).toBe(orderId);
+  });
+
+  it("resumes a failed intent without an order id and keeps order on later bind", async () => {
+    const userId = await createUser();
+    uids.push(userId);
+    const key = randomUUID();
+
+    await db.insert(paymentIntents).values({
+      id: key,
+      userId,
+      amount: "120.00",
+      method: "instapay",
+      purpose: "wallet_topup",
+      status: "failed",
+      providerRef: null,
+      metadata: { provider: "paymob", charge_error: true },
+    });
+
+    createProviderChargeMock.mockResolvedValue({
+      providerRef: "intention_new",
+      checkoutUrl: `https://accept.paymob.com/checkout/${key}`,
+    });
+
+    const result = await createTopupIntent({
+      userId,
+      amount: 120,
+      method: "instapay",
+      idempotencyKey: key,
+    });
+    expect(result.checkout_url).toContain(key);
+    expect(createProviderChargeMock).toHaveBeenCalledTimes(1);
+
+    // Simulate webhook binding an order after checkout — metadata merge must
+    // not be wiped by a subsequent charge_error-style replace.
+    await claimPaymobOrderForIntent(key, "order_bound_after");
+    const [bound] = await db
+      .select()
+      .from(paymentIntents)
+      .where(eq(paymentIntents.id, key));
+    expect(
+      (bound.metadata as Record<string, unknown>).paymob_order_id,
+    ).toBe("order_bound_after");
+    expect(
+      (bound.metadata as Record<string, unknown>).checkout_url,
+    ).toBeTruthy();
+  });
+});

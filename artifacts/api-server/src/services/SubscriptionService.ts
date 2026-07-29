@@ -14,6 +14,12 @@ import {
   getWalletBalance,
   type LedgerPaymentMethod,
 } from "./WalletService";
+import {
+  resumeFailedPaymentMetadataSql,
+  chargeErrorPaymentMetadataSql,
+  checkoutBoundPaymentMetadataSql,
+  paymobOrderIdFromMeta,
+} from "./PaymentIntentService";
 import { resolveEffectivePlan, type UserRole } from "./PlanService";
 import { createProviderCharge, type EgyptianRail } from "../lib/paymentProvider";
 import { invalidData, isUniqueViolation, notFound, toMoney, conflict } from "../lib/billing";
@@ -373,13 +379,32 @@ export async function startSubscription(input: StartSubscriptionInput) {
       return intentResult(existingIntent, replayUrl);
     }
     if (existingIntent.status === "failed") {
+      const boundOrder = paymobOrderIdFromMeta(existingIntent.metadata);
+      if (boundOrder) {
+        await db
+          .update(paymentIntents)
+          .set({
+            status: "pending",
+            planId: plan.id,
+            metadata: resumeFailedPaymentMetadataSql(),
+          })
+          .where(
+            and(
+              eq(paymentIntents.id, intentId),
+              eq(paymentIntents.status, "failed"),
+            ),
+          );
+        throw conflict(
+          "This payment already has a provider order; wait for confirmation",
+        );
+      }
       const [resumed] = await db
         .update(paymentIntents)
         .set({
           status: "pending",
           providerRef: null,
           planId: plan.id,
-          metadata: { provider: "paymob", resumed: true },
+          metadata: resumeFailedPaymentMetadataSql(),
         })
         .where(
           and(
@@ -436,6 +461,12 @@ export async function startSubscription(input: StartSubscriptionInput) {
     return intentResult(intent, earlyUrl);
   }
 
+  if (paymobOrderIdFromMeta(intent.metadata)) {
+    throw conflict(
+      "This payment already has a provider order; wait for confirmation",
+    );
+  }
+
   const [openingClaim] = await db
     .update(paymentIntents)
     .set({
@@ -490,7 +521,7 @@ export async function startSubscription(input: StartSubscriptionInput) {
   } catch (err) {
     await db
       .update(paymentIntents)
-      .set({ status: "failed", metadata: { provider: "paymob", charge_error: true } })
+      .set({ status: "failed", metadata: chargeErrorPaymentMetadataSql() })
       .where(and(eq(paymentIntents.id, intentId), eq(paymentIntents.status, "pending")));
     throw err;
   }
@@ -499,7 +530,7 @@ export async function startSubscription(input: StartSubscriptionInput) {
     .update(paymentIntents)
     .set({
       providerRef: charge.providerRef,
-      metadata: { provider: "paymob", checkout_url: charge.checkoutUrl },
+      metadata: checkoutBoundPaymentMetadataSql(charge.checkoutUrl),
     })
     .where(eq(paymentIntents.id, intentId))
     .returning();

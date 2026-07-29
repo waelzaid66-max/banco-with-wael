@@ -53,6 +53,53 @@ function checkoutUrlFromMeta(metadata: unknown): string | null {
   return typeof url === "string" && url.length > 0 ? url : null;
 }
 
+/**
+ * Resume a failed intent for another PSP open WITHOUT wiping `paymob_order_id`.
+ * A full metadata replace stranded paid orders when a second checkout was opened.
+ */
+export function resumeFailedPaymentMetadataSql() {
+  return sql`
+    (COALESCE(${paymentIntents.metadata}, '{}'::jsonb)
+      - 'checkout_url'
+      - 'provider_opening'
+      - 'charge_error')
+    || '{"provider":"paymob","resumed":true}'::jsonb
+  `;
+}
+
+/** Mark charge failure while preserving any already-bound Paymob order.id. */
+export function chargeErrorPaymentMetadataSql() {
+  return sql`
+    (COALESCE(${paymentIntents.metadata}, '{}'::jsonb)
+      - 'checkout_url'
+      - 'provider_opening'
+      - 'resumed')
+    || '{"provider":"paymob","charge_error":true}'::jsonb
+  `;
+}
+
+/** Bind hosted checkout URL without erasing `paymob_order_id`. */
+export function checkoutBoundPaymentMetadataSql(checkoutUrl: string) {
+  return sql`
+    (COALESCE(${paymentIntents.metadata}, '{}'::jsonb)
+      - 'provider_opening'
+      - 'charge_error'
+      - 'resumed')
+    || jsonb_build_object(
+      'provider', 'paymob',
+      'checkout_url', ${checkoutUrl}::text
+    )
+  `;
+}
+
+export function paymobOrderIdFromMeta(metadata: unknown): string | null {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null;
+  }
+  const id = (metadata as Record<string, unknown>).paymob_order_id;
+  return typeof id === "string" && id.length > 0 ? id : null;
+}
+
 function assertTopupIdempotencyMatch(
   existing: typeof paymentIntents.$inferSelect,
   input: CreateTopupInput,
@@ -131,12 +178,32 @@ export async function createTopupIntent(
     }
     // pending/failed without a bound checkout → resume (re-open PSP once).
     if (existing.status === "failed") {
+      const boundOrder = paymobOrderIdFromMeta(existing.metadata);
+      if (boundOrder) {
+        // Order already claimed — reopening a second checkout would strand
+        // settlement of the first paid order. Restore pending and refuse.
+        await db
+          .update(paymentIntents)
+          .set({
+            status: "pending",
+            metadata: resumeFailedPaymentMetadataSql(),
+          })
+          .where(
+            and(
+              eq(paymentIntents.id, intentId),
+              eq(paymentIntents.status, "failed"),
+            ),
+          );
+        throw conflict(
+          "This payment already has a provider order; wait for confirmation",
+        );
+      }
       const [resumed] = await db
         .update(paymentIntents)
         .set({
           status: "pending",
           providerRef: null,
-          metadata: { provider: "paymob", resumed: true },
+          metadata: resumeFailedPaymentMetadataSql(),
         })
         .where(
           and(eq(paymentIntents.id, intentId), eq(paymentIntents.status, "failed")),
@@ -190,6 +257,12 @@ export async function createTopupIntent(
     return topupResultFromRow(intent, earlyUrl);
   }
 
+  if (paymobOrderIdFromMeta(intent.metadata)) {
+    throw conflict(
+      "This payment already has a provider order; wait for confirmation",
+    );
+  }
+
   // Serialize Paymob checkout creation: only one concurrent retry may enter the
   // PSP window. Losers poll until checkout is bound (or the opener fails).
   const claimed = await claimProviderOpening(intentId);
@@ -212,7 +285,7 @@ export async function createTopupIntent(
   } catch (err) {
     await db
       .update(paymentIntents)
-      .set({ status: "failed", metadata: { provider: "paymob", charge_error: true } })
+      .set({ status: "failed", metadata: chargeErrorPaymentMetadataSql() })
       .where(and(eq(paymentIntents.id, intentId), eq(paymentIntents.status, "pending")));
     throw err;
   }
@@ -221,7 +294,7 @@ export async function createTopupIntent(
     .update(paymentIntents)
     .set({
       providerRef: charge.providerRef,
-      metadata: { provider: "paymob", checkout_url: charge.checkoutUrl },
+      metadata: checkoutBoundPaymentMetadataSql(charge.checkoutUrl),
     })
     .where(eq(paymentIntents.id, intentId))
     .returning();
