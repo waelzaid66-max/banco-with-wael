@@ -68,6 +68,13 @@
 
 ---
 
-## 5. Certification gates (re-run after this turn)
+## 5. Certification gates (this tip)
 
-Record living results in the commit message / next section after gate execution. Do **not** mark FULL CERT without OPS/device evidence.
+| Gate | Result | When |
+|------|--------|------|
+| `chain-integrity-gate.mjs` | **164/164 PASS** | after DomainRouter Clerk-origin restore |
+| API vitest | **384 passed / 3 skipped** | same tip |
+| Coolify website bake parity | committed `ee4d2ba` | prior |
+| Landing PATHS ↔ Coolify + Clerk hops | committed (this tip) | PATHS use `/market|/admin` + VITE_*; DomainRouter still hops to `banco.today/dealer-os` + `banco.today/banco-mobile` (P-landing-clerk-domain) |
+
+Do **not** mark FULL CERT without OPS/device evidence (Coolify live secrets, S3, SSL, EAS, Paymob webhook, Clerk providers).
