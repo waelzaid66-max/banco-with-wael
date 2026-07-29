@@ -699,6 +699,49 @@ const CHECKS = [
       !/from ["']@expo\/vector-icons["']/.test(s),
     why: "SVG icon registry must remain the sole runtime glyph source (no vector-font regression)",
   },
+  {
+    id: "P-push-unregister-scoped",
+    file: "artifacts/api-server/src/services/PushService.ts",
+    test: (s) =>
+      /eq\(pushTokens\.userId, user\.id\)/.test(s) &&
+      /delete\(pushTokens\)/.test(s),
+    why: "unregisterPushToken must scope DELETE to caller userId (no cross-user wipe)",
+  },
+  {
+    id: "P-message-notif-cooldown",
+    file: "artifacts/api-server/src/services/ConversationService.ts",
+    test: (s) =>
+      /MESSAGE_NOTIF_COOLDOWN_MS/.test(s) &&
+      /conversation_id/.test(s) &&
+      /recentNotif/.test(s),
+    why: "Message push/email must cooldown per thread (no chat storms)",
+  },
+  {
+    id: "P-follower-notif-route",
+    file: "artifacts/banco-mobile/lib/notificationRouting.ts",
+    test: (s) =>
+      /follower_id/.test(s) &&
+      /\/notifications/.test(s) &&
+      /open_notifications/.test(s),
+    why: "Follower system pings must deep-link to notifications feed (not dead null)",
+  },
+  {
+    id: "P-signout-unregister-first",
+    file: "artifacts/banco-mobile/app/settings.tsx",
+    test: (s) =>
+      /unregisterCachedPushTokenBestEffort/.test(s) &&
+      /confirmSignOut/.test(s),
+    why: "Sign-out must unregister push while session is still valid",
+  },
+  {
+    id: "P-account-deleted-signout",
+    file: "artifacts/banco-mobile/app/_layout.tsx",
+    test: (s) =>
+      /setAuthFailureHandler/.test(s) &&
+      /ACCOUNT_DELETED/.test(s) &&
+      /signOut/.test(s),
+    why: "Lingering JWT after soft-delete must force client sign-out",
+  },
 ];
 
 function main() {

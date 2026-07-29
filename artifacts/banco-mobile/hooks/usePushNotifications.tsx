@@ -12,6 +12,7 @@ import { Platform } from "react-native";
 
 import { useSound } from "@/context/SoundContext";
 import { routeForNotification } from "@/lib/notificationRouting";
+import { setCachedPushToken } from "@/lib/pushTokenCache";
 
 /**
  * Remote push wiring (Task #102).
@@ -144,6 +145,7 @@ export function PushNotificationsBridge() {
         .then((token) => {
           if (cancelled || !token) return;
           tokenRef.current = token;
+          setCachedPushToken(token);
           return registerPushToken({ token, platform: platformTag() });
         })
         .catch((err) => {
@@ -152,6 +154,7 @@ export function PushNotificationsBridge() {
     } else if (tokenRef.current) {
       const token = tokenRef.current;
       tokenRef.current = null;
+      setCachedPushToken(null);
       unregisterPushToken({ token }).catch(() => {});
     }
 

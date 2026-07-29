@@ -91,6 +91,12 @@ export function routeForNotification(
     return "/(tabs)/profile";
   }
 
+  // Follower ping (and similar system rows without a listing): open the feed so
+  // cold-start push is not a silent drop on home.
+  if (type === "system" && (d.follower_id || d.open_notifications === true)) {
+    return "/notifications";
+  }
+
   return null;
 }
 

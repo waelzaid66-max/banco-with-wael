@@ -14,7 +14,7 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
+import { setAuthTokenGetter, setAuthFailureHandler, setBaseUrl } from "@workspace/api-client-react";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
@@ -102,12 +102,23 @@ function ClerkLoadGate({
 }
 
 function AuthTokenBridge() {
-  const { getToken } = useAuth();
+  const { getToken, signOut } = useAuth();
   useEffect(() => {
     // getToken can reject while clerk-js is still initializing (or failed to
     // init). API calls must degrade to anonymous, never crash the request.
     setAuthTokenGetter(() => getToken().catch(() => null));
   }, [getToken]);
+
+  useEffect(() => {
+    // Soft-deleted accounts reject with 401 ACCOUNT_DELETED while Clerk JWT
+    // may still exist — clear the local session once so the user is not stuck.
+    setAuthFailureHandler(({ code }) => {
+      if (code !== "ACCOUNT_DELETED") return;
+      void signOut().catch(() => {});
+    });
+    return () => setAuthFailureHandler(null);
+  }, [signOut]);
+
   return null;
 }
 

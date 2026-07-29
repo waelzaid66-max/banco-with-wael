@@ -1244,7 +1244,13 @@ export default function ProfileScreen() {
         label: t("profile.signOut"),
         onPress: () => {
           setShowMenu(false);
-          signOut();
+          void (async () => {
+            const { unregisterCachedPushTokenBestEffort } = await import(
+              "@/lib/unregisterPushBestEffort"
+            );
+            await unregisterCachedPushTokenBestEffort();
+            await signOut();
+          })();
         },
         danger: true,
       },

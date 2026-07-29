@@ -61,14 +61,27 @@ Single implementation family: `SearchResultsMap` + `.web` + `mapHtml` (Leaflet).
 
 ---
 
+## Round 2 (precision continuation)
+
+| Defect | Severity | Status |
+|--------|----------|--------|
+| `unregisterPushToken` deleted by token only (cross-user wipe after reassignment) | HIGH | **FIXED** — `AND userId` |
+| Sign-out raced unregister after auth death | HIGH | **FIXED** — unregister before `signOut` (settings/profile/delete) + token cache |
+| Message push/email storm (no per-thread cooldown) | HIGH | **FIXED** — 3 min cooldown; message+unread still land |
+| Follower `system` ping deep-link `null` | MED | **FIXED** — route `/notifications` + name in title/body |
+| Lingering JWT after soft-delete (no client teardown) | HIGH | **FIXED** — `setAuthFailureHandler` → `signOut` on `ACCOUNT_DELETED` |
+| MFA delete `needs_second_factor` without TOTP UI | MED | **DEFERRED** — intentional BUG-002 unblock; full MFA UI = product work |
+
+---
+
 ## Verification evidence (this turn)
 
 | Gate | Result |
 |------|--------|
-| `node scripts/chain-integrity-gate.mjs` | Must be **74/74** after new Phase X markers |
+| `node scripts/chain-integrity-gate.mjs` | **79/79 PASS** |
 | API vitest | **346 passed / 3 skipped** |
-| Mobile section + icons + accounts batch | **75+ pass** (section guard suite + related) |
-| SVG icons | `tests/icons.test.mjs` asserts no runtime vector-font glyphs |
+| Mobile routing + accounts + icons + resilience | **32/32 PASS** (selected suite) |
+| SVG icons | Unchanged — registry only |
 
 ---
 
@@ -82,4 +95,4 @@ Cold/warm start, kill, memory pressure, rotation, large fonts, dark/light pixel 
 
 ## Decision
 
-**CONDITIONAL GO** for mobile code hardening continues. Phase X closed proven incident-class notification/auth/dynamic defects without inventing features or touching SVG icon architecture.
+**CONDITIONAL GO** for mobile code hardening continues. Phase X closed proven incident-class notification/auth/dynamic defects without inventing features or touching SVG icon architecture. MFA-on-delete step-up UI remains an explicit deferred residual.
