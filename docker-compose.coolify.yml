@@ -196,7 +196,7 @@ services:
       start_period: 60s
       retries: 3
 
-  # ── banco-website (Next.js marketing website) ────────────────────────────────
+  # ── banco-website (canonical Next consumer/marketing — see FROZEN.md on banco-web)
   banco-website:
     build:
       context: .
@@ -204,8 +204,20 @@ services:
       args:
         NEXT_PUBLIC_API_URL: http://api:8080
         NEXT_PUBLIC_SITE_URL: ${BANCO_WEBSITE_URL:-http://localhost:3001}
+        # Parity with banco-web bake args — site-env already reads these; without
+        # compose wiring, Coolify builds forever show App Store "soon" even when
+        # NEXT_PUBLIC_APP_*_URL secrets are set on the project.
+        NEXT_PUBLIC_MARKET_URL: ${BANCO_WEB_MARKET_URL:-}
+        NEXT_PUBLIC_ADMIN_URL: ${BANCO_WEB_ADMIN_URL:-}
+        NEXT_PUBLIC_APP_ANDROID_URL: ${NEXT_PUBLIC_APP_ANDROID_URL:-}
+        NEXT_PUBLIC_APP_IOS_URL: ${NEXT_PUBLIC_APP_IOS_URL:-}
+        NEXT_PUBLIC_WEB_SEARCH_LIVE: ${NEXT_PUBLIC_WEB_SEARCH_LIVE:-false}
+        NEXT_PUBLIC_WEB_SEARCH_MAP: ${NEXT_PUBLIC_WEB_SEARCH_MAP:-false}
+        NEXT_PUBLIC_WEB_MARKET_COPY: ${NEXT_PUBLIC_WEB_MARKET_COPY:-false}
+        NEXT_PUBLIC_SEARCH_ENABLED: ${NEXT_PUBLIC_SEARCH_ENABLED:-true}
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}
         NEXT_PUBLIC_CLERK_PROXY_URL: ${NEXT_PUBLIC_CLERK_PROXY_URL:-}
+        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}
     image: banco-website:latest
     restart: always
     depends_on:
