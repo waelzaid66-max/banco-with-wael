@@ -16,7 +16,7 @@
 
 | Gate | Result |
 |------|--------|
-| Chain integrity | **66/66 PASS** |
+| Chain integrity | **68/68 PASS** |
 | Website CI local | **11/11 PASS** |
 | Mobile node tests | **136/136 PASS** |
 | API vitest (Postgres 16) | **346 passed / 3 skipped** |
@@ -40,7 +40,7 @@
 | Repository integrity | 84 | Twin frozen debt remains |
 | Architecture / SoT | 88 | BWW ahead of forks |
 | Authentication / Clerk (code) | **94** | Tombstone fail-closed + consent order |
-| Navigation / mobile UX | 92 | Chain 66/66; mobile 136/136 |
+| Navigation / mobile UX | 92 | Chain 68/68; mobile 136/136 |
 | API | **95** | Vitest 346 + concurrency/money fixes |
 | Database | 88 | Push + seed + readyz ok in container |
 | Docker / Compose | **91** | API compose health → readyz |
