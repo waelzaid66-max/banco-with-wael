@@ -92,9 +92,9 @@ Single implementation family: `SearchResultsMap` + `.web` + `mapHtml` (Leaflet).
 
 | Gate | Result |
 |------|--------|
-| `node scripts/chain-integrity-gate.mjs` | **pending re-run after Round 3** |
-| API vitest | **pending re-run after Round 3** |
-| Mobile routing + accounts + icons + resilience | **32/32 PASS** (selected suite; Round 2) |
+| `node scripts/chain-integrity-gate.mjs` | **86/86 PASS** |
+| API vitest | **346 passed / 3 skipped** |
+| Mobile full `pnpm test` | **PASS** (icons/lib/resilience/links/session/section/i18n) |
 | SVG icons | Unchanged — registry only |
 
 ---
