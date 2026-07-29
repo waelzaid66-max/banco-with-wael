@@ -3,7 +3,7 @@
 **Authority:** Chief Production Architect / Final Production Certification  
 **Repository SoT:** `waelzaid66-max/banco-with-wael`  
 **Branch:** `cursor/phase-x-production-hardening-5cf0`  
-**Tip at certification write:** Round 15 tip (see git log)  
+**Tip at certification write:** Round 16 tip (see git log)  
 **Policy:** Zero invented features. PASS only with evidence. Multi-repo hunt + character-level verify before patch. UNVERIFIED when device/ops required.
 
 ---
@@ -12,7 +12,7 @@
 
 **CONDITIONAL GO — NOT FULL PRODUCTION CERTIFIED.**
 
-Rounds 1–15 closed proven code-path defects. Round 15 closed **CRITICAL** reverse-before-settle races (durable `psp_reversed` + settle refuse), orphan subscription clawback, adjustment-typed clawbacks, client idempotency key retention, Save/Conversation/GlobalSupply tombstones, and AWS SSM wait. Device/ops remain **UNVERIFIED**. Product/infra items (CPL fail-open, Clerk inbound delete, Redis, MFA UI) stay deferred honestly.
+Rounds 1–16 closed proven code-path defects. Round 16 closed **CRITICAL** partial-refund ACK-without-clawback, plus HIGH boost/review/GlobalSupply tombstone write gates, deleteAccount named-notification scrub, and prod compose API health depends. Device/ops remain **UNVERIFIED**. Product/infra inventions stay deferred.
 
 ---
 
@@ -20,28 +20,28 @@ Rounds 1–15 closed proven code-path defects. Round 15 closed **CRITICAL** reve
 
 | Gate | Result | Evidence |
 |------|--------|----------|
-| `node scripts/chain-integrity-gate.mjs` | **158/158 PASS** | Round 15 reverse-race, orphan, keys, tombstones, SSM wait |
-| API `pnpm test` (vitest) | **381 passed / 3 skipped** | Reverse-race + orphan + save tombstone suites |
-| Mobile lib-hardening | prior PASS | Attempt key on pending (R13); plans key (R15) |
+| `node scripts/chain-integrity-gate.mjs` | **164/164 PASS** | Round 16 partial refund + tombstone + compose markers |
+| API `pnpm test` (vitest) | **384 passed / 3 skipped** | Partial claw + boost/review tombstone suites |
+| Mobile lib-hardening | prior PASS | Attempt keys R13–R15 |
 | Cross-repo cherry-pick | **NONE** | SoT ahead — no blind merge |
 | SVG icon registry | **PASS (static)** | No SVG→PNG migration |
 
 ---
 
-## Round 15 (director accuracy pass)
+## Round 16 (director accuracy pass)
 
 | Defect | Severity | Status |
 |--------|----------|--------|
-| Reverse before success without `psp_reversed` | CRITICAL | **FIXED** + vitest |
-| Orphan `:orphan_topup` not clawed on refund | CRITICAL | **FIXED** + vitest |
-| Clawback typed as `refund` (UI = credit) | HIGH | **FIXED** + vitest |
-| Web/plans/dealer bulk key regeneration | HIGH | **FIXED** |
-| Save / Conversation / GlobalSupply tombstones | HIGH | **FIXED** + vitest |
-| AWS SSM fire-and-forget | HIGH OPS | **FIXED** |
+| Partial refund amount gate ACK no clawback | CRITICAL | **FIXED** + vitest |
+| Boost debit after seller soft-delete | HIGH | **FIXED** + vitest |
+| createReview without seller deletedAt | HIGH | **FIXED** + vitest |
+| GlobalSupply respond without shadow-ban | HIGH | **FIXED** |
+| deleteAccount left named notifs | HIGH | **FIXED** |
+| prod compose frontends ignore API health | HIGH OPS | **FIXED** |
 
-See `reports/production-verification/28-ROUND-15-REVERSE-RACE-TOMBSTONE-OPS.md`.
+See `reports/production-verification/29-ROUND-16-PARTIAL-REFUND-TOMBSTONE-OPS.md`.
 
-Prior rounds 5–14 FIXED rows remain closed (docs 19–27).
+Prior rounds 5–15 FIXED rows remain closed (docs 19–28).
 
 ---
 
@@ -49,8 +49,10 @@ Prior rounds 5–14 FIXED rows remain closed (docs 19–27).
 
 | Residual | Severity | Why open |
 |----------|----------|----------|
+| Unsigned first-bind TOFU (`merchant_order_id`) | HIGH | Needs signed correlation / Paymob order fetch — not invented |
 | MFA delete TOTP UI | MED | BUG-002 product work |
 | Facets ignore market_country | MED | Chip counts cross-market |
+| Comment notif name scrub | MED | No author_id in notification data |
 | CPL fail-open on insufficient funds | HIGH (product) | Intentional + tested |
 | Clerk inbound `user.deleted` | HIGH (ops) | Feature — not invented |
 | Adaptive feed / rate-limit multi-instance | HIGH (ops) | Needs shared store |

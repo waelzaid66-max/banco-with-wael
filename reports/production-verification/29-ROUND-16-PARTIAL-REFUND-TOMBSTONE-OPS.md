@@ -67,6 +67,6 @@ Re-read R15 residuals → money webhook amount gate + boost debit tombstone → 
 
 | Gate | Result |
 |------|--------|
-| Chain | pending tip run |
-| API vitest | pending tip run |
+| Chain | **164/164 PASS** |
+| API vitest | **384 passed / 3 skipped** |
 | Cross-repo cherry-pick | **NONE** |
