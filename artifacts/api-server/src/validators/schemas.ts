@@ -40,6 +40,8 @@ export function errorResponse(
     | "FORBIDDEN"
     | "RATE_LIMITED"
     | "INVALID_TOKEN"
+    // Soft-deleted account with a lingering Clerk JWT.
+    | "ACCOUNT_DELETED"
     // Duplicate resource (e.g. seating a user twice in the same institution).
     | "CONFLICT",
   message: string

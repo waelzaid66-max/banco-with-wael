@@ -528,12 +528,24 @@ export async function followCompany(
     .returning({ id: companyFollows.id });
 
   if (inserted.length > 0) {
+    const [follower] = await db
+      .select({ name: users.name })
+      .from(users)
+      .where(eq(users.id, followerId))
+      .limit(1);
+    const followerName = follower?.name?.trim() || null;
     void createNotification({
       userId: companyUserId,
       type: "system",
-      title: "متابع جديد · New follower",
-      body: "بدأ مشترٍ متابعة حسابك · A buyer started following your company",
-      data: { follower_id: followerId },
+      title: followerName
+        ? `متابع جديد · ${followerName}`
+        : "متابع جديد · New follower",
+      body: followerName
+        ? `${followerName} بدأ متابعة حسابك · started following your company`
+        : "بدأ مشترٍ متابعة حسابك · A buyer started following your company",
+      // follower_id alone is not a company profile route — client opens the
+      // in-app notifications feed so cold-start push is not a dead home drop.
+      data: { follower_id: followerId, open_notifications: true },
     });
   }
 

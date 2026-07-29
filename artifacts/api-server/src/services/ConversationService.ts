@@ -5,8 +5,9 @@ import {
   listings,
   listingMedia,
   users,
+  notifications,
 } from "@workspace/db/schema";
-import { and, eq, or, desc, asc, ne, isNull, inArray, sql } from "drizzle-orm";
+import { and, eq, or, desc, asc, ne, isNull, inArray, sql, gte } from "drizzle-orm";
 import { createNotification } from "./NotificationService";
 import { checkMessageRate, checkConversationRate } from "./AbuseService";
 import { isEmailChannelEnabled, sendNewMessageEmail } from "./EmailService";
@@ -20,6 +21,9 @@ import {
 } from "../lib/uploadClaims";
 
 const objectStorageService = getObjectStorageService();
+
+/** Anti-storm: at most one message push/email per recipient/thread in this window. */
+const MESSAGE_NOTIF_COOLDOWN_MS = 3 * 60_000;
 
 type CodedError = Error & { code?: string };
 function codedError(code: string, message: string): CodedError {
@@ -466,34 +470,51 @@ export async function sendMessage(
     .where(eq(users.id, userId))
     .limit(1);
 
-  await createNotification({
-    userId: recipientId,
-    type: "message",
-    title: sender?.name ?? "رسالة جديدة · New message",
-    body: preview.length > 80 ? `${preview.slice(0, 79)}…` : preview,
-    data: { conversation_id: conversationId, listing_id: conv.listingId },
-  });
+  // Cooldown: rapid chat must not storm push + email. Message + unread still land.
+  const cooldownCutoff = new Date(Date.now() - MESSAGE_NOTIF_COOLDOWN_MS);
+  const [recentNotif] = await db
+    .select({ id: notifications.id })
+    .from(notifications)
+    .where(
+      and(
+        eq(notifications.userId, recipientId),
+        eq(notifications.type, "message"),
+        gte(notifications.createdAt, cooldownCutoff),
+        sql`${notifications.data}->>'conversation_id' = ${conversationId}`,
+      ),
+    )
+    .limit(1);
 
-  // Best-effort email to the recipient — never blocks the send response.
-  void (async () => {
-    try {
-      if (!(await isEmailChannelEnabled(recipientId, "message"))) return;
-      const [recipient] = await db
-        .select({ email: users.email })
-        .from(users)
-        .where(eq(users.id, recipientId))
-        .limit(1);
-      if (!recipient?.email) return;
-      await sendNewMessageEmail({
-        to: recipient.email,
-        senderName: sender?.name ?? "مستخدم BANCO · BANCO User",
-        preview: preview.length > 80 ? `${preview.slice(0, 79)}…` : preview,
-        conversationId,
-      });
-    } catch (emailErr) {
-      console.error("[Conversation message email]", emailErr);
-    }
-  })();
+  if (!recentNotif) {
+    await createNotification({
+      userId: recipientId,
+      type: "message",
+      title: sender?.name ?? "رسالة جديدة · New message",
+      body: preview.length > 80 ? `${preview.slice(0, 79)}…` : preview,
+      data: { conversation_id: conversationId, listing_id: conv.listingId },
+    });
+
+    // Best-effort email to the recipient — never blocks the send response.
+    void (async () => {
+      try {
+        if (!(await isEmailChannelEnabled(recipientId, "message"))) return;
+        const [recipient] = await db
+          .select({ email: users.email })
+          .from(users)
+          .where(eq(users.id, recipientId))
+          .limit(1);
+        if (!recipient?.email) return;
+        await sendNewMessageEmail({
+          to: recipient.email,
+          senderName: sender?.name ?? "مستخدم BANCO · BANCO User",
+          preview: preview.length > 80 ? `${preview.slice(0, 79)}…` : preview,
+          conversationId,
+        });
+      } catch (emailErr) {
+        console.error("[Conversation message email]", emailErr);
+      }
+    })();
+  }
 
   // Resolve the reply preview + shared-listing card for the returned message so
   // the sender's client can render them immediately (no thread refetch needed).
