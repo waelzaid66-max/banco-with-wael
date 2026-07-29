@@ -208,7 +208,11 @@ export default function SearchScreen() {
   // Match section mini-apps: real safe-area only — never a fake 67px web pad.
   const topPad = Math.max(insets.top, Platform.OS === "web" ? 12 : 0);
 
-  const params = useLocalSearchParams<Record<string, string | string[] | undefined>>();
+  // expo-router typed Routes overload rejects Record<> as TRoute; cast params shape.
+  const params = useLocalSearchParams() as Record<
+    string,
+    string | string[] | undefined
+  >;
 
   // Fire a coarse behaviour signal on each committed search (category intent).
   const onCommitted = useCallback(
