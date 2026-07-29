@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
 import {
   plans,
@@ -17,7 +16,7 @@ import {
 } from "./WalletService";
 import { resolveEffectivePlan, type UserRole } from "./PlanService";
 import { createProviderCharge, type EgyptianRail } from "../lib/paymentProvider";
-import { invalidData, isUniqueViolation, notFound, toMoney } from "../lib/billing";
+import { invalidData, isUniqueViolation, notFound, toMoney, conflict } from "../lib/billing";
 import {
   schedulePaymentSuccess,
   notifyPaymentIntentFailed,
@@ -171,6 +170,8 @@ export interface StartSubscriptionInput {
   role: UserRole;
   planSlug: string;
   paymentMethod: SubscribePaymentMethod;
+  /** Client-stable UUID. External rails reuse it as payment_intents.id. */
+  idempotencyKey: string;
 }
 
 /**
@@ -201,6 +202,8 @@ export async function startSubscription(input: StartSubscriptionInput) {
   }
 
   const price = toMoney(plan.monthlyPrice);
+  const idempotencyKey = input.idempotencyKey.trim();
+  if (!idempotencyKey) throw invalidData("idempotency_key is required");
 
   if (input.paymentMethod === "wallet") {
     let sub: SubscriptionRow;
@@ -228,6 +231,7 @@ export async function startSubscription(input: StartSubscriptionInput) {
             referenceType: "subscription",
             referenceId: created.id,
             description: `Subscription: ${plan.name} (${PERIOD_DAYS}d)`,
+            idempotencyKey,
             invoice: {
               lineItems: [
                 { label: `${plan.name} subscription (${PERIOD_DAYS}d)`, amount: price },
@@ -262,8 +266,17 @@ export async function startSubscription(input: StartSubscriptionInput) {
         });
       }
     } catch (err) {
-      // Lost race for the one-active-subscription slot.
+      // Lost race for the one-active-subscription slot — or a client retry after
+      // the first request already activated. Replay via the ledger idempotency key.
       if (isUniqueViolation(err)) {
+        const settled = await findSubscriptionByChargeKey(idempotencyKey);
+        if (settled && settled.sub.userId === input.userId) {
+          return {
+            mode: "active" as const,
+            subscription: mapSubscription(settled.sub, settled.plan),
+            intent: null,
+          };
+        }
         throw invalidData("You already have an active subscription.");
       }
       throw err;
@@ -276,24 +289,136 @@ export async function startSubscription(input: StartSubscriptionInput) {
     };
   }
 
-  // External rail → durable pending intent FIRST, then open the PSP charge.
-  // Insert-before-charge prevents paid checkouts with no settleable row when
-  // the process dies between Paymob and Postgres.
-  const intentId = randomUUID();
-  const [intent] = await db
-    .insert(paymentIntents)
-    .values({
-      id: intentId,
-      userId: input.userId,
-      amount: price,
-      method: input.paymentMethod,
-      purpose: "subscription",
-      status: "pending",
-      providerRef: null,
-      planId: plan.id,
-      metadata: { provider: "paymob" },
-    })
-    .returning();
+  // External rail → durable pending intent FIRST (id = client idempotency key),
+  // then open the PSP charge. Retries with the same key replay the checkout URL.
+  const intentId = idempotencyKey;
+
+  function checkoutUrlFromMeta(metadata: unknown): string | null {
+    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+      return null;
+    }
+    const url = (metadata as Record<string, unknown>).checkout_url;
+    return typeof url === "string" && url.length > 0 ? url : null;
+  }
+
+  function assertSubIntentMatch(existing: typeof paymentIntents.$inferSelect): void {
+    if (existing.userId !== input.userId) {
+      throw conflict("Idempotency key already used");
+    }
+    if (existing.purpose !== "subscription") {
+      throw conflict("Idempotency key already used");
+    }
+    if (existing.method !== input.paymentMethod) {
+      throw invalidData("Idempotency key reused with a different payment method");
+    }
+    if (existing.planId && existing.planId !== plan.id) {
+      throw invalidData("Idempotency key reused with a different plan");
+    }
+    if (toMoney(existing.amount) !== price) {
+      throw invalidData("Idempotency key reused with a different amount");
+    }
+  }
+
+  function intentResult(row: typeof paymentIntents.$inferSelect, checkoutUrl: string | null) {
+    return {
+      mode: "intent" as const,
+      subscription: null,
+      intent: {
+        intent_id: row.id,
+        plan_slug: plan.slug,
+        amount: row.amount,
+        method: row.method as EgyptianRail,
+        status: row.status,
+        provider_ref: row.providerRef,
+        checkout_url: checkoutUrl,
+        created_at: (row.createdAt ?? new Date()).toISOString(),
+      },
+    };
+  }
+
+  let intent: typeof paymentIntents.$inferSelect | undefined;
+  const [existingIntent] = await db
+    .select()
+    .from(paymentIntents)
+    .where(eq(paymentIntents.id, intentId))
+    .limit(1);
+
+  if (existingIntent) {
+    assertSubIntentMatch(existingIntent);
+    if (existingIntent.status === "completed" || existingIntent.status === "expired") {
+      throw conflict("This subscription payment was already completed");
+    }
+    const replayUrl = checkoutUrlFromMeta(existingIntent.metadata);
+    if (
+      existingIntent.status === "pending" &&
+      replayUrl &&
+      existingIntent.providerRef
+    ) {
+      return intentResult(existingIntent, replayUrl);
+    }
+    if (existingIntent.status === "failed") {
+      const [resumed] = await db
+        .update(paymentIntents)
+        .set({
+          status: "pending",
+          providerRef: null,
+          planId: plan.id,
+          metadata: { provider: "paymob", resumed: true },
+        })
+        .where(
+          and(
+            eq(paymentIntents.id, intentId),
+            eq(paymentIntents.status, "failed"),
+          ),
+        )
+        .returning();
+      intent = resumed ?? existingIntent;
+    } else {
+      intent = existingIntent;
+    }
+  } else {
+    try {
+      const [inserted] = await db
+        .insert(paymentIntents)
+        .values({
+          id: intentId,
+          userId: input.userId,
+          amount: price,
+          method: input.paymentMethod,
+          purpose: "subscription",
+          status: "pending",
+          providerRef: null,
+          planId: plan.id,
+          metadata: { provider: "paymob" },
+        })
+        .returning();
+      intent = inserted;
+    } catch (err) {
+      if (!isUniqueViolation(err)) throw err;
+      const [raced] = await db
+        .select()
+        .from(paymentIntents)
+        .where(eq(paymentIntents.id, intentId))
+        .limit(1);
+      if (!raced) throw err;
+      assertSubIntentMatch(raced);
+      const replayUrl = checkoutUrlFromMeta(raced.metadata);
+      if (raced.status === "pending" && replayUrl && raced.providerRef) {
+        return intentResult(raced, replayUrl);
+      }
+      if (raced.status === "completed" || raced.status === "expired") {
+        throw conflict("This subscription payment was already completed");
+      }
+      intent = raced;
+    }
+  }
+
+  if (!intent) throw invalidData("Failed to create subscription intent");
+
+  const earlyUrl = checkoutUrlFromMeta(intent.metadata);
+  if (intent.status === "pending" && earlyUrl && intent.providerRef) {
+    return intentResult(intent, earlyUrl);
+  }
 
   let charge;
   try {
@@ -322,21 +447,7 @@ export async function startSubscription(input: StartSubscriptionInput) {
     .where(eq(paymentIntents.id, intentId))
     .returning();
 
-  const row = updated ?? intent;
-  return {
-    mode: "intent" as const,
-    subscription: null,
-    intent: {
-      intent_id: row.id,
-      plan_slug: plan.slug,
-      amount: row.amount,
-      method: row.method as EgyptianRail,
-      status: row.status,
-      provider_ref: row.providerRef,
-      checkout_url: charge.checkoutUrl,
-      created_at: (row.createdAt ?? new Date()).toISOString(),
-    },
-  };
+  return intentResult(updated ?? intent, charge.checkoutUrl);
 }
 
 /* ── confirm subscription intent ───────────────────────── */

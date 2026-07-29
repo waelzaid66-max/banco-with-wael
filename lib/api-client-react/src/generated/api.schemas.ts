@@ -4143,6 +4143,8 @@ export const CreateTopupBodyMethod = {
 export type CreateTopupBody = {
   amount: number;
   method: CreateTopupBodyMethod;
+  /** Client-stable UUID reused as payment_intents.id */
+  idempotency_key: string;
 };
 
 export type CreateTopup200 = {
@@ -4183,6 +4185,8 @@ export const SubscribeBodyPaymentMethod = {
 export type SubscribeBody = {
   plan_slug: string;
   payment_method?: SubscribeBodyPaymentMethod;
+  /** Client-stable UUID; external rails reuse as payment_intents.id */
+  idempotency_key: string;
 };
 
 export type Subscribe200 = {

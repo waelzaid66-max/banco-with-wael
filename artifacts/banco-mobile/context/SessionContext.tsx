@@ -22,6 +22,10 @@ import {
 // being industrial). `all` maps to undefined, which the server reads as
 // "match any category".
 import { apiCategoryFor, type Category } from "@workspace/taxonomy/categories";
+import {
+  buildSearchParams,
+  type SearchCriteria,
+} from "@/lib/searchParams";
 
 import { useAuthGate } from "@/hooks/useAuthGate";
 
@@ -417,15 +421,20 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       // revert the local write if the server rejects it, so an offline or
       // failed save never leaves a search the user believes is being watched.
       const trimmedQuery = input.q.trim();
+      // Versioned snake_case params from buildSearchParams — server matcher
+      // fail-closes on unversioned / camelCase dumps (false-positive guard).
+      const versionedFilters = input.criteria
+        ? {
+            match_version: 1,
+            ...buildSearchParams(input.criteria as SearchCriteria),
+          }
+        : null;
       createSavedSearch({
         name: input.name?.trim() || trimmedQuery || "Saved search",
         query: trimmedQuery || null,
         // undefined (category "all") is sent as null = match any category.
         category: apiCategoryFor(input.category as Category) ?? null,
-        // The full criteria snapshot rides along so a future server-side matcher
-        // can narrow further without another migration; today the server matches
-        // on category + price + query text.
-        filters: (input.criteria ?? null) as Record<string, unknown> | null,
+        filters: versionedFilters as Record<string, unknown> | null,
         price_min: input.minPrice.trim() || null,
         price_max: input.maxPrice.trim() || null,
         alerts_enabled: true,

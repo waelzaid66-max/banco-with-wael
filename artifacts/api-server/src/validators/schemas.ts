@@ -1424,6 +1424,8 @@ export const EgyptianRailSchema = z.enum([
 export const TopupCreateSchema = z.object({
   amount: z.number().positive().max(1_000_000),
   method: EgyptianRailSchema,
+  /** Client-stable UUID; becomes payment_intents.id (required for PSP idempotency). */
+  idempotency_key: z.string().uuid(),
 });
 
 export const WalletTransactionsQuerySchema = z.object({
@@ -1506,6 +1508,8 @@ export const SubscribeSchema = z.object({
   payment_method: z
     .enum(["wallet", "vodafone_cash", "fawry", "instapay", "bank_transfer"])
     .default("wallet"),
+  /** Client-stable UUID; external rails reuse as payment_intents.id. */
+  idempotency_key: z.string().uuid(),
 });
 
 export const PlanSchema = z

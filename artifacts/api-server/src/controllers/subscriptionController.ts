@@ -33,6 +33,8 @@ function handleError(res: Response, err: unknown, fallback: string, tag: string)
     return res.status(404).json(errorResponse("NOT_FOUND", e.message ?? "Not found"));
   if (e.code === "UNAUTHORIZED")
     return res.status(401).json(errorResponse("UNAUTHORIZED", e.message ?? "Unauthorized"));
+  if (e.code === "CONFLICT")
+    return res.status(409).json(errorResponse("CONFLICT", e.message ?? "Conflict"));
   console.error(tag, err);
   return res.status(500).json(errorResponse("INTERNAL_ERROR", fallback));
 }
@@ -68,6 +70,7 @@ export async function subscribeHandler(req: Request, res: Response) {
       role: (req.userRole ?? "individual") as UserRole,
       planSlug: input.plan_slug,
       paymentMethod: input.payment_method,
+      idempotencyKey: input.idempotency_key,
     });
     const validated = validateResponse(SubscribeResultSchema, result);
     return res.json(successResponse(validated));

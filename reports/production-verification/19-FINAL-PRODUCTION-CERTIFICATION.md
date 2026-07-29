@@ -3,7 +3,7 @@
 **Authority:** Chief Production Architect / Final Production Certification  
 **Repository SoT:** `waelzaid66-max/banco-with-wael`  
 **Branch:** `cursor/phase-x-production-hardening-5cf0`  
-**Tip at certification write:** Round 6 tip (see git log)  
+**Tip at certification write:** Round 7 tip (see git log)  
 **Policy:** Zero invented features. PASS only with evidence. UNVERIFIED when device/ops required. SVG icon architecture must not be migrated.
 
 ---
@@ -12,7 +12,7 @@
 
 **CONDITIONAL GO — NOT FULL PRODUCTION CERTIFIED.**
 
-Code-path defects with reproducible source evidence from Phases / Rounds 1–5 have been repaired and gated. Physical-device, live PSP/APNs/FCM, and Coolify runtime configuration remain **UNVERIFIED**. Do not claim million-user deploy confidence until those external surfaces pass.
+Code-path defects with reproducible source evidence from Phases / Rounds 1–7 have been repaired and gated. Physical-device, live PSP/APNs/FCM, and Coolify runtime configuration remain **UNVERIFIED**. Do not claim million-user deploy confidence until those external surfaces pass.
 
 ---
 
@@ -20,8 +20,8 @@ Code-path defects with reproducible source evidence from Phases / Rounds 1–5 h
 
 | Gate | Result | Evidence |
 |------|--------|----------|
-| `node scripts/chain-integrity-gate.mjs` | **103/103 PASS** | Includes Round 6 Paymob/privacy/deploy markers |
-| API `pnpm test` (vitest) | **346 passed / 3 skipped** | `artifacts/api-server` |
+| `node scripts/chain-integrity-gate.mjs` | **108/108 PASS** | Includes Round 7 top-up/subscribe idempotency + saved-search match markers |
+| API `pnpm test` (vitest) | **355 passed / 3 skipped** | `artifacts/api-server` |
 | Mobile `pnpm test` | **PASS** | icons/lib/resilience/links/session/section/i18n |
 | SVG icon registry | **PASS (static)** | `components/icons.tsx` lucide→svg; chain `P-svg-icon-registry` |
 
@@ -34,12 +34,12 @@ Code-path defects with reproducible source evidence from Phases / Rounds 1–5 h
 | 1 Monorepo integrity | **PARTIAL PASS** | Dead modules tracked, not mass-deleted (unsafe without proof) |
 | 2 Architecture consistency | **PARTIAL PASS** | Mini-apps share SearchResultsMap by design; no invented isolation rewrite |
 | 3 Account system | **CONDITIONAL** | Soft-delete/auth/tombstone hardened; MFA-delete TOTP UI deferred (BUG-002) |
-| 4 Production consistency | **CONDITIONAL** | Many races/CAS fixed; more money-path idempotency still residual |
+| 4 Production consistency | **CONDITIONAL** | Money-path top-up/subscribe client idempotency closed (Round 7); device/ops still open |
 | 5 Android hardening | **UNVERIFIED** | Needs physical device / EAS / FCM |
 | 6 iOS hardening | **UNVERIFIED** | Needs physical device / APNs / Universal Links live |
 | 7 Notifications | **CONDITIONAL** | Storms/mute/dedupe/unregister fixed in code; live delivery UNVERIFIED |
 | 8 Email | **PARTIAL** | Cooldowns + channel prefs; live Resend delivery UNVERIFIED |
-| 9 Search | **CONDITIONAL** | market_country/material/has_installment/feed material wired; saved-search structured replay deferred |
+| 9 Search | **CONDITIONAL** | market_country/material/has_installment wired; Round 7 versioned alert matcher; nav rich replay residual |
 | 10 Maps | **CONDITIONAL** | Native Leaflet WebView family proven; web map uses loaded pages only (residual) |
 | 11 Mini-apps | **PASS (static)** | 5 marketplace sections guarded by tests; service-app count not invented |
 | 12 API | **CONDITIONAL** | Validation/CAS/tombstone repairs; rate-limit trust + Coolify callbacks residual |
@@ -71,11 +71,11 @@ Code-path defects with reproducible source evidence from Phases / Rounds 1–5 h
 | Residual | Severity | Why open |
 |----------|----------|----------|
 | MFA delete step-up UI when Clerk returns `needs_second_factor` | MED | Intentional prior BUG-002; full TOTP UI = product work |
-| Saved-search structured filters ignored by AlertService matcher | HIGH | Larger matcher product; documented deferred |
-| Mobile saved-search navigation drops rich criteria | HIGH | Needs nav param pipeline completion |
+| Saved-search structured filters ignored by AlertService matcher | HIGH | **FIXED (Round 7)** — `match_version: 1` + fail-closed unversioned dumps |
+| Mobile saved-search navigation drops rich criteria | HIGH | Needs nav param pipeline completion (alert matcher is separate) |
 | Web `SearchResultsMap.web` incomplete vs native clusters | HIGH | Twin implementation; needs shared cluster controller |
 | Soft-delete leaves stories/comments/reviews public text | HIGH | **FIXED (Round 6)** — delete scrub + read guards |
-| Top-up/subscription intents lack client idempotency keys | HIGH | **OPEN** — schema + client coordination remaining |
+| Top-up/subscription intents lack client idempotency keys | HIGH | **FIXED (Round 7)** — required UUID key = intent id; clients emit |
 | Coolify `PUBLIC_API_BASE_URL` empty → Paymob no webhook URL | HIGH | **FIXED (Round 6)** — charge creation fail-closes without https callback |
 | Rate limiter trust proxy / published :8080 spoofability | HIGH | **FIXED (Round 6)** — loopback bind + `RATE_LIMITED` contract |
 | Paymob webhook unsigned intent remapping | CRITICAL | **FIXED (Round 6)** — signed `order.id` exclusive bind |
@@ -94,6 +94,17 @@ Code-path defects with reproducible source evidence from Phases / Rounds 1–5 h
 
 ---
 
+## Round 7 (idempotency + alert precision)
+
+| Defect | Severity | Status |
+|--------|----------|--------|
+| Top-up/subscribe retries opened a second Paymob checkout | HIGH | **FIXED** — client UUID = `payment_intents.id`; replay bound checkout |
+| Saved-search alerts ignored `filters` (false positives) | HIGH | **FIXED** — versioned matcher; unversioned fail-closed; cooldown after match only |
+
+See `reports/production-verification/20-ROUND-7-IDEMPOTENCY-ALERTS.md`.
+
+---
+
 ## What must be true before FULL CERTIFIED
 
 1. Physical Android + iOS QA checklist signed (cold/warm/kill, push tap, OAuth, biometric).  
@@ -107,4 +118,4 @@ Code-path defects with reproducible source evidence from Phases / Rounds 1–5 h
 ## Decision
 
 **CONDITIONAL GO** for staging / controlled production ramp.  
-**NOT** final million-user certification until device/ops UNVERIFIED surfaces and remaining OPEN HIGH residuals (top-up idempotency keys, saved-search structured matcher, web map twin) are closed or owner-accepted in writing.
+**NOT** final million-user certification until device/ops UNVERIFIED surfaces and remaining OPEN HIGH residuals (saved-search **nav** rich replay, web map twin) are closed or owner-accepted in writing.

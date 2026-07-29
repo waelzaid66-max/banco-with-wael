@@ -18,6 +18,8 @@ export const notFound = (message: string): CodedError =>
   codedError(message, "NOT_FOUND");
 export const unauthorized = (message: string): CodedError =>
   codedError(message, "UNAUTHORIZED");
+export const conflict = (message: string): CodedError =>
+  codedError(message, "CONFLICT");
 
 /**
  * Insufficient wallet balance → surfaced as 400 INVALID_DATA. Carries an

@@ -11,10 +11,11 @@ import {
   type PromoAdSummary,
   type CreateTopupBodyMethod,
 } from "@workspace/api-client-react";
+import * as Crypto from "expo-crypto";
 import * as Haptics from "expo-haptics";
 import * as WebBrowser from "expo-web-browser";
 import { router } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -103,6 +104,8 @@ export default function WalletScreen() {
   const [method, setMethod] = useState<Method>("vodafone_cash");
   const [payState, setPayState] = useState<PayState>("idle");
   const [newBalance, setNewBalance] = useState<string | null>(null);
+  /** Stable across retries of the same top-up attempt (cleared on success). */
+  const topupAttemptKeyRef = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -183,7 +186,15 @@ export default function WalletScreen() {
     setAmountError(false);
     try {
       setPayState("processing");
-      const res = await createTopup({ amount: amt, method });
+      // Stable per-attempt key — retries reopen the same intent, not a second Paymob checkout.
+      const idempotencyKey =
+        topupAttemptKeyRef.current ?? Crypto.randomUUID();
+      topupAttemptKeyRef.current = idempotencyKey;
+      const res = await createTopup({
+        amount: amt,
+        method,
+        idempotency_key: idempotencyKey,
+      });
       const intent = res.data;
       // A top-up can only proceed if the rail returns a real hosted checkout.
       // No URL → we must not pretend it succeeded.
@@ -193,11 +204,13 @@ export default function WalletScreen() {
       await WebBrowser.openBrowserAsync(intent.checkout_url);
       const polled = await pollTopup(intent.intent_id);
       if (polled.status === "completed") {
+        topupAttemptKeyRef.current = null;
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setNewBalance(polled.balance);
         setPayState("done");
         load();
       } else if (polled.status === "pending") {
+        topupAttemptKeyRef.current = null;
         setPayState("pending");
         load();
       } else {

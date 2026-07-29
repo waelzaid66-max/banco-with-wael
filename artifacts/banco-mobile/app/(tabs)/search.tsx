@@ -606,6 +606,7 @@ export default function SearchScreen() {
       maxPrice: criteria.maxPrice,
       location: criteria.location,
       paymentType: criteria.paymentType,
+      criteria: { ...criteria, q: draftQuery.trim() },
     });
   };
 

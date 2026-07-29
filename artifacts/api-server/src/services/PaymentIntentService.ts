@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
 import { paymentIntents, transactions, users } from "@workspace/db/schema";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
@@ -8,7 +7,13 @@ import {
   type LedgerPaymentMethod,
 } from "./WalletService";
 import { createProviderCharge, type EgyptianRail } from "../lib/paymentProvider";
-import { invalidData, isUniqueViolation, notFound, toMoney } from "../lib/billing";
+import {
+  conflict,
+  invalidData,
+  isUniqueViolation,
+  notFound,
+  toMoney,
+} from "../lib/billing";
 import { schedulePaymentSuccess, notifyPaymentIntentFailed } from "./BillingNotificationService";
 
 export type TopupMethod = EgyptianRail;
@@ -17,6 +22,8 @@ export interface CreateTopupInput {
   userId: string;
   amount: number;
   method: TopupMethod;
+  /** Client-stable UUID — reused as payment_intents.id so retries never open a second PSP checkout. */
+  idempotencyKey: string;
 }
 
 export interface TopupIntentResult {
@@ -38,6 +45,48 @@ export interface ConfirmTopupResult {
   already_processed: boolean;
 }
 
+function checkoutUrlFromMeta(metadata: unknown): string | null {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return null;
+  }
+  const url = (metadata as Record<string, unknown>).checkout_url;
+  return typeof url === "string" && url.length > 0 ? url : null;
+}
+
+function assertTopupIdempotencyMatch(
+  existing: typeof paymentIntents.$inferSelect,
+  input: CreateTopupInput,
+  amount: string,
+): void {
+  if (existing.userId !== input.userId) {
+    throw conflict("Idempotency key already used");
+  }
+  if (existing.purpose !== "wallet_topup") {
+    throw conflict("Idempotency key already used");
+  }
+  if (existing.method !== input.method) {
+    throw invalidData("Idempotency key reused with a different payment method");
+  }
+  if (toMoney(existing.amount) !== amount) {
+    throw invalidData("Idempotency key reused with a different amount");
+  }
+}
+
+function topupResultFromRow(
+  row: typeof paymentIntents.$inferSelect,
+  checkoutUrl: string | null,
+): TopupIntentResult {
+  return {
+    intent_id: row.id,
+    amount: row.amount,
+    method: row.method,
+    status: row.status,
+    provider_ref: row.providerRef,
+    checkout_url: checkoutUrl,
+    created_at: (row.createdAt ?? new Date()).toISOString(),
+  };
+}
+
 /**
  * Create a pending wallet top-up intent against the real PSP (Paymob).
  *
@@ -45,6 +94,10 @@ export interface ConfirmTopupResult {
  * PSP charge cannot leave a paid checkout with no settleable intent (webhook
  * would otherwise ACK an unknown merchant reference and strand money).
  * Provider charge is opened second; checkout URL is patched onto the row.
+ *
+ * Idempotency: `idempotencyKey` IS the payment_intents.id. Retries with the
+ * same key replay the existing checkout URL and never open a second Paymob
+ * order once one is bound.
  */
 export async function createTopupIntent(
   input: CreateTopupInput
@@ -52,20 +105,90 @@ export async function createTopupIntent(
   const amount = toMoney(input.amount);
   if (Number(amount) <= 0) throw invalidData("Top-up amount must be positive");
 
-  const intentId = randomUUID();
-  const [intent] = await db
-    .insert(paymentIntents)
-    .values({
-      id: intentId,
-      userId: input.userId,
-      amount,
-      method: input.method,
-      purpose: "wallet_topup",
-      status: "pending",
-      providerRef: null,
-      metadata: { provider: "paymob" },
-    })
-    .returning();
+  const intentId = input.idempotencyKey.trim();
+  if (!intentId) throw invalidData("idempotency_key is required");
+
+  let intent: typeof paymentIntents.$inferSelect | undefined;
+
+  const [existing] = await db
+    .select()
+    .from(paymentIntents)
+    .where(eq(paymentIntents.id, intentId))
+    .limit(1);
+
+  if (existing) {
+    assertTopupIdempotencyMatch(existing, input, amount);
+    if (existing.status === "completed" || existing.status === "expired") {
+      throw conflict("This top-up was already completed");
+    }
+    const replayUrl = checkoutUrlFromMeta(existing.metadata);
+    if (
+      existing.status === "pending" &&
+      replayUrl &&
+      existing.providerRef
+    ) {
+      return topupResultFromRow(existing, replayUrl);
+    }
+    // pending/failed without a bound checkout → resume (re-open PSP once).
+    if (existing.status === "failed") {
+      const [resumed] = await db
+        .update(paymentIntents)
+        .set({
+          status: "pending",
+          providerRef: null,
+          metadata: { provider: "paymob", resumed: true },
+        })
+        .where(
+          and(eq(paymentIntents.id, intentId), eq(paymentIntents.status, "failed")),
+        )
+        .returning();
+      intent = resumed ?? existing;
+    } else {
+      intent = existing;
+    }
+  } else {
+    try {
+      const [inserted] = await db
+        .insert(paymentIntents)
+        .values({
+          id: intentId,
+          userId: input.userId,
+          amount,
+          method: input.method,
+          purpose: "wallet_topup",
+          status: "pending",
+          providerRef: null,
+          metadata: { provider: "paymob" },
+        })
+        .returning();
+      intent = inserted;
+    } catch (err) {
+      if (!isUniqueViolation(err)) throw err;
+      const [raced] = await db
+        .select()
+        .from(paymentIntents)
+        .where(eq(paymentIntents.id, intentId))
+        .limit(1);
+      if (!raced) throw err;
+      assertTopupIdempotencyMatch(raced, input, amount);
+      const replayUrl = checkoutUrlFromMeta(raced.metadata);
+      if (raced.status === "pending" && replayUrl && raced.providerRef) {
+        return topupResultFromRow(raced, replayUrl);
+      }
+      if (raced.status === "completed" || raced.status === "expired") {
+        throw conflict("This top-up was already completed");
+      }
+      intent = raced;
+    }
+  }
+
+  if (!intent) throw invalidData("Failed to create top-up intent");
+
+  // Another concurrent request may have bound checkout between our read and now.
+  const earlyUrl = checkoutUrlFromMeta(intent.metadata);
+  if (intent.status === "pending" && earlyUrl && intent.providerRef) {
+    return topupResultFromRow(intent, earlyUrl);
+  }
 
   let charge;
   try {
@@ -95,15 +218,7 @@ export async function createTopupIntent(
     .returning();
 
   const row = updated ?? intent;
-  return {
-    intent_id: row.id,
-    amount: row.amount,
-    method: row.method,
-    status: row.status,
-    provider_ref: row.providerRef,
-    checkout_url: charge.checkoutUrl,
-    created_at: (row.createdAt ?? new Date()).toISOString(),
-  };
+  return topupResultFromRow(row, charge.checkoutUrl);
 }
 
 async function findTransactionByKey(key: string): Promise<string | null> {

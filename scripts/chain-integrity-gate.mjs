@@ -909,8 +909,9 @@ const CHECKS = [
     test: (s) =>
       /notified\.has\(search\.userId\)/.test(s) &&
       /Atomic cooldown claim/.test(s) &&
-      /cooldownCutoff/.test(s),
-    why: "Overlapping saved searches must not multiply new_match storms",
+      /cooldownCutoff/.test(s) &&
+      /listingMatchesSavedSearchFilters/.test(s),
+    why: "Overlapping saved searches must not multiply new_match storms; structured filters fail-closed",
   },
   {
     id: "P-boost-idempotency-required",
@@ -920,6 +921,50 @@ const CHECKS = [
       return /idempotency_key: z\.string\(\)\.min\(8\)/.test(block);
     },
     why: "Boost retries without idempotency key must be rejected",
+  },
+  {
+    id: "P-topup-idempotency-required",
+    file: "artifacts/api-server/src/validators/schemas.ts",
+    test: (s) => {
+      const block = s.slice(s.indexOf("export const TopupCreateSchema"));
+      return /idempotency_key: z\.string\(\)\.uuid\(\)/.test(block);
+    },
+    why: "Wallet top-up must require client UUID idempotency key",
+  },
+  {
+    id: "P-subscribe-idempotency-required",
+    file: "artifacts/api-server/src/validators/schemas.ts",
+    test: (s) => {
+      const block = s.slice(s.indexOf("export const SubscribeSchema"));
+      return /idempotency_key: z\.string\(\)\.uuid\(\)/.test(block);
+    },
+    why: "Subscribe must require client UUID idempotency key",
+  },
+  {
+    id: "P-topup-intent-uses-idempotency-id",
+    file: "artifacts/api-server/src/services/PaymentIntentService.ts",
+    test: (s) =>
+      /idempotencyKey: string/.test(s) &&
+      /const intentId = input\.idempotencyKey\.trim\(\)/.test(s) &&
+      /assertTopupIdempotencyMatch/.test(s),
+    why: "Top-up intent id must equal client idempotency key with replay guard",
+  },
+  {
+    id: "P-saved-search-match-version",
+    file: "artifacts/api-server/src/services/savedSearchMatch.ts",
+    test: (s) =>
+      /SAVED_SEARCH_MATCH_VERSION = 1/.test(s) &&
+      /match_version !== SAVED_SEARCH_MATCH_VERSION/.test(s) &&
+      /market_country/.test(s),
+    why: "Saved-search alerts must fail-closed without match_version 1",
+  },
+  {
+    id: "P-mobile-saved-search-versioned-filters",
+    file: "artifacts/banco-mobile/context/SessionContext.tsx",
+    test: (s) =>
+      /match_version: 1/.test(s) &&
+      /buildSearchParams\(input\.criteria/.test(s),
+    why: "Mobile must persist versioned snake_case filters for alert matching",
   },
   {
     id: "P-feed-material-wired",

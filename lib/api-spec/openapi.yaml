@@ -6781,13 +6781,17 @@ paths:
           application/json:
             schema:
               type: object
-              required: [amount, method]
+              required: [amount, method, idempotency_key]
               properties:
                 amount:
                   type: number
                 method:
                   type: string
                   enum: [vodafone_cash, fawry, instapay, bank_transfer]
+                idempotency_key:
+                  type: string
+                  format: uuid
+                  description: Client-stable UUID reused as payment_intents.id so retries never open a second PSP checkout.
       responses:
         "200":
           description: Top-up intent created
@@ -6894,7 +6898,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [plan_slug]
+              required: [plan_slug, idempotency_key]
               properties:
                 plan_slug:
                   type: string
@@ -6902,6 +6906,10 @@ paths:
                   type: string
                   enum: [wallet, vodafone_cash, fawry, instapay, bank_transfer]
                   default: wallet
+                idempotency_key:
+                  type: string
+                  format: uuid
+                  description: Client-stable UUID; external rails reuse as payment_intents.id.
       responses:
         "200":
           description: Subscription started or intent created

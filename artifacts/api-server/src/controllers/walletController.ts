@@ -32,6 +32,8 @@ function handleError(res: Response, err: unknown, fallback: string, tag: string)
     return res.status(404).json(errorResponse("NOT_FOUND", e.message ?? "Not found"));
   if (e.code === "UNAUTHORIZED")
     return res.status(401).json(errorResponse("UNAUTHORIZED", e.message ?? "Unauthorized"));
+  if (e.code === "CONFLICT")
+    return res.status(409).json(errorResponse("CONFLICT", e.message ?? "Conflict"));
   console.error(tag, err);
   return res.status(500).json(errorResponse("INTERNAL_ERROR", fallback));
 }
@@ -85,6 +87,7 @@ export async function createTopupHandler(req: Request, res: Response) {
       userId: req.dbUserId!,
       amount: input.amount,
       method: input.method,
+      idempotencyKey: input.idempotency_key,
     });
     const validated = validateResponse(TopupIntentResultSchema, result);
     return res.json(successResponse(validated));

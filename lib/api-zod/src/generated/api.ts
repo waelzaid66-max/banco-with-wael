@@ -2494,7 +2494,8 @@ export const ListTransactionsResponse = zod.object({
  */
 export const CreateTopupBody = zod.object({
   "amount": zod.number(),
-  "method": zod.enum(['vodafone_cash', 'fawry', 'instapay', 'bank_transfer'])
+  "method": zod.enum(['vodafone_cash', 'fawry', 'instapay', 'bank_transfer']),
+  "idempotency_key": zod.string().uuid()
 })
 
 export const CreateTopupResponse = zod.object({
@@ -2659,7 +2660,8 @@ export const subscribeBodyPaymentMethodDefault = `wallet`;
 
 export const SubscribeBody = zod.object({
   "plan_slug": zod.string(),
-  "payment_method": zod.enum(['wallet', 'vodafone_cash', 'fawry', 'instapay', 'bank_transfer']).default(subscribeBodyPaymentMethodDefault)
+  "payment_method": zod.enum(['wallet', 'vodafone_cash', 'fawry', 'instapay', 'bank_transfer']).default(subscribeBodyPaymentMethodDefault),
+  "idempotency_key": zod.string().uuid()
 })
 
 export const SubscribeResponse = zod.object({
