@@ -34,7 +34,7 @@
 
 | ID | Item | Next owner |
 |----|------|------------|
-| — | Merge + tag + Coolify deploy | **you** |
+| — | Coolify deploy + smoke | **OPS** — merge+tag done (`45-*`) |
 | P2-H2/H3 | S3 keys + migrate → readyz 200 | OPS |
 | P2-H1 | Paymob TOFU | Deferred — evidence `41-*`; owner picks A/B/C |
 | P2-M5/M6 | Dual web / search LIVE false | Cutover / bake flags |
@@ -93,16 +93,15 @@ Execute `37-COOLIFY-LIVE-SMOKE-MATRIX.md` at minimum: **S1–S3, S5–S9, S12–
 
 | Question | Answer |
 |----------|--------|
-| Merge this tip to `main`? | **DONE — CORRECT** (`44-*`) |
-| Tag `w.4.1` after merge? | **GO — still missing** |
-| Claim production fully certified now? | **NO-GO** until B2+B3 |
-| Merge again / more invent? | **NO-GO** — empty vs main; Phase 2 exhausted (`43-*`) |
+| Merge this tip to `main`? | **DONE** (`44-*`) |
+| Tag `w.4.1` after merge? | **DONE** @ `6c6dec4` |
+| Claim production fully certified now? | **NO-GO** — Coolify not live (`45-*`) |
+| Merge again / more invent? | **NO-GO** — Phase 2 exhausted (`43-*`) |
 
 ---
 
 ## STOP
 
-Agent code work for `w.4.1` recovery line is **complete** at this gate.  
-Phase 2 register closed — `43-*`. Merge verified correct — `44-*`.  
-**Next human actions only:** tag `w.4.1` → B2 Coolify → B3 smoke.  
-Reply after tag/Coolify smoke; or name post-ship order (H1 A/B, M7 A/B, cutover, product invent).
+Git delivery **complete** (merge + tag `w.4.1`). Phase 2 closed — `43-*`.  
+Live Coolify **blocked** in agent env — `45-W41-FULL-DELIVERY-STATUS.md`.  
+**Unblock:** Coolify secrets + compose + DNS so `banco.today/api/readyz` is BANCO JSON; then agent resumes smoke.
