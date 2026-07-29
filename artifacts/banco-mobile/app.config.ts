@@ -3,15 +3,14 @@ import type { ConfigContext, ExpoConfig } from "expo/config";
 /**
  * Deep-link / universal-link origin for expo-router static rendering.
  *
- * - Dev / Replit: defaults to https://replit.com/ (matches current tunnel host).
- * - Production EAS: set EXPO_PUBLIC_ROUTER_ORIGIN=https://your-production-domain
- *   in the EAS production environment before `eas build --profile production`.
- *
- * Do NOT hardcode the production domain here — it would break local Expo Go dev.
+ * Prefer EXPO_PUBLIC_ROUTER_ORIGIN, then EXPO_PUBLIC_PUBLIC_APP_URL (production
+ * app host). Last resort is replit.com for local Expo Go on Replit only —
+ * Coolify/EAS must set a real origin or web export canonical links break.
  */
 const routerOrigin =
   process.env.EXPO_PUBLIC_ROUTER_ORIGIN?.trim() ||
   process.env.EXPO_ROUTER_ORIGIN?.trim() ||
+  process.env.EXPO_PUBLIC_PUBLIC_APP_URL?.trim() ||
   "https://replit.com/";
 
 /**

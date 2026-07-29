@@ -165,6 +165,9 @@ export default function ProfileScreen() {
     "personal"
   );
   const consentPendingRef = useRef(false);
+  // Stays true for the whole email-signup post-finalize pipeline (consent +
+  // updateMe), so the account-type heal effect does not race the signup path.
+  const signupInFlightRef = useRef(false);
   const pendingPhoneRef = useRef("");
   const pendingBusinessRef = useRef(false);
   const pendingFirstNameRef = useRef("");
@@ -180,8 +183,10 @@ export default function ProfileScreen() {
   const [pendingType, setPendingType] = useState<
     "individual" | "dealer" | "company" | "financial_institution"
   >("individual");
-  // Set only after an in-session SSO auth, so the account-type prompt never
-  // appears on a cold launch for an already-signed-in user.
+  // Set after any successful in-session auth (SSO / email / MFA / reset) so
+  // brand-new accounts without accountTypeChosen see the picker. Also used to
+  // distinguish intentional auth from cold launch; heal still covers stuck
+  // legacy sessions missing the flag.
   const authJustHappenedRef = useRef(false);
 
   // Real seller metrics + server-backed social links (Task #38 — REAL data only).
@@ -249,6 +254,7 @@ export default function ProfileScreen() {
   // for an account created in this session, never for returning sign-ins.
   useEffect(() => {
     if (!user || !consentPendingRef.current) return;
+    signupInFlightRef.current = true;
     consentPendingRef.current = false;
     const phoneToSave = pendingPhoneRef.current;
     const goBusiness = pendingBusinessRef.current;
@@ -260,37 +266,49 @@ export default function ProfileScreen() {
     pendingLastNameRef.current = "";
     (async () => {
       try {
-        await user.update({
-          ...(firstNameToSave ? { firstName: firstNameToSave } : {}),
-          ...(lastNameToSave ? { lastName: lastNameToSave } : {}),
-          unsafeMetadata: {
-            ...(user.unsafeMetadata ?? {}),
-            termsAcceptedAt: new Date().toISOString(),
-            termsVersion: CONSENT_VERSION,
-            accountTypeChosen: true,
-          },
-        });
-      } catch (e) {
-        console.warn("[profile] consent metadata save failed", e);
-      }
-      // Persist the chosen account type (server-authoritative role mapping)
-      // plus optional phone. Clerk token is already wired by the
-      // AuthTokenBridge once the session is active.
-      try {
-        await updateMe({
-          account_type: goBusiness ? "dealer" : "individual",
-          ...(phoneToSave ? { phone: phoneToSave } : {}),
-        });
-      } catch (e) {
-        console.warn("[profile] post-signup account_type save failed", e);
-        Alert.alert(
-          t("profile.accountSetupRetryTitle") ?? "Setup incomplete",
-          t("profile.accountSetupRetryMessage") ?? "Could not save your account type. Please try again from Settings.",
-        );
-      }
-      // Business signups continue straight into fast onboarding.
-      if (goBusiness) {
-        router.push("/business/onboarding");
+        try {
+          await user.update({
+            ...(firstNameToSave ? { firstName: firstNameToSave } : {}),
+            ...(lastNameToSave ? { lastName: lastNameToSave } : {}),
+            unsafeMetadata: {
+              ...(user.unsafeMetadata ?? {}),
+              termsAcceptedAt: new Date().toISOString(),
+              termsVersion: CONSENT_VERSION,
+              accountTypeChosen: true,
+            },
+          });
+        } catch (e) {
+          console.warn("[profile] consent metadata save failed", e);
+        }
+        // Persist the chosen account type (server-authoritative role mapping)
+        // plus optional phone. Clerk token is already wired by the
+        // AuthTokenBridge once the session is active.
+        try {
+          await updateMe({
+            account_type: goBusiness ? "dealer" : "individual",
+            ...(phoneToSave ? { phone: phoneToSave } : {}),
+          });
+        } catch (e) {
+          console.warn("[profile] post-signup account_type save failed", e);
+          Alert.alert(
+            t("profile.accountSetupRetryTitle") ?? "Setup incomplete",
+            t("profile.accountSetupRetryMessage") ??
+              "Could not save your account type. Please try again from Settings.",
+          );
+        }
+        // Business signups continue straight into fast onboarding.
+        if (goBusiness) {
+          router.push("/business/onboarding");
+        }
+      } finally {
+        signupInFlightRef.current = false;
+        // Refresh metadata so the heal effect can re-check accountTypeChosen
+        // if the consent write failed mid-pipeline.
+        try {
+          await user.reload();
+        } catch {
+          /* ignore */
+        }
       }
     })();
   }, [user]);
@@ -304,15 +322,16 @@ export default function ProfileScreen() {
     };
   }, []);
 
-  // After an in-session SSO sign-in, prompt brand-new accounts (those without a
-  // chosen account type) to pick Individual / Dealer / Company before entering.
+  // After in-session auth (SSO / email / MFA / reset), or on cold launch for
+  // stuck legacy accounts missing accountTypeChosen, show the 4-type picker.
+  // Skip while email-signup consent+updateMe pipeline owns the role write.
   useEffect(() => {
-    if (!user || !authJustHappenedRef.current) return;
+    if (!user) return;
     authJustHappenedRef.current = false;
-    if (!user.unsafeMetadata?.accountTypeChosen) {
-      setNeedsAccountType(true);
-    }
-  }, [user]);
+    if (consentPendingRef.current || signupInFlightRef.current) return;
+    if (user.unsafeMetadata?.accountTypeChosen) return;
+    setNeedsAccountType(true);
+  }, [user, user?.unsafeMetadata?.accountTypeChosen]);
 
   // Step 3 of the picker flow: only fires AFTER the user has acknowledged the
   // in-app rationale, so the OS prompt never appears without a disclosure.
@@ -511,6 +530,7 @@ export default function ProfileScreen() {
     const { error } = await signIn.password({ emailAddress: email, password });
     if (error) return;
     if (signIn.status === "complete") {
+      authJustHappenedRef.current = true;
       await signIn.finalize({ navigate: () => {} });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       return;
@@ -545,6 +565,7 @@ export default function ProfileScreen() {
             : await signIn.mfa.verifyEmailCode({ code });
     if (error) return;
     if (signIn.status === "complete") {
+      authJustHappenedRef.current = true;
       await signIn.finalize({ navigate: () => {} });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
@@ -586,6 +607,7 @@ export default function ProfileScreen() {
     });
     if (pwErr) return;
     if (signIn.status === "complete") {
+      authJustHappenedRef.current = true;
       await signIn.finalize({ navigate: () => {} });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
@@ -767,6 +789,7 @@ export default function ProfileScreen() {
     // Abandon any in-flight signup intent so a returning sign-in never
     // inherits a previous draft's consent, phone, name, or business routing.
     consentPendingRef.current = false;
+    signupInFlightRef.current = false;
     pendingPhoneRef.current = "";
     pendingBusinessRef.current = false;
     pendingFirstNameRef.current = "";
@@ -1154,7 +1177,7 @@ export default function ProfileScreen() {
         label: t("profile.menuHelp"),
         onPress: () => {
           setShowMenu(false);
-          router.push("/settings");
+          void Linking.openURL("mailto:support@banco.today");
         },
       },
       {

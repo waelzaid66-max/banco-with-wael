@@ -644,7 +644,17 @@ export default function SettingsScreen() {
         emailAddress: email,
         password: deletePw,
       });
-      if (error || signIn.status !== "complete") {
+      if (error) {
+        setDeletePwError(t("settings.deleteWrongPassword"));
+        setDeletePwBusy(false);
+        return;
+      }
+      // MFA-enrolled accounts return needs_second_factor after a correct
+      // password — that still proves password knowledge for delete intent.
+      if (
+        signIn.status !== "complete" &&
+        signIn.status !== "needs_second_factor"
+      ) {
         setDeletePwError(t("settings.deleteWrongPassword"));
         setDeletePwBusy(false);
         return;

@@ -5,10 +5,10 @@
  * authentication on custom domains and .replit.app deployments without
  * requiring CNAME DNS configuration.
  *
- * AUTH CONFIGURATION: To manage users, enable/disable login providers
- * (Google, GitHub, etc.), change app branding, or configure OAuth credentials,
- * use the Auth pane in the workspace toolbar. There is no external Clerk
- * dashboard — all auth configuration is done through the Auth pane.
+ * AUTH CONFIGURATION: All Clerk settings (providers, branding, JWT templates,
+ * rate limits, MFA) are managed in the Clerk Dashboard for the tenant bound to
+ * clerk.banco.today (https://dashboard.clerk.com). Do not treat the Replit
+ * "Auth pane" as authoritative — it is not the production source of truth.
  *
  * IMPORTANT:
  * - Only active in production (Clerk proxying doesn't work for dev instances)

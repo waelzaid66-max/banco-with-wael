@@ -61,12 +61,22 @@ let cached: ObjectStorage | null = null;
 /** Resolve the configured object-storage backend (memoised per process). */
 export function getObjectStorageService(): ObjectStorage {
   if (cached) return cached;
-  const provider = (process.env.OBJECT_STORAGE_PROVIDER || "replit").toLowerCase();
+  const rawProvider = process.env.OBJECT_STORAGE_PROVIDER?.trim().toLowerCase();
+  if (!rawProvider) {
+    // Replit pollution: historic default was the Replit sidecar at :1106.
+    // Coolify / Docker / AWS MUST set OBJECT_STORAGE_PROVIDER=s3 or media
+    // uploads (avatar, KYC docs, listing photos) silently fail.
+    console.error(
+      "[BANCO] OBJECT_STORAGE_PROVIDER is unset — defaulting to 'replit' sidecar. " +
+        "Set OBJECT_STORAGE_PROVIDER=s3 for non-Replit deployments.",
+    );
+  }
+  const provider = rawProvider || "replit";
   if (provider === "s3") {
     cached = new S3ObjectStorageService();
     return cached;
   }
-  if (provider === "replit" || provider === "") {
+  if (provider === "replit") {
     cached = new ReplitObjectStorageService();
     return cached;
   }

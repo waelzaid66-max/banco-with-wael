@@ -177,6 +177,22 @@ function RootLayoutNav() {
         options={{ headerShown: false, animation: "slide_from_bottom" }}
       />
       <Stack.Screen
+        name="business/verification"
+        options={{ headerShown: false, animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="business/banks"
+        options={{ headerShown: false, animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="business/analytics"
+        options={{ headerShown: false, animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="business/rfq-inbox"
+        options={{ headerShown: false, animation: "slide_from_right" }}
+      />
+      <Stack.Screen
         name="business/requests"
         options={{ headerShown: false, animation: "slide_from_right" }}
       />
