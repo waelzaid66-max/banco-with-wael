@@ -5,7 +5,7 @@ import {
   companyProfiles,
   users,
 } from "@workspace/db/schema";
-import { and, eq, desc, sql, or } from "drizzle-orm";
+import { and, eq, desc, sql, or, isNull } from "drizzle-orm";
 import { createNotification } from "./NotificationService";
 import type {
   GlobalSupplyRequestDTO,
@@ -115,7 +115,7 @@ async function resolveUserId(clerkId: string): Promise<string> {
   const [user] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   if (!user) throw Object.assign(new Error("User not found"), { code: "UNAUTHORIZED" });
   return user.id;
@@ -126,7 +126,7 @@ async function resolveUserIdOpt(clerkId?: string): Promise<string | null> {
   const [user] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   return user?.id ?? null;
 }

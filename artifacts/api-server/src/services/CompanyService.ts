@@ -6,7 +6,7 @@ import {
   companyProfiles,
   companyFollows,
 } from "@workspace/db/schema";
-import { and, eq, sql, desc, ilike } from "drizzle-orm";
+import { and, eq, sql, desc, ilike, isNull } from "drizzle-orm";
 import { enrichListings } from "./SearchService";
 import { transformFeedItems } from "./BffService";
 import { getDbUser } from "./UserService";
@@ -109,11 +109,12 @@ export async function getCompanyProfile(
       createdAt: users.createdAt,
     })
     .from(users)
-    .where(eq(users.id, userId))
+    .where(and(eq(users.id, userId), isNull(users.deletedAt)))
     .limit(1);
 
   // A shadow-banned seller's entire public surface is suppressed — the profile
   // 404s rather than exposing identity or stats. Mirrors publicVisibilityConditions().
+  // Soft-deleted accounts are also suppressed (privacy wipe must not leave a public card).
   if (!user || user.isShadowBanned === true) return null;
 
   const [profile] = await db
@@ -204,7 +205,7 @@ async function resolveUserIdOpt(clerkId?: string): Promise<string | null> {
   const [user] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   return user?.id ?? null;
 }
@@ -343,7 +344,7 @@ export async function upsertMyCompanyProfile(
   const [user] = await db
     .select({ id: users.id, role: users.role })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
 
   if (!user) {
@@ -432,6 +433,7 @@ export async function listCompaniesDirectory(
   const conditions = [
     sql`${users.role} IN ('dealer', 'company', 'enterprise')`,
     sql`${users.isShadowBanned} IS NOT TRUE`,
+    isNull(users.deletedAt),
   ];
   if (filters.q) conditions.push(ilike(users.name, `%${filters.q}%`));
   if (filters.industry) conditions.push(eq(companyProfiles.industry, filters.industry));
@@ -513,7 +515,7 @@ export async function followCompany(
   const [company] = await db
     .select({ id: users.id, role: users.role, isShadowBanned: users.isShadowBanned })
     .from(users)
-    .where(eq(users.id, companyUserId))
+    .where(and(eq(users.id, companyUserId), isNull(users.deletedAt)))
     .limit(1);
   if (!company || company.isShadowBanned === true || !BUSINESS_ROLES.includes(company.role)) {
     throw Object.assign(new Error("Company not found"), { code: "NOT_FOUND" });
@@ -580,6 +582,7 @@ export async function listMyFollowing(
   const conditions = [
     eq(companyFollows.followerId, followerId),
     sql`${users.isShadowBanned} IS NOT TRUE`,
+    isNull(users.deletedAt),
   ];
   if (cursor) conditions.push(sql`${companyFollows.createdAt} < ${new Date(cursor)}`);
 

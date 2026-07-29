@@ -156,8 +156,14 @@ export async function updateImportOrderStage(
   const [updated] = await db
     .update(importOrders)
     .set(updateData)
-    .where(eq(importOrders.id, orderId))
+    .where(and(eq(importOrders.id, orderId), eq(importOrders.stage, row.stage)))
     .returning();
+
+  if (!updated) {
+    throw Object.assign(new Error("Import order stage changed concurrently"), {
+      code: "CONFLICT",
+    });
+  }
 
   const stageMessages: Record<string, string> = {
     review: "Your import order is under review.",

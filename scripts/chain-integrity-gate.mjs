@@ -813,6 +813,61 @@ const CHECKS = [
     },
     why: "Booking mutations must reject soft-deleted clerk sessions",
   },
+  {
+    id: "P-optional-auth-tombstone",
+    file: "artifacts/api-server/src/middlewares/authGuard.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export function optionalAuth"));
+      return (
+        /ACCOUNT_DELETED/.test(fn) &&
+        /deletedAt/.test(fn) &&
+        /Authentication unavailable/.test(fn)
+      );
+    },
+    why: "optionalAuth must fail-closed on soft-deleted JWTs (no private owner leak)",
+  },
+  {
+    id: "P-rfq-award-cas",
+    file: "artifacts/api-server/src/services/RfqService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function acceptOffer"));
+      return (
+        /FOR UPDATE/.test(fn) &&
+        /eq\(rfqs\.status, "open"\)/.test(fn) &&
+        /awarded\.length === 0/.test(fn)
+      );
+    },
+    why: "RFQ award must serialize open→awarded (no dual winner notify)",
+  },
+  {
+    id: "P-has-installment-boolparam",
+    file: "artifacts/api-server/src/validators/schemas.ts",
+    test: (s) => {
+      const block = s.slice(s.indexOf("export const SearchQuerySchema"));
+      return /has_installment: boolParam\.optional\(\)/.test(block);
+    },
+    why: "has_installment=false must not coerce truthy via z.coerce.boolean",
+  },
+  {
+    id: "P-import-stage-cas",
+    file: "artifacts/api-server/src/services/ImportOrderService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function updateImportOrderStage"));
+      return (
+        /eq\(importOrders\.stage, row\.stage\)/.test(fn) &&
+        /CONFLICT/.test(fn)
+      );
+    },
+    why: "Import stage transitions must CAS on current stage (no dual notify)",
+  },
+  {
+    id: "P-company-reject-tombstone",
+    file: "artifacts/api-server/src/services/CompanyService.ts",
+    test: (s) =>
+      /isNull\(users\.deletedAt\)/.test(s) &&
+      /Soft-deleted accounts are also suppressed/.test(s),
+    why: "Deleted businesses must not remain public/followable",
+  },
 ];
 
 function main() {

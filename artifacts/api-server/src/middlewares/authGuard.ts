@@ -151,10 +151,33 @@ export function requirePermission(permission: Permission) {
 
 export function optionalAuth(req: Request, res: Response, next: NextFunction): void {
   const auth = getAuth(req);
-  if (auth?.userId) {
-    req.userId = auth.userId;
+  const clerkId = auth?.userId;
+  if (!clerkId) {
+    next();
+    return;
   }
-  next();
+
+  // Same tombstone fail-closed as requireAuth: a lingering JWT after soft-delete
+  // must not keep req.userId set (owner-gated private fields on optional routes).
+  req.userId = clerkId;
+  db.select({ deletedAt: users.deletedAt })
+    .from(users)
+    .where(eq(users.clerkId, clerkId))
+    .limit(1)
+    .then(([user]) => {
+      if (user?.deletedAt) {
+        res
+          .status(401)
+          .json(errorResponse("ACCOUNT_DELETED", "This account has been deleted"));
+        return;
+      }
+      next();
+    })
+    .catch(() => {
+      res
+        .status(503)
+        .json(errorResponse("SERVICE_UNAVAILABLE", "Authentication unavailable"));
+    });
 }
 
 export async function resolveDbUser(req: Request, res: Response, next: NextFunction): Promise<void> {

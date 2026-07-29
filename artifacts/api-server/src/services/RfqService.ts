@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { rfqs, rfqOffers, users } from "@workspace/db/schema";
-import { and, eq, desc, sql, ne } from "drizzle-orm";
+import { and, eq, desc, sql, ne, isNull } from "drizzle-orm";
 import { createNotification } from "./NotificationService";
 import type { Rfq, RfqDetail, RfqOffer } from "../validators/schemas";
 
@@ -106,7 +106,7 @@ async function resolveUserId(clerkId: string): Promise<string> {
   const [user] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   if (!user) throw Object.assign(new Error("User not found"), { code: "UNAUTHORIZED" });
   return user.id;
@@ -212,7 +212,7 @@ export async function getRfqDetail(
     const [viewer] = await db
       .select({ id: users.id })
       .from(users)
-      .where(eq(users.clerkId, viewerClerkId))
+      .where(and(eq(users.clerkId, viewerClerkId), isNull(users.deletedAt)))
       .limit(1);
     viewerUserId = viewer?.id ?? null;
   }
@@ -373,6 +373,26 @@ export async function acceptOffer(
 
   const now = new Date();
   await db.transaction(async (tx) => {
+    // Serialize award: concurrent accepts must not both mark winners / notify.
+    await tx.execute(sql`SELECT id FROM rfqs WHERE id = ${rfqId} FOR UPDATE`);
+    const [locked] = await tx
+      .select({ status: rfqs.status })
+      .from(rfqs)
+      .where(eq(rfqs.id, rfqId))
+      .limit(1);
+    if (!locked || locked.status !== "open") {
+      throw Object.assign(new Error("This RFQ is no longer open"), { code: "CONFLICT" });
+    }
+
+    const awarded = await tx
+      .update(rfqs)
+      .set({ status: "awarded", updatedAt: now })
+      .where(and(eq(rfqs.id, rfqId), eq(rfqs.status, "open")))
+      .returning({ id: rfqs.id });
+    if (awarded.length === 0) {
+      throw Object.assign(new Error("This RFQ is no longer open"), { code: "CONFLICT" });
+    }
+
     await tx
       .update(rfqOffers)
       .set({ status: "accepted", updatedAt: now })
@@ -381,10 +401,6 @@ export async function acceptOffer(
       .update(rfqOffers)
       .set({ status: "rejected", updatedAt: now })
       .where(and(eq(rfqOffers.rfqId, rfqId), ne(rfqOffers.id, offerId)));
-    await tx
-      .update(rfqs)
-      .set({ status: "awarded", updatedAt: now })
-      .where(eq(rfqs.id, rfqId));
   });
 
   void createNotification({

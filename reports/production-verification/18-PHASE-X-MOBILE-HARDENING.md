@@ -88,13 +88,26 @@ Single implementation family: `SearchResultsMap` + `.web` + `mapHtml` (Leaflet).
 
 ---
 
+## Round 4 (precision continuation)
+
+| Defect | Severity | Status |
+|--------|----------|--------|
+| `optionalAuth` set `req.userId` for tombstoned JWTs → private owner fields leak | CRITICAL | **FIXED** — same `ACCOUNT_DELETED` fail-closed as `requireAuth` |
+| Concurrent RFQ `acceptOffer` dual-winner notify | CRITICAL | **FIXED** — `FOR UPDATE` + CAS `status='open'→awarded` |
+| `has_installment=false` coerced true via `z.coerce.boolean` | HIGH | **FIXED** — `boolParam` |
+| Import stage advance/cancel race + dual notify | HIGH | **FIXED** — CAS `WHERE stage=current` |
+| Soft-deleted companies still public/followable | HIGH | **FIXED** — `deletedAt` on profile/directory/follow/following |
+| Saved-search structured filters ignored in alerts / mobile replay | HIGH | **DEFERRED** — larger product surface; tracked |
+
+---
+
 ## Verification evidence (this turn)
 
 | Gate | Result |
 |------|--------|
-| `node scripts/chain-integrity-gate.mjs` | **86/86 PASS** |
-| API vitest | **346 passed / 3 skipped** |
-| Mobile full `pnpm test` | **PASS** (icons/lib/resilience/links/session/section/i18n) |
+| `node scripts/chain-integrity-gate.mjs` | **pending Round 4 re-run** |
+| API vitest | **pending Round 4 re-run** |
+| Mobile full `pnpm test` | **PASS** (Round 3) |
 | SVG icons | Unchanged — registry only |
 
 ---
