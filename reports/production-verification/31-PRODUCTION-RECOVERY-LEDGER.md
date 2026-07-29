@@ -44,7 +44,8 @@
 |-----------------|-----------|
 | Prior tip `5bed83e` | Mobile typecheck; CI ports; W41 plan |
 | `ee4d2ba` | Website Dockerfile/compose bake parity; health `banco-website` / `w4.1` |
-| This turn | Landing ↔ Coolify paths + `VITE_*` reconnect; nginx legacy 301 aliases; Coolify API `GIT_SHA`/`BUILD_ID`; API env AWS keys + Coolify markers + runtime pin; `WEB_PLUG_ENABLED` on both Next services |
+| `e4aa389`–`e619cba` | Landing ↔ Coolify paths + `VITE_*`; nginx legacy 301; Coolify API pin + AWS keys + Coolify markers; `WEB_PLUG_ENABLED`; ledger gates 164/164 |
+| This tip (parity wave) | `docker-compose.prod.yml` ↔ Coolify (pin/S3 keys/website bake/plug); AWS `Dockerfile.web` BASE_PATH + `dist/public` + Clerk proxy; AWS nginx 301 aliases; AWS compose pin/keys/`CLERK_SECRET_KEY`; Coolify deploy order + `DEPLOY_COOLIFY` real S3 env names; env examples `/market/` `/admin/`; health probe docs (`/api/healthz` not `/healthz` or invented `/api/v1/health`) |
 
 ---
 
@@ -52,7 +53,7 @@
 
 ### Code / release process
 
-- Open/merge PR `cursor/w41-production-release-5cf0` → `main`
+- Open/merge PR `cursor/w41-production-release-5cf0` → `main` (agent PR tool bound to `bancoo` — owner opens compare URL)
 - Tag **`w.4.1`** on merge SHA
 - Owner cutover: stop serving frozen `banco-web` when website owns the public domain
 - Optional: set `NEXT_PUBLIC_WEB_SEARCH_LIVE/MAP=true` for live search (rebuild)
@@ -72,9 +73,11 @@
 
 | Gate | Result | When |
 |------|--------|------|
-| `chain-integrity-gate.mjs` | **164/164 PASS** | after DomainRouter Clerk-origin restore |
-| API vitest | **384 passed / 3 skipped** | same tip |
+| `chain-integrity-gate.mjs` | **164/164 PASS** | after DomainRouter Clerk-origin restore + prod parity |
+| API vitest | **384 passed / 3 skipped** | re-run on this tip |
+| production-confidence | **14/14 PASS** | re-run on this tip |
 | Coolify website bake parity | committed `ee4d2ba` | prior |
-| Landing PATHS ↔ Coolify + Clerk hops | committed (this tip) | PATHS use `/market|/admin` + VITE_*; DomainRouter still hops to `banco.today/dealer-os` + `banco.today/banco-mobile` (P-landing-clerk-domain) |
+| Landing PATHS ↔ Coolify + Clerk hops | committed | PATHS `/market|/admin` + VITE_*; DomainRouter `banco.today/dealer-os` + `banco.today/banco-mobile` |
+| AWS web SPA blank-page root cause | repaired this tip | BASE_PATH + `dist/public` parity with Coolify |
 
 Do **not** mark FULL CERT without OPS/device evidence (Coolify live secrets, S3, SSL, EAS, Paymob webhook, Clerk providers).

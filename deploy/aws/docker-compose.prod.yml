@@ -18,6 +18,9 @@ services:
     build:
       context: ../..
       dockerfile: deploy/aws/Dockerfile.api
+      args:
+        GIT_SHA: ${GIT_SHA:-}
+        BUILD_ID: ${BUILD_ID:-}
     image: banco-api:latest
     restart: always
     environment:
@@ -33,11 +36,16 @@ services:
       SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
       PAYMENT_CONFIG_ENCRYPTION_KEY: ${PAYMENT_CONFIG_ENCRYPTION_KEY:?set PAYMENT_CONFIG_ENCRYPTION_KEY}
       # Object storage (S3 — see reports/06 & the REQUIRED-CHANGE note).
+      # EC2/ECS usually use IAM roles; static keys optional when no role is attached.
       OBJECT_STORAGE_PROVIDER: ${OBJECT_STORAGE_PROVIDER:-}
       AWS_REGION: ${AWS_REGION:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       S3_BUCKET: ${S3_BUCKET:-}
       PUBLIC_OBJECT_SEARCH_PATHS: ${PUBLIC_OBJECT_SEARCH_PATHS:-}
       PRIVATE_OBJECT_DIR: ${PRIVATE_OBJECT_DIR:-}
+      GIT_SHA: ${GIT_SHA:-}
+      BUILD_ID: ${BUILD_ID:-}
       # Integrations (optional per feature).
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-}
@@ -70,6 +78,7 @@ services:
       dockerfile: deploy/aws/Dockerfile.web
       args:
         VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:-}
+        VITE_CLERK_PROXY_URL: ${VITE_CLERK_PROXY_URL:-}
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
         VITE_MARKET_URL: ${VITE_MARKET_URL:-}
         VITE_ADMIN_URL: ${VITE_ADMIN_URL:-}

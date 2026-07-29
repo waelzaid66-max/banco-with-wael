@@ -126,8 +126,18 @@ Click **Deploy** in Coolify. Coolify will:
 | `OBJECT_STORAGE_PROVIDER` | `replit` | `s3` or `replit` — **NOT `gcs`** (the API rejects `gcs`: "Unsupported OBJECT_STORAGE_PROVIDER … Supported: s3, replit"). For a VPS/Coolify deploy use `s3` (any S3-compatible endpoint). |
 | `S3_BUCKET` | — | S3 bucket name |
 | `AWS_REGION` | — | AWS region |
+| `AWS_ACCESS_KEY_ID` | — | **Required on Coolify/Hostinger VPS** (no IAM role). Optional on EC2/ECS when an instance role is attached. |
+| `AWS_SECRET_ACCESS_KEY` | — | Pair with `AWS_ACCESS_KEY_ID` on VPS |
 | `PUBLIC_OBJECT_SEARCH_PATHS` | — | Public S3 path prefix for listing images |
 | `PRIVATE_OBJECT_DIR` | — | Private S3 dir for internal assets |
+| `GIT_SHA` | — | Deploy pin for `/api/readyz` (Coolify may also inject `SOURCE_COMMIT`) |
+| `BUILD_ID` | — | Optional build id surfaced on health/readyz |
+| `COOLIFY_URL` / `COOLIFY_FQDN` | — | Coolify markers — forbids `OBJECT_STORAGE_PROVIDER=replit` in-container |
+| `WEB_PLUG_ENABLED` | `true` | Consumer Next kill-switch (`false` → maintenance) |
+| `BANCO_WEB_MARKET_URL` | — | Baked into Next as `NEXT_PUBLIC_MARKET_URL` (prefer `/market/` or absolute) |
+| `BANCO_WEB_ADMIN_URL` | — | Baked into Next as `NEXT_PUBLIC_ADMIN_URL` (prefer `/admin/` or absolute) |
+| `NEXT_PUBLIC_APP_ANDROID_URL` | — | Play Store URL (store CTAs stay “soon” when unset) |
+| `NEXT_PUBLIC_APP_IOS_URL` | — | App Store URL |
 | `ERROR_ALERT_WEBHOOK` | — | Webhook URL for error alerts |
 | `LOG_LEVEL` | `info` | Pino log level |
 | `LOG_DIR` | — | Directory for log file output (omit to log to stdout only) |

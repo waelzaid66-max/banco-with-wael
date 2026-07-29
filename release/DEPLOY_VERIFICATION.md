@@ -98,7 +98,8 @@ Then confirm Replit == GitHub.
 
 ## Runtime smoke test (after the API workflow restarts)
 ```bash
-curl -s localhost:8080/healthz                                   # → 200
+curl -s localhost:8080/api/healthz                               # → 200
+curl -s localhost:8080/api/readyz                                # → 200 when money schema present
 curl -s 'localhost:8080/api/v1/reference/places?q=%D8%A7%D9%84%D8%AA%D8%AC%D9%85%D8%B9'   # التجمع → places
 ```
 - Open a listing → `GET /api/v1/listings/{id}/insights` works (rating chip shows once its market segment has enough real observations).

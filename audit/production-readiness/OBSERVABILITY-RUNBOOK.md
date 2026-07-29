@@ -48,9 +48,8 @@ ERROR_ALERT_WEBHOOK=https://hooks.slack.com/services/…   # optional
 |------|------|-----|----------|
 | `GET /api/healthz` | Liveness | No | `200 { "status": "ok" }` |
 | `GET /api/livez` | Liveness alias | No | `200 { "status": "ok" }` |
-| `GET /api/readyz` | Readiness | Yes (2s cap) | `200` ok / `503` degraded |
-| `GET /api/` | Platform probe | No | `200 { "status": "ok" }` |
-| `GET /api/v1/health` | Versioned health | — | Routed via v1 router if present |
+| `GET /api/readyz` | Readiness | Yes (2s cap) | `200` ok / `503` degraded (includes money schema fail-closed) |
+| `GET /api/` | Platform probe | No | `200 { "status": "ok", gitSha, buildId }` |
 
 **Tests:** `artifacts/api-server/src/health.test.ts`  
 **Staging script:** `scripts/staging-p0-smoke.mjs` steps 1–2
