@@ -101,44 +101,14 @@ export function feedItemsToMarkers(items: FeedItem[]): MapMarker[] {
 export function buildMapHtml(
   markers: MapMarker[],
   theme: MapTheme,
-  // Initial framing for the selected market. Optional so existing callers keep
-  // working; Egypt stays the default exactly as before.
   center?: { lat: number; lng: number; zoom: number },
-  // "Near me" area: drawn as a soft circle so the user SEES the radius being
-  // searched instead of guessing. Optional — omitted callers render as before.
-  near?: { lat: number; lng: number; radiusKm: number },
 ): string {
-  const lat = center?.lat ?? 26.8;
-  const lng = center?.lng ?? 30.8;
-  const zoom = center?.zoom ?? 6;
-  // Values are coerced to finite numbers before being inlined into the page.
-  const nearLat = Number(near?.lat);
-  const nearLng = Number(near?.lng);
-  const nearMeters = Math.round(Number(near?.radiusKm) * 1000);
-  const nearScript =
-    near && Number.isFinite(nearLat) && Number.isFinite(nearLng) && nearMeters > 0
-      ? `
-    L.circle([${nearLat}, ${nearLng}], {
-      radius: ${nearMeters},
-      color: "${theme.primary}",
-      weight: 2,
-      opacity: 0.9,
-      fillColor: "${theme.primary}",
-      fillOpacity: 0.08,
-      interactive: false
-    }).addTo(map);
-    L.circleMarker([${nearLat}, ${nearLng}], {
-      radius: 5,
-      color: "#ffffff",
-      weight: 2,
-      fillColor: "${theme.primary}",
-      fillOpacity: 1,
-      interactive: false
-    }).addTo(map);`
-      : "";
   // JSON is safe inside a <script> except for a literal "</script>"; escaping
   // "<" to its unicode form neutralizes that without changing the parsed data.
   const json = JSON.stringify(markers).replace(/</g, "\\u003c");
+  const lat = center?.lat ?? 26.8;
+  const lng = center?.lng ?? 30.8;
+  const zoom = center?.zoom ?? 6;
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -263,7 +233,6 @@ export function buildMapHtml(
       maxZoom: 19,
       attribution: "&copy; OpenStreetMap"
     }).addTo(map);
-${nearScript}
 
     // "Locate me" control — centres the map on the device GPS and drops a
     // you-are-here dot (fcd7d1c; wiped by 93b650b; restored surgically).

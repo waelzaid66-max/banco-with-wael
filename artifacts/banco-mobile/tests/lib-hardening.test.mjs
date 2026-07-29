@@ -177,6 +177,33 @@ test("search map restores locate-me control (fcd7d1c)", () => {
   assert.match(map, /geolocationEnabled/, "WebView must enable geolocation");
 });
 
+test("search map frames by market country center (b68c8af restore)", () => {
+  const tax = fs.readFileSync(
+    path.join(APP_ROOT, "lib", "searchTaxonomy.ts"),
+    "utf8",
+  );
+  const html = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "mapHtml.ts"),
+    "utf8",
+  );
+  const map = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "SearchResultsMap.tsx"),
+    "utf8",
+  );
+  assert.match(tax, /export function marketCountryMapCenter/, "taxonomy center helper required");
+  assert.match(tax, /FR:\s*\{\s*lat:/, "EU markets must have map centers");
+  assert.match(
+    html,
+    /center\?: \{ lat: number; lng: number; zoom: number \}/,
+    "buildMapHtml must accept optional center",
+  );
+  assert.match(
+    map,
+    /marketCountryMapCenter\(criteria\.marketCountry\)/,
+    "native map must pass market center into buildMapHtml",
+  );
+});
+
 test("European market countries have flags for compressed picker", () => {
   const src = fs.readFileSync(
     path.join(APP_ROOT, "constants", "countryCodes.ts"),
