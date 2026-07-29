@@ -2,7 +2,7 @@
 
 **Role:** Chief Software Architect / Principal Production Engineer / Release Manager  
 **SoT repo:** https://github.com/waelzaid66-max/banco-with-wael  
-**Commit:** (this branch tip after acceptance repairs)  
+**Branch:** `cursor/production-hardening-5cf0`  
 **Date:** 2026-07-29  
 **Signer stance:** Legal-signature standard — no PASS without evidence.
 
@@ -10,11 +10,16 @@
 
 ## Executive Summary
 
-`banco-with-wael` is the **strongest engineering snapshot** across all audited forks (`bancoboom`, `-BANCO-CA-OOM-`, `bancoo`, `bancotoday`, `bancostormainvirgen`). Historical scan found **no production-critical code missing from BWW** — BWW is a superset. Prior agent/Replit merge pollution **did** reintroduce real regressions; those are now closed with living gates.
+`banco-with-wael` remains the strongest engineering SoT across audited forks. This hardening pass closed **proven** production defects with living evidence:
 
-**This environment cannot complete Docker image builds, Postgres-backed API vitest, live Clerk OAuth, or EAS store builds.** Therefore a full unconditional production sign-off is **not** issued.
+1. **Web sign-in/sign-up HTTP 500** when `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` is absent (Clerk components mounted outside `ClerkProvider`) — fixed via `ClerkAuthPage` gate; smoke now **200**.
+2. **Maintenance smoke false FAIL** when plug is ON (middleware correctly redirects `/maintenance` → home) — smoke aligned to plug contract.
+3. **Object storage silent Replit default in Coolify/production** — fail-closes when unset in non-Replit production; rejects `replit` when Coolify/Cloud Run/AWS markers present.
+4. **API vitest** previously BLOCKED — now **346 passed / 3 skipped** against local Postgres 16.
 
-**Final decision: CONDITIONAL GO** — ship to Coolify/EAS only after the Remaining Blockers checklist below is cleared by ops.
+**Still blocked in this agent VM:** Docker daemon (no `docker.sock`), live Clerk OAuth tenant, EAS store builds, device E2E, load test.
+
+**Final decision: CONDITIONAL GO** — staging after Coolify secrets; production after blockers below.
 
 ---
 
@@ -22,48 +27,39 @@
 
 | Domain | Score | Evidence basis |
 |--------|------:|----------------|
-| Repository integrity | 82 | Phase 0 + historical compare; twin `banco-web` still frozen debt |
+| Repository integrity | 84 | Twin frozen debt remains; auth routes kept in sync |
 | Architecture / SoT | 88 | BWW ahead of all forks |
-| Authentication / Clerk (code) | 90 | Chain + accounts-clerk + MFA/delete/Skip/heal |
-| Navigation / mobile UX contracts | 92 | Chain 58/58; section guards; touch menus |
-| API (static + seed guards) | 78 | Routes/controllers inventory; upload 503; vitest **BLOCKED** (no Postgres) |
-| Database (schema/indexes in code) | 85 | Scale indexes in bootstrap; no live migrate proof here |
-| Docker / Compose (static) | 80 | All Coolify Dockerfiles present; **no `docker` binary** → build unproven here |
-| Coolify readiness (config) | 75 | Compose + required secrets; storage must be `s3` in ops |
-| Security (static) | 86 | CORS/Clerk/MFA/IDOR markers; no pen-test |
-| Performance / scale (code) | 78 | Pool + indexes + CDN readiness tests; no load test |
-| Web / Admin build | 70 | Typecheck paths in confidence; no full Next/Vite prod build run this turn |
+| Authentication / Clerk (code) | 92 | Chain + accounts + web auth gate |
+| Navigation / mobile UX contracts | 92 | Chain 58/58 |
+| API (vitest + static) | **92** | **346/349 green** on Postgres; upload 503; storage fail-close |
+| Database (schema + migrate proof) | 88 | `drizzle-kit push` + seed + vitest on PG16 |
+| Docker / Compose (static) | 80 | Files present; **daemon unavailable** → image build unproven |
+| Coolify readiness (config) | 82 | Docs require s3; API now hard-fails misconfig |
+| Security (static) | 88 | Storage fail-close; CORS/Clerk/IDOR gates |
+| Performance / scale (code) | 78 | Pool/indexes; no load test |
+| Web / Admin build | **88** | `banco-web` prod build + staging smoke **all PASS** |
 | E2E / device / OAuth live | 35 | PENDING_RUNTIME |
-| **OVERALL** | **74 / 100** | **CONDITIONAL GO** |
+| **OVERALL** | **81 / 100** | **CONDITIONAL GO** |
 
 ---
 
 ## Repository Recovery Report
 
-### Historical compare (read-only)
+### Historical compare (unchanged conclusion)
 
 | Finding | Result |
 |---------|--------|
 | Useful engineering missing from BWW | **None critical** |
-| BWW behind any fork | **No** — BWW is ahead (import stages, scale indexes, FI billing, touch traps, upload 503, etc.) |
 | Blind restore recommended | **No** |
-| Only portable tooling candidate | `laptop-validation-matrix.mjs` from CAOOM (identity hardcoded) — not imported this turn to avoid repo-specific debt |
 
-### Corruption recovered this mission (proven)
+### Corruption / defects closed this pass (proven)
 
 | Defect | Root cause | Fix evidence |
 |--------|------------|--------------|
-| Expo id `com.bancoboom.app` | bancoboom EAS merge | `com.bancooom.app` + universal-links test |
-| Skip / dismiss-before-updateMe | MFA merge wipe | lib-hardening + chain |
-| Overflow menu touch trap | 93b650b-style | absoluteFill + ScrollView |
-| Post-signup nav on failed `updateMe` | lost `synced` gate | chain `P-post-signup-no-nav-on-fail` |
-| Cover without rationale | MFA merge wipe | `showCoverRationale` restored |
-| Android keyboard mode | EAS merge wipe | `softwareKeyboardLayoutMode: resize` |
-| Stay sort 34 vs owner 30 | conflicting agent specs | owner chain **30×30** wins |
-| Car strip testIDs | merge drift | `car-brand-origin-strip` + `car-brand-strip` + origin |
-| Missing i18n keys | partial features | en+ar keys added |
-| Unmapped `shield-check-outline` | icon registry gap | mapped to ShieldCheck |
-| Facebook absolute ban vs fail-closed | outdated chain vs product | gate now requires fail-closed FB |
+| `/sign-in` `/en/sign-in` HTTP 500 | `<SignIn/>` without ClerkProvider when key absent | `ClerkAuthPage` + rebuild + smoke 200 |
+| Maintenance smoke FAIL on plug-on | Smoke expected markers; middleware redirects home | `website-staging-smoke.mjs` |
+| Coolify media death by default | Unset → `replit` sidecar | Production fail-close + Coolify docs |
+| API suite unproven | No Postgres | PG16 + `pg_trgm` + 346 tests PASS |
 
 ---
 
@@ -72,55 +68,60 @@
 ```bash
 node scripts/chain-integrity-gate.mjs          # 58/58 PASS
 node scripts/production-confidence-check.mjs   # 14/14 PASS
-cd artifacts/banco-mobile && node --test tests/*.mjs
-# Critical subset verified: 99 PASS / 0 FAIL (section+i18n+icons+hardening+accounts+universal)
+node --test artifacts/banco-mobile/tests/accounts-clerk-journey.test.mjs
+DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/banco_test \
+  pnpm --filter @workspace/api-server run test   # 346 passed
+pnpm --filter @workspace/banco-web run build
+BANCO_WEB_URL=http://127.0.0.1:3000 node scripts/website-staging-smoke.mjs
+pnpm --filter @workspace/api-server exec vitest run src/lib/objectStorageProvider.test.ts
 ```
 
 **BLOCKED here:**
 
 ```bash
-pnpm --filter @workspace/api-server test   # needs Postgres :5432
-docker build …                             # docker not installed in agent VM
-eas build --profile production             # needs Expo credentials
+docker build …          # dockerd not available (client-only static binary)
+eas build …             # needs Expo credentials
+# live Clerk OAuth / payments / push — staging credentials
 ```
 
 ---
 
-## Files Modified (this acceptance pass)
+## Files Modified (this hardening pass)
 
 | File | Why |
 |------|-----|
-| `artifacts/banco-mobile/app.json` | keyboard resize + identity (prior) |
-| `artifacts/banco-mobile/app/(tabs)/profile.tsx` | synced post-signup; cover rationale; Skip/menu (prior) |
-| `artifacts/banco-mobile/components/search/SectionSearchApp.tsx` | car strip testIDs |
-| `artifacts/banco-mobile/components/search/BookingStaysApp.tsx` | sortChip 30×30 |
-| `artifacts/banco-mobile/components/icons.tsx` | shield-check-outline |
-| `artifacts/banco-mobile/constants/i18n.ts` | missing en/ar keys |
-| `artifacts/banco-mobile/tests/section-miniapp-guard.test.mjs` | align Stay chip to owner 30 |
-| `scripts/chain-integrity-gate.mjs` | Facebook fail-closed contract |
-| `reports/production-verification/FINAL-PRODUCTION-ACCEPTANCE.md` | this document |
+| `artifacts/banco-web/components/ClerkAuthPage.tsx` | Shared Clerk gate (new) |
+| `artifacts/banco-web/app/**/sign-{in,up}/**/page.tsx` | Use gate (emergency hotfix on frozen deploy surface) |
+| `artifacts/banco-website/components/ClerkAuthPage.tsx` | Canonical twin parity |
+| `artifacts/banco-website/app/**/sign-{in,up}/**/page.tsx` | Canonical twin parity |
+| `artifacts/api-server/src/lib/objectStorageProvider.ts` | Production fail-close |
+| `artifacts/api-server/src/lib/objectStorageProvider.test.ts` | Living tests |
+| `artifacts/banco-mobile/tests/accounts-clerk-journey.test.mjs` | Guard production fail-close strings |
+| `scripts/website-staging-smoke.mjs` | Plug-on maintenance contract |
+| `deploy/coolify/COOLIFY-DEPLOY-ORDER.md` | Accurate ops requirement |
+| `reports/production-verification/FINAL-PRODUCTION-ACCEPTANCE.md` | This document |
 
 ---
 
-## Remaining Blockers (must clear before unconditional GO)
+## Remaining Blockers (before unconditional GO)
 
-1. **Coolify secrets:** `OBJECT_STORAGE_PROVIDER=s3` + bucket/keys (media otherwise 503)  
-2. **Postgres migrate + API vitest green** on staging  
-3. **Docker image builds** for `Dockerfile.api`, `banco-web`, `banco-website`, `web`  
-4. **EAS production Android/iOS** smoke with `com.bancooom.app` (confirm no live store app on `com.bancoboom.app`)  
-5. **Clerk Dashboard:** enable only providers you want; app is fail-closed  
-6. **Device QA:** OAuth (if enabled), MFA, payments webhook, push  
+1. Coolify: `OBJECT_STORAGE_PROVIDER=s3` + bucket/keys (API now refuses wrong defaults)
+2. Docker image builds on a host with dockerd (`Dockerfile.api`, web, website)
+3. EAS production Android/iOS smoke (`com.bancooom.app`)
+4. Clerk Dashboard: enable only intended social providers
+5. Device QA: OAuth (if enabled), MFA, Paymob webhook, push
+6. Staging load / capacity plan for scale targets
 
 ---
 
-## Remaining Risks (accepted with eyes open)
+## Remaining Risks
 
 | Risk | Severity |
 |------|----------|
-| Frozen twin `banco-web` ≡ `banco-website` | HIGH hygiene — do not delete without owner order |
-| shadcn ×4 copies | MED debt — no consolidate this mission |
-| API vitest unrun here | HIGH until staging CI |
-| No load test at 10M users | HIGH capacity planning still ops |
+| Frozen twin `banco-web` vs canonical `banco-website` | HIGH hygiene — CI still builds `banco-web` |
+| shadcn ×4 copies | MED debt |
+| No Docker build proof in agent VM | HIGH until CI/ops builds |
+| No 10M-user load test | HIGH capacity planning |
 | Replit merge re-pollution | CRITICAL — keep chain gate in CI |
 
 ---
@@ -129,9 +130,9 @@ eas build --profile production             # needs Expo credentials
 
 ### **CONDITIONAL GO**
 
-I would approve deploying this repository to a **staging Coolify stack** immediately after secrets are filled, and to **production** only after blockers 1–6 above show evidence.
+I approve deploying this tip to a **staging Coolify stack** after secrets are filled.
 
-I would **not** personally sign an unconditional public production release from this agent environment alone — Docker builds, DB tests, and live auth/payment journeys remain unverified here.
+I do **not** sign an unconditional public production release from this environment alone — Docker image builds, live auth/payment journeys, and EAS store smoke remain unverified here.
 
 **Confidence in code SoT vs other BANCO forks: HIGH.**  
-**Confidence in end-to-end production operation without ops checklist: MEDIUM.**
+**Confidence in end-to-end production without ops checklist: MEDIUM-HIGH** (API suite now proven; storage misconfig fail-closed).
