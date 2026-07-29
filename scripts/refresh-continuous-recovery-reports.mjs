@@ -68,7 +68,7 @@ const fingerprint = {
   commit: HEAD,
   describe: DESCRIBE,
   productionAccepted: false,
-  iteration: "R-WEB-BASE-CLERK-GATE",
+  iteration: "R-ARCHIVE-POSTSIGNUP-EDIT-INVALIDATE",
   criticalAreas,
   validations: {
     chainGate: gate.ok ? "PASS" : "FAIL",
@@ -77,15 +77,16 @@ const fingerprint = {
     nodeModulesPresent: nodeModules,
   },
   lastRepair: {
-    id: "REP-C-WEB-BASE-2026-07-21",
+    id: "REP-ARCHIVE-POSTSIGNUP-2026-07-21",
     summary:
-      "Restore bancoo Replit web export + ClerkLoadGate/font wait/getToken.catch (evidence: white-screen / QR-only browsers)",
+      "Mobile archive/reactivate + post-signup no-nav-on-fail + edit listing RQ invalidate",
     files: [
-      "artifacts/banco-mobile/app/_layout.tsx",
-      "artifacts/banco-mobile/app.config.ts",
-      "artifacts/banco-mobile/scripts/build.js",
-      "artifacts/banco-mobile/server/serve.js",
-      "artifacts/banco-mobile/tests/session-restore.test.mjs",
+      "artifacts/banco-mobile/app/listings/mine.tsx",
+      "artifacts/banco-mobile/app/listing/[id].tsx",
+      "artifacts/banco-mobile/app/(tabs)/profile.tsx",
+      "artifacts/banco-mobile/app/listings/edit/[id].tsx",
+      "artifacts/banco-mobile/constants/i18n.ts",
+      "artifacts/banco-mobile/components/icons.tsx",
       "scripts/chain-integrity-gate.mjs",
     ],
   },
@@ -107,7 +108,7 @@ w(
   "ProductionState.md",
   `${hdr("Production State")}
 ## Current iteration
-**R-WEB-BASE-CLERK-GATE** — restored Replit browser SPA export + ClerkLoadGate from bancoo handoff after forensic carding.
+**R-ARCHIVE-POSTSIGNUP-EDIT-INVALIDATE** — mobile archive parity, post-signup half-wire closed, edit listing cache invalidate.
 
 ## Critical area board
 ${Object.entries(criticalAreas)
@@ -121,26 +122,29 @@ Mission continues while any critical row is FAIL or unresolved BLOCKED that is o
 
 w(
   "RepairReport.md",
-  `${hdr("Repair Report — C-WEB-BASE")}
+  `${hdr("Repair Report — ARCHIVE / POST-SIGNUP / EDIT INVALIDATE")}
 ## Unique ID
-\`REP-C-WEB-BASE-2026-07-21\`
+\`REP-ARCHIVE-POSTSIGNUP-2026-07-21\`
 
 ## Problem
-CA lacked bancoo's Replit web production path: browsers got Expo Go QR only; \`<ClerkLoaded>\` could white-screen forever on unauthorized origins; fonts could hang on web.
+1. Edit listing PATCH success only bumped session version — listing RQ cache could stay stale.
+2. Post-signup \`updateMe\` failure still \`router.push\` business onboarding (half-wired journey).
+3. Dealer-os could archive/activate; mobile mine/detail only sold/delete/bump.
 
 ## Evidence
-- Forensic card C-WEB-BASE / C-MEM-WEB
-- Diff bancoo\`321af02\` vs CA: \`_layout.tsx\`, \`app.config.ts\`, \`scripts/build.js\`, \`server/serve.js\`
+- Laptop-style audit of tip \`9965d12\`
+- API already accepts \`UpdateListingBody.status\` active|sold|archived
+- Dealer \`handleStatusToggle\` archive/activate contract
 
 ## Root Cause
-History-stripped bancoo handoff contained the web stack; CA continuous line had native/EAS focus and never re-imported the Replit browser SPA path after wipe-era churn.
+Prior wave wired edit media + post-signup Alert but left navigation and cache incomplete; archive UI never ported to mobile.
 
 ## Files Modified
 See fingerprint.lastRepair.files
 
 ## Validation
-- chain-integrity-gate: ${gate.ok ? "PASS" : "FAIL"} (includes P-clerk-load-gate, P-web-export-build, P-web-serve-spa)
-- mobile node tests incl. session-restore: ${mobile.ok ? "PASS" : "FAIL"}
+- chain-integrity-gate: ${gate.ok ? "PASS" : "FAIL"} (46 markers incl. archive/post-signup/invalidate)
+- mobile node tests: ${mobile.ok ? "PASS" : "FAIL"}
 - typecheck/lint/full build: BLOCKED (no node_modules)
 
 ## Rollback
@@ -172,7 +176,8 @@ w(
 | 93b650b wipe | regression root |
 | S1–S4 / N0–N2 / C1–C3 | on CA |
 | Forensic bancoo baseline study | docs \`194e144\` era |
-| **C-WEB-BASE ClerkLoadGate + web export** | this iteration |
+| C-WEB-BASE ClerkLoadGate + web export | prior |
+| **ARCHIVE / POST-SIGNUP / EDIT INVALIDATE** | this iteration |
 `,
 );
 
@@ -227,17 +232,23 @@ w(
   `${hdr("Completed Repairs")}
 - S1/S2/S4, N0–N2, C1–C3 (prior)
 - **C-WEB-BASE** ClerkLoadGate + font wait + getToken.catch + exportWebBuild + serve web SPA
+- **EDIT-MEDIA / BUYER-PHONE / LANDING-CLERK-DOMAIN / ACCOUNT-TYPE-SYNC** (prior tip)
+- **EDIT-LISTING-INVALIDATE** — invalidate \`getGetListingQueryKey\` on edit save
+- **POST-SIGNUP-NO-NAV-ON-FAIL** — no onboarding push after failed \`updateMe\`
+- **MOBILE-ARCHIVE** — mine + listing detail archive/reactivate via \`updateListing({ status })\`
 `,
 );
 
 w(
   "PendingRepairs.md",
   `${hdr("Pending Repairs")}
-1. Laptop: \`pnpm install --frozen-lockfile\` + \`laptop-validation-matrix.mjs --with-install\`
-2. Owner: sync bancooom + deploy + paste readyz (F1)
-3. Laptop: device N2 QA
-4. Optional card: aws-virgen EB packaging (AWS lane only)
-5. Runtime prove web export on Replit after deps available
+1. Laptop/owner: \`CONFIRM_BANCOO_FORCE=YES\` + \`./scripts/publish-bancoo-production-main.sh\` (bancoo MAIN)
+2. Laptop: \`pnpm install --frozen-lockfile\` + \`laptop-validation-matrix.mjs --with-install\`
+3. Owner: sync bancooom + deploy + paste readyz (F1)
+4. Laptop: device N2 QA + audit paste \`PASTE-CURSOR-LAPTOP-AGENT-WAVE-ARCHIVE-POSTSIGNUP-AR.md\`
+5. Optional: VIDEO-POSTER-SCHEMA-UNWIRED — do **not** invent frame extract
+6. Optional: EXPO-APP-IDENTITY-DRIFT — owner branding decision
+7. Runtime prove web export on Replit after deps available
 `,
 );
 

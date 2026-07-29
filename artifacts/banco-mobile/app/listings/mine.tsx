@@ -3,6 +3,7 @@ import {
   getMyManagedListings,
   deleteListing,
   bumpListing,
+  updateListing,
   DealerListing,
 } from "@workspace/api-client-react";
 import { router, type Href } from "expo-router";
@@ -80,6 +81,7 @@ export default function MyListingsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [bumpingId, setBumpingId] = useState<string | null>(null);
+  const [statusBusyId, setStatusBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -164,6 +166,76 @@ export default function MyListingsScreen() {
       );
     },
     [runDelete, t],
+  );
+
+  // Mirror dealer-os archive/activate via existing updateListing(status) —
+  // mobile previously only sold/delete/bump (MOBILE-ARCHIVE-UNWIRED).
+  const runStatus = useCallback(
+    async (id: string, status: "archived" | "active") => {
+      try {
+        setStatusBusyId(id);
+        await updateListing(id, { status });
+        setItems((prev) =>
+          prev.map((l) => (l.id === id ? { ...l, status } : l)),
+        );
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        if (status === "archived") {
+          Alert.alert(t("mine.archiveFailedTitle"), t("mine.archiveFailedBody"));
+        } else {
+          Alert.alert(
+            t("mine.reactivateFailedTitle"),
+            t("mine.reactivateFailedBody"),
+          );
+        }
+      } finally {
+        setStatusBusyId(null);
+      }
+    },
+    [t],
+  );
+
+  const confirmArchive = useCallback(
+    (item: DealerListing) => {
+      if (!item.id) return;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Alert.alert(
+        t("mine.archiveTitle"),
+        t("mine.archiveBody", {
+          title: item.title ?? t("mine.deleteFallbackTitle"),
+        }),
+        [
+          { text: t("common.cancel"), style: "cancel" },
+          {
+            text: t("mine.archiveConfirm"),
+            onPress: () => runStatus(item.id as string, "archived"),
+          },
+        ],
+      );
+    },
+    [runStatus, t],
+  );
+
+  const confirmReactivate = useCallback(
+    (item: DealerListing) => {
+      if (!item.id) return;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Alert.alert(
+        t("mine.reactivateTitle"),
+        t("mine.reactivateBody", {
+          title: item.title ?? t("mine.deleteFallbackTitle"),
+        }),
+        [
+          { text: t("common.cancel"), style: "cancel" },
+          {
+            text: t("mine.reactivateConfirm"),
+            onPress: () => runStatus(item.id as string, "active"),
+          },
+        ],
+      );
+    },
+    [runStatus, t],
   );
 
   return (
@@ -291,6 +363,7 @@ export default function MyListingsScreen() {
             const tone = statusTone(item.status, colors);
             const isDeleting = deletingId === item.id;
             const isBumping = bumpingId === item.id;
+            const isStatusBusy = statusBusyId === item.id;
             const listed = formatListedDate(item.created_at, lang);
             return (
               <View
@@ -417,6 +490,58 @@ export default function MyListingsScreen() {
                     ) : null}
                     {item.status === "active" && item.id ? (
                       <PromoteButton listingId={item.id} variant="compact" />
+                    ) : null}
+                    {item.status === "active" && item.id ? (
+                      <Pressable
+                        onPress={() => confirmArchive(item)}
+                        disabled={isStatusBusy}
+                        style={styles.renewBtn}
+                        hitSlop={8}
+                        testID={`archive-listing-${item.id}`}
+                      >
+                        {isStatusBusy ? (
+                          <ActivityIndicator size="small" color={colors.primary} />
+                        ) : (
+                          <>
+                            <Feather
+                              name="archive"
+                              size={15}
+                              color={colors.primary}
+                            />
+                            <AppText
+                              style={[styles.renewText, { color: colors.primary }]}
+                            >
+                              {t("mine.archive")}
+                            </AppText>
+                          </>
+                        )}
+                      </Pressable>
+                    ) : null}
+                    {item.status === "archived" && item.id ? (
+                      <Pressable
+                        onPress={() => confirmReactivate(item)}
+                        disabled={isStatusBusy}
+                        style={styles.renewBtn}
+                        hitSlop={8}
+                        testID={`reactivate-listing-${item.id}`}
+                      >
+                        {isStatusBusy ? (
+                          <ActivityIndicator size="small" color={colors.primary} />
+                        ) : (
+                          <>
+                            <Feather
+                              name="rotate-ccw"
+                              size={15}
+                              color={colors.primary}
+                            />
+                            <AppText
+                              style={[styles.renewText, { color: colors.primary }]}
+                            >
+                              {t("mine.reactivate")}
+                            </AppText>
+                          </>
+                        )}
+                      </Pressable>
                     ) : null}
                     <Pressable
                       onPress={() => confirmDelete(item)}

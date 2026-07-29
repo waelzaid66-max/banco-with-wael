@@ -375,6 +375,41 @@ const CHECKS = [
       /buyer_phone/.test(s),
     why: "Lead/booking buyer phone must prefer /me.phone (profile SoT)",
   },
+  {
+    id: "P-edit-listing-invalidate",
+    file: "artifacts/banco-mobile/app/listings/edit/[id].tsx",
+    test: (s) =>
+      /invalidateQueries/.test(s) &&
+      /getGetListingQueryKey\(id\)/.test(s),
+    why: "Edit save must invalidate listing RQ cache (not only session bump)",
+  },
+  {
+    id: "P-post-signup-no-nav-on-fail",
+    file: "artifacts/banco-mobile/app/(tabs)/profile.tsx",
+    test: (s) =>
+      /let synced = false/.test(s) &&
+      /if \(!synced\) return/.test(s) &&
+      /post-signup account_type save failed/.test(s),
+    why: "Failed post-signup updateMe must not router.push onboarding",
+  },
+  {
+    id: "P-mobile-archive-wired",
+    file: "artifacts/banco-mobile/app/listings/mine.tsx",
+    test: (s) =>
+      /updateListing\(id, \{ status \}\)/.test(s) &&
+      /confirmArchive/.test(s) &&
+      /confirmReactivate/.test(s),
+    why: "Mine must archive/reactivate via updateListing status (dealer parity)",
+  },
+  {
+    id: "P-listing-detail-archive",
+    file: "artifacts/banco-mobile/app/listing/[id].tsx",
+    test: (s) =>
+      /handleArchive/.test(s) &&
+      /handleReactivate/.test(s) &&
+      /status: "archived"/.test(s),
+    why: "Owner listing detail must archive/reactivate like mine",
+  },
 ];
 
 function main() {

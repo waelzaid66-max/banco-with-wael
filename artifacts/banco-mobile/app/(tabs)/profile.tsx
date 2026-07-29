@@ -241,17 +241,22 @@ export default function ProfileScreen() {
       // Persist the chosen account type (server-authoritative role mapping)
       // plus optional phone. Clerk token is already wired by the
       // AuthTokenBridge once the session is active.
+      let synced = false;
       try {
         await updateMe({
           account_type: goBusiness ? "dealer" : "individual",
           ...(phoneToSave ? { phone: phoneToSave } : {}),
         });
+        synced = true;
       } catch (e) {
         console.warn("[profile] post-signup account_type save failed", e);
         // Do not silently leave DB role/phone out of sync after Clerk session
         // is live — surface retry (BUYER-PHONE / role SoT depend on /me).
         Alert.alert(t("profile.accountTypeError"));
       }
+      // Never continue into business onboarding on a failed /me sync — that
+      // created a half-wired journey (Alert then still router.push).
+      if (!synced) return;
       // Business signups continue straight into fast onboarding.
       if (goBusiness) {
         router.push("/business/onboarding");

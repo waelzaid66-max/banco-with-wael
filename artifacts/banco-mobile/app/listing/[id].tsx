@@ -296,6 +296,76 @@ export default function ListingDetailScreen() {
     ]);
   };
 
+  const handleArchive = () => {
+    if (!listing || marking) return;
+    Alert.alert(
+      t("mine.archiveTitle"),
+      t("mine.archiveBody", { title: listing.title ?? t("mine.deleteFallbackTitle") }),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("mine.archiveConfirm"),
+          onPress: async () => {
+            setMarking(true);
+            try {
+              await updateListing(listing.id, { status: "archived" });
+              setListing((prev) =>
+                prev ? { ...prev, status: "archived" } : prev,
+              );
+              Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Success,
+              );
+            } catch {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              Alert.alert(
+                t("mine.archiveFailedTitle"),
+                t("mine.archiveFailedBody"),
+              );
+            } finally {
+              setMarking(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleReactivate = () => {
+    if (!listing || marking) return;
+    Alert.alert(
+      t("mine.reactivateTitle"),
+      t("mine.reactivateBody", {
+        title: listing.title ?? t("mine.deleteFallbackTitle"),
+      }),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("mine.reactivateConfirm"),
+          onPress: async () => {
+            setMarking(true);
+            try {
+              await updateListing(listing.id, { status: "active" });
+              setListing((prev) =>
+                prev ? { ...prev, status: "active" } : prev,
+              );
+              Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Success,
+              );
+            } catch {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              Alert.alert(
+                t("mine.reactivateFailedTitle"),
+                t("mine.reactivateFailedBody"),
+              );
+            } finally {
+              setMarking(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const submitRfq = async () => {
     if (rfqState === "submitting") return;
     setRfqState("submitting");
@@ -728,6 +798,8 @@ export default function ListingDetailScreen() {
   const aboveFoldBadge = listing.best_offer?.provider_badge ?? null;
   const isOwner = !!meId && meId === listing.seller?.id;
   const isSold = listing.status === "sold";
+  const isArchived = listing.status === "archived";
+  const isActive = listing.status === "active";
 
   // Role separation, made visible: only furnished/daily real-estate is bookable
   // (the hotel mode). Long-term rent and sale keep the plain contact-owner flow.
@@ -1152,42 +1224,104 @@ export default function ListingDetailScreen() {
                     {t("mine.edit")}
                   </AppText>
                 </Pressable>
-                <Pressable
-                  onPress={handleMarkSold}
-                  disabled={marking}
-                  style={[
-                    styles.offerBtn,
-                    {
-                      flexDirection: rowDir,
-                      borderColor: colors.primary,
-                      borderRadius: colors.radius,
-                      backgroundColor: colors.primary,
-                    },
-                  ]}
-                  testID="owner-mark-sold"
-                >
-                  {marking ? (
-                    <ActivityIndicator
-                      color={colors.primaryForeground}
-                      size="small"
-                    />
-                  ) : (
-                    <Feather
-                      name="tag"
-                      size={18}
-                      color={colors.primaryForeground}
-                    />
-                  )}
-                  <AppText
+                {isActive ? (
+                  <Pressable
+                    onPress={handleMarkSold}
+                    disabled={marking}
                     style={[
-                      styles.offerBtnText,
-                      { color: colors.primaryForeground },
+                      styles.offerBtn,
+                      {
+                        flexDirection: rowDir,
+                        borderColor: colors.primary,
+                        borderRadius: colors.radius,
+                        backgroundColor: colors.primary,
+                      },
                     ]}
+                    testID="owner-mark-sold"
                   >
-                    {t("chat.markSold")}
-                  </AppText>
-                </Pressable>
-                {listing.status === "active" ? (
+                    {marking ? (
+                      <ActivityIndicator
+                        color={colors.primaryForeground}
+                        size="small"
+                      />
+                    ) : (
+                      <Feather
+                        name="tag"
+                        size={18}
+                        color={colors.primaryForeground}
+                      />
+                    )}
+                    <AppText
+                      style={[
+                        styles.offerBtnText,
+                        { color: colors.primaryForeground },
+                      ]}
+                    >
+                      {t("chat.markSold")}
+                    </AppText>
+                  </Pressable>
+                ) : null}
+                {isActive ? (
+                  <Pressable
+                    onPress={handleArchive}
+                    disabled={marking}
+                    style={[
+                      styles.offerBtn,
+                      {
+                        flexDirection: rowDir,
+                        borderColor: colors.border,
+                        borderRadius: colors.radius,
+                        backgroundColor: colors.card,
+                      },
+                    ]}
+                    testID="owner-archive-listing"
+                  >
+                    <Feather name="archive" size={18} color={colors.foreground} />
+                    <AppText
+                      style={[styles.offerBtnText, { color: colors.foreground }]}
+                    >
+                      {t("mine.archive")}
+                    </AppText>
+                  </Pressable>
+                ) : null}
+                {isArchived ? (
+                  <Pressable
+                    onPress={handleReactivate}
+                    disabled={marking}
+                    style={[
+                      styles.offerBtn,
+                      {
+                        flexDirection: rowDir,
+                        borderColor: colors.primary,
+                        borderRadius: colors.radius,
+                        backgroundColor: colors.primary,
+                      },
+                    ]}
+                    testID="owner-reactivate-listing"
+                  >
+                    {marking ? (
+                      <ActivityIndicator
+                        color={colors.primaryForeground}
+                        size="small"
+                      />
+                    ) : (
+                      <Feather
+                        name="rotate-ccw"
+                        size={18}
+                        color={colors.primaryForeground}
+                      />
+                    )}
+                    <AppText
+                      style={[
+                        styles.offerBtnText,
+                        { color: colors.primaryForeground },
+                      ]}
+                    >
+                      {t("mine.reactivate")}
+                    </AppText>
+                  </Pressable>
+                ) : null}
+                {isActive ? (
                   <PromoteButton listingId={listing.id} variant="full" />
                 ) : null}
               </View>

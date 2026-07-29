@@ -5,7 +5,7 @@ import {
   getListing,
   useUpdateListing,
 } from "@workspace/api-client-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -46,6 +46,7 @@ export default function EditListingScreen() {
   const colors = useColors();
   const { t, isRTL } = useI18n();
   const { bumpListings } = useSession();
+  const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   // Same safe-area contract as Search/Section — fake web 67 crushed chrome.
   const topPad = Math.max(insets.top, Platform.OS === "web" ? 12 : 0);
@@ -102,7 +103,14 @@ export default function EditListingScreen() {
     mutation: {
       onSuccess: () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // Session bump refreshes list surfaces; also invalidate this listing so
+        // detail/edit reload does not show stale title/media after PATCH.
         bumpListings();
+        if (id) {
+          void queryClient.invalidateQueries({
+            queryKey: getGetListingQueryKey(id),
+          });
+        }
         Alert.alert(t("editListing.savedTitle"), t("editListing.savedBody"), [
           { text: t("common.done"), onPress: () => router.back() },
         ]);
