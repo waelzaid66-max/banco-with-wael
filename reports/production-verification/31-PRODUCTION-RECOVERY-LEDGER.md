@@ -65,7 +65,7 @@
 | Facets `market_country` MED | deferred (OpenAPI + handler category-only — not inventing API surface this wave) |
 | Dual `banco-web`/`banco-website` cutover | owner |
 | Optional: set `NEXT_PUBLIC_WEB_SEARCH_LIVE/MAP=true` for live search (rebuild) | ops soft-launch |
-| Web account-delete UI (P2-M3) | deferred — mobile only; invent only on explicit order |
+| Web account-delete UI (P2-M3) | **closed UI-only** on `banco-website` `/workspace/settings` — see `38-P2-M3-WEB-ACCOUNT-DELETE-UI.md` |
 | OpenAPI omit payments/readyz/livez (P2-M4) | **closed** on tip `b2ac785` (140 paths / 166 ops) |
 | Merge PR → tag `w.4.1` → Coolify | **owner** — see Phase 5 |
 

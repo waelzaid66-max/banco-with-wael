@@ -48,6 +48,7 @@ export function WorkspaceOverviewPanel() {
     { href: `${prefix}/analytics`, label: copy.navAnalytics, hint: copy.overviewAnalyticsHint },
     { href: workspaceSubpath(locale, "wallet"), label: copy.navWallet, hint: copy.overviewWalletHint },
     { href: `${prefix}/b2b`, label: copy.b2bTitle, hint: copy.overviewB2bHint },
+    { href: workspaceSubpath(locale, "settings"), label: copy.navSettings, hint: copy.overviewSettingsHint },
     { href: savedPath(locale), label: copy.navSaved, hint: copy.overviewSavedHint },
   ];
 

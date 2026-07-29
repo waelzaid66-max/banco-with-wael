@@ -102,6 +102,21 @@ export type WorkspaceUiCopy = {
   navMessages: string;
   navWallet: string;
   navBookings: string;
+  navSettings: string;
+  overviewSettingsHint: string;
+  settingsTitle: string;
+  settingsSubtitle: string;
+  accountDangerTitle: string;
+  accountDangerBody: string;
+  accountDeleteCta: string;
+  accountDeleteTitle: string;
+  accountDeleteBody: string;
+  accountDeleteKeyword: string;
+  accountDeleteConfirmLabel: string;
+  accountDeleteConfirm: string;
+  accountDeleteCancel: string;
+  accountDeleteWorking: string;
+  accountDeleteError: string;
   messagesTitle: string;
   messagesEmpty: string;
   messagesEmptyHint: string;
@@ -299,9 +314,26 @@ const COPY: Record<SiteLocale, WorkspaceUiCopy> = {
     overviewMessagesHint: "محادثات مع البائعين",
     overviewBookingsHint: "طلبات الإقامة كضيف أو مضيف",
     overviewWalletHint: "الرصيد وسجل المعاملات",
+    overviewSettingsHint: "حذف الحساب وإعدادات الحساب",
     navMessages: "الرسائل",
     navWallet: "المحفظة",
     navBookings: "الحجوزات",
+    navSettings: "الإعدادات",
+    settingsTitle: "إعدادات الحساب",
+    settingsSubtitle: "إدارة حساب البائع على الويب.",
+    accountDangerTitle: "منطقة خطر",
+    accountDangerBody:
+      "حذف الحساب نهائي. تُزال بياناتك الشخصية ويُلغى الدخول. لا يمكن التراجع من هنا.",
+    accountDeleteCta: "حذف الحساب",
+    accountDeleteTitle: "حذف الحساب نهائياً؟",
+    accountDeleteBody:
+      "سيُحذف حسابك وبياناتك المرتبطة. اكتب كلمة التأكيد للمتابعة.",
+    accountDeleteKeyword: "حذف",
+    accountDeleteConfirmLabel: "اكتب {keyword} للتأكيد",
+    accountDeleteConfirm: "احذف حسابي",
+    accountDeleteCancel: "إلغاء",
+    accountDeleteWorking: "جاري الحذف…",
+    accountDeleteError: "تعذّر حذف الحساب. حاول مرة أخرى أو تواصل مع الدعم.",
     messagesTitle: "الرسائل",
     messagesEmpty: "لا محادثات بعد",
     messagesEmptyHint: "ابدأ محادثة من أي إعلان للتواصل مع البائع.",
@@ -497,9 +529,26 @@ const COPY: Record<SiteLocale, WorkspaceUiCopy> = {
     overviewMessagesHint: "Chats with sellers",
     overviewBookingsHint: "Stay requests as guest or host",
     overviewWalletHint: "Balance and transaction ledger",
+    overviewSettingsHint: "Account deletion and account settings",
     navMessages: "Messages",
     navWallet: "Wallet",
     navBookings: "Bookings",
+    navSettings: "Settings",
+    settingsTitle: "Account settings",
+    settingsSubtitle: "Manage your seller account in the browser.",
+    accountDangerTitle: "Danger zone",
+    accountDangerBody:
+      "Deleting your account is permanent. Personal data is removed and sign-in stops. This cannot be undone here.",
+    accountDeleteCta: "Delete account",
+    accountDeleteTitle: "Delete account permanently?",
+    accountDeleteBody:
+      "Your account and associated personal data will be removed. Type the confirmation word to continue.",
+    accountDeleteKeyword: "DELETE",
+    accountDeleteConfirmLabel: "Type {keyword} to confirm",
+    accountDeleteConfirm: "Delete my account",
+    accountDeleteCancel: "Cancel",
+    accountDeleteWorking: "Deleting…",
+    accountDeleteError: "We couldn't delete your account. Try again or contact support.",
     messagesTitle: "Messages",
     messagesEmpty: "No conversations yet",
     messagesEmptyHint: "Start a chat from any listing to reach the seller.",
