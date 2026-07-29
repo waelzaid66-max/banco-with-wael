@@ -22,7 +22,7 @@ These change behavior when env vars or admin config change, then **process resta
 | `LOG_DIR` | Rotating files on disk | stdout only | No |
 | `PUBLIC_API_BASE_URL` / `PUBLIC_APP_URL` | Absolute links in SEO/email | Relative / derived | No |
 | `ADMIN_EMAILS` | Bootstrap admin staff role | Manual admin seed only | No |
-| `OBJECT_STORAGE_PROVIDER` | `s3` / `gcs` / `replit` | Defaults `replit` | **Upload path only** — same API contract; provider swap is infra |
+| `OBJECT_STORAGE_PROVIDER` | `s3` / `replit` only (**`gcs` is rejected** by `objectStorageProvider.ts`) | Defaults `replit` (forbidden on Coolify/AWS/GCP markers — use `s3`) | **Upload path only** — same API contract; provider swap is infra |
 | `CRON_TIMEZONE` | Job schedule TZ | `Africa/Cairo` | No |
 
 **Replit-only vars** (`REPLIT_DEPLOYMENT`, `REPLIT_DOMAINS`, …): documented as **do not set on AWS/GCP** — presence changes CORS/dev behavior, not publish logic.
