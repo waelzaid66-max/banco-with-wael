@@ -4,8 +4,9 @@
 **Branch:** `cursor/w41-production-release-5cf0`  
 **Policy:** Recover / reconnect / certify — never rewrite, never invent, never fake green.  
 **Verdict at this ledger:** **CONDITIONAL GO — NOT FULL PRODUCTION CERTIFIED**  
-**Merge to `main`:** **DONE / CORRECT** — see `44-MERGE-VERDICT.md`. Tip `ca2ed1a` is ancestor of `origin/main` `0183169` (PR #1 + PR #2).  
-**Remaining blockers:** **tag `w.4.1` (MISSING)** + **Coolify/EAS/device OPS**. Residuals: P2-H1 `41-*`, P2-M7b `42-*`. Register: `43-*`.
+**Merge to `main`:** **DONE** — PR #1 + #2 + docs `6c6dec4` (`44-*`).  
+**Tag `w.4.1`:** **PUSHED** → `6c6dec4` (`45-W41-FULL-DELIVERY-STATUS.md`).  
+**Coolify live:** **BLOCKED** this env — `banco.today` = Replit “isn't live yet”; no Coolify/SSH creds. Residuals: P2-H1 `41-*`, P2-M7b `42-*`.
 
 ---
 

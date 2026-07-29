@@ -14,9 +14,10 @@
 | API vitest | **386 passed / 3 skipped** (post P2-M1; no API diff since) |
 | production-confidence | **14/14 PASS** (re-verified) |
 | Phase 2 register | **Closed for agent reconnect** — `43-*` |
-| Ahead of `main` | **0** — tip fully merged |
-| PR on GitHub | **MERGED** — [#1](https://github.com/waelzaid66-max/banco-with-wael/pull/1) + [#2](https://github.com/waelzaid66-max/banco-with-wael/pull/2) → `0183169` |
-| Tag `w.4.1` | **NONE** — still required |
+| Ahead of `main` | **0** at tag; post-tag delivery log may follow |
+| PR on GitHub | **MERGED** — [#1](https://github.com/waelzaid66-max/banco-with-wael/pull/1) + [#2](https://github.com/waelzaid66-max/banco-with-wael/pull/2) + push `6c6dec4` |
+| Tag `w.4.1` | **DONE** @ `6c6dec4` — see `45-*` |
+| Coolify live smoke | **BLOCKED** — public host not BANCO (`45-*`) |
 
 ### Closed on tip (code)
 
