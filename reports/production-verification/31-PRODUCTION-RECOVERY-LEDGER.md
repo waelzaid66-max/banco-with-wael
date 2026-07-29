@@ -92,3 +92,22 @@
 | Comment notif scrub on delete | repaired this tip | review-scrub parity |
 
 Do **not** mark FULL CERT without OPS/device evidence (Coolify live secrets, S3, SSL, EAS, Paymob webhook, Clerk providers).
+
+---
+
+## 6. Investigation stop (engineering thinking mode) — tip `323e832`
+
+**Living gates re-verified:** chain **164/164**; confidence **14/14**.
+
+| Candidate | Classification | Confidence | Code change now? |
+|-----------|----------------|------------|------------------|
+| `site-env` defaults `/dealer-os` `/admin-os` | OPS bake / Replit fallback (Coolify must set `BANCO_WEB_*`; nginx 301 covers shared-origin legacy) | HIGH | **No** — changing defaults without live host topology evidence risks Replit same-origin |
+| Facets ignore `market_country` | disconnected + cert-deferred MED | HIGH | **No** — requires OpenAPI/schema/handler contract expansion (forbidden invent this wave) |
+| Dual `banco-web` + `banco-website` | intentional cutover (B-07 / FROZEN) | HIGH | **No** — owner domain cutover only |
+| `WEB_SEARCH_LIVE` default `false` | intentional soft-launch | HIGH | **No** — ops flip + rebuild |
+| Paymob unsigned first-bind TOFU | intentional HIGH deferred | HIGH | **No** — needs signed correlation / order fetch (no invention) |
+| Further Coolify SoT code disconnects | none proven HIGH after skeptical scan | MEDIUM→HIGH on “none found” after evidence pass | **No** |
+
+**Outcome:** Choosing **not** to modify application code is the correct production move. Remaining uncertainty is OPS/device/owner cutover — not missing modules on tip.
+
+**Next production-correct action (owner):** open/merge PR → tag `w.4.1` → Coolify deploy this SHA + migrate + S3 keys + SSL → verify `/api/readyz` + upload + Clerk/Paymob/EAS.

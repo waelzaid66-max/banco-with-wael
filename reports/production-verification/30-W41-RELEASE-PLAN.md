@@ -47,7 +47,8 @@
 | Device / EAS / APNs / FCM / live Paymob webhook | UNVERIFIED OPS |
 | Clerk live social providers empty on tenant | OPS dashboard |
 | Coolify secrets + S3 + SSL + domains | OPS |
-| Facets `market_country` MED · comment notif scrub MED | deferred |
+| Facets `market_country` MED | deferred (contract + OpenAPI still category-only) |
+| Comment notif scrub on account delete | **repaired** on `cursor/w41-production-release-5cf0` (`authoredCommentIds` + vitest) |
 | Redis / Clerk inbound delete / MFA TOTP UI / CPL flip | **forbidden invent** |
 | Product waves M2–N5 / P3–P7 | **after** w.4.1 ship unless owner orders otherwise |
 
