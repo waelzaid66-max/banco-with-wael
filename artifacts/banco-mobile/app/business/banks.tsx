@@ -537,14 +537,10 @@ export default function BanksScreen() {
           </View>
         ))}
 
-<<<<<<< HEAD
         {/* Awaiting admin link (S2): the account already holds the FI role, so
             showing "Join" again would read as if the registration never landed.
             Verification alone does not open the inbox — an admin must link the
             institution — so this state says exactly that. */}
-=======
-        {/* Awaiting admin link — FI role without membership (honest ops path; no re-onboard) */}
->>>>>>> 5a67b27 (fix(accounts): close real profile/FI gaps without inventing product)
         {showAwaitingAdminLink ? (
           <View
             style={[
@@ -565,14 +561,7 @@ export default function BanksScreen() {
               />
             </View>
             <AppText
-<<<<<<< HEAD
               style={[styles.joinTitle, { color: colors.foreground, textAlign }]}
-=======
-              style={[
-                styles.joinTitle,
-                { color: colors.foreground, textAlign },
-              ]}
->>>>>>> 5a67b27 (fix(accounts): close real profile/FI gaps without inventing product)
             >
               {t("business.banks.awaitingLinkTitle")}
             </AppText>
@@ -587,19 +576,12 @@ export default function BanksScreen() {
             <Pressable
               onPress={() => router.push("/business/verification")}
               style={styles.joinBtn}
-<<<<<<< HEAD
               accessibilityRole="button"
               accessibilityLabel={t("business.banks.awaitingLinkCta")}
               testID="banks-awaiting-verify"
             >
               <MaterialCommunityIcons
-                name="shield-check"
-=======
-              testID="banks-awaiting-verify"
-            >
-              <MaterialCommunityIcons
                 name="shield-check-outline"
->>>>>>> 5a67b27 (fix(accounts): close real profile/FI gaps without inventing product)
                 size={18}
                 color="#FFFFFF"
               />
@@ -611,11 +593,7 @@ export default function BanksScreen() {
         ) : null}
 
         {/* Join CTA — hidden for institution members who already have an inbox
-<<<<<<< HEAD
             AND for FI-role users still awaiting the admin owner link (S2). */}
-=======
-            AND for FI-role users still awaiting admin owner link (S2). */}
->>>>>>> 5a67b27 (fix(accounts): close real profile/FI gaps without inventing product)
         {showJoinCta ? (
           <View
             style={[
