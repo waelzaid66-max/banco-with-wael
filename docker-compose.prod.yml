@@ -125,7 +125,8 @@ services:
     image: banco-web:latest
     restart: always
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     networks:
       - banco_net
     ports:
@@ -158,7 +159,8 @@ services:
     image: banco-website:latest
     restart: always
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     networks:
       - banco_net
     ports:
@@ -191,7 +193,8 @@ services:
     image: banco-web-static:latest
     restart: always
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     networks:
       - banco_net
     ports:

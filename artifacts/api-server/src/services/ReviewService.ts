@@ -193,7 +193,7 @@ export async function createReview(
   const [seller] = await db
     .select({ id: users.id, name: users.name, isShadowBanned: users.isShadowBanned })
     .from(users)
-    .where(eq(users.id, sellerId))
+    .where(and(eq(users.id, sellerId), isNull(users.deletedAt)))
     .limit(1);
   if (!seller || seller.isShadowBanned === true)
     throw codedError("NOT_FOUND", "Seller not found");

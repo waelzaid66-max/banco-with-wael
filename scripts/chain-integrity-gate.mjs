@@ -1482,6 +1482,63 @@ const CHECKS = [
       /Success/.test(s),
     why: "AWS deploy must wait for SSM and fail the job when Status is not Success",
   },
+  // ── Round 16 ──────────────────────────────────────────────
+  {
+    id: "P-paymob-partial-refund-claw",
+    file: "artifacts/api-server/src/controllers/paymentsController.ts",
+    test: (s) =>
+      /isPspReverse/.test(s) &&
+      /clawAmountEgp/.test(s) &&
+      /amountCents > intentCents/.test(s),
+    why: "Refund/void must claw partial amount_cents instead of ACK no-op on mismatch",
+  },
+  {
+    id: "P-boost-seller-tombstone",
+    file: "artifacts/api-server/src/services/AdsService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function boostListing"));
+      return /deletedAt/.test(fn) && /for\("update"\)/.test(fn);
+    },
+    why: "Boost must not debit a soft-deleted seller",
+  },
+  {
+    id: "P-review-create-tombstone",
+    file: "artifacts/api-server/src/services/ReviewService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function createReview"));
+      return /isNull\(users\.deletedAt\)/.test(fn);
+    },
+    why: "createReview must fail closed on soft-deleted sellers like listReviews",
+  },
+  {
+    id: "P-globalsupply-respond-shadowban",
+    file: "artifacts/api-server/src/services/GlobalSupplyService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function respondToRequest"));
+      return /Account cannot submit offers/.test(fn) && /isShadowBanned/.test(fn);
+    },
+    why: "GlobalSupply respond must reject shadow-banned suppliers (RFQ parity)",
+  },
+  {
+    id: "P-delete-account-notif-scrub",
+    file: "artifacts/api-server/src/services/UserService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function deleteAccount"));
+      return (
+        /company_user_id/.test(fn) &&
+        /follower_id/.test(fn) &&
+        /authoredReviewIds/.test(fn)
+      );
+    },
+    why: "Account delete must purge follower/review notifications that embed the deleted name",
+  },
+  {
+    id: "P-prod-compose-healthy-depends",
+    file: "docker-compose.prod.yml",
+    test: (s) =>
+      (s.match(/condition: service_healthy/g) || []).length >= 3,
+    why: "Prod compose frontends must wait for API readyz health like Coolify",
+  },
 ];
 
 function main() {

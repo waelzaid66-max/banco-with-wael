@@ -365,6 +365,14 @@ export async function deleteAccount(clerkId: string): Promise<{ deleted: boolean
     await tx.delete(userBehavior).where(eq(userBehavior.userId, user.id));
 
     // Public content authored by the deleted user must not remain discoverable.
+    // Capture review ids BEFORE wipe so counterparties' review notifications
+    // (which embed the author's name) can be purged below.
+    const authoredReviews = await tx
+      .select({ id: sellerReviews.id })
+      .from(sellerReviews)
+      .where(eq(sellerReviews.authorId, user.id));
+    const authoredReviewIds = authoredReviews.map((r) => r.id);
+
     await tx.delete(stories).where(eq(stories.userId, user.id));
     await tx.delete(sellerReviews).where(eq(sellerReviews.authorId, user.id));
     await tx
@@ -416,6 +424,38 @@ export async function deleteAccount(clerkId: string): Promise<{ deleted: boolean
           and(
             eq(notifications.type, "message"),
             inArray(sql`${notifications.data}->>'conversation_id'`, convIds),
+          ),
+        );
+    }
+
+    // Follower alerts embed the pre-delete seller name in counterparties' inboxes.
+    await tx
+      .delete(notifications)
+      .where(
+        and(
+          eq(notifications.type, "new_match"),
+          sql`${notifications.data}->>'company_user_id' = ${user.id}`,
+        ),
+      );
+
+    // Follow notifications embed the follower's name on the company inbox.
+    await tx
+      .delete(notifications)
+      .where(
+        and(
+          eq(notifications.type, "system"),
+          sql`${notifications.data}->>'follower_id' = ${user.id}`,
+        ),
+      );
+
+    // Review notifications embed the author's name in the seller inbox.
+    if (authoredReviewIds.length > 0) {
+      await tx
+        .delete(notifications)
+        .where(
+          and(
+            eq(notifications.type, "review"),
+            inArray(sql`${notifications.data}->>'review_id'`, authoredReviewIds),
           ),
         );
     }

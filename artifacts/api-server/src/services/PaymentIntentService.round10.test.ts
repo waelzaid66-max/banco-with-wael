@@ -377,8 +377,65 @@ describe("PSP reverse-before-settle race (Round 15)", () => {
     const [claw] = await db
       .select()
       .from(transactions)
-      .where(eq(transactions.idempotencyKey, `${key}:psp_reversal`));
+      .where(eq(transactions.idempotencyKey, `${key}:psp_reversal:c10000:from0`));
     expect(claw.type).toBe("adjustment");
     expect(Number(claw.amount)).toBe(-100);
+  });
+
+  it("partial refund claws requested amount then a second delivery claws the rest", async () => {
+    const { reverseTopupAfterPspReversal } = await import("./PaymentIntentService");
+    const { applyTransaction, getWalletBalance } = await import("./WalletService");
+    const userId = await createUser();
+    uids.push(userId);
+    const key = randomUUID();
+
+    await db.transaction((tx) =>
+      applyTransaction(tx, {
+        userId,
+        type: "wallet_topup",
+        direction: "credit",
+        amount: 300,
+        idempotencyKey: key,
+        referenceType: "payment_intent",
+        referenceId: key,
+      }),
+    );
+    await db.insert(paymentIntents).values({
+      id: key,
+      userId,
+      amount: "300.00",
+      method: "fawry",
+      purpose: "wallet_topup",
+      status: "completed",
+      providerRef: "intention_partial",
+      completedAt: new Date(),
+      metadata: { provider: "paymob" },
+    });
+
+    await reverseTopupAfterPspReversal(key, {
+      reason: "refunded",
+      providerTxnId: "ref_partial_1",
+      clawAmountEgp: "100.00",
+    });
+    expect(Number(await getWalletBalance(userId))).toBe(200);
+
+    // Identical retry must not double-debit.
+    await reverseTopupAfterPspReversal(key, {
+      reason: "refunded",
+      providerTxnId: "ref_partial_1",
+      clawAmountEgp: "100.00",
+    });
+    expect(Number(await getWalletBalance(userId))).toBe(200);
+
+    await reverseTopupAfterPspReversal(key, {
+      reason: "refunded",
+      providerTxnId: "ref_partial_2",
+      clawAmountEgp: "200.00",
+    });
+    expect(Number(await getWalletBalance(userId))).toBe(0);
+
+    const [row] = await db.select().from(paymentIntents).where(eq(paymentIntents.id, key));
+    expect((row.metadata as Record<string, unknown>).psp_reversed).toBe(true);
+    expect((row.metadata as Record<string, unknown>).psp_clawed_cents).toBe(30000);
   });
 });

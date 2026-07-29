@@ -60,18 +60,33 @@ export async function paymobWebhookHandler(req: Request, res: Response) {
       return res.status(503).json({ ok: false, error: "intent_not_found" });
     }
 
+    const isPspReverse = verification.isRefunded || verification.isVoided;
+    const intentCents = Math.round(Number(meta.amount) * 100);
+
     // Economic guards MUST run before claimPaymobOrderForIntent — otherwise a
     // wrong-amount webhook permanently binds order.id and strands the real pay.
+    // SUCCESS path: exact amount match required.
+    // REFUND/VOID path: Paymob may send a PARTIAL refund amount_cents — require
+    // 0 < cents <= intent and claw that magnitude (never ACK with zero clawback
+    // just because cents ≠ full intent).
     if (
       verification.amountCents == null ||
       !Number.isFinite(verification.amountCents) ||
       verification.amountCents <= 0
     ) {
-      console.error(
-        "[Paymob webhook] missing/invalid signed amount_cents for intent",
-        intentId,
-      );
-      return res.status(200).json({ ok: true });
+      if (isPspReverse) {
+        // Missing amount on reverse → claw the full intent (ops-conservative).
+        console.error(
+          "[Paymob webhook] reverse missing amount_cents — clawing full intent",
+          intentId,
+        );
+      } else {
+        console.error(
+          "[Paymob webhook] missing/invalid signed amount_cents for intent",
+          intentId,
+        );
+        return res.status(200).json({ ok: true });
+      }
     }
     if (verification.currency !== "EGP") {
       console.error(
@@ -81,7 +96,26 @@ export async function paymobWebhookHandler(req: Request, res: Response) {
       );
       return res.status(200).json({ ok: true });
     }
-    if (Math.round(Number(meta.amount) * 100) !== verification.amountCents) {
+
+    let clawCents = intentCents;
+    if (isPspReverse) {
+      if (
+        verification.amountCents != null &&
+        Number.isFinite(verification.amountCents) &&
+        verification.amountCents > 0
+      ) {
+        if (verification.amountCents > intentCents) {
+          console.error(
+            "[Paymob webhook] reverse amount exceeds intent — ACK no-op",
+            intentId,
+            verification.amountCents,
+            intentCents,
+          );
+          return res.status(200).json({ ok: true });
+        }
+        clawCents = verification.amountCents;
+      }
+    } else if (intentCents !== verification.amountCents) {
       console.error(
         "[Paymob webhook] amount mismatch for intent",
         intentId,
@@ -120,19 +154,22 @@ export async function paymobWebhookHandler(req: Request, res: Response) {
           providerTxnId: verification.providerTxnId,
         });
       }
-    } else if (verification.isRefunded || verification.isVoided) {
+    } else if (isPspReverse) {
       // Post-settlement refund/void: mark-failed is a no-op on completed intents
       // and would leave wallet credit / active subscription in place.
       const reason = verification.isRefunded ? "refunded" : "voided";
+      const clawAmountEgp = (clawCents / 100).toFixed(2);
       if (meta.purpose === "subscription") {
         await reverseSubscriptionAfterPspReversal(intentId, {
           reason,
           providerTxnId: verification.providerTxnId,
+          clawAmountEgp,
         });
       } else {
         await reverseTopupAfterPspReversal(intentId, {
           reason,
           providerTxnId: verification.providerTxnId,
+          clawAmountEgp,
         });
       }
     } else {

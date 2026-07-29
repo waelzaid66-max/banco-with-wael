@@ -414,6 +414,17 @@ export async function respondToRequest(
 ): Promise<{ id: string; submitted: boolean }> {
   const supplierId = await resolveUserId(clerkId);
 
+  const [supplierRow] = await db
+    .select({ isShadowBanned: users.isShadowBanned })
+    .from(users)
+    .where(eq(users.id, supplierId))
+    .limit(1);
+  if (supplierRow?.isShadowBanned === true) {
+    throw Object.assign(new Error("Account cannot submit offers"), {
+      code: "FORBIDDEN",
+    });
+  }
+
   const [req] = await db
     .select({
       id: globalSupplyRequests.id,

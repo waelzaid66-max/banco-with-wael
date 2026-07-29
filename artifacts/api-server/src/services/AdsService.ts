@@ -132,6 +132,18 @@ export async function boostListing(
         });
       }
 
+      // Soft-deleted sellers must not be charged for boosts — public surfaces
+      // already hide their inventory; debiting here would drain a tombstone wallet.
+      const [sellerRow] = await tx
+        .select({ id: users.id, deletedAt: users.deletedAt })
+        .from(users)
+        .where(eq(users.id, sellerId))
+        .for("update")
+        .limit(1);
+      if (!sellerRow || sellerRow.deletedAt != null) {
+        throw notFound("Listing not found or access denied");
+      }
+
       // Insert the ad first so the charge can reference it (FK-free polymorphic
       // link). A failed debit rolls this insert back.
       const [created] = await tx

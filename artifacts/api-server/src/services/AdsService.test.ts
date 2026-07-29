@@ -222,6 +222,23 @@ describe("boostListing (ad spend protection)", () => {
     const adsB = await db.select().from(ads).where(eq(ads.listingId, b.listingId));
     expect(adsB).toHaveLength(0);
   });
+
+  it("rejects boost after seller soft-delete (Round 16)", async () => {
+    const { sellerId, listingId } = await dealerWithListing("500");
+    const plan = await resolveEffectivePlan(sellerId, "dealer");
+    await db
+      .update(users)
+      .set({ walletBalance: plan.boostPrice, deletedAt: new Date() })
+      .where(eq(users.id, sellerId));
+
+    await expect(
+      boostListing(listingId, sellerId, "dealer", "featured", 7),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+
+    expect(Number(await getWalletBalance(sellerId))).toBe(Number(plan.boostPrice));
+    const created = await db.select().from(ads).where(eq(ads.listingId, listingId));
+    expect(created).toHaveLength(0);
+  });
 });
 
 afterAll(async () => {

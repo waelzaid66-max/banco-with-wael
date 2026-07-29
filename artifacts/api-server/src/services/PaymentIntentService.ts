@@ -723,14 +723,17 @@ export async function markTopupIntentFailed(intentId: string): Promise<void> {
  * Paymob refund/void after a successful settlement. Pending intents are marked
  * failed WITH durable `psp_reversed` so a late success webhook cannot credit.
  * Completed top-ups are clawed back via an `adjustment` debit (not `refund` —
- * schema/UI treat refund as a credit). Partial balance → debit what's left and
- * flag shortfall for ops.
+ * schema/UI treat refund as a credit). `clawAmountEgp` supports PARTIAL refunds
+ * (cumulative via metadata.psp_clawed_cents). Partial balance → debit what's
+ * left and flag shortfall for ops.
  */
 export async function reverseTopupAfterPspReversal(
   intentId: string,
   opts: {
     reason: "refunded" | "voided";
     providerTxnId?: string | null;
+    /** EGP magnitude to claw this delivery; defaults to full remaining intent. */
+    clawAmountEgp?: string | number | null;
   },
 ): Promise<void> {
   let notifyFailed = false;
@@ -745,14 +748,16 @@ export async function reverseTopupAfterPspReversal(
     if (!intent || intent.purpose !== "wallet_topup") return;
 
     const meta = asIntentMeta(intent.metadata);
-    if (meta.psp_reversed === true) return;
-
-    meta.psp_reversed = true;
-    meta.psp_reversal_reason = opts.reason;
-    if (opts.providerTxnId) meta.psp_reversal_txn_id = opts.providerTxnId;
+    const intentTotal = Number(intent.amount);
+    const alreadyClawed = Math.max(0, Number(meta.psp_clawed_cents ?? 0) / 100);
+    const remaining = Math.max(0, Math.round((intentTotal - alreadyClawed) * 100) / 100);
 
     if (intent.status === "pending" || intent.status === "failed") {
+      if (meta.psp_reversed === true) return;
       // Durable reverse marker under row lock — late success cannot credit.
+      meta.psp_reversed = true;
+      meta.psp_reversal_reason = opts.reason;
+      if (opts.providerTxnId) meta.psp_reversal_txn_id = opts.providerTxnId;
       await tx
         .update(paymentIntents)
         .set({ status: "failed", metadata: meta })
@@ -761,8 +766,22 @@ export async function reverseTopupAfterPspReversal(
       return;
     }
     if (intent.status !== "completed") return;
+    if (remaining <= 0) {
+      meta.psp_reversed = true;
+      await tx
+        .update(paymentIntents)
+        .set({ metadata: meta })
+        .where(eq(paymentIntents.id, intent.id));
+      return;
+    }
 
-    const reversalKey = `${intent.id}:psp_reversal`;
+    const requestedRaw =
+      opts.clawAmountEgp != null && opts.clawAmountEgp !== ""
+        ? Number(opts.clawAmountEgp)
+        : remaining;
+    if (!Number.isFinite(requestedRaw) || requestedRaw <= 0) return;
+    const requested = Math.min(remaining, Math.round(requestedRaw * 100) / 100);
+
     const [lockedUser] = await tx
       .select({ bal: users.walletBalance })
       .from(users)
@@ -770,11 +789,16 @@ export async function reverseTopupAfterPspReversal(
       .for("update")
       .limit(1);
     const avail = Math.max(0, Number(lockedUser?.bal ?? 0));
-    const target = Number(intent.amount);
-    const claw = Math.min(avail, target);
+    const claw = Math.min(avail, requested);
+
+    // Per-delivery idempotency: Paymob refund txn id when present; otherwise
+    // watermark by (requested, already-clawed) so retries do not double-debit.
+    const reversalKey = opts.providerTxnId
+      ? `${intent.id}:psp_reversal:txn:${opts.providerTxnId}`
+      : `${intent.id}:psp_reversal:c${Math.round(requested * 100)}:from${Math.round(alreadyClawed * 100)}`;
 
     if (claw > 0) {
-      await applyTransaction(tx, {
+      const applied = await applyTransaction(tx, {
         userId: intent.userId,
         type: "adjustment",
         direction: "debit",
@@ -788,13 +812,29 @@ export async function reverseTopupAfterPspReversal(
           psp_reversal: opts.reason,
           provider_txn_id: opts.providerTxnId ?? null,
           clawback_amount: claw.toFixed(2),
+          requested_amount: requested.toFixed(2),
         },
       });
-    }
-
-    if (claw < target) {
+      // Replay must not inflate psp_clawed_cents.
+      const creditedClaw = applied.replayed ? 0 : claw;
+      const clawedAfter = Math.round((alreadyClawed + creditedClaw) * 100);
+      meta.psp_clawed_cents = Math.max(
+        Number(meta.psp_clawed_cents ?? 0),
+        clawedAfter,
+      );
+      if (!applied.replayed && claw < requested) {
+        meta.psp_reversal_shortfall = true;
+        meta.psp_reversal_shortfall_amount = (requested - claw).toFixed(2);
+        console.error(
+          "[Paymob reversal] wallet shortfall — ops must recover",
+          intentId,
+          opts.reason,
+          meta.psp_reversal_shortfall_amount,
+        );
+      }
+    } else if (requested > 0) {
       meta.psp_reversal_shortfall = true;
-      meta.psp_reversal_shortfall_amount = (target - claw).toFixed(2);
+      meta.psp_reversal_shortfall_amount = requested.toFixed(2);
       console.error(
         "[Paymob reversal] wallet shortfall — ops must recover",
         intentId,
@@ -802,6 +842,11 @@ export async function reverseTopupAfterPspReversal(
         meta.psp_reversal_shortfall_amount,
       );
     }
+
+    meta.psp_reversal_reason = opts.reason;
+    if (opts.providerTxnId) meta.psp_reversal_txn_id = opts.providerTxnId;
+    // Block late settle-from-failed even when only a partial reverse landed.
+    meta.psp_reversed = true;
     await tx
       .update(paymentIntents)
       .set({ metadata: meta })

@@ -855,6 +855,8 @@ export async function reverseSubscriptionAfterPspReversal(
   opts: {
     reason: "refunded" | "voided";
     providerTxnId?: string | null;
+    /** EGP magnitude for orphan clawback; defaults to full orphan credit. */
+    clawAmountEgp?: string | number | null;
   },
 ): Promise<void> {
   let notifyFailed = false;
@@ -925,7 +927,15 @@ export async function reverseSubscriptionAfterPspReversal(
       .where(eq(transactions.idempotencyKey, orphanKey))
       .limit(1);
     if (orphanCredit && Number(orphanCredit.amount) > 0) {
-      const clawTarget = Number(orphanCredit.amount);
+      const orphanTotal = Number(orphanCredit.amount);
+      const requestedRaw =
+        opts.clawAmountEgp != null && opts.clawAmountEgp !== ""
+          ? Number(opts.clawAmountEgp)
+          : orphanTotal;
+      const clawTarget =
+        Number.isFinite(requestedRaw) && requestedRaw > 0
+          ? Math.min(orphanTotal, Math.round(requestedRaw * 100) / 100)
+          : orphanTotal;
       const [lockedUser] = await tx
         .select({ bal: users.walletBalance })
         .from(users)
