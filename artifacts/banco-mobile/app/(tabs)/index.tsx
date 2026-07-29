@@ -530,7 +530,9 @@ export default function FeedScreen() {
   // so home rails don't waterfall three feed round-trips on cold open.
   const loadRails = useCallback(async () => {
     const [trendingRes, poolRes, industrialRes, geoCity] = await Promise.all([
-      getTrending().catch(() => ({ data: [] as FeedItem[] })),
+      getTrending({ market_country: marketCountry }).catch(() => ({
+        data: [] as FeedItem[],
+      })),
       getFeed({
         limit: 40,
         session_id: sessionId,
@@ -579,12 +581,12 @@ export default function FeedScreen() {
       return;
     }
     try {
-      const res = await getRecommendations();
+      const res = await getRecommendations({ market_country: marketCountry });
       setRecommendedItems(res.data ?? []);
     } catch {
       setRecommendedItems([]);
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, marketCountry]);
 
   useEffect(() => {
     loadRails();

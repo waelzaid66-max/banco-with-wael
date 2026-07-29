@@ -506,6 +506,16 @@ test("home feed passes market_country from preferred market", () => {
   assert.match(home, /market_country:\s*marketCountry/);
   assert.match(
     home,
+    /getTrending\(\{\s*market_country:\s*marketCountry/,
+    "trending rail must pass preferred market",
+  );
+  assert.match(
+    home,
+    /getRecommendations\(\{\s*market_country:\s*marketCountry/,
+    "recommendations must pass preferred market",
+  );
+  assert.match(
+    home,
     /\[category, industrialType, engineKey, marketCountry\]/,
     "feed must refetch when preferred market resolves/changes",
   );

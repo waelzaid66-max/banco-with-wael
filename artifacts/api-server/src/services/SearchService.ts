@@ -612,7 +612,11 @@ export async function getAutocomplete(query: string): Promise<string[]> {
   return results.map((r) => r.title);
 }
 
-export async function getTrending(limit: number = 20): Promise<FeedItem[]> {
+export async function getTrending(
+  limit: number = 20,
+  marketCountry?: string,
+): Promise<FeedItem[]> {
+  const market = marketCountry?.trim().toUpperCase();
   const rows = await db
     .select({
       id: listings.id,
@@ -635,7 +639,15 @@ export async function getTrending(limit: number = 20): Promise<FeedItem[]> {
     .leftJoin(users, eq(listings.userId, users.id))
     .leftJoin(interactions, eq(interactions.listingId, listings.id))
     .leftJoin(listingAttributes, eq(listingAttributes.listingId, listings.id))
-    .where(and(eq(listings.status, "active"), ...publicVisibilityConditions()))
+    .where(
+      and(
+        eq(listings.status, "active"),
+        ...publicVisibilityConditions(),
+        ...buildAttributeConditions(
+          market ? { market_country: market } : {},
+        ),
+      ),
+    )
     .orderBy(desc(sql`COALESCE(${interactions.views}, 0) + COALESCE(${interactions.clicks}, 0)`))
     .limit(limit);
 
@@ -837,9 +849,13 @@ async function computeSimilarListings(listingId: string, limit: number): Promise
   return transformFeedItems(enriched);
 }
 
-export async function getRecommendations(userId: string, limit: number = 20): Promise<FeedItem[]> {
+export async function getRecommendations(
+  userId: string,
+  limit: number = 20,
+  marketCountry?: string,
+): Promise<FeedItem[]> {
   // Fallback to trending if no behavior data
-  return getTrending(limit);
+  return getTrending(limit, marketCountry);
 }
 
 // Helper: enrich base rows with media, payment, interaction data

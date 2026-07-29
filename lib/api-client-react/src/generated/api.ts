@@ -156,6 +156,7 @@ import type {
   GetPromoAdSummary200,
   GetPromoCampaign200,
   GetRecommendations200,
+  GetRecommendationsParams,
   GetRfq200,
   GetSavedListings200,
   GetSellerReviews200,
@@ -164,6 +165,7 @@ import type {
   GetSupportTickets200,
   GetSupportTicketsParams,
   GetTrending200,
+  GetTrendingParams,
   GetWallet200,
   HealthStatus,
   ListBookings200,
@@ -2363,20 +2365,27 @@ export function useGetAutocomplete<TData = Awaited<ReturnType<typeof getAutocomp
 
 
 
-export const getGetTrendingUrl = () => {
+export const getGetTrendingUrl = (params?: GetTrendingParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/search/trending`
+  return stringifiedParams.length > 0 ? `/api/v1/search/trending?${stringifiedParams}` : `/api/v1/search/trending`
 }
 
 /**
  * @summary Trending listings by engagement score
  */
-export const getTrending = async ( options?: RequestInit): Promise<GetTrending200> => {
+export const getTrending = async (params?: GetTrendingParams, options?: RequestInit): Promise<GetTrending200> => {
 
-  return customFetch<GetTrending200>(getGetTrendingUrl(),
+  return customFetch<GetTrending200>(getGetTrendingUrl(params),
   {
     ...options,
     method: 'GET'
@@ -2389,23 +2398,23 @@ export const getTrending = async ( options?: RequestInit): Promise<GetTrending20
 
 
 
-export const getGetTrendingQueryKey = () => {
+export const getGetTrendingQueryKey = (params?: GetTrendingParams,) => {
     return [
-    `/api/v1/search/trending`
+    `/api/v1/search/trending`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetTrendingQueryOptions = <TData = Awaited<ReturnType<typeof getTrending>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTrending>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetTrendingQueryOptions = <TData = Awaited<ReturnType<typeof getTrending>>, TError = ErrorType<unknown>>(params?: GetTrendingParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTrending>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetTrendingQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetTrendingQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTrending>>> = ({ signal }) => getTrending({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getTrending>>> = ({ signal }) => getTrending(params, { signal, ...requestOptions });
 
 
 
@@ -2423,11 +2432,11 @@ export type GetTrendingQueryError = ErrorType<unknown>
  */
 
 export function useGetTrending<TData = Awaited<ReturnType<typeof getTrending>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTrending>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: GetTrendingParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getTrending>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetTrendingQueryOptions(options)
+  const queryOptions = getGetTrendingQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -2438,22 +2447,27 @@ export function useGetTrending<TData = Awaited<ReturnType<typeof getTrending>>, 
 
 
 
+export const getGetRecommendationsUrl = (params?: GetRecommendationsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
-export const getGetRecommendationsUrl = () => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-
-
-  return `/api/v1/search/recommendations`
+  return stringifiedParams.length > 0 ? `/api/v1/search/recommendations?${stringifiedParams}` : `/api/v1/search/recommendations`
 }
 
 /**
  * @summary Personalized recommendations
  */
-export const getRecommendations = async ( options?: RequestInit): Promise<GetRecommendations200> => {
+export const getRecommendations = async (params?: GetRecommendationsParams, options?: RequestInit): Promise<GetRecommendations200> => {
 
-  return customFetch<GetRecommendations200>(getGetRecommendationsUrl(),
+  return customFetch<GetRecommendations200>(getGetRecommendationsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -2466,23 +2480,23 @@ export const getRecommendations = async ( options?: RequestInit): Promise<GetRec
 
 
 
-export const getGetRecommendationsQueryKey = () => {
+export const getGetRecommendationsQueryKey = (params?: GetRecommendationsParams,) => {
     return [
-    `/api/v1/search/recommendations`
+    `/api/v1/search/recommendations`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getGetRecommendationsQueryOptions = <TData = Awaited<ReturnType<typeof getRecommendations>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRecommendations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetRecommendationsQueryOptions = <TData = Awaited<ReturnType<typeof getRecommendations>>, TError = ErrorType<unknown>>(params?: GetRecommendationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRecommendations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetRecommendationsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetRecommendationsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRecommendations>>> = ({ signal }) => getRecommendations({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRecommendations>>> = ({ signal }) => getRecommendations(params, { signal, ...requestOptions });
 
 
 
@@ -2500,17 +2514,16 @@ export type GetRecommendationsQueryError = ErrorType<unknown>
  */
 
 export function useGetRecommendations<TData = Awaited<ReturnType<typeof getRecommendations>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRecommendations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: GetRecommendationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRecommendations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetRecommendationsQueryOptions(options)
+  const queryOptions = getGetRecommendationsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
-
 
 
 

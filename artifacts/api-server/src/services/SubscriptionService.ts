@@ -8,7 +8,7 @@ import {
   users,
   type Plan,
 } from "@workspace/db/schema";
-import { and, asc, count, eq, gte, gt, inArray, isNull } from "drizzle-orm";
+import { and, asc, count, eq, gte, gt, inArray, isNull, sql } from "drizzle-orm";
 import {
   applyTransaction,
   getWalletBalance,
@@ -418,6 +418,47 @@ export async function startSubscription(input: StartSubscriptionInput) {
   const earlyUrl = checkoutUrlFromMeta(intent.metadata);
   if (intent.status === "pending" && earlyUrl && intent.providerRef) {
     return intentResult(intent, earlyUrl);
+  }
+
+  const [openingClaim] = await db
+    .update(paymentIntents)
+    .set({
+      metadata: sql`
+        COALESCE(${paymentIntents.metadata}, '{}'::jsonb)
+        || '{"provider":"paymob","provider_opening":true}'::jsonb
+      `,
+    })
+    .where(
+      and(
+        eq(paymentIntents.id, intentId),
+        eq(paymentIntents.status, "pending"),
+        isNull(paymentIntents.providerRef),
+        sql`COALESCE(${paymentIntents.metadata}->>'checkout_url', '') = ''`,
+        sql`COALESCE(${paymentIntents.metadata}->>'provider_opening', '') <> 'true'`,
+      ),
+    )
+    .returning({ id: paymentIntents.id });
+
+  if (!openingClaim) {
+    for (let i = 0; i < 40; i++) {
+      await new Promise((r) => setTimeout(r, 50));
+      const [fresh] = await db
+        .select()
+        .from(paymentIntents)
+        .where(eq(paymentIntents.id, intentId))
+        .limit(1);
+      if (!fresh) break;
+      assertSubIntentMatch(fresh);
+      const url = checkoutUrlFromMeta(fresh.metadata);
+      if (fresh.status === "pending" && url && fresh.providerRef) {
+        return intentResult(fresh, url);
+      }
+      if (fresh.status === "failed") break;
+      if (fresh.status === "completed" || fresh.status === "expired") {
+        throw conflict("This subscription payment was already completed");
+      }
+    }
+    throw conflict("Subscription checkout is being prepared; retry shortly");
   }
 
   let charge;

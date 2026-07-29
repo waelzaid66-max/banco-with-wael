@@ -138,7 +138,12 @@ export async function facetsHandler(req: Request, res: Response) {
 export async function trendingHandler(req: Request, res: Response) {
   try {
     const limit = Math.min(Number(req.query.limit ?? 20), 50);
-    const items = await getTrending(limit);
+    const rawMarket =
+      typeof req.query.market_country === "string"
+        ? req.query.market_country.trim().toUpperCase()
+        : "";
+    const marketCountry = /^[A-Z]{2}$/.test(rawMarket) ? rawMarket : undefined;
+    const items = await getTrending(limit, marketCountry);
     const validated = validateResponse(FeedItemSchema.array(), items);
     res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
     return res.json(successResponse(validated, { total: validated.length }));
@@ -151,7 +156,12 @@ export async function trendingHandler(req: Request, res: Response) {
 export async function recommendationsHandler(req: Request, res: Response) {
   try {
     const limit = Math.min(Number(req.query.limit ?? 20), 50);
-    const items = await getRecommendations(req.userId ?? "", limit);
+    const rawMarket =
+      typeof req.query.market_country === "string"
+        ? req.query.market_country.trim().toUpperCase()
+        : "";
+    const marketCountry = /^[A-Z]{2}$/.test(rawMarket) ? rawMarket : undefined;
+    const items = await getRecommendations(req.userId ?? "", limit, marketCountry);
     const validated = validateResponse(FeedItemSchema.array(), items);
     return res.json(successResponse(validated, { total: validated.length }));
   } catch (err) {

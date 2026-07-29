@@ -1117,6 +1117,46 @@ const CHECKS = [
     test: (s) => /idempotencyKey:\s*`lead_charge:\$\{lead\.id\}`/.test(s),
     why: "CPL lead_charge must use lead-id idempotency key at wallet chokepoint",
   },
+  {
+    id: "P-listing-detail-tombstone",
+    file: "artifacts/api-server/src/services/ListingService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function getListingDetail"));
+      return (
+        /seller_deleted_at/.test(fn) &&
+        /seller_shadow_banned/.test(fn) &&
+        /is_flagged/.test(fn) &&
+        /!isOwner/.test(fn)
+      );
+    },
+    why: "Public listing detail must hide soft-deleted/shadow-banned/flagged sellers",
+  },
+  {
+    id: "P-topup-provider-opening-cas",
+    file: "artifacts/api-server/src/services/PaymentIntentService.ts",
+    test: (s) =>
+      /provider_opening/.test(s) &&
+      /claimProviderOpening/.test(s) &&
+      /waitForTopupCheckout/.test(s),
+    why: "Concurrent top-up retries must CAS before opening a second Paymob checkout",
+  },
+  {
+    id: "P-paymob-resolve-bound-order",
+    file: "artifacts/api-server/src/controllers/paymentsController.ts",
+    test: (s) =>
+      /findIntentIdByPaymobOrderId/.test(s) &&
+      /boundIntentId/.test(s),
+    why: "Webhook must settle the intent already bound to signed order.id",
+  },
+  {
+    id: "P-trending-market-country",
+    file: "artifacts/api-server/src/services/SearchService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function getTrending"));
+      return /marketCountry/.test(fn) && /buildAttributeConditions/.test(fn);
+    },
+    why: "Trending must honor market_country like feed/search",
+  },
 ];
 
 function main() {

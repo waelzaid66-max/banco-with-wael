@@ -3,6 +3,7 @@ import { verifyPaymobWebhook } from "../lib/paymentProvider";
 import {
   getIntentMeta,
   claimPaymobOrderForIntent,
+  findIntentIdByPaymobOrderId,
   settleTopupIntent,
   markTopupIntentFailed,
 } from "../services/PaymentIntentService";
@@ -31,24 +32,31 @@ export async function paymobWebhookHandler(req: Request, res: Response) {
   if (!verification.valid) {
     return res.status(401).json({ ok: false });
   }
-  if (!verification.intentId) {
-    console.warn("[Paymob webhook] signed but no intent id present");
-    return res.status(200).json({ ok: true });
-  }
   if (!verification.providerOrderId) {
     console.error("[Paymob webhook] signed payload missing order.id");
     return res.status(200).json({ ok: true });
   }
 
   try {
+    // Prefer the already-bound intent for this signed order.id — never let an
+    // unsigned merchant_order_id remap settlement onto a different intent.
+    const boundIntentId = await findIntentIdByPaymobOrderId(
+      verification.providerOrderId,
+    );
+    const intentId = boundIntentId ?? verification.intentId;
+    if (!intentId) {
+      console.warn("[Paymob webhook] signed but no intent id present");
+      return res.status(200).json({ ok: true });
+    }
+
     const claim = await claimPaymobOrderForIntent(
-      verification.intentId,
+      intentId,
       verification.providerOrderId,
     );
     if (claim === "not_found") {
       console.error(
         "[Paymob webhook] signed settlement for unknown intent",
-        verification.intentId,
+        intentId,
       );
       return res.status(503).json({ ok: false, error: "intent_not_found" });
     }
@@ -56,17 +64,17 @@ export async function paymobWebhookHandler(req: Request, res: Response) {
       console.error(
         "[Paymob webhook] order/intent binding rejected",
         claim,
-        verification.intentId,
+        intentId,
         verification.providerOrderId,
       );
       return res.status(200).json({ ok: true });
     }
 
-    const meta = await getIntentMeta(verification.intentId);
+    const meta = await getIntentMeta(intentId);
     if (!meta) {
       console.error(
         "[Paymob webhook] signed settlement for unknown intent",
-        verification.intentId,
+        intentId,
       );
       return res.status(503).json({ ok: false, error: "intent_not_found" });
     }
@@ -78,26 +86,26 @@ export async function paymobWebhookHandler(req: Request, res: Response) {
     ) {
       console.error(
         "[Paymob webhook] amount mismatch for intent",
-        verification.intentId
+        intentId
       );
       return res.status(200).json({ ok: true });
     }
 
     if (verification.success) {
       if (meta.purpose === "subscription") {
-        await settleSubscriptionIntentByWebhook(verification.intentId, {
+        await settleSubscriptionIntentByWebhook(intentId, {
           providerTxnId: verification.providerTxnId,
         });
       } else {
-        await settleTopupIntent(verification.intentId, {
+        await settleTopupIntent(intentId, {
           providerTxnId: verification.providerTxnId,
         });
       }
     } else {
       if (meta.purpose === "subscription") {
-        await markSubscriptionIntentFailed(verification.intentId);
+        await markSubscriptionIntentFailed(intentId);
       } else {
-        await markTopupIntentFailed(verification.intentId);
+        await markTopupIntentFailed(intentId);
       }
     }
 

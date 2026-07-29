@@ -5153,6 +5153,21 @@ paths:
       operationId: getTrending
       summary: Trending listings by engagement score
       tags: [search]
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+        - in: query
+          name: market_country
+          schema:
+            type: string
+            pattern: '^[A-Za-z]{2}$'
+          description: >
+            ISO 3166-1 alpha-2 market country (EG, SA, …). Filters inventory by
+            specs.market_country; listings without the key are treated as EG.
       responses:
         "200":
           description: Trending
@@ -5178,6 +5193,21 @@ paths:
       tags: [search]
       security:
         - ClerkAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+        - in: query
+          name: market_country
+          schema:
+            type: string
+            pattern: '^[A-Za-z]{2}$'
+          description: >
+            ISO 3166-1 alpha-2 market country (EG, SA, …). Filters inventory by
+            specs.market_country; listings without the key are treated as EG.
       responses:
         "200":
           description: Recommendations

@@ -3475,10 +3475,28 @@ export type GetAutocomplete200 = {
   meta?: Meta;
 };
 
+export type GetTrendingParams = {
+limit?: number;
+/**
+ * ISO 3166-1 alpha-2 market country (EG, SA, …). Filters inventory by specs.market_country; listings without the key are treated as EG.
+ * @pattern ^[A-Za-z]{2}$
+ */
+market_country?: string;
+};
+
 export type GetTrending200 = {
   data?: FeedItem[];
   error?: ApiError | null;
   meta?: Meta;
+};
+
+export type GetRecommendationsParams = {
+limit?: number;
+/**
+ * ISO 3166-1 alpha-2 market country (EG, SA, …). Filters inventory by specs.market_country; listings without the key are treated as EG.
+ * @pattern ^[A-Za-z]{2}$
+ */
+market_country?: string;
 };
 
 export type GetRecommendations200 = {

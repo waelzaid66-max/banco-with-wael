@@ -190,6 +190,15 @@ export async function createTopupIntent(
     return topupResultFromRow(intent, earlyUrl);
   }
 
+  // Serialize Paymob checkout creation: only one concurrent retry may enter the
+  // PSP window. Losers poll until checkout is bound (or the opener fails).
+  const claimed = await claimProviderOpening(intentId);
+  if (!claimed) {
+    const replay = await waitForTopupCheckout(intentId, input, amount);
+    if (replay) return replay;
+    throw conflict("Top-up checkout is being prepared; retry shortly");
+  }
+
   let charge;
   try {
     charge = await createProviderCharge({
@@ -219,6 +228,60 @@ export async function createTopupIntent(
 
   const row = updated ?? intent;
   return topupResultFromRow(row, charge.checkoutUrl);
+}
+
+/**
+ * CAS: mark intent as opening a PSP checkout. Returns true only for the winner.
+ * Requires pending + no providerRef + no checkout_url + not already opening.
+ */
+async function claimProviderOpening(intentId: string): Promise<boolean> {
+  const [row] = await db
+    .update(paymentIntents)
+    .set({
+      metadata: sql`
+        COALESCE(${paymentIntents.metadata}, '{}'::jsonb)
+        || '{"provider":"paymob","provider_opening":true}'::jsonb
+      `,
+    })
+    .where(
+      and(
+        eq(paymentIntents.id, intentId),
+        eq(paymentIntents.status, "pending"),
+        isNull(paymentIntents.providerRef),
+        sql`COALESCE(${paymentIntents.metadata}->>'checkout_url', '') = ''`,
+        sql`COALESCE(${paymentIntents.metadata}->>'provider_opening', '') <> 'true'`,
+      ),
+    )
+    .returning({ id: paymentIntents.id });
+  return !!row;
+}
+
+async function waitForTopupCheckout(
+  intentId: string,
+  input: CreateTopupInput,
+  amount: string,
+): Promise<TopupIntentResult | null> {
+  for (let i = 0; i < 40; i++) {
+    await new Promise((r) => setTimeout(r, 50));
+    const [fresh] = await db
+      .select()
+      .from(paymentIntents)
+      .where(eq(paymentIntents.id, intentId))
+      .limit(1);
+    if (!fresh) return null;
+    assertTopupIdempotencyMatch(fresh, input, amount);
+    const url = checkoutUrlFromMeta(fresh.metadata);
+    if (fresh.status === "pending" && url && fresh.providerRef) {
+      return topupResultFromRow(fresh, url);
+    }
+    if (fresh.status === "failed") {
+      return null;
+    }
+    if (fresh.status === "completed" || fresh.status === "expired") {
+      throw conflict("This top-up was already completed");
+    }
+  }
+  return null;
 }
 
 async function findTransactionByKey(key: string): Promise<string | null> {
@@ -302,6 +365,21 @@ export async function claimPaymobOrderForIntent(
       .where(eq(paymentIntents.id, intentId));
     return "ok";
   });
+}
+
+/**
+ * Prefer the already-bound local intent for a signed Paymob order.id.
+ * When present, unsigned merchant_order_id must be ignored (remap attack).
+ */
+export async function findIntentIdByPaymobOrderId(
+  providerOrderId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ id: paymentIntents.id })
+    .from(paymentIntents)
+    .where(sql`${paymentIntents.metadata}->>'paymob_order_id' = ${providerOrderId}`)
+    .limit(1);
+  return row?.id ?? null;
 }
 
 /**

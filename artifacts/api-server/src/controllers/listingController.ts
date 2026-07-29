@@ -6,6 +6,7 @@ import {
   updateListing,
   deleteListing,
   bumpListing,
+  listingIsPubliclyVisible,
 } from "../services/ListingService";
 import { getSimilarListings } from "../services/SearchService";
 import { getListingDealInsights } from "../services/MarketInsightsService";
@@ -169,6 +170,9 @@ export async function getSimilarHandler(req: Request, res: Response) {
 export async function getListingInsightsHandler(req: Request, res: Response) {
   try {
     const id = req.params.id as string;
+    if (!(await listingIsPubliclyVisible(id))) {
+      return res.status(404).json(errorResponse("NOT_FOUND", "Listing not found"));
+    }
     const insights = await getListingDealInsights(id);
     if (!insights) {
       return res.status(404).json(errorResponse("NOT_FOUND", "Listing not found"));
@@ -185,6 +189,9 @@ export async function getListingInsightsHandler(req: Request, res: Response) {
 export async function getAvailabilityHandler(req: Request, res: Response) {
   try {
     const id = req.params.id as string;
+    if (!(await listingIsPubliclyVisible(id))) {
+      return res.status(404).json(errorResponse("NOT_FOUND", "Listing not found"));
+    }
     const ranges = await getListingAvailability(id);
     const validated = validateResponse(AvailabilityRangeSchema.array(), ranges);
     return res.json(successResponse(validated, { total: validated.length }));
