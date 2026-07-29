@@ -16,6 +16,7 @@
 
 | Gate | Result |
 |------|--------|
+| Chain integrity | **66/66 PASS** |
 | Website CI local | **11/11 PASS** |
 | Mobile node tests | **136/136 PASS** |
 | API vitest (Postgres 16) | **346 passed / 3 skipped** |
@@ -23,10 +24,12 @@
 | Coolify `Dockerfile.api` | **Built** |
 | Coolify `Dockerfile.banco-web` | **Built** + container staging smoke **all PASS** |
 | Product builds | API, banco-web, banco-website, landing, admin-os, dealer-os **build PASS** |
+| Hidden-defect hunt | See `17-HIDDEN-DEFECTS.md` (auth tombstone, intent-before-PSP, bookings/FI/ads races, plug redirect) |
 
 **Still pending ops/device:** Coolify live secrets/SSL, EAS store submit, live Clerk OAuth tenant, Paymob webhook, push on device, multi-million load test.
 
 **Final decision: CONDITIONAL GO** — staging Coolify after secrets; public production after remaining ops blockers.
+
 
 ---
 
@@ -36,17 +39,17 @@
 |--------|------:|----------------|
 | Repository integrity | 84 | Twin frozen debt remains |
 | Architecture / SoT | 88 | BWW ahead of forks |
-| Authentication / Clerk (code) | 92 | Chain + accounts + web auth gate |
-| Navigation / mobile UX | 92 | Chain 58/58; mobile 136/136 |
-| API | **93** | Vitest 346 + Docker container ready |
+| Authentication / Clerk (code) | **94** | Tombstone fail-closed + consent order |
+| Navigation / mobile UX | 92 | Chain 66/66; mobile 136/136 |
+| API | **95** | Vitest 346 + concurrency/money fixes |
 | Database | 88 | Push + seed + readyz ok in container |
-| Docker / Compose | **90** | API + Coolify API + banco-web images built & probed |
+| Docker / Compose | **91** | API compose health → readyz |
 | Coolify readiness | 86 | Images build; secrets still ops |
-| Security (static) | 88 | Storage fail-close; IDOR/CORS gates |
-| Performance / scale | 78 | Code ready; no load test |
+| Security (static) | **91** | Soft-delete auth + FI seat revoke |
+| Performance / scale | 80 | Quota/ad locks; session Maps still in-proc |
 | Web / Admin build | **92** | CI 11/11; Vite admin/dealer build; Docker web smoke |
 | E2E / device / OAuth live | 35 | PENDING_RUNTIME |
-| **OVERALL** | **86 / 100** | **CONDITIONAL GO** |
+| **OVERALL** | **88 / 100** | **CONDITIONAL GO** |
 
 ---
 
@@ -64,13 +67,21 @@ No critical missing engineering vs forks. Blind restore still **forbidden**.
 | Maintenance smoke vs plug-on redirect | Smoke contract | Staging smoke PASS |
 | Storage silent Replit default | Production fail-close | Vitest 5/5 + accounts guard |
 | Docker builds unproven | Agent dockerd + buildx | See `16-DOCKER-IMAGE-PROOF.md` |
+| Soft-delete auth incomplete | `requireAuth` + `getDbUser` active-only | Chain `P-auth-reject-tombstone` |
+| PSP before intent / unknown ACK | Intent-first + webhook 503 | Chain `P-intent-before-psp` |
+| Booking/FI/ad/quota races | Locks + conditional UPDATEs | Chain + vitest 346 |
+| Plug rewrite chrome leak | Redirect twins | Chain `P-plug-redirect-not-rewrite` |
+| Mobile consent / verify races | Order + Go Back lock | Chain + accounts-clerk-journey |
+
+See also: `17-HIDDEN-DEFECTS.md`.
+
 
 ---
 
 ## Evidence commands
 
 ```bash
-node scripts/chain-integrity-gate.mjs                 # 58/58
+node scripts/chain-integrity-gate.mjs                 # 66/66
 node scripts/production-confidence-check.mjs          # 14/14
 node scripts/website-ci-local.mjs                     # 11/11
 node --test artifacts/banco-mobile/tests/*.mjs        # 136/136
@@ -78,6 +89,7 @@ DATABASE_URL=... pnpm --filter @workspace/api-server run test  # 346
 docker build --network=host -f Dockerfile -t banco-api:agent-proof .
 docker buildx build --network=host --load -f deploy/coolify/Dockerfile.banco-web -t banco-web:agent-proof .
 # container probes documented in 16-DOCKER-IMAGE-PROOF.md
+# hidden defects: reports/production-verification/17-HIDDEN-DEFECTS.md
 ```
 
 ---
