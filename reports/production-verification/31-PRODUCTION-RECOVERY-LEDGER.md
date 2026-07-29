@@ -54,6 +54,7 @@
 | Tip after privacy/CI wave | Comment notif scrub on account delete (+ test + chain marker); Coolify migrate docs corrected to `push --force`; prod migrate profile; CI Coolify `Dockerfile.banco-website` job; GCP validation build pin + SESSION/PAYMENT secrets in env examples; staging env Coolify path guidance |
 | Phase 1–2 docs | `32-PHASE1-PRODUCTION-INVENTORY.md`; `33-PHASE2-PRODUCTION-AUDIT-REPORT.md` + auth/lifecycle annexes |
 | `d4cec74` Phase 3 reconnect | **P2-M2** `setAuthFailureHandler` on website/web/admin/dealer; **P2-M9** dealer NotFound Switch catch-all; see `34-PHASE3-PRODUCTION-RECOVERY-REPORT.md` |
+| `b2ac785` Phase 4 harden | **P2-M4** OpenAPI `/livez` `/readyz` `/v1/payments/*` + codegen; `ACCOUNT_DELETED`/`SERVICE_UNAVAILABLE` on ApiError; `errorResponse` union matches authGuard 503; see `35-PHASE4-PRODUCTION-HARDENING-REPORT.md` |
 
 ---
 
@@ -62,8 +63,8 @@
 | Facets `market_country` MED | deferred (OpenAPI + handler category-only — not inventing API surface this wave) |
 | Dual `banco-web`/`banco-website` cutover | owner |
 | Optional: set `NEXT_PUBLIC_WEB_SEARCH_LIVE/MAP=true` for live search (rebuild) | ops soft-launch |
-| Web account-delete UI (P2-M3) | deferred — mobile only; no invent in Phase 3 |
-| OpenAPI omit payments/readyz/livez (P2-M4) | spec gap — untouched Phase 3 |
+| Web account-delete UI (P2-M3) | deferred — mobile only; no invent in Phase 3/4 |
+| OpenAPI omit payments/readyz/livez (P2-M4) | **closed** on tip `b2ac785` (140 paths / 166 ops) |
 
 ### Code / release process
 
@@ -87,15 +88,16 @@
 
 | Gate | Result | When |
 |------|--------|------|
-| `chain-integrity-gate.mjs` | **164/164 PASS** | Phase 3 tip `d4cec74` |
-| API vitest (deleteAccount + full suite) | **385 passed / 3 skipped** | Phase 3 tip `d4cec74` |
-| production-confidence | **14/14 PASS** | Phase 3 tip `d4cec74` |
+| `chain-integrity-gate.mjs` | **164/164 PASS** | Phase 4 tip `b2ac785` |
+| API vitest (deleteAccount + full suite) | **385 passed / 3 skipped** | Phase 4 tip `b2ac785` |
+| production-confidence | **14/14 PASS** | Phase 4 tip `b2ac785` |
 | Coolify website bake parity | committed `ee4d2ba` | prior |
 | Landing PATHS ↔ Coolify + Clerk hops | committed | PATHS `/market|/admin` + VITE_*; DomainRouter `banco.today/dealer-os` + `banco.today/banco-mobile` |
 | AWS web SPA blank-page root cause | repaired | BASE_PATH + `dist/public` parity with Coolify |
 | Comment notif scrub on delete | repaired prior tip | review-scrub parity |
 | P2-M2 tombstone auto-signOut web/SPA | repaired `d4cec74` | mirrors mobile AuthTokenBridge |
 | P2-M9 dealer NotFound route | repaired `d4cec74` | Switch catch-all |
+| P2-M4 OpenAPI health/payments + error codes | hardened `b2ac785` | 140 paths / 166 ops; codegen |
 
 Do **not** mark FULL CERT without OPS/device evidence (Coolify live secrets, S3, SSL, EAS, Paymob webhook, Clerk providers).
 
