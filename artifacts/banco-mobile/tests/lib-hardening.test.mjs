@@ -214,6 +214,13 @@ test("search map frames by market country center (b68c8af restore)", () => {
   );
   assert.match(tax, /export function marketCountryMapCenter/, "taxonomy center helper required");
   assert.match(tax, /FR:\s*\{\s*lat:/, "EU markets must have map centers");
+  for (const iso of ["LB", "MA", "TN", "SD"]) {
+    assert.match(
+      tax,
+      new RegExp(`${iso}:\\s*\\{\\s*lat:`),
+      `${iso} must have map center (catalog market must not frame as EG)`,
+    );
+  }
   assert.match(
     html,
     /center\?: \{ lat: number; lng: number; zoom: number \}/,

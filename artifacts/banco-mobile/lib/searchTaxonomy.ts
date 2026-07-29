@@ -37,6 +37,7 @@ export function marketCountryLabel(
  * Initial Leaflet framing for an empty/default map keyed by market ISO.
  * Restored after 93b650b wiped it from this module (was on b68c8af).
  * EU markets added to match MARKET_COUNTRIES catalog (FR/DE/ES/IT).
+ * LB/MA/TN/SD filled so catalog markets do not silently frame as Egypt.
  */
 export function marketCountryMapCenter(code: string): {
   lat: number;
@@ -54,6 +55,10 @@ export function marketCountryMapCenter(code: string): {
     JO: { lat: 31.2, lng: 36.5, zoom: 7 },
     IQ: { lat: 33.2, lng: 44.0, zoom: 6 },
     LY: { lat: 27.0, lng: 17.0, zoom: 5 },
+    LB: { lat: 33.85, lng: 35.85, zoom: 8 },
+    MA: { lat: 31.8, lng: -7.1, zoom: 5 },
+    TN: { lat: 34.0, lng: 9.5, zoom: 6 },
+    SD: { lat: 15.5, lng: 32.5, zoom: 5 },
     TR: { lat: 39.0, lng: 35.0, zoom: 5 },
     FR: { lat: 46.5, lng: 2.5, zoom: 5 },
     DE: { lat: 51.1, lng: 10.4, zoom: 5 },

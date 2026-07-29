@@ -122,8 +122,30 @@ const CHECKS = [
     id: "P-map-market-center",
     file: "artifacts/banco-mobile/lib/searchTaxonomy.ts",
     test: (s) =>
-      /export function marketCountryMapCenter/.test(s) && /FR:\s*\{\s*lat:/.test(s),
-    why: "Market-country initial map center (b68c8af) must remain; includes EU",
+      /export function marketCountryMapCenter/.test(s) &&
+      /FR:\s*\{\s*lat:/.test(s) &&
+      /LB:\s*\{\s*lat:/.test(s) &&
+      /MA:\s*\{\s*lat:/.test(s) &&
+      /TN:\s*\{\s*lat:/.test(s) &&
+      /SD:\s*\{\s*lat:/.test(s),
+    why: "Market-country initial map center must cover EU + LB/MA/TN/SD (no silent EG fallback)",
+  },
+  {
+    id: "P-profile-menu-hooks-safe",
+    file: "artifacts/banco-mobile/app/(tabs)/profile.tsx",
+    test: (s) =>
+      /const menuItems\s*:/.test(s) && !/const menuItems\s*=\s*useMemo/.test(s),
+    why: "Profile menuItems must not useMemo after early returns (Rules of Hooks crash)",
+  },
+  {
+    id: "P-deploy-pin-readyz",
+    file: "artifacts/api-server/src/routes/health.ts",
+    test: (s) =>
+      /function deployPin/.test(s) &&
+      /gitSha/.test(s) &&
+      /readyz/.test(s) &&
+      /\.\.\.deployPin\(\)/.test(s),
+    why: "Readyz/livez must expose deploy SHA pin for live production verification (F1)",
   },
   {
     id: "P-map-market-center-wired",
