@@ -97,6 +97,7 @@ Single implementation family: `SearchResultsMap` + `.web` + `mapHtml` (Leaflet).
 | `has_installment=false` coerced true via `z.coerce.boolean` | HIGH | **FIXED** — `boolParam` |
 | Import stage advance/cancel race + dual notify | HIGH | **FIXED** — CAS `WHERE stage=current` |
 | Soft-deleted companies still public/followable | HIGH | **FIXED** — `deletedAt` on profile/directory/follow/following |
+| Global supply / investment clerk resolves ignored tombstones | HIGH | **FIXED** — `isNull(deletedAt)` on resolve helpers + create |
 | Saved-search structured filters ignored in alerts / mobile replay | HIGH | **DEFERRED** — larger product surface; tracked |
 
 ---
@@ -105,9 +106,9 @@ Single implementation family: `SearchResultsMap` + `.web` + `mapHtml` (Leaflet).
 
 | Gate | Result |
 |------|--------|
-| `node scripts/chain-integrity-gate.mjs` | **pending Round 4 re-run** |
-| API vitest | **pending Round 4 re-run** |
-| Mobile full `pnpm test` | **PASS** (Round 3) |
+| `node scripts/chain-integrity-gate.mjs` | **91/91 PASS** |
+| API vitest | **346 passed / 3 skipped** |
+| Mobile full `pnpm test` | **PASS** |
 | SVG icons | Unchanged — registry only |
 
 ---
@@ -122,4 +123,4 @@ Cold/warm start, kill, memory pressure, rotation, large fonts, dark/light pixel 
 
 ## Decision
 
-**CONDITIONAL GO** for mobile code hardening continues. Phase X closed proven incident-class notification/auth/dynamic/search defects without inventing features or touching SVG icon architecture. MFA-on-delete step-up UI remains an explicit deferred residual.
+**CONDITIONAL GO** for mobile code hardening continues. Phase X closed proven incident-class notification/auth/dynamic/search/B2B concurrency defects without inventing features or touching SVG icon architecture. MFA-on-delete step-up UI and saved-search structured replay remain explicit deferred residuals.
