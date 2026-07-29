@@ -1263,10 +1263,12 @@ export default function FeedScreen() {
         animationType="fade"
         onRequestClose={() => setShowLogoMenu(false)}
       >
-        <Pressable
-          style={styles.menuBackdrop}
-          onPress={() => setShowLogoMenu(false)}
-        >
+        <View style={styles.menuBackdrop}>
+          <Pressable
+            style={StyleSheet.absoluteFillObject}
+            onPress={() => setShowLogoMenu(false)}
+            accessibilityRole="button"
+          />
           <View
             style={[
               styles.menuSheet,
@@ -1276,7 +1278,6 @@ export default function FeedScreen() {
                 paddingBottom: insets.bottom + 12,
               },
             ]}
-            onStartShouldSetResponder={() => true}
           >
             <View style={styles.menuHandle} />
             <View
@@ -1328,7 +1329,7 @@ export default function FeedScreen() {
               </Pressable>
             ))}
           </View>
-        </Pressable>
+        </View>
       </Modal>
 
       <Modal
@@ -1337,10 +1338,12 @@ export default function FeedScreen() {
         animationType="fade"
         onRequestClose={() => setShowSortMenu(false)}
       >
-        <Pressable
-          style={styles.sortBackdrop}
-          onPress={() => setShowSortMenu(false)}
-        >
+        <View style={styles.sortBackdrop}>
+          <Pressable
+            style={StyleSheet.absoluteFillObject}
+            onPress={() => setShowSortMenu(false)}
+            accessibilityRole="button"
+          />
           <View
             style={[
               styles.sortSheet,
@@ -1351,7 +1354,6 @@ export default function FeedScreen() {
                 [isRTL ? "left" : "right"]: 16,
               },
             ]}
-            onStartShouldSetResponder={() => true}
           >
             <AppText
               style={[
@@ -1396,7 +1398,7 @@ export default function FeedScreen() {
               </Pressable>
             ))}
           </View>
-        </Pressable>
+        </View>
       </Modal>
     </View>
   );

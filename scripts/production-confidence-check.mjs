@@ -181,6 +181,48 @@ function checkOpenApi() {
   pass("openapi.yaml structure");
 }
 
+/** Anti-93b650b pollution: touch-trap menus + opaque upload 500 for missing storage. */
+function checkReplitWipePollution() {
+  const profile = path.join(MOBILE, "app", "(tabs)", "profile.tsx");
+  const promote = path.join(MOBILE, "components", "PromoteButton.tsx");
+  const home = path.join(MOBILE, "app", "(tabs)", "index.tsx");
+  const upload = path.join(ROOT, "artifacts", "api-server", "src", "controllers", "uploadController.ts");
+
+  for (const [label, file] of [
+    ["profile.tsx", profile],
+    ["PromoteButton.tsx", promote],
+    ["index.tsx", home],
+  ]) {
+    if (!fs.existsSync(file)) {
+      fail("anti-wipe menus", `missing ${label}`);
+      return;
+    }
+    const src = fs.readFileSync(file, "utf8");
+    if (/onStartShouldSetResponder/.test(src)) {
+      fail("anti-wipe menus", `${label} still contains onStartShouldSetResponder (93b650b pollution)`);
+      return;
+    }
+  }
+
+  const profileSrc = fs.readFileSync(profile, "utf8");
+  if (!/maxHeight:\s*["']85%["']/.test(profileSrc)) {
+    fail("anti-wipe menus", "profile menuSheet missing maxHeight 85%");
+    return;
+  }
+
+  if (!fs.existsSync(upload)) {
+    fail("anti-wipe upload 503", "uploadController.ts missing");
+    return;
+  }
+  const uploadSrc = fs.readFileSync(upload, "utf8");
+  if (!/Image upload is not available yet — object storage is not configured/.test(uploadSrc)) {
+    fail("anti-wipe upload 503", "request-url must map missing storage config to clear 503 (0afef07)");
+    return;
+  }
+  pass("anti-wipe pollution guards", "menus touch-safe + upload 503 restored");
+}
+
+
 function checkMobileTests() {
   const r = run("pnpm", ["run", "test"], MOBILE);
   const countMatch = (r.stdout || "").match(/ℹ pass (\d+)/);
@@ -228,6 +270,7 @@ function main() {
   checkExpoSdkAlignment();
   checkWorkspaceRefs();
   checkOpenApi();
+  checkReplitWipePollution();
   checkGcpDockerConfig();
 
   if (!skipTypecheck) {

@@ -83,6 +83,71 @@ test("profile Payments menu opens billing hub (wallet remains linked inside)", (
   );
 });
 
+// Anti-wipe guards: 93b650b reintroduced baseline touch-traps after f70e016/4ccf939.
+// These must never return — they make overflow menus fill the screen / eat taps.
+test("profile overflow menu stays touch-safe (no nested responder trap)", () => {
+  const src = fs.readFileSync(PROFILE, "utf8");
+  const modalStart = src.indexOf("{/* Overflow menu");
+  assert.ok(modalStart >= 0, "overflow menu marker must exist");
+  const modalEnd = src.indexOf("</Modal>", modalStart);
+  assert.ok(modalEnd > modalStart, "overflow menu Modal must close");
+  const block = src.slice(modalStart, modalEnd);
+  assert.doesNotMatch(
+    block,
+    /onStartShouldSetResponder/,
+    "profile menu must NOT use onStartShouldSetResponder (93b650b pollution)",
+  );
+  assert.match(
+    block,
+    /StyleSheet\.absoluteFillObject/,
+    "profile menu dismiss control must be a sibling absoluteFill Pressable",
+  );
+  assert.match(
+    block,
+    /<ScrollView[\s\S]*menuItems\.map/,
+    "profile menu items must scroll inside the sheet",
+  );
+  assert.match(
+    src,
+    /menuSheet:\s*\{[\s\S]*?maxHeight:\s*["']85%["']/,
+    "menuSheet must cap at maxHeight 85% (4ccf939)",
+  );
+});
+
+test("PromoteButton sheet stays touch-safe (no nested responder trap)", () => {
+  const src = fs.readFileSync(
+    path.join(APP_ROOT, "components", "PromoteButton.tsx"),
+    "utf8",
+  );
+  assert.doesNotMatch(
+    src,
+    /onStartShouldSetResponder/,
+    "PromoteButton must not nest onStartShouldSetResponder under backdrop Pressable",
+  );
+  assert.match(
+    src,
+    /StyleSheet\.absoluteFillObject/,
+    "PromoteButton must dismiss via sibling absoluteFill Pressable",
+  );
+});
+
+test("home logo/sort menus stay touch-safe (no nested responder trap)", () => {
+  const src = fs.readFileSync(
+    path.join(APP_ROOT, "app", "(tabs)", "index.tsx"),
+    "utf8",
+  );
+  assert.doesNotMatch(
+    src,
+    /onStartShouldSetResponder/,
+    "home feed menus must not use onStartShouldSetResponder (f70e016 / anti-93b650b)",
+  );
+  const absCount = (src.match(/StyleSheet\.absoluteFillObject/g) || []).length;
+  assert.ok(
+    absCount >= 2,
+    "home logo + sort menus each need an absoluteFill dismiss Pressable",
+  );
+});
+
 test("billing, wallet, and invoices are registered stack routes", () => {
   const src = fs.readFileSync(LAYOUT, "utf8");
   const routes = ["billing", "wallet", "invoices", "invoices/[id]"];

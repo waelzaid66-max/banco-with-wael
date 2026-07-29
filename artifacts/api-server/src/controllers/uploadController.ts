@@ -127,6 +127,22 @@ export async function requestUploadUrlHandler(req: Request, res: Response): Prom
     return res.status(200).json(successResponse(result));
   } catch (error) {
     req.log.error({ err: error }, "Error generating upload URL");
+    // Object storage not provisioned (PRIVATE_OBJECT_DIR / PUBLIC_OBJECT_SEARCH_PATHS
+    // unset) is a deploy/config gap, not a code fault. Surface a clear, actionable
+    // 503 so the app can show a helpful message and ops can tell a missing bucket
+    // apart from a genuine failure — instead of an opaque 500.
+    // Restored after 93b650b wiped 0afef07.
+    const msg = error instanceof Error ? error.message : "";
+    if (/not set|OBJECT_SEARCH_PATHS|PRIVATE_OBJECT_DIR/i.test(msg)) {
+      return res
+        .status(503)
+        .json(
+          errorResponse(
+            "INTERNAL_ERROR",
+            "Image upload is not available yet — object storage is not configured on the server.",
+          ),
+        );
+    }
     return res
       .status(500)
       .json(errorResponse("INTERNAL_ERROR", "Failed to generate upload URL"));
