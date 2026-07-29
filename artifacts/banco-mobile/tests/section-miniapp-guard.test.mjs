@@ -7,7 +7,7 @@
 //   4. Stack screens for section/* remain registered in app/_layout.tsx
 //
 // Run: pnpm --filter @workspace/banco-mobile run test:section-guard
-// Expectation: 46/46 PASS (owner-approved black Stay header + black-void flexGrow + country label
+// Expectation: 48/48 PASS (owner-approved black Stay header + black-void flexGrow + country label
 // + section header icon hits stay inside / padding 12 + hard category locks
 // + no fake web topPad 67 anywhere under banco-mobile
 // + Banks FI finish: intent=fi from profile, Join gated on membership
@@ -16,7 +16,7 @@
 // + Car brand/origin strips + Discover ENTER + car?engine=import
 // + Materials material/origin/market strips + FilterSheet showMaterial wired
 // + Stay auto-reset on back + rental strip + map latch + scoped property types
-// + Stay sort 34px + StayCard logical start/end
+// + Stay sort 30×30 + StayCard logical start/end
 // + SmartAssetCard start/end + Section activeFilterCount includes sort).
 
 import test from "node:test";
@@ -1177,7 +1177,7 @@ test("Profile role prefers /me over Clerk publicMetadata", () => {
 test("Banks hub hides Join when institution membership is active", () => {
   const src = fs.readFileSync(BANKS, "utf8");
   assert.match(src, /onMembershipChange/);
-  assert.match(src, /!isFiMember/);
+  assert.match(src, /showJoinCta/);
   assert.match(src, /testID="banks-join-box"/);
   assert.match(
     src,
@@ -1196,6 +1196,17 @@ test("Banks hub shows awaiting-admin link for FI role without membership", () =>
   assert.match(src, /showAwaitingAdminLink/);
   assert.match(src, /financial_institution/);
   assert.match(src, /useGetMe/);
+});
+
+test("Profile role prefers /me over Clerk publicMetadata", () => {
+  const src = fs.readFileSync(PROFILE, "utf8");
+  assert.match(src, /meQuery\.data\?\.data\?\.role/);
+  assert.match(
+    src,
+    /const role = meRole \|\| clerkRole/,
+    "profile must use DB role first (S1)",
+  );
+  assert.match(src, /demoteBlockedTitle/, "client demote guard copy");
 });
 
 test("Banks productsHint honesty keys exist in en+ar", () => {

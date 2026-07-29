@@ -19,7 +19,18 @@ export function routeForNotification(
   const d = (data ?? {}) as Record<string, unknown>;
 
   if (type === "message" && typeof d.conversation_id === "string") {
-    return { pathname: "/messages/[id]", params: { id: d.conversation_id } };
+    // Pass listingId when the server stamped it (ConversationService always
+    // does). Thread still opens with id alone; listingId unlocks seller chrome
+    // later if role is also present — never invent role here.
+    return {
+      pathname: "/messages/[id]",
+      params: {
+        id: d.conversation_id,
+        ...(typeof d.listing_id === "string"
+          ? { listingId: d.listing_id }
+          : {}),
+      },
+    };
   }
 
   if (type === "rfq" && typeof d.rfq_id === "string") {

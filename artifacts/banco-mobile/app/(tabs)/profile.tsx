@@ -11,18 +11,18 @@ import {
   getGetMyListingsQueryKey,
   getGetMyMetricsQueryKey,
   getGetMySocialLinksQueryKey,
-  getMyListings,
   setMySocialLinks,
   promoteUpload,
   updateMe,
   useGetMe,
+  useGetMyListings,
   useGetMyMetrics,
   useGetMySocialLinks,
   type FeedItem,
   type SocialLink,
   type SocialLinkPlatform,
 } from "@workspace/api-client-react";
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -140,6 +140,7 @@ export default function ProfileScreen() {
   const [lastName, setLastName] = useState("");
 
   const [showPhotoRationale, setShowPhotoRationale] = useState(false);
+  const [showCoverRationale, setShowCoverRationale] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [phone, setPhone] = useState("");
@@ -152,9 +153,7 @@ export default function ProfileScreen() {
   const pendingFirstNameRef = useRef("");
   const pendingLastNameRef = useRef("");
 
-  const [oauthLoading, setOauthLoading] = useState<
-    null | "google" | "apple" | "facebook"
-  >(
+  const [oauthLoading, setOauthLoading] = useState<null | "google" | "apple">(
     null
   );
   const [needsAccountType, setNeedsAccountType] = useState(false);
@@ -179,24 +178,8 @@ export default function ProfileScreen() {
     query: { queryKey: getGetMySocialLinksQueryKey(), enabled: !!user, staleTime: 60_000 },
   });
   // The Instagram-style grid of the caller's OWN real listings (role-agnostic).
-  //
-  // Paged, because the endpoint always was. `GET /me/listings` defaults to 20 per
-  // page and returns a cursor, but this screen only ever read the first page and
-  // never followed it — so a dealer with 50 listings saw 20 of their OWN stock and
-  // had no way to reach the rest, with nothing on screen admitting more existed.
-  // Silent truncation of a seller's own inventory is the worst kind: they conclude
-  // their listings were lost.
-  const listingsQuery = useInfiniteQuery({
-    queryKey: [...getGetMyListingsQueryKey(), "paged"],
-    enabled: !!user,
-    staleTime: 30_000,
-    initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) => getMyListings({ cursor: pageParam }),
-    // Trust the server's has_next rather than inferring from page length — a total
-    // that happens to be an exact multiple of the page size would otherwise cause
-    // one phantom fetch that returns nothing.
-    getNextPageParam: (last) =>
-      last.meta?.has_next ? last.meta.cursor : undefined,
+  const listingsQuery = useGetMyListings(undefined, {
+    query: { queryKey: getGetMyListingsQueryKey(), enabled: !!user, staleTime: 30_000 },
   });
   // Refetch the profile grid when the user publishes a listing so it appears
   // immediately — the profile tab stays mounted, so react-query won't refetch on
@@ -249,7 +232,8 @@ export default function ProfileScreen() {
             ...(user.unsafeMetadata ?? {}),
             termsAcceptedAt: new Date().toISOString(),
             termsVersion: CONSENT_VERSION,
-            accountTypeChosen: true,
+            // accountTypeChosen stays false until /me sync succeeds — otherwise
+            // a failed updateMe + cold restart skips the retry gate forever.
           },
         });
       } catch (e) {
@@ -258,14 +242,33 @@ export default function ProfileScreen() {
       // Persist the chosen account type (server-authoritative role mapping)
       // plus optional phone. Clerk token is already wired by the
       // AuthTokenBridge once the session is active.
+      let synced = false;
       try {
         await updateMe({
           account_type: goBusiness ? "dealer" : "individual",
           ...(phoneToSave ? { phone: phoneToSave } : {}),
         });
+        synced = true;
+        try {
+          await user.update({
+            unsafeMetadata: {
+              ...(user.unsafeMetadata ?? {}),
+              accountTypeChosen: true,
+            },
+          });
+        } catch (e) {
+          console.warn("[profile] accountTypeChosen post-sync failed", e);
+        }
       } catch (e) {
         console.warn("[profile] post-signup account_type save failed", e);
+        // Do not silently leave DB role/phone out of sync after Clerk session
+        // is live — reopen the existing account-type gate (SSO parity).
+        Alert.alert(t("profile.accountTypeError"));
+        setNeedsAccountType(true);
       }
+      // Never continue into business onboarding on a failed /me sync — that
+      // created a half-wired journey (Alert then still router.push).
+      if (!synced) return;
       // Business signups continue straight into fast onboarding.
       if (goBusiness) {
         router.push("/business/onboarding");
@@ -343,7 +346,9 @@ export default function ProfileScreen() {
 
   // Cover photo — reuses the shared media upload (returns a hosted URL) and
   // stores only the URL string in Clerk unsafeMetadata. No new endpoint.
+  // OS gallery prompt fires ONLY after in-app rationale (Play/iOS disclosure).
   const launchCoverPicker = async () => {
+    setShowCoverRationale(false);
     setShowMenu(false);
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -515,18 +520,13 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleOAuth = async (provider: "google" | "apple" | "facebook") => {
+  const handleOAuth = async (provider: "google" | "apple") => {
     if (oauthLoading) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setOauthLoading(provider);
     try {
       const { createdSessionId, setActive: ssoSetActive } = await startSSOFlow({
-        strategy:
-          provider === "google"
-            ? "oauth_google"
-            : provider === "facebook"
-              ? "oauth_facebook"
-              : "oauth_apple",
+        strategy: provider === "google" ? "oauth_google" : "oauth_apple",
         redirectUrl: AuthSession.makeRedirectUri(),
       });
       if (createdSessionId && ssoSetActive) {
@@ -566,6 +566,10 @@ export default function ProfileScreen() {
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSavingAccountType(true);
+    // Dismiss the gate while the request is in flight so a slow backend cannot
+    // trap the user (df68258). On /me failure we reopen + clear the Clerk flag
+    // so a cold restart cannot skip the retry forever.
+    setNeedsAccountType(false);
     try {
       await updateMe({ account_type: type });
       try {
@@ -579,8 +583,8 @@ export default function ProfileScreen() {
       } catch (e) {
         console.warn("[profile] accountTypeChosen flag save failed", e);
       }
+      await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setNeedsAccountType(false);
       // Dealer / company / financial-institution all continue to the business
       // onboarding, where verification (KYC / bank approval) is collected.
       // FI must pass intent=fi so activity + account_type stay bank — never dealer.
@@ -590,6 +594,17 @@ export default function ProfileScreen() {
         router.push("/business/onboarding");
       }
     } catch {
+      try {
+        await user?.update({
+          unsafeMetadata: {
+            ...(user.unsafeMetadata ?? {}),
+            accountTypeChosen: false,
+          },
+        });
+      } catch (e) {
+        console.warn("[profile] accountTypeChosen revert failed", e);
+      }
+      setNeedsAccountType(true);
       Alert.alert(t("profile.accountTypeError"));
     } finally {
       setSavingAccountType(false);
@@ -678,14 +693,39 @@ export default function ProfileScreen() {
 
   if (user && needsAccountType) {
     return (
-      <ScrollView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        contentContainerStyle={[
-          styles.authContent,
-          { paddingTop: topPad + 40 },
-        ]}
-        keyboardShouldPersistTaps="handled"
-      >
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Skip / dismiss — continues as individual (224ef4f; wiped by 93b650b) */}
+        <View
+          style={{
+            paddingTop: topPad + 6,
+            paddingHorizontal: 16,
+            paddingBottom: 4,
+            alignItems: isRTL ? "flex-start" : "flex-end",
+          }}
+        >
+          <Pressable
+            onPress={() => chooseAccountType("individual")}
+            disabled={savingAccountType}
+            hitSlop={12}
+            style={{ padding: 8 }}
+            testID="onboard-skip"
+          >
+            <AppText
+              style={{
+                color: colors.mutedForeground,
+                fontSize: 14,
+                fontFamily: "Inter_500Medium",
+              }}
+            >
+              {isRTL ? "تخطى" : "Skip"}
+            </AppText>
+          </Pressable>
+        </View>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={[styles.authContent, { paddingTop: 20 }]}
+          keyboardShouldPersistTaps="handled"
+        >
         <BancoLogo height={40} style={styles.authLogoImg} />
         <AppText style={[styles.authTitle, { color: colors.foreground }]}>
           {t("profile.chooseAccountType")}
@@ -816,6 +856,7 @@ export default function ProfileScreen() {
           )}
         </Pressable>
       </ScrollView>
+      </View>
     );
   }
 
@@ -915,15 +956,15 @@ export default function ProfileScreen() {
         route: "/business/requests",
       });
     }
-    // Every page fetched so far, flattened — the grid grows as the seller pages.
-    const posts = listingsQuery.data?.pages.flatMap((p) => p.data) ?? [];
+    const posts = listingsQuery.data?.data ?? [];
     const hasBookableRentals = filterBookableListings(posts).length > 0;
     // Banks are not rental hosts — do not push the rental hub from FI role alone.
     const showRentalHub = hasBookableRentals || (isBusiness && !isFi);
 
-    // Plain array (NOT useMemo): this code sits inside a conditional `if (user)`
-    // branch, so any hook here breaks the Rules of Hooks and crashes the screen
-    // with "Rendered more hooks than during the previous render".
+    // Plain array — NOT useMemo. This block runs only after early returns
+    // (!isLoaded / needsAccountType). A hook here violates Rules of Hooks when
+    // auth/onboarding paths skip it (crash risk on signed-in ↔ loading flips).
+    // Proven-stable pattern: bancoo tip used a plain menuItems array.
     const menuItems: {
       key: string;
       icon: React.ComponentProps<typeof Feather>["name"];
@@ -941,7 +982,10 @@ export default function ProfileScreen() {
         key: "cover",
         icon: "image",
         label: t("profile.changeCover"),
-        onPress: launchCoverPicker,
+        onPress: () => {
+          setShowMenu(false);
+          setShowCoverRationale(true);
+        },
       },
       {
         key: "listings",
@@ -1088,11 +1132,12 @@ export default function ProfileScreen() {
             ]}
           >
             <Pressable
-              onPress={launchCoverPicker}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowCoverRationale(true);
+              }}
               hitSlop={8}
               style={styles.coverActionBtn}
-              accessibilityRole="button"
-              accessibilityLabel={t("profile.changeCover")}
               testID="cover-edit"
             >
               {uploadingCover ? (
@@ -1119,8 +1164,6 @@ export default function ProfileScreen() {
                   borderColor: colors.background,
                 },
               ]}
-              accessibilityRole="button"
-              accessibilityLabel={t("profile.photoAccessConfirm")}
               testID="avatar-edit"
             >
               <View style={styles.avatarLargeInner}>
@@ -1185,8 +1228,6 @@ export default function ProfileScreen() {
                   styles.editProfileBtn,
                   { borderColor: colors.border, borderRadius: colors.radius, paddingHorizontal: 10 },
                 ]}
-                accessibilityRole="button"
-                accessibilityLabel={t("common.more")}
                 testID="profile-menu"
                 hitSlop={8}
               >
@@ -1232,7 +1273,7 @@ export default function ProfileScreen() {
             >
               <AppText style={[styles.roleText, { color: colors.primary }]}>
                 {categoryLabel ||
-                  ((user.publicMetadata?.role as string) || t("profile.member"))
+                  (role || t("profile.member"))
                     .replace(/_/g, " ")
                     .replace(/\b\w/g, (c) => c.toUpperCase())}
               </AppText>
@@ -1787,7 +1828,6 @@ export default function ProfileScreen() {
             </Pressable>
           </View>
         ) : (
-          <>
           <View style={styles.postsGrid}>
             {posts.map((item) => (
               <Pressable
@@ -1901,33 +1941,6 @@ export default function ProfileScreen() {
               </Pressable>
             ))}
           </View>
-          {/* The rest of the seller's own stock. Rendered only when the server
-              says more exist, so a seller with one page never sees a dead control. */}
-          {listingsQuery.hasNextPage ? (
-            <Pressable
-              onPress={() => {
-                Haptics.selectionAsync();
-                listingsQuery.fetchNextPage();
-              }}
-              disabled={listingsQuery.isFetchingNextPage}
-              style={[
-                styles.postsLoadMore,
-                { borderColor: colors.border, backgroundColor: colors.card },
-              ]}
-              testID="profile-load-more-listings"
-              accessibilityRole="button"
-              accessibilityLabel={t("profile.loadMoreListings")}
-            >
-              {listingsQuery.isFetchingNextPage ? (
-                <ActivityIndicator size="small" color={colors.mutedForeground} />
-              ) : (
-                <AppText style={[styles.postsLoadMoreText, { color: colors.foreground }]}>
-                  {t("profile.loadMoreListings")}
-                </AppText>
-              )}
-            </Pressable>
-          ) : null}
-          </>
         )}
 
         <Modal
@@ -2040,6 +2053,23 @@ export default function ProfileScreen() {
           config={{
             icon: "image-outline",
             title: t("profile.photoAccessTitle"),
+            message: t("profile.photoAccessMessage"),
+            bullets: [
+              t("profile.photoAccessBullet1"),
+              t("profile.photoAccessBullet2"),
+              t("profile.photoAccessBullet3"),
+            ],
+            confirmLabel: t("profile.photoAccessConfirm"),
+          }}
+        />
+
+        <PermissionRationaleModal
+          visible={showCoverRationale}
+          onAcknowledge={launchCoverPicker}
+          onCancel={() => setShowCoverRationale(false)}
+          config={{
+            icon: "image-outline",
+            title: t("profile.coverAccessTitle"),
             message: t("profile.photoAccessMessage"),
             bullets: [
               t("profile.photoAccessBullet1"),
@@ -2278,23 +2308,27 @@ export default function ProfileScreen() {
           </View>
         </Modal>
 
-        {/* Overflow menu → existing routes only */}
+        {/* Overflow menu → existing routes only.
+            Touch-safe pattern (f70e016) + scroll/cap (4ccf939): sibling dismiss
+            Pressable — NEVER nest sheet under backdrop Pressable with a
+            start-should-set-responder trap (that was reintroduced by 93b650b wipe). */}
         <Modal
           visible={showMenu}
           transparent
           animationType="slide"
           onRequestClose={() => setShowMenu(false)}
         >
-          <Pressable
-            style={styles.menuBackdrop}
-            onPress={() => setShowMenu(false)}
-          >
+          <View style={styles.menuBackdrop}>
+            <Pressable
+              style={StyleSheet.absoluteFillObject}
+              onPress={() => setShowMenu(false)}
+              accessibilityRole="button"
+            />
             <View
               style={[
                 styles.menuSheet,
                 { backgroundColor: colors.card, borderColor: colors.border },
               ]}
-              onStartShouldSetResponder={() => true}
             >
               <View
                 style={[styles.menuHandle, { backgroundColor: colors.border }]}
@@ -2310,40 +2344,48 @@ export default function ProfileScreen() {
                   {userEmail}
                 </AppText>
               ) : null}
-              {menuItems.map((mi) => (
-                <Pressable
-                  key={mi.key}
-                  onPress={mi.onPress}
-                  style={[styles.menuItem, isRTL && styles.rowReverse]}
-                  testID={`menu-${mi.key}`}
-                >
-                  <Feather
-                    name={mi.icon}
-                    size={18}
-                    color={mi.danger ? colors.destructive : colors.foreground}
-                  />
-                  <AppText
-                    style={[
-                      styles.menuItemText,
-                      {
-                        color: mi.danger
-                          ? colors.destructive
-                          : colors.foreground,
-                        textAlign: isRTL ? "right" : "left",
-                      },
-                    ]}
+              <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+                {menuItems.map((mi) => (
+                  <Pressable
+                    key={mi.key}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setShowMenu(false);
+                      mi.onPress();
+                    }}
+                    style={[styles.menuItem, isRTL && styles.rowReverse]}
+                    testID={`menu-${mi.key}`}
                   >
-                    {mi.label}
-                  </AppText>
-                  <Feather
-                    name={isRTL ? "chevron-left" : "chevron-right"}
-                    size={16}
-                    color={colors.mutedForeground}
-                  />
-                </Pressable>
-              ))}
+                    <Feather
+                      name={mi.icon}
+                      size={18}
+                      color={
+                        mi.danger ? colors.destructive : colors.foreground
+                      }
+                    />
+                    <AppText
+                      style={[
+                        styles.menuItemText,
+                        {
+                          color: mi.danger
+                            ? colors.destructive
+                            : colors.foreground,
+                          textAlign: isRTL ? "right" : "left",
+                        },
+                      ]}
+                    >
+                      {mi.label}
+                    </AppText>
+                    <Feather
+                      name={isRTL ? "chevron-left" : "chevron-right"}
+                      size={16}
+                      color={colors.mutedForeground}
+                    />
+                  </Pressable>
+                ))}
+              </ScrollView>
             </View>
-          </Pressable>
+          </View>
         </Modal>
       </ScrollView>
     );
@@ -2971,32 +3013,6 @@ export default function ProfileScreen() {
             <Ionicons name="logo-google" size={18} color={colors.foreground} />
             <AppText style={[styles.oauthBtnText, { color: colors.foreground }]}>
               {t("profile.continueWithGoogle")}
-            </AppText>
-          </>
-        )}
-      </Pressable>
-
-      <Pressable
-        onPress={() => handleOAuth("facebook")}
-        disabled={!!oauthLoading}
-        style={[
-          styles.oauthBtn,
-          {
-            backgroundColor: colors.card,
-            borderColor: colors.border,
-            borderRadius: colors.radius,
-          },
-          isRTL && styles.rowReverse,
-        ]}
-        testID="oauth-facebook"
-      >
-        {oauthLoading === "facebook" ? (
-          <ActivityIndicator color={colors.foreground} size="small" />
-        ) : (
-          <>
-            <Ionicons name="logo-facebook" size={18} color={colors.foreground} />
-            <AppText style={[styles.oauthBtnText, { color: colors.foreground }]}>
-              {t("profile.continueWithFacebook")}
             </AppText>
           </>
         )}
@@ -3660,26 +3676,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
   },
-  postsLoadMore: {
-    marginHorizontal: 16,
-    marginTop: 12,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  postsLoadMoreText: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-  },
   postsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    // 2-col grid: tileSize already subtracts one GRID_GAP, so apply that gap
-    // BETWEEN the columns (was missing → the two cards touched and the 12px
-    // landed as dead space on the right / asymmetric margin after the shrink).
-    columnGap: GRID_GAP,
   },
   postTile: {
     marginBottom: GRID_GAP,
@@ -3966,6 +3965,9 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 36,
     borderWidth: 1,
+    // Cap the sheet so a long menu (11+ rows on a small screen) scrolls inside
+    // instead of overflowing above the top of the screen. (4ccf939; wiped by 93b650b)
+    maxHeight: "85%",
   },
   menuHandle: {
     width: 40,

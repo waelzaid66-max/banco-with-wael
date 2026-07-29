@@ -35,10 +35,9 @@ export function marketCountryLabel(
 
 /**
  * Initial Leaflet framing for an empty/default map keyed by market ISO.
- * Restored after 93b650b wiped it (originally b68c8af): without it every market
- * silently framed Egypt, so switching to Saudi/UAE/Morocco opened a map of the
- * wrong country. Covers exactly the MARKET_COUNTRIES catalog (21 markets);
- * Egypt stays the fallback for an unknown code.
+ * Restored after 93b650b wiped it from this module (was on b68c8af).
+ * EU markets added to match MARKET_COUNTRIES catalog (FR/DE/ES/IT).
+ * LB/MA/TN/SD filled so catalog markets do not silently frame as Egypt.
  */
 export function marketCountryMapCenter(code: string): {
   lat: number;

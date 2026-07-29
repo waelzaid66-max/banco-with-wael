@@ -253,6 +253,10 @@ export async function createListing(
 
   for (const m of input.media) {
     await assertCallerMayUseUpload(m.url, userId);
+    // Poster URLs are first-party uploads too — never accept an unclaimed poster.
+    if (m.thumbnail_url) {
+      await assertCallerMayUseUpload(m.thumbnail_url, userId);
+    }
   }
 
   // Ensure DB user exists
@@ -447,6 +451,14 @@ export async function createListing(
       await objectStorageService.promoteServingUrlToPublic(m.url, userId);
       const wildcard = parseServingWildcard(m.url);
       if (wildcard) await consumeUploadClaim(servingWildcardToObjectPath(wildcard));
+      if (m.thumbnail_url && m.thumbnail_url !== m.url) {
+        await assertCallerMayUseUpload(m.thumbnail_url, userId);
+        await objectStorageService.promoteServingUrlToPublic(m.thumbnail_url, userId);
+        const posterWild = parseServingWildcard(m.thumbnail_url);
+        if (posterWild) {
+          await consumeUploadClaim(servingWildcardToObjectPath(posterWild));
+        }
+      }
     })
   );
 
@@ -1093,7 +1105,11 @@ export async function updateListing(
     .limit(1);
 
   const mediaRows = await db
-    .select({ type: listingMedia.type, url: listingMedia.url })
+    .select({
+      type: listingMedia.type,
+      url: listingMedia.url,
+      thumbnailUrl: listingMedia.thumbnailUrl,
+    })
     .from(listingMedia)
     .where(eq(listingMedia.listingId, id))
     .orderBy(desc(listingMedia.isThumbnail), asc(listingMedia.sortOrder));
@@ -1118,6 +1134,9 @@ export async function updateListing(
     );
     for (const m of updates.media) {
       await assertCallerMayUseUpload(m.url, clerkUserId);
+      if (m.thumbnail_url) {
+        await assertCallerMayUseUpload(m.thumbnail_url, clerkUserId);
+      }
     }
   }
 
@@ -1255,6 +1274,28 @@ export async function updateListing(
           const wildcard = parseServingWildcard(m.url);
           if (wildcard) await consumeUploadClaim(servingWildcardToObjectPath(wildcard));
         })
+    );
+    // Promote newly referenced posters (may be an existing image URL already
+    // public — promote/claim helpers are idempotent for owned objects).
+    const previousPosterUrls = new Set(
+      mediaRows.map((m) => m.thumbnailUrl).filter((u): u is string => !!u),
+    );
+    await Promise.all(
+      updates.media
+        .filter(
+          (m) =>
+            !!m.thumbnail_url &&
+            m.thumbnail_url !== m.url &&
+            !previousPosterUrls.has(m.thumbnail_url) &&
+            !previousMediaUrls.has(m.thumbnail_url),
+        )
+        .map(async (m) => {
+          const poster = m.thumbnail_url!;
+          await assertCallerMayUseUpload(poster, clerkUserId);
+          await objectStorageService.promoteServingUrlToPublic(poster, clerkUserId);
+          const wildcard = parseServingWildcard(poster);
+          if (wildcard) await consumeUploadClaim(servingWildcardToObjectPath(wildcard));
+        }),
     );
   }
 

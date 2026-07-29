@@ -5,10 +5,10 @@ import {
   getListing,
   useUpdateListing,
 } from "@workspace/api-client-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -22,6 +22,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "@/components/AppText";
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { LocationPicker } from "@/components/LocationPicker";
+import {
+  ListingMediaEditor,
+  type ListingMediaEditorHandle,
+} from "@/components/listings/ListingMediaEditor";
 import {
   MARKET_COUNTRIES,
   currencyForMarket,
@@ -42,6 +46,7 @@ export default function EditListingScreen() {
   const colors = useColors();
   const { t, isRTL } = useI18n();
   const { bumpListings } = useSession();
+  const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   // Same safe-area contract as Search/Section — fake web 67 crushed chrome.
   const topPad = Math.max(insets.top, Platform.OS === "web" ? 12 : 0);
@@ -69,6 +74,7 @@ export default function EditListingScreen() {
   const [marketCountry, setMarketCountry] = useState("EG");
   const [currency, setCurrency] = useState("EGP");
   const [hydrated, setHydrated] = useState(false);
+  const mediaRef = useRef<ListingMediaEditorHandle>(null);
 
   useEffect(() => {
     if (!listing || hydrated) return;
@@ -97,7 +103,14 @@ export default function EditListingScreen() {
     mutation: {
       onSuccess: () => {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // Session bump refreshes list surfaces; also invalidate this listing so
+        // detail/edit reload does not show stale title/media after PATCH.
         bumpListings();
+        if (id) {
+          void queryClient.invalidateQueries({
+            queryKey: getGetListingQueryKey(id),
+          });
+        }
         Alert.alert(t("editListing.savedTitle"), t("editListing.savedBody"), [
           { text: t("common.done"), onPress: () => router.back() },
         ]);
@@ -116,6 +129,17 @@ export default function EditListingScreen() {
       Alert.alert(t("common.error"), t("editListing.priceRequired"));
       return;
     }
+    // Media editor is production-complete (WAVE-10) but was left unwired after
+    // wipe restores — edit previously PATCH'd text/price only (EDIT-MEDIA-DEAD).
+    if (mediaRef.current?.hasPendingUploads()) {
+      Alert.alert(t("common.error"), t("create.uploading"));
+      return;
+    }
+    const media = mediaRef.current?.buildMediaPayload();
+    if (media === null) {
+      Alert.alert(t("common.error"), t("create.errPhotos"));
+      return;
+    }
     mutate({
       id,
       data: {
@@ -125,6 +149,7 @@ export default function EditListingScreen() {
         base_price_cash,
         // Merged server-side — only these two keys change, other specs stay.
         specs: { market_country: marketCountry, currency },
+        media,
       },
     });
   };
@@ -191,6 +216,14 @@ export default function EditListingScreen() {
           <AppText style={[styles.locked, { color: colors.mutedForeground, textAlign: isRTL ? "right" : "left" }]}>
             {t("editListing.lockedType")}
           </AppText>
+
+          {/* WAVE-10 media editor — was dead (no importer) until EDIT-MEDIA-DEAD repair. */}
+          <ListingMediaEditor
+            ref={mediaRef}
+            initialMedia={listing.media ?? []}
+            isRequest={!!listing.is_request}
+            testIdPrefix="edit-listing"
+          />
 
           <Field label={t("create.titleField")} colors={colors} isRTL={isRTL}>
             <TextInput

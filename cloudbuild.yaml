@@ -18,6 +18,10 @@ steps:
       - build
       - -f
       - Dockerfile
+      - --build-arg
+      - GIT_SHA=$COMMIT_SHA
+      - --build-arg
+      - BUILD_ID=$BUILD_ID
       - -t
       - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_AR_REPO}/${_IMAGE_NAME}:$BUILD_ID
       - -t

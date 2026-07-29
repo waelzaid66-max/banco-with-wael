@@ -555,6 +555,8 @@ async function runLightweightBuild() {
  *
  * EXPO_WEB_BASE_URL bakes the deployment path prefix (/banco-mobile) into
  * asset URLs via app.config.ts experiments.baseUrl.
+ * Restored from bancoo handoff (C-WEB-BASE) — without this, browsers only see
+ * the Expo Go QR landing page.
  */
 function exportWebBuild() {
   console.log("Exporting web build (expo export --platform web)...");

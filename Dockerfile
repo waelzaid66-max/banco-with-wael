@@ -58,6 +58,13 @@ COPY --from=builder /app/artifacts/api-server/node_modules ./artifacts/api-serve
 COPY --from=builder /app/artifacts/api-server/package.json ./artifacts/api-server/package.json
 COPY --from=builder /app/artifacts/api-server/dist ./artifacts/api-server/dist
 
+# Deploy pin (F1): bake commit/build so /api/readyz can report live SHA.
+# Empty defaults keep local/dev images honest (gitSha/buildId → null at runtime).
+ARG GIT_SHA=
+ARG BUILD_ID=
+ENV GIT_SHA=$GIT_SHA
+ENV BUILD_ID=$BUILD_ID
+
 # Non-root.
 RUN useradd -r -u 10001 -g root banco && chown -R banco:root /app
 USER banco

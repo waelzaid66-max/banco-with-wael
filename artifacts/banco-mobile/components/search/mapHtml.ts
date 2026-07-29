@@ -54,7 +54,9 @@ export type MapBridgeMessage =
   | { type: "ready" }
   | { type: "error" }
   | { type: "select"; id: string }
-  | { type: "viewport"; bounds: MapViewportBounds; zoom: number };
+  | { type: "viewport"; bounds: MapViewportBounds; zoom: number }
+  /** Locate-me failed (permission deny / timeout / unavailable) — host shows Alert. */
+  | { type: "locate_error"; reason: "denied" | "unavailable" | "timeout" };
 
 const LEAFLET = "https://unpkg.com/leaflet@1.9.4/dist";
 const CLUSTER = "https://unpkg.com/leaflet.markercluster@1.5.3/dist";
@@ -101,44 +103,14 @@ export function feedItemsToMarkers(items: FeedItem[]): MapMarker[] {
 export function buildMapHtml(
   markers: MapMarker[],
   theme: MapTheme,
-  // Initial framing for the selected market. Optional so existing callers keep
-  // working; Egypt stays the default exactly as before.
   center?: { lat: number; lng: number; zoom: number },
-  // "Near me" area: drawn as a soft circle so the user SEES the radius being
-  // searched instead of guessing. Optional — omitted callers render as before.
-  near?: { lat: number; lng: number; radiusKm: number },
 ): string {
-  const lat = center?.lat ?? 26.8;
-  const lng = center?.lng ?? 30.8;
-  const zoom = center?.zoom ?? 6;
-  // Values are coerced to finite numbers before being inlined into the page.
-  const nearLat = Number(near?.lat);
-  const nearLng = Number(near?.lng);
-  const nearMeters = Math.round(Number(near?.radiusKm) * 1000);
-  const nearScript =
-    near && Number.isFinite(nearLat) && Number.isFinite(nearLng) && nearMeters > 0
-      ? `
-    L.circle([${nearLat}, ${nearLng}], {
-      radius: ${nearMeters},
-      color: "${theme.primary}",
-      weight: 2,
-      opacity: 0.9,
-      fillColor: "${theme.primary}",
-      fillOpacity: 0.08,
-      interactive: false
-    }).addTo(map);
-    L.circleMarker([${nearLat}, ${nearLng}], {
-      radius: 5,
-      color: "#ffffff",
-      weight: 2,
-      fillColor: "${theme.primary}",
-      fillOpacity: 1,
-      interactive: false
-    }).addTo(map);`
-      : "";
   // JSON is safe inside a <script> except for a literal "</script>"; escaping
   // "<" to its unicode form neutralizes that without changing the parsed data.
   const json = JSON.stringify(markers).replace(/</g, "\\u003c");
+  const lat = center?.lat ?? 26.8;
+  const lng = center?.lng ?? 30.8;
+  const zoom = center?.zoom ?? 6;
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -218,6 +190,18 @@ export function buildMapHtml(
   .marker-cluster-small,
   .marker-cluster-medium,
   .marker-cluster-large { background: rgba(0,0,0,0.18); }
+  .locate-btn {
+    width: 40px; height: 40px; background: ${theme.card};
+    border: 1px solid ${theme.border}; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.35); cursor: pointer; margin-bottom: 8px;
+  }
+  .locate-btn svg { width: 20px; height: 20px; stroke: ${theme.primary}; }
+  .me-dot {
+    width: 16px; height: 16px; background: #2F80ED; border: 3px solid #fff;
+    border-radius: 50%; box-shadow: 0 0 0 6px rgba(47,128,237,0.25);
+    transform: translate(-50%, -50%);
+  }
 </style>
 </head>
 <body>
@@ -251,7 +235,41 @@ export function buildMapHtml(
       maxZoom: 19,
       attribution: "&copy; OpenStreetMap"
     }).addTo(map);
-${nearScript}
+
+    // "Locate me" control — centres the map on the device GPS and drops a
+    // you-are-here dot (fcd7d1c; wiped by 93b650b; restored surgically).
+    var meMarker = null;
+    var LocateControl = L.Control.extend({
+      options: { position: "bottomright" },
+      onAdd: function () {
+        var b = L.DomUtil.create("div", "locate-btn");
+        b.setAttribute("title", "My location");
+        b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke-linejoin="round" stroke-linecap="round" stroke-width="2"><circle cx="12" cy="12" r="7"></circle><line x1="12" y1="1" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="23"></line><line x1="1" y1="12" x2="4" y2="12"></line><line x1="20" y1="12" x2="23" y2="12"></line></svg>';
+        L.DomEvent.disableClickPropagation(b);
+        b.onclick = function () {
+          if (!navigator.geolocation) {
+            post({ type: "locate_error", reason: "unavailable" });
+            return;
+          }
+          navigator.geolocation.getCurrentPosition(function (p) {
+            var ll = [p.coords.latitude, p.coords.longitude];
+            map.setView(ll, 14);
+            if (meMarker) { map.removeLayer(meMarker); }
+            meMarker = L.marker(ll, {
+              icon: L.divIcon({ className: "", html: '<div class="me-dot"></div>', iconSize: [16, 16] })
+            }).addTo(map);
+          }, function (err) {
+            // N2: never fail silently on Android/iOS WebView permission deny/timeout.
+            var reason = "unavailable";
+            if (err && err.code === 1) reason = "denied";
+            else if (err && err.code === 3) reason = "timeout";
+            post({ type: "locate_error", reason: reason });
+          }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 });
+        };
+        return b;
+      }
+    });
+    map.addControl(new LocateControl());
 
     // Layer 1 — the loaded page, shown instantly so the map is never blank.
     var group = L.markerClusterGroup

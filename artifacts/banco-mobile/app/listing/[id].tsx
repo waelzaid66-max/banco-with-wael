@@ -21,10 +21,13 @@ import {
   getGetCompanyQueryKey,
   useGetMe,
   getGetMeQueryKey,
+  getGetListingQueryKey,
+  getGetMyListingsQueryKey,
   updateListing,
   ContactLeadBodyActionType,
   type CreateReportBodyReason,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import React, {
   useCallback,
   useEffect,
@@ -95,10 +98,24 @@ export default function ListingDetailScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
-  const { sessionId, isSaved, toggleSave, recordView, getCachedItem } =
+  const { sessionId, isSaved, toggleSave, recordView, getCachedItem, bumpListings } =
     useSession();
+  const queryClient = useQueryClient();
   const { playSound } = useSound();
   const { user, isSignedIn, isLoaded } = useUser();
+
+  const notifyListingsChanged = useCallback(
+    (listingId: string) => {
+      bumpListings();
+      void queryClient.invalidateQueries({
+        queryKey: getGetListingQueryKey(listingId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: getGetMyListingsQueryKey(),
+      });
+    },
+    [bumpListings, queryClient],
+  );
 
   const [listing, setListing] = useState<
     Awaited<ReturnType<typeof getListing>>["data"] | null
@@ -169,12 +186,24 @@ export default function ListingDetailScreen() {
   const rowDir = isRTL ? "row-reverse" : "row";
   const textAlign = isRTL ? "right" : "left";
 
-  // Best-effort buyer identity from the signed-in Clerk user; only included
-  // when present so guests can still submit anonymously.
+  // Identify the viewer so the owner sees a "mark sold" control instead of the
+  // buyer offer CTA. me.id and seller.id are both backend user ids.
+  // /me also carries phone SoT (profile save writes updateMe.phone — Clerk
+  // primaryPhoneNumber is often empty because we never createPhoneNumber).
+  const meQuery = useGetMe({
+    query: { enabled: !!isSignedIn, queryKey: getGetMeQueryKey() },
+  });
+  const meId = meQuery.data?.data?.id ?? null;
+
+  // Best-effort buyer identity from signed-in user; guests stay anonymous.
   const buyerIdentity: { buyer_name?: string; buyer_phone?: string } = {};
   const buyerName = (user?.fullName ?? user?.firstName ?? "").trim();
   if (buyerName) buyerIdentity.buyer_name = buyerName;
-  const buyerPhone = (user?.primaryPhoneNumber?.phoneNumber ?? "").trim();
+  const buyerPhone = (
+    meQuery.data?.data?.phone ||
+    user?.primaryPhoneNumber?.phoneNumber ||
+    ""
+  ).trim();
   if (buyerPhone) buyerIdentity.buyer_phone = buyerPhone;
 
   // Public seller trust stats. Enabled only once the listing (and its seller id)
@@ -184,13 +213,6 @@ export default function ListingDetailScreen() {
     query: { enabled: !!sellerId, queryKey: getGetCompanyQueryKey(sellerId) },
   });
   const company = companyRes?.data ?? null;
-
-  // Identify the viewer so the owner sees a "mark sold" control instead of the
-  // buyer offer CTA. me.id and seller.id are both backend user ids.
-  const meQuery = useGetMe({
-    query: { enabled: !!isSignedIn, queryKey: getGetMeQueryKey() },
-  });
-  const meId = meQuery.data?.data?.id ?? null;
 
   const loadListing = useCallback(async () => {
     if (!id) return;
@@ -279,6 +301,7 @@ export default function ListingDetailScreen() {
           try {
             await updateListing(listing.id, { status: "sold" });
             setListing((prev) => (prev ? { ...prev, status: "sold" } : prev));
+            notifyListingsChanged(listing.id);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           } catch {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -289,6 +312,78 @@ export default function ListingDetailScreen() {
         },
       },
     ]);
+  };
+
+  const handleArchive = () => {
+    if (!listing || marking) return;
+    Alert.alert(
+      t("mine.archiveTitle"),
+      t("mine.archiveBody", { title: listing.title ?? t("mine.deleteFallbackTitle") }),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("mine.archiveConfirm"),
+          onPress: async () => {
+            setMarking(true);
+            try {
+              await updateListing(listing.id, { status: "archived" });
+              setListing((prev) =>
+                prev ? { ...prev, status: "archived" } : prev,
+              );
+              notifyListingsChanged(listing.id);
+              Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Success,
+              );
+            } catch {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              Alert.alert(
+                t("mine.archiveFailedTitle"),
+                t("mine.archiveFailedBody"),
+              );
+            } finally {
+              setMarking(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleReactivate = () => {
+    if (!listing || marking) return;
+    Alert.alert(
+      t("mine.reactivateTitle"),
+      t("mine.reactivateBody", {
+        title: listing.title ?? t("mine.deleteFallbackTitle"),
+      }),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("mine.reactivateConfirm"),
+          onPress: async () => {
+            setMarking(true);
+            try {
+              await updateListing(listing.id, { status: "active" });
+              setListing((prev) =>
+                prev ? { ...prev, status: "active" } : prev,
+              );
+              notifyListingsChanged(listing.id);
+              Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Success,
+              );
+            } catch {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              Alert.alert(
+                t("mine.reactivateFailedTitle"),
+                t("mine.reactivateFailedBody"),
+              );
+            } finally {
+              setMarking(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   const submitRfq = async () => {
@@ -723,6 +818,8 @@ export default function ListingDetailScreen() {
   const aboveFoldBadge = listing.best_offer?.provider_badge ?? null;
   const isOwner = !!meId && meId === listing.seller?.id;
   const isSold = listing.status === "sold";
+  const isArchived = listing.status === "archived";
+  const isActive = listing.status === "active";
 
   // Role separation, made visible: only furnished/daily real-estate is bookable
   // (the hotel mode). Long-term rent and sale keep the plain contact-owner flow.
@@ -1147,43 +1244,109 @@ export default function ListingDetailScreen() {
                     {t("mine.edit")}
                   </AppText>
                 </Pressable>
-                <Pressable
-                  onPress={handleMarkSold}
-                  disabled={marking}
-                  style={[
-                    styles.offerBtn,
-                    {
-                      flexDirection: rowDir,
-                      borderColor: colors.primary,
-                      borderRadius: colors.radius,
-                      backgroundColor: colors.primary,
-                    },
-                  ]}
-                  testID="owner-mark-sold"
-                >
-                  {marking ? (
-                    <ActivityIndicator
-                      color={colors.primaryForeground}
-                      size="small"
-                    />
-                  ) : (
-                    <Feather
-                      name="tag"
-                      size={18}
-                      color={colors.primaryForeground}
-                    />
-                  )}
-                  <AppText
+                {isActive ? (
+                  <Pressable
+                    onPress={handleMarkSold}
+                    disabled={marking}
                     style={[
-                      styles.offerBtnText,
-                      { color: colors.primaryForeground },
+                      styles.offerBtn,
+                      {
+                        flexDirection: rowDir,
+                        borderColor: colors.primary,
+                        borderRadius: colors.radius,
+                        backgroundColor: colors.primary,
+                      },
                     ]}
+                    testID="owner-mark-sold"
                   >
-                    {t("chat.markSold")}
-                  </AppText>
-                </Pressable>
-                {listing.status === "active" ? (
-                  <PromoteButton listingId={listing.id} variant="full" />
+                    {marking ? (
+                      <ActivityIndicator
+                        color={colors.primaryForeground}
+                        size="small"
+                      />
+                    ) : (
+                      <Feather
+                        name="tag"
+                        size={18}
+                        color={colors.primaryForeground}
+                      />
+                    )}
+                    <AppText
+                      style={[
+                        styles.offerBtnText,
+                        { color: colors.primaryForeground },
+                      ]}
+                    >
+                      {t("chat.markSold")}
+                    </AppText>
+                  </Pressable>
+                ) : null}
+                {isActive ? (
+                  <Pressable
+                    onPress={handleArchive}
+                    disabled={marking}
+                    style={[
+                      styles.offerBtn,
+                      {
+                        flexDirection: rowDir,
+                        borderColor: colors.border,
+                        borderRadius: colors.radius,
+                        backgroundColor: colors.card,
+                      },
+                    ]}
+                    testID="owner-archive-listing"
+                  >
+                    <Feather name="archive" size={18} color={colors.foreground} />
+                    <AppText
+                      style={[styles.offerBtnText, { color: colors.foreground }]}
+                    >
+                      {t("mine.archive")}
+                    </AppText>
+                  </Pressable>
+                ) : null}
+                {isArchived ? (
+                  <Pressable
+                    onPress={handleReactivate}
+                    disabled={marking}
+                    style={[
+                      styles.offerBtn,
+                      {
+                        flexDirection: rowDir,
+                        borderColor: colors.primary,
+                        borderRadius: colors.radius,
+                        backgroundColor: colors.primary,
+                      },
+                    ]}
+                    testID="owner-reactivate-listing"
+                  >
+                    {marking ? (
+                      <ActivityIndicator
+                        color={colors.primaryForeground}
+                        size="small"
+                      />
+                    ) : (
+                      <Feather
+                        name="rotate-ccw"
+                        size={18}
+                        color={colors.primaryForeground}
+                      />
+                    )}
+                    <AppText
+                      style={[
+                        styles.offerBtnText,
+                        { color: colors.primaryForeground },
+                      ]}
+                    >
+                      {t("mine.reactivate")}
+                    </AppText>
+                  </Pressable>
+                ) : null}
+                {isActive ? (
+                  <PromoteButton
+                    listingId={listing.id}
+                    variant="full"
+                    onPromoted={() => notifyListingsChanged(listing.id)}
+                  />
                 ) : null}
               </View>
             )

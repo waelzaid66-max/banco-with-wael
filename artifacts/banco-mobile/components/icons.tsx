@@ -3,6 +3,7 @@ import type { StyleProp, ViewStyle } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import {
   Apple,
+  Archive,
   ArrowLeft,
   ArrowRight,
   Award,
@@ -196,6 +197,7 @@ const ICONS: Record<string, LucideIcon> = {
   "arrow-down-circle": CircleArrowDown,
   "arrow-left": ArrowLeft,
   "arrow-right": ArrowRight,
+  "archive": Archive,
   "award": Award,
   "bank-outline": Landmark,
   "bank-check": BadgeCheck,

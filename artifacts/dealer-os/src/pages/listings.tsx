@@ -2,7 +2,7 @@ import { useState } from "react";
 import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import {
   useGetDealerListings, getGetDealerListingsQueryKey,
-  useDealerBulkAction, useBoostListing,
+  useDealerBulkAction, useBoostListing, useUpdateListing,
   useGetPromoAdSummary, getGetPromoAdSummaryQueryKey
 } from "@workspace/api-client-react";
 import { useClerk } from "@clerk/react";
@@ -17,7 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Car, Factory, Home, ArrowUpRight, Archive, CheckCircle, Plus, Pencil, Gift } from "lucide-react";
+import { Loader2, Car, Factory, Home, ArrowUpRight, Archive, CheckCircle, Plus, Pencil, Gift, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
@@ -61,6 +61,7 @@ export default function ListingsPage() {
 
   const bulkActionMutation = useDealerBulkAction();
   const boostMutation = useBoostListing();
+  const updateListingMutation = useUpdateListing();
 
   const { data: promoResp } = useGetPromoAdSummary({
     query: { enabled: !!user, queryKey: getGetPromoAdSummaryQueryKey() },
@@ -145,6 +146,28 @@ export default function ListingsPage() {
         queryClient.invalidateQueries({ queryKey: getGetDealerListingsQueryKey({ limit: 100 }) });
       }
     });
+  };
+
+  // Mobile already closes deals via UpdateListingBody.status=sold; dealer-os
+  // had sold display labels but no row action (DEALER-OS-NO-MARK-SOLD).
+  const handleMarkSold = (id: string) => {
+    updateListingMutation.mutate(
+      { id, data: { status: "sold" } },
+      {
+        onSuccess: () => {
+          toast({ title: t("listings.toast.sold") });
+          queryClient.invalidateQueries({
+            queryKey: getGetDealerListingsQueryKey({ limit: 100 }),
+          });
+        },
+        onError: () => {
+          toast({
+            title: t("listings.toast.soldFailed"),
+            variant: "destructive",
+          });
+        },
+      },
+    );
   };
 
   const handleBoostSubmit = () => {
@@ -269,6 +292,19 @@ export default function ListingsPage() {
               {isActive ? <Archive className="w-4 h-4 mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
               {isActive ? t("listings.archive") : t("listings.activate")}
             </Button>
+            {isActive ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 border-white/10"
+                onClick={() => handleMarkSold(row.original.id!)}
+                disabled={updateListingMutation.isPending}
+                data-testid={`btn-sold-${row.original.id}`}
+              >
+                <Tag className="w-4 h-4 mr-2" />
+                {t("listings.markSold")}
+              </Button>
+            ) : null}
             <Button
               size="sm"
               className="h-8 bg-primary hover:bg-primary/90 text-white"

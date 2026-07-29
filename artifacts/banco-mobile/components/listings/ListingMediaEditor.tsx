@@ -387,6 +387,15 @@ export const ListingMediaEditor = forwardRef<
           is_thumbnail: i === firstImageIdx,
         });
       });
+      // VIDEO-POSTER (no frame extract): sibling cover image → video thumbnail_url.
+      const posterUrl = media.find((m) => m.type === "image")?.url;
+      if (posterUrl) {
+        for (const m of media) {
+          if (m.type === "video" && !m.thumbnail_url) {
+            m.thumbnail_url = posterUrl;
+          }
+        }
+      }
       return media;
     },
   }));

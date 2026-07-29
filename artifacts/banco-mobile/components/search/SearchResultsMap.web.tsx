@@ -42,15 +42,6 @@ export function SearchResultsMap({
           border: colors.border,
         },
         marketCountryMapCenter(criteria.marketCountry),
-        criteria.nearMeEnabled &&
-          criteria.nearLat != null &&
-          criteria.nearLng != null
-          ? {
-              lat: criteria.nearLat,
-              lng: criteria.nearLng,
-              radiusKm: criteria.nearRadiusKm,
-            }
-          : undefined,
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
@@ -61,10 +52,6 @@ export function SearchResultsMap({
       colors.foreground,
       colors.border,
       criteria.marketCountry,
-      criteria.nearMeEnabled,
-      criteria.nearLat,
-      criteria.nearLng,
-      criteria.nearRadiusKm,
     ],
   );
 
@@ -81,6 +68,10 @@ export function SearchResultsMap({
       try {
         const msg = JSON.parse(String(event.data)) as MapBridgeMessage;
         if (msg.type === "select" && typeof msg.id === "string") setSelectedId(msg.id);
+        else if (msg.type === "locate_error") {
+          // Web preview: soft console only — full Alert lives on native ASB/iOS.
+          console.warn("[map] locate_error", msg.reason);
+        }
       } catch {
         // Ignore non-map messages on the shared web message channel.
       }

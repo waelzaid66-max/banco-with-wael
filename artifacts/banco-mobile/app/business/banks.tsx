@@ -109,13 +109,19 @@ function InstitutionInboxSection({
   const { mutate: updateRequest, isPending } = useUpdateInstitutionRequest();
   const [pendingLead, setPendingLead] = React.useState<string | null>(null);
 
-  // Tell the hub when a real institution membership is active so Join CTA
-  // (F-UX-02) is not stacked on top of an already-working inbox.
+  // Tell the hub when membership is known (settled) so Join / awaiting-link
+  // never flash during the inbox probe. 401/403 ⇒ not a member; success ⇒ member.
+  const membershipSettled = !!isSignedIn && !inbox.isLoading;
   const membershipActive =
-    !!isSignedIn && !inbox.isLoading && !inbox.isError && !!inbox.data?.data;
+    membershipSettled && !inbox.isError && !!inbox.data?.data;
   React.useEffect(() => {
+    if (!isSignedIn) {
+      onMembershipChange?.(false);
+      return;
+    }
+    if (!membershipSettled) return;
     onMembershipChange?.(membershipActive);
-  }, [membershipActive, onMembershipChange]);
+  }, [isSignedIn, membershipSettled, membershipActive, onMembershipChange]);
 
   const transition = (leadId: string, status: "contacted" | "closed") => {
     setPendingLead(leadId);
@@ -575,7 +581,7 @@ export default function BanksScreen() {
               testID="banks-awaiting-verify"
             >
               <MaterialCommunityIcons
-                name="shield-check"
+                name="shield-check-outline"
                 size={18}
                 color="#FFFFFF"
               />

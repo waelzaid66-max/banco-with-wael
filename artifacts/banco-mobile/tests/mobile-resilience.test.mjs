@@ -53,6 +53,10 @@ test("in-app and push notification taps share routeForNotification", () => {
     path.join(APP_ROOT, "hooks", "usePushNotifications.tsx"),
     "utf8",
   );
+  const routing = fs.readFileSync(
+    path.join(APP_ROOT, "lib", "notificationRouting.ts"),
+    "utf8",
+  );
   assert.match(
     feed,
     /routeForNotificationItem/,
@@ -72,6 +76,16 @@ test("in-app and push notification taps share routeForNotification", () => {
     push,
     /from\s+["']@\/lib\/notificationRouting["']/,
     "push must import from notificationRouting",
+  );
+  assert.match(
+    push,
+    /isExpoGo/,
+    "Expo Go must remain a no-remote-push guard (SDK 53+)",
+  );
+  assert.match(
+    routing,
+    /listingId:\s*d\.listing_id/,
+    "message deep-links must forward listingId when stamped",
   );
 });
 

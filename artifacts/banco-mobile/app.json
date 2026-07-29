@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "BANCO",
-    "slug": "banco-mobile",
+    "slug": "bancoboom",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.bancoboom.app",
+      "bundleIdentifier": "com.bancooom.app",
       "buildNumber": "1",
       "usesAppleSignIn": true,
       "associatedDomains": [
@@ -33,8 +33,9 @@
       }
     },
     "android": {
-      "package": "com.bancoboom.app",
+      "package": "com.bancooom.app",
       "versionCode": 1,
+      "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.ACCESS_COARSE_LOCATION",
@@ -49,23 +50,11 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            {
-              "scheme": "https",
-              "host": "banco.today"
-            },
-            {
-              "scheme": "https",
-              "host": "banco.deals"
-            },
-            {
-              "scheme": "https",
-              "host": "banco.autos"
-            }
+            { "scheme": "https", "host": "banco.today" },
+            { "scheme": "https", "host": "banco.deals" },
+            { "scheme": "https", "host": "banco.autos" }
           ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
+          "category": ["BROWSABLE", "DEFAULT"]
         }
       ]
     },
@@ -124,7 +113,6 @@
         "projectId": "45f092c8-52f9-4272-880f-48e6b721126f"
       }
     },
-    "owner": "waelzaid",
-    "backgroundColor": "#000000"
+    "owner": "waelzaid"
   }
 }

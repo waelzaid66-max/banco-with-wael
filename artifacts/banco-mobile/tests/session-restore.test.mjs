@@ -10,8 +10,9 @@
  * What is validated:
  *  1. tokenCache → Clerk persists tokens to SecureStore so sessions survive
  *     Expo Go being closed and reopened (no re-login prompt for valid sessions).
- *  2. ClerkLoaded → auth-sensitive providers only render once Clerk has fully
- *     resolved the stored session, so `isSignedIn` is always definitive.
+ *  2. ClerkLoadGate (or legacy ClerkLoaded) → auth-sensitive providers only
+ *     render once Clerk has fully resolved the stored session (or after a
+ *     timed guest fallback), so `isSignedIn` is never read mid-init.
  *  3. Provider order → AuthGateProvider > SessionProvider > BiometricProvider.
  *     SessionContext calls useAuthGate(), so the gate MUST sit above the
  *     session provider; inverting this creates a context cycle.
@@ -109,35 +110,54 @@ test("ClerkProvider configured with tokenCache (SecureStore-backed session persi
   );
 });
 
-// ─── 2. ClerkLoaded guards all auth-sensitive providers ──────────────────────
+// ─── 2. Clerk auth gate guards all auth-sensitive providers ──────────────────
+// Production (bancoo handoff C-WEB-BASE): ClerkLoadGate waits for isLoaded OR
+// a timeout, then renders as signed-out guest — avoids infinite white screen
+// when clerk-js cannot init (unauthorized origin / CDN). Legacy <ClerkLoaded>
+// remains acceptable for older trees.
 
-test("all auth-sensitive providers are rendered inside <ClerkLoaded>", () => {
-  assert.match(
-    layout,
-    /<ClerkLoaded>/,
-    "_layout must render <ClerkLoaded> to ensure Clerk has fully resolved the stored " +
-      "session before any provider reads isSignedIn"
+test("all auth-sensitive providers are rendered inside ClerkLoadGate (or ClerkLoaded)", () => {
+  const hasLoadGate = /<ClerkLoadGate[\s>]/.test(layout);
+  const hasClerkLoaded = /<ClerkLoaded>/.test(layout);
+  assert.ok(
+    hasLoadGate || hasClerkLoaded,
+    "_layout must render <ClerkLoadGate> (preferred) or <ClerkLoaded> so auth " +
+      "providers never read isSignedIn before Clerk resolves",
   );
 
-  const clerkLoadedIdx = layout.indexOf("<ClerkLoaded>");
+  const gateIdx = hasLoadGate
+    ? layout.search(/<ClerkLoadGate[\s>]/)
+    : layout.indexOf("<ClerkLoaded>");
   const authGateIdx = layout.indexOf("<AuthGateProvider>");
   const sessionIdx = layout.indexOf("<SessionProvider>");
   const biometricIdx = layout.indexOf("<BiometricProvider>");
 
-  assert.ok(clerkLoadedIdx !== -1, "<ClerkLoaded> must be present in _layout");
+  assert.ok(gateIdx !== -1, "Clerk auth gate must be present in _layout");
   assert.ok(
-    authGateIdx > clerkLoadedIdx,
-    "<AuthGateProvider> must be a descendant of <ClerkLoaded> so requireAuth() " +
-      "never sees isSignedIn===undefined during session restore"
+    authGateIdx > gateIdx,
+    "<AuthGateProvider> must be a descendant of the Clerk auth gate so requireAuth() " +
+      "never sees isSignedIn===undefined during session restore",
   );
   assert.ok(
-    sessionIdx > clerkLoadedIdx,
-    "<SessionProvider> must be inside <ClerkLoaded>"
+    sessionIdx > gateIdx,
+    "<SessionProvider> must be inside the Clerk auth gate",
   );
   assert.ok(
-    biometricIdx > clerkLoadedIdx,
-    "<BiometricProvider> must be inside <ClerkLoaded>"
+    biometricIdx > gateIdx,
+    "<BiometricProvider> must be inside the Clerk auth gate",
   );
+  if (hasLoadGate) {
+    assert.match(
+      layout,
+      /CLERK_LOAD_TIMEOUT_MS|clerkWaitExpired/,
+      "ClerkLoadGate must include a timeout so unauthorized origins do not white-screen forever",
+    );
+    assert.match(
+      layout,
+      /getToken\(\)\.catch\(\(\)\s*=>\s*null\)/,
+      "AuthTokenBridge must degrade getToken failures to anonymous",
+    );
+  }
 });
 
 // ─── 3. Provider order is load-bearing ───────────────────────────────────────
