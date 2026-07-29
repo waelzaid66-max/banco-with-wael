@@ -377,7 +377,7 @@ describe("PSP reverse-before-settle race (Round 15)", () => {
     const [claw] = await db
       .select()
       .from(transactions)
-      .where(eq(transactions.idempotencyKey, `${key}:psp_reversal:c10000:from0`));
+      .where(eq(transactions.idempotencyKey, `${key}:psp_reversal:c30000:from0`));
     expect(claw.type).toBe("adjustment");
     expect(Number(claw.amount)).toBe(-100);
   });
