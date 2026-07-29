@@ -14,9 +14,9 @@
 | API vitest | **386 passed / 3 skipped** (post P2-M1; no API diff since) |
 | production-confidence | **14/14 PASS** (re-verified) |
 | Phase 2 register | **Closed for agent reconnect** — `43-*` |
-| Ahead of `main` | **58+** commits |
-| PR on GitHub | **NONE** — open compare URL |
-| Tag `w.4.1` | **NONE** |
+| Ahead of `main` | **0** — tip fully merged |
+| PR on GitHub | **MERGED** — [#1](https://github.com/waelzaid66-max/banco-with-wael/pull/1) + [#2](https://github.com/waelzaid66-max/banco-with-wael/pull/2) → `0183169` |
+| Tag `w.4.1` | **NONE** — still required |
 
 ### Closed on tip (code)
 
@@ -92,16 +92,16 @@ Execute `37-COOLIFY-LIVE-SMOKE-MATRIX.md` at minimum: **S1–S3, S5–S9, S12–
 
 | Question | Answer |
 |----------|--------|
-| Merge this tip to `main`? | **GO** |
-| Tag `w.4.1` after merge? | **GO** |
+| Merge this tip to `main`? | **DONE — CORRECT** (`44-*`) |
+| Tag `w.4.1` after merge? | **GO — still missing** |
 | Claim production fully certified now? | **NO-GO** until B2+B3 |
-| More code invent before merge? | **NO-GO** — tip is merge-ready; Phase 2 agent work exhausted (`43-*`) |
+| Merge again / more invent? | **NO-GO** — empty vs main; Phase 2 exhausted (`43-*`) |
 
 ---
 
 ## STOP
 
 Agent code work for `w.4.1` recovery line is **complete** at this gate.  
-Phase 2 register closed for reconnect — see `43-PHASE2-RESIDUAL-CLOSEOUT.md`.  
-**Next human actions only:** B1 → B2 → B3.  
-Reply after Coolify smoke (or paste failures); or name post-ship order (H1 A/B, M7 A/B, cutover, product invent).
+Phase 2 register closed — `43-*`. Merge verified correct — `44-*`.  
+**Next human actions only:** tag `w.4.1` → B2 Coolify → B3 smoke.  
+Reply after tag/Coolify smoke; or name post-ship order (H1 A/B, M7 A/B, cutover, product invent).

@@ -4,7 +4,8 @@
 **Branch:** `cursor/w41-production-release-5cf0`  
 **Policy:** Recover / reconnect / certify — never rewrite, never invent, never fake green.  
 **Verdict at this ledger:** **CONDITIONAL GO — NOT FULL PRODUCTION CERTIFIED**  
-**Code tip merge-ready for tag `w.4.1`:** **YES** @ `aee476c` (+ docs `0b7c418` H1/M7; this tip Phase 2 closeout). Remaining blockers: **owner merge/tag** + **Coolify/EAS/device OPS**. Residuals: P2-H1 `41-*`, P2-M7b `42-*`. Register: `43-PHASE2-RESIDUAL-CLOSEOUT.md`.
+**Merge to `main`:** **DONE / CORRECT** — see `44-MERGE-VERDICT.md`. Tip `ca2ed1a` is ancestor of `origin/main` `0183169` (PR #1 + PR #2).  
+**Remaining blockers:** **tag `w.4.1` (MISSING)** + **Coolify/EAS/device OPS**. Residuals: P2-H1 `41-*`, P2-M7b `42-*`. Register: `43-*`.
 
 ---
 
@@ -75,7 +76,8 @@
 | OpenAPI omit payments/readyz/livez (P2-M4) | **closed** on tip `b2ac785` (140 paths / 166 ops) |
 | Paymob unsigned first-bind TOFU (P2-H1) | **deferred HIGH** — evidence + options A/B/C in `41-*`; no invent without owner order |
 | Landing DomainRouter hops (P2-M7) | **M7a mitigated** (dealer-os→market 301); **M7b proven** `/banco-mobile` → landing fallback — `42-*`; owner A/B/C |
-| Merge PR → tag `w.4.1` → Coolify → smoke | **owner** — see `39-RELEASE-EXECUTION-GO-NOGO.md` |
+| Merge PR → `main` | **DONE** — PR #1 `a72a8b5` + PR #2 `0183169` (`44-*`) |
+| Tag `w.4.1` → Coolify → smoke | **owner** — tag still **MISSING**; see `39-*` / `44-*` |
 
 ### Code / release process
 
