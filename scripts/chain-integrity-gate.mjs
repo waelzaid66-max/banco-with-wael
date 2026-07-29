@@ -173,6 +173,22 @@ const CHECKS = [
     why: "C-01 upload IDOR guard must remain",
   },
   {
+    id: "P-upload-update-503",
+    file: "artifacts/api-server/src/controllers/listingController.ts",
+    test: (s) => {
+      const i = s.indexOf("export async function updateListingHandler");
+      if (i < 0) return false;
+      const block = s.slice(i, i + 1800);
+      return (
+        /MEDIA_VERIFY_RETRYABLE/.test(block) &&
+        /status\(503\)/.test(block) &&
+        /createListingHandler/.test(s) &&
+        /MEDIA_VERIFY_RETRYABLE/.test(s)
+      );
+    },
+    why: "Update listing must map transient media verify to 503 like create (N1.1)",
+  },
+  {
     id: "P-email-cycles",
     file: "artifacts/api-server/src/services/EmailService.ts",
     test: (s) =>
