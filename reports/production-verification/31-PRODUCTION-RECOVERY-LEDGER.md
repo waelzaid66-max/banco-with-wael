@@ -52,6 +52,8 @@
 | `e4aa389`–`e619cba` | Landing ↔ Coolify paths + `VITE_*`; nginx legacy 301; Coolify API pin + AWS keys + Coolify markers; `WEB_PLUG_ENABLED`; ledger gates 164/164 |
 | This tip (parity wave) | `docker-compose.prod.yml` ↔ Coolify (pin/S3 keys/website bake/plug); AWS `Dockerfile.web` BASE_PATH + `dist/public` + Clerk proxy; AWS nginx 301 aliases; AWS compose pin/keys/`CLERK_SECRET_KEY`; Coolify deploy order + `DEPLOY_COOLIFY` real S3 env names; env examples `/market/` `/admin/`; health probe docs (`/api/healthz` not `/healthz` or invented `/api/v1/health`) |
 | Tip after privacy/CI wave | Comment notif scrub on account delete (+ test + chain marker); Coolify migrate docs corrected to `push --force`; prod migrate profile; CI Coolify `Dockerfile.banco-website` job; GCP validation build pin + SESSION/PAYMENT secrets in env examples; staging env Coolify path guidance |
+| Phase 1–2 docs | `32-PHASE1-PRODUCTION-INVENTORY.md`; `33-PHASE2-PRODUCTION-AUDIT-REPORT.md` + auth/lifecycle annexes |
+| `d4cec74` Phase 3 reconnect | **P2-M2** `setAuthFailureHandler` on website/web/admin/dealer; **P2-M9** dealer NotFound Switch catch-all; see `34-PHASE3-PRODUCTION-RECOVERY-REPORT.md` |
 
 ---
 
@@ -60,6 +62,8 @@
 | Facets `market_country` MED | deferred (OpenAPI + handler category-only — not inventing API surface this wave) |
 | Dual `banco-web`/`banco-website` cutover | owner |
 | Optional: set `NEXT_PUBLIC_WEB_SEARCH_LIVE/MAP=true` for live search (rebuild) | ops soft-launch |
+| Web account-delete UI (P2-M3) | deferred — mobile only; no invent in Phase 3 |
+| OpenAPI omit payments/readyz/livez (P2-M4) | spec gap — untouched Phase 3 |
 
 ### Code / release process
 
@@ -83,13 +87,15 @@
 
 | Gate | Result | When |
 |------|--------|------|
-| `chain-integrity-gate.mjs` | **164/164 PASS** | comment-scrub marker strengthened |
-| API vitest (deleteAccount + full suite) | **385 passed / 3 skipped** | +1 comment scrub test |
-| production-confidence | **14/14 PASS** | this tip |
+| `chain-integrity-gate.mjs` | **164/164 PASS** | Phase 3 tip `d4cec74` |
+| API vitest (deleteAccount + full suite) | **385 passed / 3 skipped** | Phase 3 tip `d4cec74` |
+| production-confidence | **14/14 PASS** | Phase 3 tip `d4cec74` |
 | Coolify website bake parity | committed `ee4d2ba` | prior |
 | Landing PATHS ↔ Coolify + Clerk hops | committed | PATHS `/market|/admin` + VITE_*; DomainRouter `banco.today/dealer-os` + `banco.today/banco-mobile` |
 | AWS web SPA blank-page root cause | repaired | BASE_PATH + `dist/public` parity with Coolify |
-| Comment notif scrub on delete | repaired this tip | review-scrub parity |
+| Comment notif scrub on delete | repaired prior tip | review-scrub parity |
+| P2-M2 tombstone auto-signOut web/SPA | repaired `d4cec74` | mirrors mobile AuthTokenBridge |
+| P2-M9 dealer NotFound route | repaired `d4cec74` | Switch catch-all |
 
 Do **not** mark FULL CERT without OPS/device evidence (Coolify live secrets, S3, SSL, EAS, Paymob webhook, Clerk providers).
 
