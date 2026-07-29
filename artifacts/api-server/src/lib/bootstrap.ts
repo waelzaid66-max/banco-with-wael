@@ -110,6 +110,16 @@ async function ensureSearchIndexes(): Promise<void> {
     // first `drizzle-kit push`) is caught below and retried on the next boot.
     sql`CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_reference_places_blob_trgm ON reference_places USING gin (search_blob gin_trgm_ops)`,
     sql`CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_reference_developers_blob_trgm ON reference_developers USING gin (search_blob gin_trgm_ops)`,
+    // 21-market filter: SearchService filters on
+    // COALESCE(specs->>'market_country','EG'). Without this expression index,
+    // every section/map/facet query seq-scans listing_attributes at catalog scale.
+    sql`CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_listing_attrs_market_country ON listing_attributes ((COALESCE(specs->>'market_country', 'EG')))`,
+    // Map viewport queries: skip rows without coordinates; supports near-me + clusters.
+    sql`CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_listings_geo ON listings (latitude, longitude) WHERE latitude IS NOT NULL AND longitude IS NOT NULL`,
+    // Status+category+recency — the common multi-market feed prefix under load.
+    sql`CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_listings_status_category_created ON listings (status, category, created_at DESC)`,
+    // Import-order ops inbox under load (admin stage transitions).
+    sql`CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_import_orders_stage_created ON import_orders (stage, created_at DESC)`,
   ];
   for (const statement of statements) {
     try {
