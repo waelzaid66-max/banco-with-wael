@@ -21,6 +21,8 @@ import {
   useSession,
 } from "@/context/SessionContext";
 import { useColors } from "@/hooks/useColors";
+import { searchCriteriaToNavParams } from "@/lib/searchNavParams";
+import type { SearchCriteria } from "@/lib/searchParams";
 
 type PriceTrend = "down" | "up" | null;
 
@@ -132,20 +134,25 @@ export default function SavedScreen() {
       >
         <Pressable
           style={[styles.searchMain, { flexDirection: rowDir }]}
-          onPress={() =>
+          onPress={() => {
+            // Prefer rich criteria snapshot when present — legacy six-field
+            // fallback keeps older local saves replayable.
+            const params = search.criteria
+              ? searchCriteriaToNavParams(search.criteria as SearchCriteria)
+              : {
+                  q: search.q,
+                  category: search.category,
+                  minPrice: search.minPrice,
+                  maxPrice: search.maxPrice,
+                  location: search.location,
+                  paymentType: search.paymentType,
+                  ts: String(Date.now()),
+                };
             router.push({
               pathname: "/(tabs)/search",
-              params: {
-                q: search.q,
-                category: search.category,
-                minPrice: search.minPrice,
-                maxPrice: search.maxPrice,
-                location: search.location,
-                paymentType: search.paymentType,
-                ts: String(Date.now()),
-              },
-            })
-          }
+              params,
+            });
+          }}
         >
           <View
             style={[styles.searchIcon, { backgroundColor: colors.secondary }]}

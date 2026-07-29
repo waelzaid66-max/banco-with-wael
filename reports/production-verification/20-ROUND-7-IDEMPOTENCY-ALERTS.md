@@ -52,9 +52,10 @@ A search saved with `market_country=SA` still alerted on any EG listing in-categ
 ## Still OPEN / UNVERIFIED (unchanged policy)
 
 - MFA delete TOTP UI (BUG-002)
-- Mobile saved-search **navigation** rich criteria replay (separate from alert matcher)
 - Web map twin vs native clusters
 - Device / EAS / APNs / FCM / visual QA → **UNVERIFIED**
 - Ops Coolify live Paymob webhook end-to-end → **UNVERIFIED**
+
+**Note:** Mobile saved-search **navigation** rich criteria replay closed in Round 8.
 
 **Verdict remains: CONDITIONAL GO — not full million-user certification.**

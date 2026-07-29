@@ -1017,6 +1017,55 @@ const CHECKS = [
     test: (s) => /127\.0\.0\.1:\$\{API_HOST_PORT/.test(s),
     why: "Coolify API host port must not be world-bindable (rate-limit spoof)",
   },
+  {
+    id: "P-saved-search-nav-emit",
+    file: "artifacts/banco-mobile/app/(tabs)/saved.tsx",
+    test: (s) =>
+      /searchCriteriaToNavParams/.test(s) &&
+      /search\.criteria/.test(s),
+    why: "Saved-search tap must emit rich criteria via searchNavParams",
+  },
+  {
+    id: "P-saved-search-nav-consume",
+    file: "artifacts/banco-mobile/app/(tabs)/search.tsx",
+    test: (s) =>
+      /parseMobileSearchNavParams/.test(s) &&
+      /hasIncomingSearchNavParams/.test(s) &&
+      /s\.criteria/.test(s),
+    why: "Search tab must restore rich criteria from nav params and applySaved",
+  },
+  {
+    id: "P-b2b-tombstone-investments",
+    file: "artifacts/api-server/src/services/InvestmentService.ts",
+    test: (s) =>
+      /users\.deletedAt\} IS NULL/.test(s) &&
+      /owner_deleted_at/.test(s),
+    why: "Public investment boards must hide soft-deleted owners",
+  },
+  {
+    id: "P-b2b-tombstone-rfq",
+    file: "artifacts/api-server/src/services/RfqService.ts",
+    test: (s) =>
+      /users\.deletedAt\} IS NULL/.test(s) &&
+      /buyerDeletedAt/.test(s),
+    why: "Open RFQ board + offers must fail-closed for soft-deleted buyers",
+  },
+  {
+    id: "P-b2b-tombstone-supply",
+    file: "artifacts/api-server/src/services/GlobalSupplyService.ts",
+    test: (s) =>
+      /users\.deletedAt\} IS NULL/.test(s) &&
+      /buyerDeletedAt/.test(s),
+    why: "Global supply board + respond must fail-closed for soft-deleted buyers",
+  },
+  {
+    id: "P-banco-web-topup-idempotency",
+    file: "artifacts/banco-web/components/workspace/WalletPanel.tsx",
+    test: (s) =>
+      /idempotency_key/.test(s) &&
+      /topupAttemptKeyRef/.test(s),
+    why: "Frozen banco-web must still send top-up idempotency after Round 7 schema change",
+  },
 ];
 
 function main() {

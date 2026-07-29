@@ -140,7 +140,12 @@ export async function listOpenRfqs(
   cursor?: string,
   limit = 20
 ): Promise<{ items: Rfq[]; cursor?: string; has_next: boolean }> {
-  const conditions = [eq(rfqs.status, "open")];
+  const conditions = [
+    eq(rfqs.status, "open"),
+    // Never surface open RFQs from shadow-banned or soft-deleted buyers.
+    sql`${users.isShadowBanned} IS NOT TRUE`,
+    sql`${users.deletedAt} IS NULL`,
+  ];
   if (filters.category) conditions.push(eq(rfqs.category, filters.category));
   if (filters.industry) conditions.push(eq(rfqs.industry, filters.industry));
   if (filters.industrial_type) conditions.push(eq(rfqs.industrialType, filters.industrial_type));
@@ -199,7 +204,11 @@ export async function getRfqDetail(
   viewerClerkId?: string
 ): Promise<RfqDetail | null> {
   const [row] = await db
-    .select(rfqSelect)
+    .select({
+      ...rfqSelect,
+      buyer_is_shadow_banned: users.isShadowBanned,
+      buyer_deleted_at: users.deletedAt,
+    })
     .from(rfqs)
     .leftJoin(users, eq(rfqs.buyerId, users.id))
     .where(eq(rfqs.id, rfqId))
@@ -218,6 +227,15 @@ export async function getRfqDetail(
   }
 
   const viewerIsBuyer = viewerUserId != null && viewerUserId === row.buyer_id;
+
+  // Soft-deleted / shadow-banned buyers: hide from everyone except the buyer
+  // (who cannot authenticate after delete — so effectively public-hidden).
+  if (
+    !viewerIsBuyer &&
+    (row.buyer_is_shadow_banned === true || row.buyer_deleted_at != null)
+  ) {
+    return null;
+  }
 
   let offers: RfqOffer[] = [];
   if (viewerIsBuyer) {
@@ -291,11 +309,22 @@ export async function submitOffer(
   const supplierId = await resolveUserId(clerkId);
 
   const [rfq] = await db
-    .select({ id: rfqs.id, buyerId: rfqs.buyerId, status: rfqs.status, title: rfqs.title })
+    .select({
+      id: rfqs.id,
+      buyerId: rfqs.buyerId,
+      status: rfqs.status,
+      title: rfqs.title,
+      buyerIsShadowBanned: users.isShadowBanned,
+      buyerDeletedAt: users.deletedAt,
+    })
     .from(rfqs)
+    .leftJoin(users, eq(rfqs.buyerId, users.id))
     .where(eq(rfqs.id, rfqId))
     .limit(1);
   if (!rfq) throw Object.assign(new Error("RFQ not found"), { code: "NOT_FOUND" });
+  if (rfq.buyerIsShadowBanned === true || rfq.buyerDeletedAt != null) {
+    throw Object.assign(new Error("RFQ not found"), { code: "NOT_FOUND" });
+  }
   if (rfq.buyerId === supplierId) {
     throw Object.assign(new Error("You cannot offer on your own RFQ"), { code: "FORBIDDEN" });
   }

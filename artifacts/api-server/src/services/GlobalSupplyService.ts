@@ -68,6 +68,7 @@ interface RequestRow {
   notes: string | null;
   status: RequestStatus;
   buyer_is_shadow_banned: boolean | null;
+  buyer_deleted_at: Date | null;
   created_at: Date | null;
 }
 
@@ -87,6 +88,7 @@ const requestSelect = {
   notes: globalSupplyRequests.notes,
   status: globalSupplyRequests.status,
   buyer_is_shadow_banned: users.isShadowBanned,
+  buyer_deleted_at: users.deletedAt,
   created_at: globalSupplyRequests.createdAt,
 } as const;
 
@@ -141,8 +143,9 @@ export async function listGlobalRequests(
 ): Promise<{ items: GlobalSupplyRequestDTO[]; cursor?: string; has_next: boolean }> {
   const conditions = [
     eq(globalSupplyRequests.status, filters.status ?? "open"),
-    // Never surface requests from shadow-banned buyers on the public board.
+    // Never surface requests from shadow-banned or soft-deleted buyers.
     sql`${users.isShadowBanned} IS NOT TRUE`,
+    sql`${users.deletedAt} IS NULL`,
   ];
   if (filters.industry) conditions.push(eq(globalSupplyRequests.industry, filters.industry));
   if (filters.destination_country)
@@ -222,8 +225,13 @@ export async function getGlobalRequestDetail(
   const viewerUserId = await resolveUserIdOpt(viewerClerkId);
   const viewerIsBuyer = viewerUserId != null && viewerUserId === row.buyer_id;
 
-  // Hide a shadow-banned buyer's request from everyone except the buyer.
-  if (!viewerIsBuyer && row.buyer_is_shadow_banned === true) return null;
+  // Hide a shadow-banned / soft-deleted buyer's request from everyone except the buyer.
+  if (
+    !viewerIsBuyer &&
+    (row.buyer_is_shadow_banned === true || row.buyer_deleted_at != null)
+  ) {
+    return null;
+  }
 
   const [countRow] = await db
     .select({ count: sql<number>`COUNT(*)` })
@@ -407,16 +415,16 @@ export async function respondToRequest(
       status: globalSupplyRequests.status,
       productText: globalSupplyRequests.productText,
       buyerIsShadowBanned: users.isShadowBanned,
+      buyerDeletedAt: users.deletedAt,
     })
     .from(globalSupplyRequests)
     .innerJoin(users, eq(globalSupplyRequests.buyerId, users.id))
     .where(eq(globalSupplyRequests.id, requestId))
     .limit(1);
   if (!req) throw Object.assign(new Error("Request not found"), { code: "NOT_FOUND" });
-  // A shadow-banned buyer's request is suppressed for everyone but the buyer; the
-  // responder is by definition not the buyer (self-response blocked below), so an
-  // outsider must not be able to act on it via a direct ID. Mirror detail semantics.
-  if (req.buyerIsShadowBanned === true) {
+  // A shadow-banned / soft-deleted buyer's request is suppressed for everyone
+  // but the buyer; the responder is by definition not the buyer.
+  if (req.buyerIsShadowBanned === true || req.buyerDeletedAt != null) {
     throw Object.assign(new Error("Request not found"), { code: "NOT_FOUND" });
   }
   if (req.buyerId === supplierId) {

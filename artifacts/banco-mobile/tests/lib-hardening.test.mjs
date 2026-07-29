@@ -420,3 +420,49 @@ test("any asset can be published — the floor and the brand escape both hold", 
     "the draft shape must carry the brand label",
   );
 });
+
+// Round 8: saved-search navigation must wire the existing searchNavParams
+// pipeline (orphan module until this round) so rich criteria round-trip.
+test("saved search tap emits searchCriteriaToNavParams when criteria present", () => {
+  const saved = fs.readFileSync(
+    path.join(APP_ROOT, "app", "(tabs)", "saved.tsx"),
+    "utf8",
+  );
+  assert.match(
+    saved,
+    /searchCriteriaToNavParams/,
+    "Saved tab must serialize rich criteria through searchNavParams",
+  );
+  assert.match(
+    saved,
+    /search\.criteria/,
+    "Saved tab must prefer search.criteria over legacy six fields",
+  );
+});
+
+test("search tab consumes parseMobileSearchNavParams + applySaved criteria", () => {
+  const search = fs.readFileSync(
+    path.join(APP_ROOT, "app", "(tabs)", "search.tsx"),
+    "utf8",
+  );
+  assert.match(
+    search,
+    /parseMobileSearchNavParams/,
+    "Search tab must parse rich nav params via search-contract",
+  );
+  assert.match(
+    search,
+    /hasIncomingSearchNavParams/,
+    "Search tab must detect incoming search nav params",
+  );
+  assert.match(
+    search,
+    /s\.criteria/,
+    "applySaved must prefer SavedSearch.criteria when present",
+  );
+  assert.doesNotMatch(
+    search,
+    /if \(!params\.q && !params\.sort && !params\.category && !params\.engine\) return/,
+    "legacy six-field-only nav gate must not remain",
+  );
+});

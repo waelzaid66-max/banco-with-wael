@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import {
   useGetDealerListings, getGetDealerListingsQueryKey,
@@ -53,6 +53,8 @@ export default function ListingsPage() {
   const [boostListingId, setBoostListingId] = useState<string | null>(null);
   const [boostType, setBoostType] = useState<"featured" | "native_feed" | "top_search">("featured");
   const [boostDuration, setBoostDuration] = useState("7");
+  /** Stable across retries of the same boost attempt (cleared on success). */
+  const boostAttemptKeyRef = useRef<string | null>(null);
 
   const { data: listingsData, isLoading } = useGetDealerListings(
     { limit: 100 },
@@ -172,7 +174,10 @@ export default function ListingsPage() {
 
   const handleBoostSubmit = () => {
     if (!boostListingId) return;
-    const idempotency_key = `boost:${boostListingId}:${boostType}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    const idempotency_key =
+      boostAttemptKeyRef.current ??
+      `boost:${boostListingId}:${boostType}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    boostAttemptKeyRef.current = idempotency_key;
     boostMutation.mutate({
       data: {
         listing_id: boostListingId,
@@ -182,6 +187,7 @@ export default function ListingsPage() {
       }
     }, {
       onSuccess: (res) => {
+        boostAttemptKeyRef.current = null;
         const promoUsed = Number(res?.data?.promo_used ?? "0");
         const walletCharged = Number(res?.data?.wallet_charged ?? "0");
         const description =
@@ -316,6 +322,7 @@ export default function ListingsPage() {
               className="h-8 bg-primary hover:bg-primary/90 text-white"
               onClick={() => {
                 setBoostListingId(row.original.id!);
+                boostAttemptKeyRef.current = null;
                 setBoostModalOpen(true);
               }}
               data-testid={`btn-boost-${row.original.id}`}
