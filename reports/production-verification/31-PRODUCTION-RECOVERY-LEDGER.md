@@ -6,7 +6,7 @@
 **Verdict at this ledger:** **CONDITIONAL GO — NOT FULL PRODUCTION CERTIFIED**  
 **Merge to `main`:** **DONE** — PR #1 + #2 + docs `6c6dec4` (`44-*`).  
 **Tag `w.4.1`:** **PUSHED** → `6c6dec4` (`45-W41-FULL-DELIVERY-STATUS.md`).  
-**Coolify live:** **BLOCKED** this env — `banco.today` = Replit “isn't live yet”; no Coolify/SSH creds. Residuals: P2-H1 `41-*`, P2-M7b `42-*`.
+**Coolify live:** **public BLOCKED**; **local Coolify images smoke PASS** — `46-W41-LOCAL-COOLIFY-SMOKE-PRECISION.md`. Residuals: P2-H1 `41-*`, P2-M7b `42-*`.
 
 ---
 

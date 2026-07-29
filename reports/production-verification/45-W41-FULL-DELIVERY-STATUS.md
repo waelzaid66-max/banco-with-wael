@@ -11,10 +11,10 @@
 | Layer | Status |
 |-------|--------|
 | **Git delivery (`main` + tag)** | **COMPLETE** |
-| **Coolify / live production** | **BLOCKED — no VPS/Coolify credentials or live host in this agent env** |
+| **Coolify / live production** | **Public BLOCKED** — no VPS/DNS; see also **local image PASS** in `46-*` |
 | **FULL PRODUCTION CERTIFIED** | **NO** |
 
-Code release is shipped on GitHub. Runtime ship requires Coolify VPS actions this agent cannot execute from the current cloud environment (no Coolify token, no SSH host, `banco.today` not serving BANCO).
+Code release is shipped on GitHub. Coolify Dockerfiles for tag `w.4.1` **pass local rebuild+smoke** (`46-*`). Public `banco.today` still Replit placeholder — VPS/DNS still required for FULL CERT.
 
 ---
 
