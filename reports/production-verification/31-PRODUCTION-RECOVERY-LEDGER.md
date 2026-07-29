@@ -56,7 +56,7 @@
 | Phase 1–2 docs | `32-PHASE1-PRODUCTION-INVENTORY.md`; `33-PHASE2-PRODUCTION-AUDIT-REPORT.md` + auth/lifecycle annexes |
 | `d4cec74` Phase 3 reconnect | **P2-M2** `setAuthFailureHandler` on website/web/admin/dealer; **P2-M9** dealer NotFound Switch catch-all; see `34-PHASE3-PRODUCTION-RECOVERY-REPORT.md` |
 | `b2ac785` Phase 4 harden | **P2-M4** OpenAPI `/livez` `/readyz` `/v1/payments/*` + codegen; `ACCOUNT_DELETED`/`SERVICE_UNAVAILABLE` on ApiError; `errorResponse` union matches authGuard 503; see `35-PHASE4-PRODUCTION-HARDENING-REPORT.md` |
-| `0d49814` Phase 5 package | Release readiness + OPS handoff; gates re-verified; see `36-PHASE5-W41-RELEASE-READINESS.md` |
+| `0d49814` / `8317326` Phase 5 package | Release readiness + OPS handoff; gates re-verified; see `36-PHASE5-W41-RELEASE-READINESS.md` |
 
 ---
 
@@ -91,9 +91,9 @@
 
 | Gate | Result | When |
 |------|--------|------|
-| `chain-integrity-gate.mjs` | **164/164 PASS** | Phase 5 tip `0d49814` |
-| API vitest (deleteAccount + full suite) | **385 passed / 3 skipped** | Phase 5 tip `0d49814` |
-| production-confidence | **14/14 PASS** | Phase 5 tip `0d49814` |
+| `chain-integrity-gate.mjs` | **164/164 PASS** | Phase 5 tip `8317326` |
+| API vitest (deleteAccount + full suite) | **385 passed / 3 skipped** | Phase 5 tip `8317326` |
+| production-confidence | **14/14 PASS** | Phase 5 tip `8317326` |
 | Mobile lib-hardening + universal-links | **33/33 PASS** | Phase 5 re-verify |
 | Coolify website bake parity | committed `ee4d2ba` | prior |
 | Landing PATHS ↔ Coolify + Clerk hops | committed | PATHS `/market|/admin` + VITE_*; DomainRouter `banco.today/dealer-os` + `banco.today/banco-mobile` |

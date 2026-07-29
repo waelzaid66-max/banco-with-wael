@@ -2,7 +2,7 @@
 
 **SoT:** `waelzaid66-max/banco-with-wael`  
 **Branch:** `cursor/w41-production-release-5cf0`  
-**Release tip:** `0d49814`  
+**Release tip:** `8317326` (docs package; code harden `b2ac785`)  
 **Release name:** **`w.4.1`**  
 **Phase rule:** Release packaging + re-certification only. **No new product code. No invent.**
 
@@ -16,7 +16,7 @@
 | 2 Lifecycle audit | Complete (no repairs) | `33-PHASE2-*` |
 | 3 Recovery reconnect | **P2-M2** tombstone sign-out; **P2-M9** dealer 404 | `d4cec74` · `34-PHASE3-*` |
 | 4 Contract harden | **P2-M4** OpenAPI health/payments; error codes | `b2ac785` · `35-PHASE4-*` |
-| **5 Release readiness** | **This document** — gates + OPS handoff | `0d49814` |
+| **5 Release readiness** | **This document** — gates + OPS handoff | `8317326` |
 
 ---
 
@@ -24,10 +24,10 @@
 
 | Gate | Result | Tip |
 |------|--------|-----|
-| `chain-integrity-gate.mjs` | **164/164 PASS** | `0d49814` |
-| API vitest | **385 passed / 3 skipped** | `0d49814` |
-| `production-confidence-check.mjs` | **14/14 PASS** | `0d49814` |
-| Mobile `lib-hardening` + `universal-links-config` | **33/33 PASS** | `0d49814` |
+| `chain-integrity-gate.mjs` | **164/164 PASS** | `8317326` |
+| API vitest | **385 passed / 3 skipped** | `8317326` |
+| `production-confidence-check.mjs` | **14/14 PASS** | `8317326` |
+| Mobile `lib-hardening` + `universal-links-config` | **33/33 PASS** | `8317326` |
 
 **Code DoD for `w.4.1`:** satisfied on this tip (Round 16 base + w.4.1 reconnects + Phase 3/4 repairs + living gates green).
 
