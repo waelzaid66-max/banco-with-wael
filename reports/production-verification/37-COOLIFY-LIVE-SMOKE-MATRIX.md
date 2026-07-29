@@ -39,6 +39,7 @@
 | S8 | `GET /admin/` | admin-os | ☐ |
 | S9 | `GET /api/` or `/api/healthz` via nginx | Proxies to API | ☐ |
 | S10 | `GET /dealer-os/` | **301/302 → `/market/`** (alias) | ☐ |
+| S10b | `GET /banco-mobile/` | Landing SPA fallback (P2-M7b) — **not** Next consumer until owner A/B | ☐ noted |
 | S11 | `GET /admin-os/` | **301/302 → `/admin/`** (alias) | ☐ |
 
 ---

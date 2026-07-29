@@ -4,7 +4,7 @@
 **Branch:** `cursor/w41-production-release-5cf0`  
 **Policy:** Recover / reconnect / certify — never rewrite, never invent, never fake green.  
 **Verdict at this ledger:** **CONDITIONAL GO — NOT FULL PRODUCTION CERTIFIED**  
-**Code tip merge-ready for tag `w.4.1`:** **YES** @ `aee476c` (+ docs tip after P2-H1 decision). Remaining blockers are **owner merge/tag** + **Coolify/EAS/device OPS**. P2-H1 TOFU = **deferred HIGH** — see `41-P2-H1-UNSIGNED-FIRST-BIND-TOFU.md` (no invent).
+**Code tip merge-ready for tag `w.4.1`:** **YES** @ `aee476c` (+ docs tips `bcede12` P2-H1, this tip P2-M7). Remaining blockers: **owner merge/tag** + **Coolify/EAS/device OPS**. Residuals: P2-H1 `41-*`, P2-M7b `42-*` (no invent).
 
 ---
 
@@ -61,6 +61,7 @@
 | Release execution gate | `39-RELEASE-EXECUTION-GO-NOGO.md` — **GO merge**; FULL CERT after Coolify smoke |
 | P2-M1 facets market | OpenAPI + `getFacets` + mobile/web clients; chain **167/167**; vitest **386**; `40-P2-M1-*` |
 | P2-H1 TOFU evidence | **decision only** — `41-P2-H1-UNSIGNED-FIRST-BIND-TOFU.md`; **no code**; owner picks A/B/C |
+| P2-M7 landing hops | **decision** — `42-P2-M7-LANDING-DOMAIN-HOPS.md`; M7a 301-mitigated; M7b proven nginx gap; **no code** |
 
 ---
 
@@ -72,6 +73,7 @@
 | Web account-delete UI (P2-M3) | **closed UI-only** on `banco-website` `/workspace/settings` — see `38-P2-M3-WEB-ACCOUNT-DELETE-UI.md` |
 | OpenAPI omit payments/readyz/livez (P2-M4) | **closed** on tip `b2ac785` (140 paths / 166 ops) |
 | Paymob unsigned first-bind TOFU (P2-H1) | **deferred HIGH** — evidence + options A/B/C in `41-*`; no invent without owner order |
+| Landing DomainRouter hops (P2-M7) | **M7a mitigated** (dealer-os→market 301); **M7b proven** `/banco-mobile` → landing fallback — `42-*`; owner A/B/C |
 | Merge PR → tag `w.4.1` → Coolify → smoke | **owner** — see `39-RELEASE-EXECUTION-GO-NOGO.md` |
 
 ### Code / release process

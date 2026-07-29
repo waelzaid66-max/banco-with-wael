@@ -37,6 +37,7 @@
 | P2-H2/H3 | S3 keys + migrate → readyz 200 | OPS |
 | P2-H1 | Paymob TOFU | Deferred — evidence `41-*`; owner picks A/B/C |
 | P2-M5/M6 | Dual web / search LIVE false | Cutover / bake flags |
+| P2-M7 | Landing hops | M7a OK via 301; M7b `/banco-mobile` — see `42-*` |
 | Live Clerk/EAS/Paymob/device | UNVERIFIED | Smoke `37-*` |
 
 **Code verdict:** **GO to merge** (CONDITIONAL — not FULL CERT).
@@ -80,9 +81,10 @@ Execute `37-COOLIFY-LIVE-SMOKE-MATRIX.md` at minimum: **S1–S3, S5–S9, S12–
 | Priority | Work | Why later |
 |----------|------|-----------|
 | 1 | Paymob TOFU (P2-H1) | See `41-*`: A fail-closed checkout / B order-fetch / C accept residual |
-| 2 | Owner cutover drop `banco-web` | Domain ownership |
-| 3 | Flip `WEB_SEARCH_LIVE/MAP=true` | Soft-launch product choice |
-| 4 | Product waves M2–N* | After ship unless ordered |
+| 2 | Landing hops (P2-M7) | See `42-*`: M7b A edge→website / B path design / C accept |
+| 3 | Owner cutover drop `banco-web` | Domain ownership |
+| 4 | Flip `WEB_SEARCH_LIVE/MAP=true` | Soft-launch product choice |
+| 5 | Product waves M2–N* | After ship unless ordered |
 
 ---
 
