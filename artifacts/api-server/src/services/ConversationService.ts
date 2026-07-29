@@ -412,6 +412,12 @@ export async function sendMessage(
   const isBuyer = conv.buyerId === userId;
   const recipientId = isBuyer ? conv.sellerId : conv.buyerId;
 
+  // Ownership MUST be proven before the message row is durable — otherwise a
+  // stolen first-party URL lands in chat history even when assert later throws.
+  if (mediaUrl) {
+    await assertCallerMayUseUpload(mediaUrl, clerkId);
+  }
+
   const [msg] = await db
     .insert(messages)
     .values({ conversationId, senderId: userId, body: text, mediaUrl, mediaKind, replyToId, listingRefId })
@@ -422,7 +428,6 @@ export async function sendMessage(
   // Best-effort: promoteServingUrlToPublic swallows failures and no-ops URLs
   // that aren't our own first-party uploads.
   if (msg.mediaUrl) {
-    await assertCallerMayUseUpload(msg.mediaUrl, clerkId);
     await objectStorageService.promoteServingUrlToPublic(msg.mediaUrl, clerkId);
     const wildcard = parseServingWildcard(msg.mediaUrl);
     if (wildcard) await consumeUploadClaim(servingWildcardToObjectPath(wildcard));

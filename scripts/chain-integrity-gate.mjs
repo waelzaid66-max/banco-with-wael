@@ -619,6 +619,28 @@ const CHECKS = [
       /CONFLICT/.test(s),
     why: "FI request status updates must be conditional (no last-write-wins reopen)",
   },
+  {
+    id: "P-chat-media-assert-before-insert",
+    file: "artifacts/api-server/src/services/ConversationService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function sendMessage"));
+      const assertAt = fn.indexOf("assertCallerMayUseUpload");
+      const insertAt = fn.indexOf("insert(messages)");
+      return assertAt >= 0 && insertAt >= 0 && assertAt < insertAt;
+    },
+    why: "Chat media ownership must be proven before message insert (no durable stolen URL)",
+  },
+  {
+    id: "P-company-brand-assert-before-write",
+    file: "artifacts/api-server/src/services/CompanyService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function upsertMyCompanyProfile"));
+      const assertAt = fn.indexOf("assertCallerMayUseUpload");
+      const insertAt = fn.indexOf("insert(companyProfiles)");
+      return assertAt >= 0 && insertAt >= 0 && assertAt < insertAt;
+    },
+    why: "Company brand media ownership must be proven before profile write",
+  },
 ];
 
 function main() {

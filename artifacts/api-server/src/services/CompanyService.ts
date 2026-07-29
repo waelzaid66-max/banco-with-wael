@@ -372,6 +372,15 @@ export async function upsertMyCompanyProfile(
   if (input.industry !== undefined) patch.industry = input.industry;
   if (input.hq_country !== undefined) patch.hqCountry = input.hq_country;
 
+  // Prove upload ownership BEFORE writing URLs onto the company profile —
+  // otherwise a failed assert leaves another user's first-party media attached.
+  const brandUrls = [input.logo_url, input.cover_url].filter(
+    (u): u is string => typeof u === "string" && u.length > 0,
+  );
+  for (const u of brandUrls) {
+    await assertCallerMayUseUpload(u, clerkId);
+  }
+
   await db
     .insert(companyProfiles)
     .values({ userId: user.id, ...patch })
@@ -384,14 +393,11 @@ export async function upsertMyCompanyProfile(
   // handler returns them without auth (mirrors listing media). Best-effort:
   // promoteServingUrlToPublic swallows failures and no-ops non-first-party URLs.
   await Promise.all(
-    [input.logo_url, input.cover_url]
-      .filter((u): u is string => typeof u === "string" && u.length > 0)
-      .map(async (u) => {
-        await assertCallerMayUseUpload(u, clerkId);
-        await objectStorageService.promoteServingUrlToPublic(u, clerkId);
-        const wildcard = parseServingWildcard(u);
-        if (wildcard) await consumeUploadClaim(servingWildcardToObjectPath(wildcard));
-      })
+    brandUrls.map(async (u) => {
+      await objectStorageService.promoteServingUrlToPublic(u, clerkId);
+      const wildcard = parseServingWildcard(u);
+      if (wildcard) await consumeUploadClaim(servingWildcardToObjectPath(wildcard));
+    }),
   );
 
   return { updated: true };
