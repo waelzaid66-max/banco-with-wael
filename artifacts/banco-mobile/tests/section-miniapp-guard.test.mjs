@@ -1177,7 +1177,7 @@ test("Profile role prefers /me over Clerk publicMetadata", () => {
 test("Banks hub hides Join when institution membership is active", () => {
   const src = fs.readFileSync(BANKS, "utf8");
   assert.match(src, /onMembershipChange/);
-  assert.match(src, /!isFiMember/);
+  assert.match(src, /showJoinCta/);
   assert.match(src, /testID="banks-join-box"/);
   assert.match(
     src,
@@ -1186,10 +1186,13 @@ test("Banks hub hides Join when institution membership is active", () => {
   );
 });
 
+<<<<<<< HEAD
 // Restored from -BANCO-CA-OOM- alongside the feature itself. An account that
 // already holds the FI role must not be shown "Join" again — that reads as if
 // the registration never landed. Verification alone does not open the inbox: an
 // admin still has to link the institution, and this state says so.
+=======
+>>>>>>> 5a67b27 (fix(accounts): close real profile/FI gaps without inventing product)
 test("Banks hub shows awaiting-admin link for FI role without membership", () => {
   const src = fs.readFileSync(BANKS, "utf8");
   assert.match(src, /testID="banks-awaiting-link"/);
@@ -1198,6 +1201,20 @@ test("Banks hub shows awaiting-admin link for FI role without membership", () =>
   assert.match(src, /useGetMe/);
 });
 
+<<<<<<< HEAD
+=======
+test("Profile role prefers /me over Clerk publicMetadata", () => {
+  const src = fs.readFileSync(PROFILE, "utf8");
+  assert.match(src, /meQuery\.data\?\.data\?\.role/);
+  assert.match(
+    src,
+    /const role = meRole \|\| clerkRole/,
+    "profile must use DB role first (S1)",
+  );
+  assert.match(src, /demoteBlockedTitle/, "client demote guard copy");
+});
+
+>>>>>>> 5a67b27 (fix(accounts): close real profile/FI gaps without inventing product)
 test("Banks productsHint honesty keys exist in en+ar", () => {
   const src = fs.readFileSync(I18N, "utf8");
   assert.match(src, /productsHint:\s*[\s\S]*?not a browsable partner list/i);

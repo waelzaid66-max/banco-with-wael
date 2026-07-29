@@ -109,13 +109,19 @@ function InstitutionInboxSection({
   const { mutate: updateRequest, isPending } = useUpdateInstitutionRequest();
   const [pendingLead, setPendingLead] = React.useState<string | null>(null);
 
-  // Tell the hub when a real institution membership is active so Join CTA
-  // (F-UX-02) is not stacked on top of an already-working inbox.
+  // Tell the hub when membership is known (settled) so Join / awaiting-link
+  // never flash during the inbox probe. 401/403 ⇒ not a member; success ⇒ member.
+  const membershipSettled = !!isSignedIn && !inbox.isLoading;
   const membershipActive =
-    !!isSignedIn && !inbox.isLoading && !inbox.isError && !!inbox.data?.data;
+    membershipSettled && !inbox.isError && !!inbox.data?.data;
   React.useEffect(() => {
+    if (!isSignedIn) {
+      onMembershipChange?.(false);
+      return;
+    }
+    if (!membershipSettled) return;
     onMembershipChange?.(membershipActive);
-  }, [membershipActive, onMembershipChange]);
+  }, [isSignedIn, membershipSettled, membershipActive, onMembershipChange]);
 
   const transition = (leadId: string, status: "contacted" | "closed") => {
     setPendingLead(leadId);
@@ -531,10 +537,14 @@ export default function BanksScreen() {
           </View>
         ))}
 
+<<<<<<< HEAD
         {/* Awaiting admin link (S2): the account already holds the FI role, so
             showing "Join" again would read as if the registration never landed.
             Verification alone does not open the inbox — an admin must link the
             institution — so this state says exactly that. */}
+=======
+        {/* Awaiting admin link — FI role without membership (honest ops path; no re-onboard) */}
+>>>>>>> 5a67b27 (fix(accounts): close real profile/FI gaps without inventing product)
         {showAwaitingAdminLink ? (
           <View
             style={[
@@ -555,7 +565,14 @@ export default function BanksScreen() {
               />
             </View>
             <AppText
+<<<<<<< HEAD
               style={[styles.joinTitle, { color: colors.foreground, textAlign }]}
+=======
+              style={[
+                styles.joinTitle,
+                { color: colors.foreground, textAlign },
+              ]}
+>>>>>>> 5a67b27 (fix(accounts): close real profile/FI gaps without inventing product)
             >
               {t("business.banks.awaitingLinkTitle")}
             </AppText>
@@ -570,12 +587,19 @@ export default function BanksScreen() {
             <Pressable
               onPress={() => router.push("/business/verification")}
               style={styles.joinBtn}
+<<<<<<< HEAD
               accessibilityRole="button"
               accessibilityLabel={t("business.banks.awaitingLinkCta")}
               testID="banks-awaiting-verify"
             >
               <MaterialCommunityIcons
                 name="shield-check"
+=======
+              testID="banks-awaiting-verify"
+            >
+              <MaterialCommunityIcons
+                name="shield-check-outline"
+>>>>>>> 5a67b27 (fix(accounts): close real profile/FI gaps without inventing product)
                 size={18}
                 color="#FFFFFF"
               />
@@ -587,7 +611,11 @@ export default function BanksScreen() {
         ) : null}
 
         {/* Join CTA — hidden for institution members who already have an inbox
+<<<<<<< HEAD
             AND for FI-role users still awaiting the admin owner link (S2). */}
+=======
+            AND for FI-role users still awaiting admin owner link (S2). */}
+>>>>>>> 5a67b27 (fix(accounts): close real profile/FI gaps without inventing product)
         {showJoinCta ? (
           <View
             style={[

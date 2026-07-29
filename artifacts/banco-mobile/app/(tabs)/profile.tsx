@@ -582,6 +582,7 @@ export default function ProfileScreen() {
     setNeedsAccountType(false);
     try {
       await updateMe({ account_type: type });
+      await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       // Dealer / company / financial-institution all continue to the business
       // onboarding, where verification (KYC / bank approval) is collected.
@@ -1261,7 +1262,7 @@ export default function ProfileScreen() {
             >
               <AppText style={[styles.roleText, { color: colors.primary }]}>
                 {categoryLabel ||
-                  ((user.publicMetadata?.role as string) || t("profile.member"))
+                  (role || t("profile.member"))
                     .replace(/_/g, " ")
                     .replace(/\b\w/g, (c) => c.toUpperCase())}
               </AppText>

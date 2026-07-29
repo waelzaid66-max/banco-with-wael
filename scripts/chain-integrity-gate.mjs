@@ -1,0 +1,236 @@
+#!/usr/bin/env node
+/**
+ * BANCO full-chain integrity gate — NON-DESTRUCTIVE.
+ *
+ * Verifies that critical adopted fixes remain present in source so a future
+ * Replit mega-wipe (class of 93b650b) cannot ship silently.
+ *
+ * Usage (repo root):
+ *   node scripts/chain-integrity-gate.mjs
+ *
+ * Exit 0 = all markers present. Exit 1 = one or more missing.
+ * Does NOT modify product behavior. Does NOT guess env/runtime.
+ */
+
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, "..");
+
+/** @type {{ id: string; file: string; test: (src: string) => boolean; why: string }[]} */
+const CHECKS = [
+  {
+    id: "P-profile-phone-MOB01",
+    file: "artifacts/banco-mobile/app/(tabs)/profile.tsx",
+    test: (s) =>
+      /testID="edit-phone-input"/.test(s) &&
+      /phoneDraft/.test(s) &&
+      /phone:\s*trimmedPhone/.test(s),
+    why: "MOB-01 phone edit must remain wired to updateMe",
+  },
+  {
+    id: "P-account-skip",
+    file: "artifacts/banco-mobile/app/(tabs)/profile.tsx",
+    test: (s) => /testID="onboard-skip"/.test(s),
+    why: "Skip on account-type gate (224ef4f) must not be wiped again",
+  },
+  {
+    id: "P-account-anti-trap",
+    file: "artifacts/banco-mobile/app/(tabs)/profile.tsx",
+    test: (s) => {
+      const i = s.indexOf("const chooseAccountType");
+      if (i < 0) return false;
+      const sl = s.slice(i, i + 2200);
+      const d = sl.indexOf("setNeedsAccountType(false)");
+      const u = sl.indexOf("await updateMe({ account_type");
+      return d >= 0 && u >= 0 && d < u;
+    },
+    why: "df68258 dismiss-first — never trap users if API fails",
+  },
+  {
+    id: "P-account-fi-intent",
+    file: "artifacts/banco-mobile/app/(tabs)/profile.tsx",
+    test: (s) => /intent=fi/.test(s) && /financial_institution/.test(s),
+    why: "FI onboarding must pass intent=fi (never silent dealer demotion path)",
+  },
+  {
+    id: "P-account-role-from-me",
+    file: "artifacts/banco-mobile/app/(tabs)/profile.tsx",
+    test: (s) =>
+      /meQuery\.data\?\.data\?\.role/.test(s) &&
+      /const role = meRole \|\| clerkRole/.test(s),
+    why: "Profile chrome must prefer DB /me.role over Clerk metadata lag",
+  },
+  {
+    id: "P-account-demote-guard",
+    file: "artifacts/api-server/src/services/UserService.ts",
+    test: (s) =>
+      /DEMOTE_BLOCKED/.test(s) &&
+      /account_type === "individual"/.test(s) &&
+      /financial_institution/.test(s),
+    why: "Elevated roles must not self-demote to individual via PATCH /me",
+  },
+  {
+    id: "P-banks-awaiting-link",
+    file: "artifacts/banco-mobile/app/business/banks.tsx",
+    test: (s) =>
+      /testID="banks-awaiting-link"/.test(s) &&
+      /showAwaitingAdminLink/.test(s) &&
+      /intent=fi/.test(s),
+    why: "FI without owner link must see awaiting-admin UX, not endless Join",
+  },
+  {
+    id: "P-menu-touch-safe-profile",
+    file: "artifacts/banco-mobile/app/(tabs)/profile.tsx",
+    test: (s) => {
+      const a = s.indexOf("{/* Overflow menu");
+      if (a < 0) return false;
+      const b = s.indexOf("</Modal>", a);
+      const block = s.slice(a, b);
+      return (
+        !/onStartShouldSetResponder/.test(block) &&
+        /StyleSheet\.absoluteFillObject/.test(block) &&
+        /maxHeight:\s*["']85%["']/.test(s)
+      );
+    },
+    why: "Profile overflow menu touch-safe + scroll cap (f70e016/4ccf939)",
+  },
+  {
+    id: "P-menu-touch-safe-promote",
+    file: "artifacts/banco-mobile/components/PromoteButton.tsx",
+    test: (s) =>
+      !/onStartShouldSetResponder/.test(s) && /StyleSheet\.absoluteFillObject/.test(s),
+    why: "Promote sheet must stay touch-safe",
+  },
+  {
+    id: "P-menu-touch-safe-home",
+    file: "artifacts/banco-mobile/app/(tabs)/index.tsx",
+    test: (s) =>
+      !/onStartShouldSetResponder/.test(s) &&
+      (s.match(/StyleSheet\.absoluteFillObject/g) || []).length >= 2,
+    why: "Home logo/sort menus must stay touch-safe",
+  },
+  {
+    id: "P-map-locate-me",
+    file: "artifacts/banco-mobile/components/search/mapHtml.ts",
+    test: (s) => /LocateControl/.test(s) && /locate-btn/.test(s),
+    why: "Locate-me control (fcd7d1c) must remain after wipe restore",
+  },
+  {
+    id: "P-map-market-center",
+    file: "artifacts/banco-mobile/lib/searchTaxonomy.ts",
+    test: (s) =>
+      /export function marketCountryMapCenter/.test(s) && /FR:\s*\{\s*lat:/.test(s),
+    why: "Market-country initial map center (b68c8af) must remain; includes EU",
+  },
+  {
+    id: "P-map-market-center-wired",
+    file: "artifacts/banco-mobile/components/search/SearchResultsMap.tsx",
+    test: (s) => /marketCountryMapCenter\(criteria\.marketCountry\)/.test(s),
+    why: "Native map must frame by selected market country",
+  },
+  {
+    id: "P-map-geolocation-webview",
+    file: "artifacts/banco-mobile/components/search/SearchResultsMap.tsx",
+    test: (s) => /geolocationEnabled/.test(s),
+    why: "Android/iOS WebView must allow geolocation for locate-me",
+  },
+  {
+    id: "P-market-eu-flags",
+    file: "artifacts/banco-mobile/constants/countryCodes.ts",
+    test: (s) =>
+      ["FR", "DE", "ES", "IT"].every((iso) =>
+        new RegExp(`iso:\\s*"${iso}"[\\s\\S]{0,120}?flag:\\s*"`).test(s),
+      ),
+    why: "Compressed market strip needs EU flags (not globe fallback)",
+  },
+  {
+    id: "P-car-compact-strip",
+    file: "artifacts/banco-mobile/components/search/SectionSearchApp.tsx",
+    test: (s) =>
+      /testID="car-brand-origin-strip"/.test(s) && /testID="car-brand-btn"/.test(s),
+    why: "Owner-approved compact car strip (aa0364c) — do not regress to dual rows",
+  },
+  {
+    id: "P-stay-compact-sort",
+    file: "artifacts/banco-mobile/components/search/BookingStaysApp.tsx",
+    test: (s) => /sortChip:\s*\{[\s\S]*?width:\s*30[\s\S]*?height:\s*30/.test(s),
+    why: "Owner compact Stay sort chip 30×30 (4bf7cfb)",
+  },
+  {
+    id: "P-upload-503-storage",
+    file: "artifacts/api-server/src/controllers/uploadController.ts",
+    test: (s) =>
+      /object storage is not configured/.test(s) && /status\(503\)/.test(s),
+    why: "Clear 503 when storage missing (0afef07) — not opaque 500",
+  },
+  {
+    id: "P-upload-claims-idor",
+    file: "artifacts/api-server/src/lib/uploadClaims.ts",
+    test: (s) => /assertCallerMayUseUpload/.test(s),
+    why: "C-01 upload IDOR guard must remain",
+  },
+  {
+    id: "P-email-cycles",
+    file: "artifacts/api-server/src/services/EmailService.ts",
+    test: (s) =>
+      /sendNewMessageEmail/.test(s) &&
+      /sendNewMatchEmail/.test(s) &&
+      /sendPriceDropEmail/.test(s),
+    why: "Transactional email cycles (ef8174d) must remain",
+  },
+  {
+    id: "P-email-arabic-safe",
+    file: "artifacts/api-server/src/services/EmailService.ts",
+    test: (s) => /BUG-001/.test(s) && /charCodeAt\(0\)\.toString\(16\)/.test(s),
+    why: "Arabic ByteString-safe escape (b6724a1) must remain",
+  },
+  {
+    id: "P-push-service",
+    file: "artifacts/api-server/src/services/PushService.ts",
+    test: (s) => /EXPO_PUSH_ENDPOINT/.test(s) && /registerPushToken/.test(s),
+    why: "Push delivery path must remain",
+  },
+  {
+    id: "P-fi-agent-authz",
+    file: "artifacts/api-server/src/services/FinancingService.ts",
+    test: (s) => /agentCanAccessRequest/.test(s),
+    why: "FI branch agent AuthZ must remain",
+  },
+  {
+    id: "P-section-route-discover",
+    file: "artifacts/banco-mobile/components/SearchDiscover.tsx",
+    test: (s) => /SECTION_ROUTE/.test(s) && /router\.push\(SECTION_ROUTE\[cat\]\)/.test(s),
+    why: "Discover must ENTER mini-apps (anti-melt)",
+  },
+];
+
+function main() {
+  console.log("BANCO chain-integrity-gate (source markers only)\n");
+  const failed = [];
+  for (const c of CHECKS) {
+    const full = path.join(ROOT, c.file);
+    if (!fs.existsSync(full)) {
+      failed.push({ id: c.id, detail: `missing file ${c.file}` });
+      console.error(`[FAIL] ${c.id}: missing file ${c.file}`);
+      continue;
+    }
+    const src = fs.readFileSync(full, "utf8");
+    if (!c.test(src)) {
+      failed.push({ id: c.id, detail: c.why });
+      console.error(`[FAIL] ${c.id}: ${c.why}`);
+    } else {
+      console.log(`[PASS] ${c.id}`);
+    }
+  }
+  console.log(`\n--- ${CHECKS.length - failed.length}/${CHECKS.length} passed ---`);
+  if (failed.length) {
+    console.error("\nChain broken — do not ship until markers are restored.");
+    process.exit(1);
+  }
+  console.log("Chain integrity OK.");
+}
+
+main();

@@ -165,6 +165,10 @@ export async function updateUserProfile(
   // A client can never request `admin` or any privileged role; those are
   // unreachable through this path. A financial institution still has to pass
   // verification (KYC / bank approval) before its financing features unlock.
+<<<<<<< HEAD
+=======
+  //
+>>>>>>> 5a67b27 (fix(accounts): close real profile/FI gaps without inventing product)
   // Self-demote guard (S4): elevated roles must not silently collapse to
   // `individual` via PATCH /me — that hole let FI/company wipe themselves from
   // the profile "Manage account type" / Skip paths. Upgrades and lateral moves

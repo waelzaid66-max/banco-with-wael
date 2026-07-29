@@ -6,6 +6,8 @@ import {
   sendBehaviorSignal,
   useListNotifications,
   getListNotificationsQueryKey,
+  useGetMe,
+  getGetMeQueryKey,
   FeedItem,
   GetFeedCategory,
   SendBehaviorSignalBodyAction,
@@ -301,7 +303,18 @@ export default function FeedScreen() {
     useSession();
   const { requireAuth } = useAuthGate();
   const { isSignedIn, user } = useUser();
-  const role = (user?.publicMetadata?.role as string) || "";
+  // DB role via /me first — Clerk publicMetadata can lag after account upgrades.
+  const meQuery = useGetMe({
+    query: {
+      queryKey: getGetMeQueryKey(),
+      enabled: !!isSignedIn,
+      staleTime: 60_000,
+    },
+  });
+  const role =
+    meQuery.data?.data?.role ||
+    (user?.publicMetadata?.role as string) ||
+    "";
   const isBusiness = ["dealer", "company", "enterprise"].includes(role);
   const [showLogoMenu, setShowLogoMenu] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);

@@ -151,9 +151,15 @@ test("home logo/sort menus stay touch-safe (no nested responder trap)", () => {
 test("account-type gate keeps Skip + dismiss-first anti-trap", () => {
   const src = fs.readFileSync(PROFILE, "utf8");
   assert.match(src, /testID="onboard-skip"/, "Skip control must remain (224ef4f)");
+  assert.match(
+    src,
+    /demoteBlockedTitle/,
+    "elevated self-demote must stay client-blocked (S4)",
+  );
   const fn = src.indexOf("const chooseAccountType");
   assert.ok(fn >= 0);
-  const slice = src.slice(fn, fn + 1200);
+  // Include demote guard preamble before dismiss/updateMe (slice must be long enough).
+  const slice = src.slice(fn, fn + 2200);
   const dismiss = slice.indexOf("setNeedsAccountType(false)");
   const update = slice.indexOf("await updateMe({ account_type");
   assert.ok(dismiss >= 0 && update >= 0, "chooseAccountType must dismiss + updateMe");
