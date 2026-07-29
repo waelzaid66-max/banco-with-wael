@@ -641,6 +641,64 @@ const CHECKS = [
     },
     why: "Company brand media ownership must be proven before profile write",
   },
+  {
+    id: "P-notif-enum-car-import",
+    file: "artifacts/api-server/src/validators/schemas.ts",
+    test: (s) =>
+      /NotificationTypeEnum[\s\S]*car_import/.test(s) &&
+      /subscription_expiring/.test(s),
+    why: "Response Zod enum must include car_import or GET /notifications 500s",
+  },
+  {
+    id: "P-prefs-billing-mutable",
+    file: "artifacts/api-server/src/services/ProfileService.ts",
+    test: (s) =>
+      /"booking"/.test(s) &&
+      /"payment_success"/.test(s) &&
+      /"car_import"/.test(s) &&
+      /NOTIFICATION_TYPES/.test(s),
+    why: "Settings must expose booking/billing/import mute categories",
+  },
+  {
+    id: "P-delete-clerk-fail-soft",
+    file: "artifacts/api-server/src/services/UserService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function deleteAccount"));
+      return (
+        /clerkClient\.users\.deleteUser/.test(fn) &&
+        /returning success so client signs out/.test(fn) &&
+        !/AUTH_PROVIDER_ERROR/.test(fn)
+      );
+    },
+    why: "Clerk delete failure must not block client sign-out after privacy wipe",
+  },
+  {
+    id: "P-push-response-dedupe",
+    file: "artifacts/banco-mobile/hooks/usePushNotifications.tsx",
+    test: (s) =>
+      /handledResponseIds/.test(s) &&
+      /getLastNotificationResponseAsync/.test(s) &&
+      /addNotificationResponseReceivedListener/.test(s),
+    why: "Cold-start push deep-link must dedupe last-response vs listener",
+  },
+  {
+    id: "P-biometric-bg-only",
+    file: "artifacts/banco-mobile/context/BiometricContext.tsx",
+    test: (s) =>
+      /state === "background"/.test(s) &&
+      !/state === "background" \|\| state === "inactive"/.test(s) &&
+      !/\(state === "background" \|\| state === "inactive"\)/.test(s),
+    why: "Biometric must not re-lock on inactive (permission sheet storms)",
+  },
+  {
+    id: "P-svg-icon-registry",
+    file: "artifacts/banco-mobile/components/icons.tsx",
+    test: (s) =>
+      /lucide-react-native/.test(s) &&
+      /react-native-svg/.test(s) &&
+      !/from ["']@expo\/vector-icons["']/.test(s),
+    why: "SVG icon registry must remain the sole runtime glyph source (no vector-font regression)",
+  },
 ];
 
 function main() {

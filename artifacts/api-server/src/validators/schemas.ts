@@ -557,6 +557,7 @@ export const NotificationTypeEnum = z.enum([
   "payment_success",
   "payment_failed",
   "subscription_expiring",
+  "car_import",
 ]);
 
 export const NotificationItemSchema = z

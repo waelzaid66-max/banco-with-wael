@@ -322,16 +322,15 @@ describe("deleteAccount", () => {
     expect(deleteUserMock).not.toHaveBeenCalled();
   });
 
-  it("throws AUTH_PROVIDER_ERROR but keeps local data anonymized when Clerk deletion fails", async () => {
+  it("returns deleted:true and keeps local anonymization when Clerk deletion fails", async () => {
     const f = await seedUserWithFootprint();
     deleteUserMock.mockRejectedValue(new Error("clerk down"));
 
-    await expect(deleteAccount(f.clerkId)).rejects.toMatchObject({
-      code: "AUTH_PROVIDER_ERROR",
-    });
+    const result = await deleteAccount(f.clerkId);
+    expect(result).toEqual({ deleted: true });
 
     // The privacy obligation (local wipe) must already be durable even though
-    // the auth-provider step failed.
+    // the auth-provider step failed — client can sign out on success.
     const [user] = await db.select().from(users).where(eq(users.id, f.userId));
     expect(user.name).toBe("Deleted User");
     expect(user.email).toBeNull();

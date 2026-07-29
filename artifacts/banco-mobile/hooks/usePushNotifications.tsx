@@ -65,8 +65,20 @@ function navigateWhenReady(dest: Parameters<typeof router.push>[0], attempt = 0)
   }
 }
 
+const handledResponseIds = new Set<string>();
+
 function handleResponse(response: Notifications.NotificationResponse | null) {
   if (!response) return;
+  const id = response.notification.request.identifier;
+  if (id && handledResponseIds.has(id)) return;
+  if (id) {
+    handledResponseIds.add(id);
+    // Bound memory: keep only recent ids across long sessions.
+    if (handledResponseIds.size > 64) {
+      const first = handledResponseIds.values().next().value;
+      if (first !== undefined) handledResponseIds.delete(first);
+    }
+  }
   const data = (response.notification.request.content.data ?? {}) as Record<
     string,
     unknown

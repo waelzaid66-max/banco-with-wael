@@ -50,6 +50,10 @@ const CATEGORY_ORDER: NotificationPreferenceType[] = [
   "price_drop",
   "investment",
   "global_supply",
+  "payment_success",
+  "payment_failed",
+  "subscription_expiring",
+  "car_import",
   "system",
 ];
 

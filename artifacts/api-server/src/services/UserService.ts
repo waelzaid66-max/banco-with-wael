@@ -146,6 +146,11 @@ export async function updateUserProfile(
   if (!user) {
     throw Object.assign(new Error("User not found"), { code: "NOT_FOUND" });
   }
+  if (user.deletedAt) {
+    throw Object.assign(new Error("Account has been deleted"), {
+      code: "ACCOUNT_DELETED",
+    });
+  }
 
   // Anti-abuse: cap profile-mutation bursts per user (feeds suspicion → auto
   // shadow-ban). Server-authoritative; the client can never opt out.
@@ -398,13 +403,12 @@ export async function deleteAccount(clerkId: string): Promise<{ deleted: boolean
   try {
     await clerkClient.users.deleteUser(clerkId);
   } catch (err) {
+    // Privacy wipe is already durable. Throwing here left clients signed-in
+    // with a tombstoned DB user (401 ACCOUNT_DELETED forever, no retry path).
+    // Return success so the client signs out; ops cleans orphan Clerk rows.
     logger.error(
       { err, user_id: user.id },
-      "Account data anonymized but Clerk user deletion failed",
-    );
-    throw Object.assign(
-      new Error("Account data removed but auth-provider deletion failed"),
-      { code: "AUTH_PROVIDER_ERROR" },
+      "Account data anonymized but Clerk user deletion failed — returning success so client signs out",
     );
   }
 

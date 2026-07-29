@@ -33,7 +33,8 @@ export async function notifyNewMatch(listing: {
   price: number;
   title: string;
   sellerId: string;
-}): Promise<void> {
+}): Promise<Set<string>> {
+  const notified = new Set<string>();
   try {
     const candidates = await db
       .select()
@@ -66,6 +67,7 @@ export async function notifyNewMatch(listing: {
         body: `إعلان جديد يطابق «${search.name}» · A new listing matches "${search.name}"`,
         data: { listing_id: listing.id, saved_search_id: search.id },
       });
+      notified.add(search.userId);
 
       await db
         .update(savedSearches)
@@ -97,6 +99,7 @@ export async function notifyNewMatch(listing: {
   } catch (err) {
     console.error("[Alert new_match]", err);
   }
+  return notified;
 }
 
 /**
@@ -167,6 +170,8 @@ export async function notifyFollowersOfNewListing(listing: {
   id: string;
   title: string;
   sellerId: string;
+  /** Users already pinged for this listing (e.g. via saved-search match). */
+  skipUserIds?: ReadonlySet<string>;
 }): Promise<void> {
   try {
     const followers = await db
@@ -184,6 +189,7 @@ export async function notifyFollowersOfNewListing(listing: {
 
     for (const f of followers) {
       if (f.followerId === listing.sellerId) continue;
+      if (listing.skipUserIds?.has(f.followerId)) continue;
       await createNotification({
         userId: f.followerId,
         type: "new_match",

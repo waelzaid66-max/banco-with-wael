@@ -113,10 +113,12 @@ export function BiometricProvider({ children }: { children: React.ReactNode }) {
     if (locked) void unlock();
   }, [locked, unlock]);
 
-  // Re-lock whenever the app leaves the foreground so it's protected on return.
+  // Re-lock when the app is backgrounded. Do NOT lock on `inactive` — that
+  // fires for Control Center, permission sheets (incl. notification prompts),
+  // and incoming calls, which caused biometric prompt storms / overlay flicker.
   useEffect(() => {
     const sub = AppState.addEventListener("change", (state) => {
-      if ((state === "background" || state === "inactive") && enabledRef.current) {
+      if (state === "background" && enabledRef.current) {
         setLocked(true);
       }
     });

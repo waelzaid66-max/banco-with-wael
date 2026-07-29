@@ -471,7 +471,8 @@ export async function createListing(
   recomputeDealerQuality(user.id);
 
   // Best-effort: alert owners of matching alerts-enabled saved searches.
-  void notifyNewMatch({
+  // Capture who was notified so follower fan-out does not double-ping them.
+  const matchNotified = notifyNewMatch({
     id: created.id,
     category: input.category,
     price: input.base_price_cash ?? 0,
@@ -483,11 +484,16 @@ export async function createListing(
   // "wanted" requests are skipped — followers subscribe to what a company
   // SELLS, not to its purchasing needs.
   if (!input.is_request) {
-    void notifyFollowersOfNewListing({
-      id: created.id,
-      title: normalized.title,
-      sellerId: user.id,
-    });
+    void matchNotified.then((skipUserIds) =>
+      notifyFollowersOfNewListing({
+        id: created.id,
+        title: normalized.title,
+        sellerId: user.id,
+        skipUserIds,
+      }),
+    );
+  } else {
+    void matchNotified;
   }
 
   return created;
