@@ -4,7 +4,7 @@
 **Branch:** `cursor/w41-production-release-5cf0`  
 **Policy:** Recover / reconnect / certify — never rewrite, never invent, never fake green.  
 **Verdict at this ledger:** **CONDITIONAL GO — NOT FULL PRODUCTION CERTIFIED**  
-**Code tip merge-ready for tag `w.4.1`:** **YES** (Phase 5 package). Remaining blockers are **owner merge/tag** + **Coolify/EAS/device OPS**.
+**Code tip merge-ready for tag `w.4.1`:** **YES** @ `05d0dd1` (see `39-RELEASE-EXECUTION-GO-NOGO.md`). Remaining blockers are **owner merge/tag** + **Coolify/EAS/device OPS**.
 
 ---
 
@@ -57,6 +57,8 @@
 | `d4cec74` Phase 3 reconnect | **P2-M2** `setAuthFailureHandler` on website/web/admin/dealer; **P2-M9** dealer NotFound Switch catch-all; see `34-PHASE3-PRODUCTION-RECOVERY-REPORT.md` |
 | `b2ac785` Phase 4 harden | **P2-M4** OpenAPI `/livez` `/readyz` `/v1/payments/*` + codegen; `ACCOUNT_DELETED`/`SERVICE_UNAVAILABLE` on ApiError; `errorResponse` union matches authGuard 503; see `35-PHASE4-PRODUCTION-HARDENING-REPORT.md` |
 | `0d49814` / `8317326` Phase 5 package | Release readiness + OPS handoff; gates re-verified; see `36-PHASE5-W41-RELEASE-READINESS.md` |
+| `05d0dd1` P2-M3 + smoke matrix | Website `/workspace/settings` delete UI; `37-COOLIFY-LIVE-SMOKE-MATRIX.md`; `38-P2-M3-*` |
+| Release execution gate | `39-RELEASE-EXECUTION-GO-NOGO.md` — **GO merge**; FULL CERT after Coolify smoke |
 
 ---
 
@@ -67,7 +69,7 @@
 | Optional: set `NEXT_PUBLIC_WEB_SEARCH_LIVE/MAP=true` for live search (rebuild) | ops soft-launch |
 | Web account-delete UI (P2-M3) | **closed UI-only** on `banco-website` `/workspace/settings` — see `38-P2-M3-WEB-ACCOUNT-DELETE-UI.md` |
 | OpenAPI omit payments/readyz/livez (P2-M4) | **closed** on tip `b2ac785` (140 paths / 166 ops) |
-| Merge PR → tag `w.4.1` → Coolify | **owner** — see Phase 5 |
+| Merge PR → tag `w.4.1` → Coolify → smoke | **owner** — see `39-RELEASE-EXECUTION-GO-NOGO.md` |
 
 ### Code / release process
 
@@ -91,9 +93,10 @@
 
 | Gate | Result | When |
 |------|--------|------|
-| `chain-integrity-gate.mjs` | **164/164 PASS** | Phase 5 tip `8317326` |
-| API vitest (deleteAccount + full suite) | **385 passed / 3 skipped** | Phase 5 tip `8317326` |
-| production-confidence | **14/14 PASS** | Phase 5 tip `8317326` |
+| `chain-integrity-gate.mjs` | **164/164 PASS** | tip `05d0dd1` (post P2-M3) |
+| API vitest (deleteAccount + full suite) | **385 passed / 3 skipped** | tip `05d0dd1` |
+| production-confidence | **14/14 PASS** | tip `05d0dd1` |
+| banco-website tsc | **PASS** | tip `05d0dd1` |
 | Mobile lib-hardening + universal-links | **33/33 PASS** | Phase 5 re-verify |
 | Coolify website bake parity | committed `ee4d2ba` | prior |
 | Landing PATHS ↔ Coolify + Clerk hops | committed | PATHS `/market|/admin` + VITE_*; DomainRouter `banco.today/dealer-os` + `banco.today/banco-mobile` |
