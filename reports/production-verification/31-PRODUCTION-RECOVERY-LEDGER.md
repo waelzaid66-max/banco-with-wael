@@ -35,6 +35,11 @@
 | Coolify Next services omitted `WEB_PLUG_ENABLED` (AWS had it) | **ops kill-switch unreachable** |
 | Dual `banco-web` + `banco-website` still both deployed | **cutover incomplete (B-07)** — intentional until owner cutover |
 | Live search/map defaults `false` in compose | **soft-launch default** — ops must set true + rebuild when ready |
+| Account delete blanked comment bodies but left `type:comment` notifs with author name | **privacy gap** — repaired this tip (review-scrub parity) |
+| `DEPLOY_COOLIFY.md` invented `db generate` / `db migrate` scripts | **ops mislead** — repaired (push --force via migrate profile) |
+| Website CI only built AWS frozen twin | **SoT Coolify website ungated** — repaired (second job) |
+| `docker-compose.prod.yml` lacked migrate profile | **repaired** |
+| GCP validation Cloud Build omitted deploy pin bake | **repaired** |
 
 ---
 
@@ -46,22 +51,27 @@
 | `ee4d2ba` | Website Dockerfile/compose bake parity; health `banco-website` / `w4.1` |
 | `e4aa389`–`e619cba` | Landing ↔ Coolify paths + `VITE_*`; nginx legacy 301; Coolify API pin + AWS keys + Coolify markers; `WEB_PLUG_ENABLED`; ledger gates 164/164 |
 | This tip (parity wave) | `docker-compose.prod.yml` ↔ Coolify (pin/S3 keys/website bake/plug); AWS `Dockerfile.web` BASE_PATH + `dist/public` + Clerk proxy; AWS nginx 301 aliases; AWS compose pin/keys/`CLERK_SECRET_KEY`; Coolify deploy order + `DEPLOY_COOLIFY` real S3 env names; env examples `/market/` `/admin/`; health probe docs (`/api/healthz` not `/healthz` or invented `/api/v1/health`) |
+| Tip after privacy/CI wave | Comment notif scrub on account delete (+ test + chain marker); Coolify migrate docs corrected to `push --force`; prod migrate profile; CI Coolify `Dockerfile.banco-website` job; GCP validation build pin + SESSION/PAYMENT secrets in env examples; staging env Coolify path guidance |
 
 ---
 
 ## 4. What remains (honest blockers)
+
+| Facets `market_country` MED | deferred (OpenAPI + handler category-only — not inventing API surface this wave) |
+| Dual `banco-web`/`banco-website` cutover | owner |
+| Optional: set `NEXT_PUBLIC_WEB_SEARCH_LIVE/MAP=true` for live search (rebuild) | ops soft-launch |
 
 ### Code / release process
 
 - Open/merge PR `cursor/w41-production-release-5cf0` → `main` (agent PR tool bound to `bancoo` — owner opens compare URL)
 - Tag **`w.4.1`** on merge SHA
 - Owner cutover: stop serving frozen `banco-web` when website owns the public domain
-- Optional: set `NEXT_PUBLIC_WEB_SEARCH_LIVE/MAP=true` for live search (rebuild)
 
 ### OPS / UNVERIFIED (cannot code-fake)
 
 - Coolify deploy of this SHA + one-shot migrate (`/readyz` money schema)
 - `OBJECT_STORAGE_PROVIDER=s3` + bucket/region + **static AWS keys** on VPS
+- Set `BANCO_WEB_MARKET_URL=/market/` + `BANCO_WEB_ADMIN_URL=/admin/` (or absolute) on Coolify Next builds
 - SSL + domains + Clerk live social providers
 - Paymob live webhook; EAS submit; device push/OAuth/payment QA
 - Unsigned Paymob first-bind TOFU (HIGH deferred — no invention)
@@ -73,11 +83,12 @@
 
 | Gate | Result | When |
 |------|--------|------|
-| `chain-integrity-gate.mjs` | **164/164 PASS** | after DomainRouter Clerk-origin restore + prod parity |
-| API vitest | **384 passed / 3 skipped** | re-run on this tip |
-| production-confidence | **14/14 PASS** | re-run on this tip |
+| `chain-integrity-gate.mjs` | **164/164 PASS** | comment-scrub marker strengthened |
+| API vitest (deleteAccount + full suite) | **385 passed / 3 skipped** | +1 comment scrub test |
+| production-confidence | **14/14 PASS** | this tip |
 | Coolify website bake parity | committed `ee4d2ba` | prior |
 | Landing PATHS ↔ Coolify + Clerk hops | committed | PATHS `/market|/admin` + VITE_*; DomainRouter `banco.today/dealer-os` + `banco.today/banco-mobile` |
-| AWS web SPA blank-page root cause | repaired this tip | BASE_PATH + `dist/public` parity with Coolify |
+| AWS web SPA blank-page root cause | repaired | BASE_PATH + `dist/public` parity with Coolify |
+| Comment notif scrub on delete | repaired this tip | review-scrub parity |
 
 Do **not** mark FULL CERT without OPS/device evidence (Coolify live secrets, S3, SSL, EAS, Paymob webhook, Clerk providers).

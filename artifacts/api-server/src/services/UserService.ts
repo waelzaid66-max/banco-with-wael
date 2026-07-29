@@ -365,13 +365,19 @@ export async function deleteAccount(clerkId: string): Promise<{ deleted: boolean
     await tx.delete(userBehavior).where(eq(userBehavior.userId, user.id));
 
     // Public content authored by the deleted user must not remain discoverable.
-    // Capture review ids BEFORE wipe so counterparties' review notifications
+    // Capture review/comment ids BEFORE wipe so counterparties' notifications
     // (which embed the author's name) can be purged below.
     const authoredReviews = await tx
       .select({ id: sellerReviews.id })
       .from(sellerReviews)
       .where(eq(sellerReviews.authorId, user.id));
     const authoredReviewIds = authoredReviews.map((r) => r.id);
+
+    const authoredComments = await tx
+      .select({ id: listingComments.id })
+      .from(listingComments)
+      .where(eq(listingComments.authorId, user.id));
+    const authoredCommentIds = authoredComments.map((c) => c.id);
 
     await tx.delete(stories).where(eq(stories.userId, user.id));
     await tx.delete(sellerReviews).where(eq(sellerReviews.authorId, user.id));
@@ -456,6 +462,19 @@ export async function deleteAccount(clerkId: string): Promise<{ deleted: boolean
           and(
             eq(notifications.type, "review"),
             inArray(sql`${notifications.data}->>'review_id'`, authoredReviewIds),
+          ),
+        );
+    }
+
+    // Comment notifications embed the author's name in listing-owner / parent
+    // author inboxes (CommentService createNotification type "comment").
+    if (authoredCommentIds.length > 0) {
+      await tx
+        .delete(notifications)
+        .where(
+          and(
+            eq(notifications.type, "comment"),
+            inArray(sql`${notifications.data}->>'comment_id'`, authoredCommentIds),
           ),
         );
     }

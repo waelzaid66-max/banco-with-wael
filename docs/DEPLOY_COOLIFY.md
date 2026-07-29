@@ -183,15 +183,17 @@ DATABASE_URL="postgresql://banco:<password>@<vps-ip>:5432/banco" \
 
 ### Subsequent deployments
 
-For schema changes after the initial deploy:
+Schema apply uses Drizzle **push** (there is no `generate` / `migrate` script
+in `@workspace/db`). After the DB is healthy:
 
 ```bash
-# Generate a migration file (run locally, commit it)
-pnpm --filter @workspace/db run generate
-
-# Apply migrations in production (via API container shell or CI job)
-pnpm --filter @workspace/db run migrate
+# One-shot (profile-gated — never runs on a normal `up`)
+docker compose -f docker-compose.coolify.yml --profile migrate run --rm migrate
 ```
+
+That runs `pnpm --filter @workspace/db run push -- --force` inside the API
+builder image. On a real data migration, review the SQL first; re-runs are
+idempotent for additive schema.
 
 ### Postgres connection string
 
@@ -329,7 +331,7 @@ Before going live:
 - [ ] Set all **required** environment variables (see table above)
 - [ ] Set `BANCO_WEB_URL`, `BANCO_WEBSITE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` before first build
 - [ ] Configure domains in Coolify → Traefik issues TLS certificates automatically
-- [ ] Run database schema push (first time) or migrate (subsequent changes)
+- [ ] Run database schema push once via Coolify migrate profile (`--profile migrate run --rm migrate`)
 - [ ] Set `PAYMOB_MODE=live` and fill in production Paymob credentials
 - [ ] Verify `CORS_ALLOWED_ORIGINS` includes all frontend domains
 - [ ] Set up object storage (`S3_BUCKET` etc.) for media uploads

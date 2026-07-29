@@ -1527,10 +1527,12 @@ const CHECKS = [
       return (
         /company_user_id/.test(fn) &&
         /follower_id/.test(fn) &&
-        /authoredReviewIds/.test(fn)
+        /authoredReviewIds/.test(fn) &&
+        /authoredCommentIds/.test(fn) &&
+        /type,\s*"comment"/.test(fn)
       );
     },
-    why: "Account delete must purge follower/review notifications that embed the deleted name",
+    why: "Account delete must purge follower/review/comment notifications that embed the deleted name",
   },
   {
     id: "P-prod-compose-healthy-depends",
