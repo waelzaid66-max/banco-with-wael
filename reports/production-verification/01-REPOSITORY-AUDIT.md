@@ -181,3 +181,9 @@ cd artifacts/banco-mobile && node --test tests/*.mjs
 - [ ] Fixes deferred until reports 01 committed and Phase 1+ continue with proof  
 
 **Next:** Phase 1 User Journey Audit (static + test evidence; runtime Clerk/OAuth marked PENDING without live tenant). Then repair **only** R-16/R-17/R-18 with before/after tests.
+
+---
+
+## Postscript — repairs applied after Phase 0 (same mission)
+
+After this report was committed unchanged, R-16 / R-17 / R-18 were repaired on branch `cursor/production-verification-5cf0` with living-test proof (**44/44 PASS** on the guard suites). See `11-REGRESSION-REPORT.md` and `13-BROKEN-FEATURES.md`.

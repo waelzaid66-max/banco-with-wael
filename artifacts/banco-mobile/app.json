@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.bancoboom.app",
+      "bundleIdentifier": "com.bancooom.app",
       "buildNumber": "1",
       "usesAppleSignIn": true,
       "associatedDomains": [
@@ -33,7 +33,7 @@
       }
     },
     "android": {
-      "package": "com.bancoboom.app",
+      "package": "com.bancooom.app",
       "versionCode": 1,
       "permissions": [
         "android.permission.CAMERA",

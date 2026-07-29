@@ -706,6 +706,9 @@ export default function ProfileScreen() {
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSavingAccountType(true);
+    // Dismiss the gate FIRST so a flaky/slow backend can never trap the user
+    // on this screen (df68258; wiped by 93b650b / bancoboom merges).
+    setNeedsAccountType(false);
     try {
       await updateMe({ account_type: type });
       try {
@@ -720,7 +723,6 @@ export default function ProfileScreen() {
         console.warn("[profile] accountTypeChosen flag save failed", e);
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setNeedsAccountType(false);
       // Dealer / company / financial-institution all continue to the business
       // onboarding, where verification (KYC / bank approval) is collected.
       // FI must pass intent=fi so activity + account_type stay bank — never dealer.
@@ -730,6 +732,7 @@ export default function ProfileScreen() {
         router.push("/business/onboarding");
       }
     } catch {
+      // Gate already dismissed — sync is retryable from Manage account type.
       Alert.alert(t("profile.accountTypeError"));
     } finally {
       setSavingAccountType(false);
@@ -821,14 +824,39 @@ export default function ProfileScreen() {
 
   if (user && needsAccountType) {
     return (
-      <ScrollView
-        style={[styles.container, { backgroundColor: colors.background }]}
-        contentContainerStyle={[
-          styles.authContent,
-          { paddingTop: topPad + 40 },
-        ]}
-        keyboardShouldPersistTaps="handled"
-      >
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Skip / dismiss — continues as individual (224ef4f; wiped by 93b650b) */}
+        <View
+          style={{
+            paddingTop: topPad + 6,
+            paddingHorizontal: 16,
+            paddingBottom: 4,
+            alignItems: isRTL ? "flex-start" : "flex-end",
+          }}
+        >
+          <Pressable
+            onPress={() => chooseAccountType("individual")}
+            disabled={savingAccountType}
+            hitSlop={12}
+            style={{ padding: 8 }}
+            testID="onboard-skip"
+          >
+            <AppText
+              style={{
+                color: colors.mutedForeground,
+                fontSize: 14,
+                fontFamily: "Inter_500Medium",
+              }}
+            >
+              {isRTL ? "تخطى" : "Skip"}
+            </AppText>
+          </Pressable>
+        </View>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={[styles.authContent, { paddingTop: 20 }]}
+          keyboardShouldPersistTaps="handled"
+        >
         <BancoLogo height={40} style={styles.authLogoImg} />
         <AppText style={[styles.authTitle, { color: colors.foreground }]}>
           {t("profile.chooseAccountType")}
@@ -958,7 +986,8 @@ export default function ProfileScreen() {
             </AppText>
           )}
         </Pressable>
-      </ScrollView>
+        </ScrollView>
+      </View>
     );
   }
 
@@ -2421,23 +2450,27 @@ export default function ProfileScreen() {
           </View>
         </Modal>
 
-        {/* Overflow menu → existing routes only */}
+        {/* Overflow menu → existing routes only.
+            Touch-safe pattern (f70e016) + scroll/cap (4ccf939): sibling dismiss
+            Pressable — NEVER nest sheet under backdrop Pressable with a
+            start-should-set-responder trap (that was reintroduced by 93b650b wipe). */}
         <Modal
           visible={showMenu}
           transparent
           animationType="slide"
           onRequestClose={() => setShowMenu(false)}
         >
-          <Pressable
-            style={styles.menuBackdrop}
-            onPress={() => setShowMenu(false)}
-          >
+          <View style={styles.menuBackdrop}>
+            <Pressable
+              style={StyleSheet.absoluteFillObject}
+              onPress={() => setShowMenu(false)}
+              accessibilityRole="button"
+            />
             <View
               style={[
                 styles.menuSheet,
                 { backgroundColor: colors.card, borderColor: colors.border },
               ]}
-              onStartShouldSetResponder={() => true}
             >
               <View
                 style={[styles.menuHandle, { backgroundColor: colors.border }]}
@@ -2453,40 +2486,48 @@ export default function ProfileScreen() {
                   {userEmail}
                 </AppText>
               ) : null}
-              {menuItems.map((mi) => (
-                <Pressable
-                  key={mi.key}
-                  onPress={mi.onPress}
-                  style={[styles.menuItem, isRTL && styles.rowReverse]}
-                  testID={`menu-${mi.key}`}
-                >
-                  <Feather
-                    name={mi.icon}
-                    size={18}
-                    color={mi.danger ? colors.destructive : colors.foreground}
-                  />
-                  <AppText
-                    style={[
-                      styles.menuItemText,
-                      {
-                        color: mi.danger
-                          ? colors.destructive
-                          : colors.foreground,
-                        textAlign: isRTL ? "right" : "left",
-                      },
-                    ]}
+              <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+                {menuItems.map((mi) => (
+                  <Pressable
+                    key={mi.key}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setShowMenu(false);
+                      mi.onPress();
+                    }}
+                    style={[styles.menuItem, isRTL && styles.rowReverse]}
+                    testID={`menu-${mi.key}`}
                   >
-                    {mi.label}
-                  </AppText>
-                  <Feather
-                    name={isRTL ? "chevron-left" : "chevron-right"}
-                    size={16}
-                    color={colors.mutedForeground}
-                  />
-                </Pressable>
-              ))}
+                    <Feather
+                      name={mi.icon}
+                      size={18}
+                      color={
+                        mi.danger ? colors.destructive : colors.foreground
+                      }
+                    />
+                    <AppText
+                      style={[
+                        styles.menuItemText,
+                        {
+                          color: mi.danger
+                            ? colors.destructive
+                            : colors.foreground,
+                          textAlign: isRTL ? "right" : "left",
+                        },
+                      ]}
+                    >
+                      {mi.label}
+                    </AppText>
+                    <Feather
+                      name={isRTL ? "chevron-left" : "chevron-right"}
+                      size={16}
+                      color={colors.mutedForeground}
+                    />
+                  </Pressable>
+                ))}
+              </ScrollView>
             </View>
-          </Pressable>
+          </View>
         </Modal>
       </ScrollView>
     );
@@ -4265,6 +4306,7 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 36,
     borderWidth: 1,
+    maxHeight: "85%",
   },
   menuHandle: {
     width: 40,
