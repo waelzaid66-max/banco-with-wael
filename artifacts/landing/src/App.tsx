@@ -47,23 +47,23 @@ function useScrollY() {
 
 /**
  * Domain-aware redirect (Clerk live keys bound to banco.today only):
- *   banco.deals  → market (dealer-os under /market/ on Coolify)
- *   banco.autos  → consumer app entry (store / web URL / landing)
+ *   banco.deals  → https://banco.today/dealer-os/   (Market on Clerk origin)
+ *   banco.autos  → https://banco.today/banco-mobile/ (consumer on Clerk origin)
  *   banco.today  → show main landing
+ *
+ * Absolute hops MUST stay on the banco.today path scheme (dealer-os /
+ * banco-mobile) — that is the Clerk-authorized origin layout. Same-origin
+ * PATHS above use Coolify /market|/admin (or VITE_*) for the Coolify nginx map.
  */
 function DomainRouter({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const h = window.location.hostname.toLowerCase().replace(/^www\./, "");
+    // Relative redirects on banco.deals / banco.autos keep the user on a
+    // non-authorized origin → white-screen / broken SSO.
     if (h === "banco.deals") {
-      const market = PATHS.market.startsWith("http")
-        ? PATHS.market
-        : `https://banco.today${PATHS.market.startsWith("/") ? PATHS.market : `/${PATHS.market}`}`;
-      window.location.replace(market);
+      window.location.replace("https://banco.today/dealer-os/");
     } else if (h === "banco.autos") {
-      const app = PATHS.app.startsWith("http")
-        ? PATHS.app
-        : `https://banco.today${PATHS.app.startsWith("/") ? PATHS.app : `/${PATHS.app}`}`;
-      window.location.replace(app);
+      window.location.replace("https://banco.today/banco-mobile/");
     }
   }, []);
   return <>{children}</>;
