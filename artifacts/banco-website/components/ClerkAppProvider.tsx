@@ -2,7 +2,10 @@
 
 import { ClerkProvider, useAuth } from "@clerk/nextjs";
 import { shadcn } from "@clerk/themes";
-import { setAuthTokenGetter } from "@workspace/api-client-react";
+import {
+  setAuthFailureHandler,
+  setAuthTokenGetter,
+} from "@workspace/api-client-react";
 import { usePathname } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { bancoBrand } from "@workspace/design-tokens";
@@ -37,7 +40,7 @@ const clerkAppearance = {
 };
 
 function AuthTokenBridgeInner() {
-  const { getToken, isLoaded } = useAuth();
+  const { getToken, isLoaded, signOut } = useAuth();
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -52,6 +55,17 @@ function AuthTokenBridgeInner() {
 
     return () => setAuthTokenGetter(null);
   }, [getToken, isLoaded]);
+
+  useEffect(() => {
+    // Soft-deleted accounts reject with 401 ACCOUNT_DELETED while Clerk JWT
+    // may still exist — clear the local session once so the user is not stuck.
+    // Mirrors artifacts/banco-mobile/app/_layout.tsx AuthTokenBridge.
+    setAuthFailureHandler(({ code }) => {
+      if (code !== "ACCOUNT_DELETED") return;
+      void signOut().catch(() => {});
+    });
+    return () => setAuthFailureHandler(null);
+  }, [signOut]);
 
   return null;
 }

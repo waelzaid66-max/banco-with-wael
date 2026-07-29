@@ -208,6 +208,10 @@ const en = {
     cat_review: "Reviews",
     cat_investment: "Investment interest",
     cat_global_supply: "Supply responses",
+    cat_payment_success: "Successful payments",
+    cat_payment_failed: "Failed payments",
+    cat_subscription_expiring: "Subscription reminders",
+    cat_car_import: "Car import updates",
     securitySection: "Account & Security",
     identityTitle: "Sign-in & security",
     identityBody: "Your email, password and sign-in providers are managed securely at sign-in. Update them from the login screen.",
@@ -876,7 +880,7 @@ const en = {
     accountTypeError: "Couldn't save your account type. Please try again.",
     accountSetupRetryTitle: "Setup incomplete",
     accountSetupRetryMessage:
-      "Could not save your account type. Please try again from Settings.",
+      "Could not save your account type. Open Profile → Manage account type to retry.",
     demoteBlockedTitle: "Can't switch to personal",
     demoteBlockedBody:
       "Company and financial-institution accounts can't be switched to personal from the app. Contact BANCO support if you need a change.",
@@ -2283,6 +2287,10 @@ const ar: typeof en = {
     cat_review: "التقييمات",
     cat_investment: "اهتمام استثماري",
     cat_global_supply: "ردود التوريد",
+    cat_payment_success: "مدفوعات ناجحة",
+    cat_payment_failed: "مدفوعات فاشلة",
+    cat_subscription_expiring: "تذكير الاشتراك",
+    cat_car_import: "تحديثات استيراد السيارات",
     securitySection: "الحساب والأمان",
     identityTitle: "تسجيل الدخول والأمان",
     identityBody: "بريدك وكلمة السر ووسائل تسجيل الدخول بتتدار بأمان عند تسجيل الدخول. عدّلها من شاشة الدخول.",
@@ -2948,7 +2956,7 @@ const ar: typeof en = {
     accountTypeError: "تعذّر حفظ نوع الحساب. حاول تاني.",
     accountSetupRetryTitle: "الإعداد غير مكتمل",
     accountSetupRetryMessage:
-      "تعذّر حفظ نوع الحساب. حاول من الإعدادات.",
+      "تعذّر حفظ نوع الحساب. افتح الملف الشخصي ← إدارة نوع الحساب لإعادة المحاولة.",
     demoteBlockedTitle: "مش هينفع تتحوّل لشخصي",
     demoteBlockedBody:
       "حسابات الشركة والمؤسسة المالية ماينفعش تتحول لشخصي من التطبيق. تواصل مع دعم بانكو لو محتاج تغيير.",

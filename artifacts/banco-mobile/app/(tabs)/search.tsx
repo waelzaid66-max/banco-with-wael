@@ -70,6 +70,10 @@ import {
   type SearchSort,
 } from "@/lib/searchParams";
 import {
+  hasIncomingSearchNavParams,
+  parseMobileSearchNavParams,
+} from "@/lib/searchNavParams";
+import {
   DEFAULT_NEAR_RADIUS_KM,
   requestNearMeCoords,
 } from "@/lib/nearMe";
@@ -204,17 +208,11 @@ export default function SearchScreen() {
   // Match section mini-apps: real safe-area only — never a fake 67px web pad.
   const topPad = Math.max(insets.top, Platform.OS === "web" ? 12 : 0);
 
-  const params = useLocalSearchParams<{
-    q?: string;
-    category?: string;
-    engine?: string;
-    minPrice?: string;
-    maxPrice?: string;
-    location?: string;
-    paymentType?: string;
-    sort?: string;
-    ts?: string;
-  }>();
+  // expo-router typed Routes overload rejects Record<> as TRoute; cast params shape.
+  const params = useLocalSearchParams() as Record<
+    string,
+    string | string[] | undefined
+  >;
 
   // Fire a coarse behaviour signal on each committed search (category intent).
   const onCommitted = useCallback(
@@ -271,7 +269,7 @@ export default function SearchScreen() {
   // Category chips are facet-gated: only categories with live inventory show.
   // Fails open while facets load; the active category is always kept visible.
   const { globalFacets, scopedFacets, loading: facetsLoading } =
-    useInventoryFacets(criteria.category);
+    useInventoryFacets(criteria.category, criteria.marketCountry);
   const shownCategories = useMemo(() => {
     const visible = visibleCategories(CATEGORIES, globalFacets);
     return CATEGORIES.filter(
@@ -425,46 +423,20 @@ export default function SearchScreen() {
     [update]
   );
 
-  // Re-run a saved search arriving via navigation params.
+  // Re-run a saved / deep-linked search arriving via navigation params.
+  // Uses the shared search-contract parser so rich criteria (brand, market
+  // country, material, near-me, …) round-trip — not only the legacy six fields.
   const appliedSig = useRef<string>("");
   useEffect(() => {
-    // Navigation can arrive with a free-text query, category, engine, and/or sort.
-    if (!params.q && !params.sort && !params.category && !params.engine) return;
+    if (!hasIncomingSearchNavParams(params)) return;
     const sig = JSON.stringify(params);
     if (sig === appliedSig.current) return;
     appliedSig.current = sig;
 
-    const category = (CATEGORIES.includes(params.category as FilterCategory)
-      ? params.category
-      : "all") as FilterCategory;
-    const engineDefs = enginesForCategory(category);
-    const engineKey =
-      params.engine && engineDefs?.some((e) => e.key === params.engine)
-        ? String(params.engine)
-        : "all";
-    const pt: PaymentType =
-      params.paymentType === "installment" ? "installment" : "any";
-    const sort: SearchSort = (SORTS.includes(params.sort as SearchSort)
-      ? params.sort
-      : "recommended") as SearchSort;
-    const q = params.q ? String(params.q) : "";
-    const minP = params.minPrice ? String(params.minPrice) : "";
-    const maxP = params.maxPrice ? String(params.maxPrice) : "";
-    const loc = params.location ? String(params.location) : "";
-
-    setDraftQuery(q);
+    const next = parseMobileSearchNavParams(params) as SearchCriteria;
+    setDraftQuery(next.q);
     setBrandValue(null);
-    commit({
-      ...DEFAULT_CRITERIA,
-      q,
-      category,
-      engineKey,
-      minPrice: minP,
-      maxPrice: maxP,
-      location: loc,
-      paymentType: pt,
-      sort,
-    });
+    commit(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params]);
 
@@ -485,6 +457,14 @@ export default function SearchScreen() {
 
   const applySaved = useCallback(
     (s: SavedSearch) => {
+      // Prefer the rich criteria snapshot when the save carried one.
+      if (s.criteria) {
+        const next = { ...(s.criteria as SearchCriteria), q: s.q || (s.criteria as SearchCriteria).q };
+        setDraftQuery(next.q);
+        setBrandValue(null);
+        commit({ ...DEFAULT_CRITERIA, ...next });
+        return;
+      }
       const cat = (CATEGORIES.includes(s.category as FilterCategory)
         ? s.category
         : "all") as FilterCategory;
@@ -606,6 +586,7 @@ export default function SearchScreen() {
       maxPrice: criteria.maxPrice,
       location: criteria.location,
       paymentType: criteria.paymentType,
+      criteria: { ...criteria, q: draftQuery.trim() },
     });
   };
 

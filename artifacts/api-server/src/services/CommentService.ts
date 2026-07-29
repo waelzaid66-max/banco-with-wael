@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { listingComments, listings, users } from "@workspace/db/schema";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { createNotification } from "./NotificationService";
 import { checkCommentRate } from "./AbuseService";
 import { publicVisibilityConditions } from "../lib/feedVisibility";
@@ -25,7 +25,7 @@ async function getUserId(clerkId: string): Promise<string> {
   const [user] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   if (!user) throw codedError("UNAUTHORIZED", "User not found");
   return user.id;
@@ -46,7 +46,13 @@ export async function listComments(listingId: string): Promise<CommentDTO[]> {
     .select({ id: listings.id, sellerId: listings.userId })
     .from(listings)
     .innerJoin(users, eq(users.id, listings.userId))
-    .where(and(eq(listings.id, listingId), ...publicVisibilityConditions()))
+    .where(
+      and(
+        eq(listings.id, listingId),
+        eq(listings.status, "active"),
+        ...publicVisibilityConditions(),
+      ),
+    )
     .limit(1);
   if (!listing) throw codedError("NOT_FOUND", "Listing not found");
 
@@ -60,7 +66,14 @@ export async function listComments(listingId: string): Promise<CommentDTO[]> {
       createdAt: listingComments.createdAt,
     })
     .from(listingComments)
-    .where(eq(listingComments.listingId, listingId))
+    .innerJoin(users, eq(listingComments.authorId, users.id))
+    .where(
+      and(
+        eq(listingComments.listingId, listingId),
+        isNull(users.deletedAt),
+        ne(listingComments.body, ""),
+      ),
+    )
     .orderBy(asc(listingComments.createdAt));
 
   if (rows.length === 0) return [];
@@ -105,13 +118,18 @@ export async function createComment(
   const rate = await checkCommentRate({ userId: authorId });
   if (!rate.ok) throw codedError("RATE_LIMITED", "Too many comments, please slow down");
 
-  // Block posting onto suppressed inventory (flagged listing / shadow-banned
-  // seller) — same guard as the read path.
+  // Block posting onto non-active or suppressed inventory — same guard as reads.
   const [listing] = await db
     .select({ id: listings.id, title: listings.title, sellerId: listings.userId })
     .from(listings)
     .innerJoin(users, eq(users.id, listings.userId))
-    .where(and(eq(listings.id, listingId), ...publicVisibilityConditions()))
+    .where(
+      and(
+        eq(listings.id, listingId),
+        eq(listings.status, "active"),
+        ...publicVisibilityConditions(),
+      ),
+    )
     .limit(1);
   if (!listing) throw codedError("NOT_FOUND", "Listing not found");
 

@@ -45,6 +45,7 @@ export function WorkspaceShell({ children }: WorkspaceShellProps) {
       href: `${prefix}/b2b`,
       label: marketCopyOn ? copy.marketNavWebCopy : copy.b2bTitle,
     },
+    { href: `${prefix}/settings`, label: copy.navSettings },
   ];
 
   if (!clerkOn) {

@@ -68,6 +68,12 @@ export interface ProviderChargeResult {
   providerRef: string;
   /** Hosted Unified Checkout URL the buyer is sent to. */
   checkoutUrl: string;
+  /**
+   * Paymob order id when the Intention API returns it (e.g. intention_order_id).
+   * Pre-binding this at checkout creation closes first-webhook TOFU remaps that
+   * rely on unsigned merchant_order_id before any claim exists.
+   */
+  providerOrderId?: string | null;
 }
 
 const HTTP_TIMEOUT_MS = 15_000;
@@ -111,6 +117,13 @@ async function requireConfig(): Promise<ActivePaymentConfig> {
   if (cfg.integrationIds.length === 0) {
     throw invalidData(
       "Payment gateway has no configured payment methods. Please try again later."
+    );
+  }
+  // Without a public HTTPS callback host, Paymob never delivers settlement
+  // webhooks — charges would strand as pending forever. Fail closed.
+  if (!cfg.callbackBaseUrl || !/^https:\/\//i.test(cfg.callbackBaseUrl)) {
+    throw invalidData(
+      "PUBLIC_API_BASE_URL must be an https URL before payments can be opened."
     );
   }
   return cfg;
@@ -204,6 +217,9 @@ export async function createProviderCharge(
   const data = (await resp.json().catch(() => null)) as {
     client_secret?: string;
     id?: string | number;
+    intention_order_id?: string | number;
+    order_id?: string | number;
+    order?: { id?: string | number };
   } | null;
 
   if (!data?.client_secret || data.id == null) {
@@ -218,7 +234,12 @@ export async function createProviderCharge(
     `${cfg.apiBase}/unifiedcheckout/?publicKey=${encodeURIComponent(cfg.publicKey)}` +
     `&clientSecret=${encodeURIComponent(data.client_secret)}`;
 
-  return { providerRef: String(data.id), checkoutUrl };
+  const rawOrder =
+    data.intention_order_id ?? data.order_id ?? data.order?.id ?? null;
+  const providerOrderId =
+    rawOrder != null && String(rawOrder).length > 0 ? String(rawOrder) : null;
+
+  return { providerRef: String(data.id), checkoutUrl, providerOrderId };
 }
 
 /* ── webhook signature verification ─────────────────────── */
@@ -267,14 +288,22 @@ function hmacFieldValue(v: unknown): string {
 export interface WebhookVerification {
   /** True only when the HMAC signature matched. */
   valid: boolean;
-  /** Our payment_intent id, recovered from the order/extras. */
+  /** Our payment_intent id, recovered from the order/extras (UNSIGNED — bind via providerOrderId). */
   intentId: string | null;
+  /** Paymob order id from the signed HMAC field `order.id`. */
+  providerOrderId: string | null;
   /** Settlement outcome — true only for a fully successful transaction. */
   success: boolean;
+  /** Signed refund flag — completed intents need ledger reversal, not mark-failed. */
+  isRefunded: boolean;
+  /** Signed void flag — same reversal path as refund. */
+  isVoided: boolean;
   /** Paymob transaction id (for audit/metadata). */
   providerTxnId: string | null;
   /** Amount in piasters reported by the provider (tamper check). */
   amountCents: number | null;
+  /** Currency from the signed HMAC field (must be EGP for BANCO rails). */
+  currency: string | null;
 }
 
 /**
@@ -289,9 +318,13 @@ export async function verifyPaymobWebhook(params: {
   const result: WebhookVerification = {
     valid: false,
     intentId: null,
+    providerOrderId: null,
     success: false,
+    isRefunded: false,
+    isVoided: false,
     providerTxnId: null,
     amountCents: null,
+    currency: null,
   };
 
   // Always resolve fresh config so a rotated/swapped HMAC secret takes effect
@@ -330,7 +363,12 @@ export async function verifyPaymobWebhook(params: {
   const success =
     obj.success === true &&
     obj.error_occured === false &&
-    obj.pending !== true;
+    obj.pending !== true &&
+    // Signed outcome flags — HMAC includes these but older code ignored them,
+    // so refunded/voided/auth-only webhooks could still settle wallet credit.
+    obj.is_refunded !== true &&
+    obj.is_voided !== true &&
+    !(obj.is_auth === true && obj.is_capture !== true);
 
   const rawAmount = obj.amount_cents;
   const amountCents =
@@ -340,12 +378,26 @@ export async function verifyPaymobWebhook(params: {
         ? Number(rawAmount)
         : null;
 
+  const rawOrderId = getPath(obj, "order.id");
+  const providerOrderId =
+    rawOrderId != null && String(rawOrderId).length > 0 ? String(rawOrderId) : null;
+
+  const rawCurrency = obj.currency;
+  const currency =
+    typeof rawCurrency === "string" && rawCurrency.trim()
+      ? rawCurrency.trim().toUpperCase()
+      : null;
+
   return {
     valid: true,
     intentId,
+    providerOrderId,
     success,
+    isRefunded: obj.is_refunded === true,
+    isVoided: obj.is_voided === true,
     providerTxnId: obj.id != null ? String(obj.id) : null,
     amountCents,
+    currency,
   };
 }
 

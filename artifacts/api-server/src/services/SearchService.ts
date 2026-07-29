@@ -54,6 +54,8 @@ export interface ParsedSearchQuery {
   origin_type?: string;
   // Commodity material (specs.material) — materials/raw_material browse only.
   material?: string;
+  // Market country (ISO-3166 alpha-2). Applied via buildAttributeConditions.
+  market_country?: string;
   // Near-me / radius search. All three are required together; when present,
   // results are limited to listings whose EFFECTIVE coordinate (the listing's
   // own override, else its area centroid) lies within radius_km of the point.
@@ -189,6 +191,7 @@ export function buildAttributeConditions(f: {
   max_year?: number;
   industry?: string;
   origin_type?: string;
+  material?: string;
   market_country?: string;
 }): SQL[] {
   const conditions: SQL[] = [];
@@ -259,6 +262,10 @@ export function buildAttributeConditions(f: {
     conditions.push(
       sql`COALESCE(${listingAttributes.originType}::text, ${listingAttributes.specs}->>'origin_type') = ${f.origin_type}`
     );
+  }
+  // Commodity material — materials browse only (specs.material free string).
+  if (f.material) {
+    conditions.push(sql`${listingAttributes.specs}->>'material' = ${f.material}`);
   }
   // brand / model are matched against the English listing title (titles are
   // canonical "<Brand> <Model> <Year>"), keeping the NLP `q` param free for
@@ -605,7 +612,11 @@ export async function getAutocomplete(query: string): Promise<string[]> {
   return results.map((r) => r.title);
 }
 
-export async function getTrending(limit: number = 20): Promise<FeedItem[]> {
+export async function getTrending(
+  limit: number = 20,
+  marketCountry?: string,
+): Promise<FeedItem[]> {
+  const market = marketCountry?.trim().toUpperCase();
   const rows = await db
     .select({
       id: listings.id,
@@ -628,7 +639,15 @@ export async function getTrending(limit: number = 20): Promise<FeedItem[]> {
     .leftJoin(users, eq(listings.userId, users.id))
     .leftJoin(interactions, eq(interactions.listingId, listings.id))
     .leftJoin(listingAttributes, eq(listingAttributes.listingId, listings.id))
-    .where(and(eq(listings.status, "active"), ...publicVisibilityConditions()))
+    .where(
+      and(
+        eq(listings.status, "active"),
+        ...publicVisibilityConditions(),
+        ...buildAttributeConditions(
+          market ? { market_country: market } : {},
+        ),
+      ),
+    )
     .orderBy(desc(sql`COALESCE(${interactions.views}, 0) + COALESCE(${interactions.clicks}, 0)`))
     .limit(limit);
 
@@ -638,15 +657,25 @@ export async function getTrending(limit: number = 20): Promise<FeedItem[]> {
 
 /**
  * Per-value counts of the currently-visible inventory, optionally scoped to a
- * category. The mobile mini-app gates each filter chip on count > 0 so it never
- * offers a filter that would return an empty page. Every count uses the SAME
- * column / specs COALESCE expression as buildAttributeConditions, so a chip's
- * badge count always equals the size of the result set it produces.
+ * category and/or market_country. The mobile mini-app gates each filter chip on
+ * count > 0 so it never offers a filter that would return an empty page. Every
+ * count uses the SAME column / specs COALESCE expression as
+ * buildAttributeConditions, so a chip's badge count always equals the size of
+ * the result set it produces. market_country uses the same EG-default COALESCE
+ * as search/trending (P2-M1).
  */
 export async function getFacets(
-  category?: "car" | "real_estate" | "industrial"
+  category?: "car" | "real_estate" | "industrial",
+  marketCountry?: string,
 ): Promise<FacetCounts> {
-  const visible: SQL[] = [eq(listings.status, "active"), ...publicVisibilityConditions()];
+  const marketFilter = marketCountry
+    ? buildAttributeConditions({ market_country: marketCountry })
+    : [];
+  const visible: SQL[] = [
+    eq(listings.status, "active"),
+    ...publicVisibilityConditions(),
+    ...marketFilter,
+  ];
   const scoped: SQL[] = category ? [...visible, eq(listings.category, category)] : [...visible];
 
   const groupMap = async (expr: SQL, where: SQL[]): Promise<Record<string, number>> => {
@@ -830,9 +859,13 @@ async function computeSimilarListings(listingId: string, limit: number): Promise
   return transformFeedItems(enriched);
 }
 
-export async function getRecommendations(userId: string, limit: number = 20): Promise<FeedItem[]> {
+export async function getRecommendations(
+  userId: string,
+  limit: number = 20,
+  marketCountry?: string,
+): Promise<FeedItem[]> {
   // Fallback to trending if no behavior data
-  return getTrending(limit);
+  return getTrending(limit, marketCountry);
 }
 
 // Helper: enrich base rows with media, payment, interaction data

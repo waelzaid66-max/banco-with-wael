@@ -3,14 +3,27 @@ import logoUrl from "@/assets/banco-logo.png";
 
 /**
  * BANCO — صفحة الدخول الرسمية
- * روابط سريعة ثابتة لكل الأسطح: التطبيق · ماركت · لوحة التحكم
- * لا تعتمد على متغيرات بيئة — المسارات معروفة دائماً.
+ * روابط سريعة لكل الأسطح: التطبيق · ماركت · لوحة التحكم
+ *
+ * Coolify nginx serves /market/ + /admin/ (see deploy/coolify/nginx.conf).
+ * VITE_* URLs are baked by Dockerfile.web when set in Coolify secrets;
+ * defaults match that Coolify path map (not the old Replit /dealer-os/ layout).
  */
 
+function envUrl(name: string): string {
+  const raw = import.meta.env[name];
+  return typeof raw === "string" ? raw.trim() : "";
+}
+
 const PATHS = {
-  app: "/banco-mobile/",
-  market: "/dealer-os/",
-  admin: "/admin-os/",
+  // Prefer store links, then consumer web URL, then landing root (no /banco-mobile/ on Coolify).
+  app:
+    envUrl("VITE_APP_ANDROID_URL") ||
+    envUrl("VITE_APP_IOS_URL") ||
+    envUrl("VITE_WEB_URL") ||
+    "/",
+  market: envUrl("VITE_MARKET_URL") || "/market/",
+  admin: envUrl("VITE_ADMIN_URL") || "/admin/",
 };
 
 const SECTIONS = [
@@ -33,18 +46,20 @@ function useScrollY() {
 }
 
 /**
- * Domain-aware redirect:
- *   banco.deals  → /dealer-os/   (dealer management platform)
- *   banco.autos  → /banco-mobile/ (automotive marketplace)
- *   banco.today  → show main landing (consumer entry)
- * All three domains hit the same Replit deployment — we route by Host header.
+ * Domain-aware redirect (Clerk live keys bound to banco.today only):
+ *   banco.deals  → https://banco.today/dealer-os/   (Market on Clerk origin)
+ *   banco.autos  → https://banco.today/banco-mobile/ (consumer on Clerk origin)
+ *   banco.today  → show main landing
+ *
+ * Absolute hops MUST stay on the banco.today path scheme (dealer-os /
+ * banco-mobile) — that is the Clerk-authorized origin layout. Same-origin
+ * PATHS above use Coolify /market|/admin (or VITE_*) for the Coolify nginx map.
  */
 function DomainRouter({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const h = window.location.hostname.toLowerCase().replace(/^www\./, "");
-    // Clerk live keys are bound to banco.today only. Relative redirects on
-    // banco.deals / banco.autos keep the user on a non-authorized origin →
-    // white-screen / broken SSO. Restored from bancoo production handoff.
+    // Relative redirects on banco.deals / banco.autos keep the user on a
+    // non-authorized origin → white-screen / broken SSO.
     if (h === "banco.deals") {
       window.location.replace("https://banco.today/dealer-os/");
     } else if (h === "banco.autos") {

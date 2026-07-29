@@ -56,7 +56,7 @@ describe("settleTopupIntent (webhook-driven settlement)", () => {
     expect(Number(await getWalletBalance(row.userId))).toBe(750);
   });
 
-  it("does not credit when the intent is marked failed", async () => {
+  it("credits after a premature failed mark when success webhook arrives", async () => {
     const intentId = await pendingTopup("400.00");
     await markTopupIntentFailed(intentId);
 
@@ -67,8 +67,13 @@ describe("settleTopupIntent (webhook-driven settlement)", () => {
     expect(row.status).toBe("failed");
     expect(Number(await getWalletBalance(row.userId))).toBe(0);
 
-    // A failed intent can no longer be settled.
-    await expect(settleTopupIntent(intentId)).rejects.toThrow();
-    expect(Number(await getWalletBalance(row.userId))).toBe(0);
+    // Out-of-order / premature failure must not permanently strand PSP money.
+    await settleTopupIntent(intentId, { providerTxnId: "txn_late_success" });
+    expect(Number(await getWalletBalance(row.userId))).toBe(400);
+    const [done] = await db
+      .select()
+      .from(paymentIntents)
+      .where(eq(paymentIntents.id, intentId));
+    expect(done.status).toBe("completed");
   });
 });

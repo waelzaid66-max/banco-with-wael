@@ -8,6 +8,12 @@ export type BodyType<T> = T;
 
 export type AuthTokenGetter = () => Promise<string | null> | string | null;
 
+/** Invoked once when the API reports a tombstoned account (401 ACCOUNT_DELETED). */
+export type AuthFailureHandler = (info: {
+  code: string;
+  status: number;
+}) => void;
+
 const NO_BODY_STATUS = new Set([204, 205, 304]);
 const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
@@ -17,6 +23,8 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
+let _authFailureHandler: AuthFailureHandler | null = null;
+let _accountDeletedSignOutScheduled = false;
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -42,6 +50,15 @@ export function setBaseUrl(url: string | null): void {
  */
 export function setAuthTokenGetter(getter: AuthTokenGetter | null): void {
   _authTokenGetter = getter;
+}
+
+/**
+ * Register a handler for auth failures that require client session teardown
+ * (today: soft-deleted account with a lingering Clerk JWT). Pass `null` to clear.
+ */
+export function setAuthFailureHandler(handler: AuthFailureHandler | null): void {
+  _authFailureHandler = handler;
+  if (!handler) _accountDeletedSignOutScheduled = false;
 }
 
 function isRequest(input: RequestInfo | URL): input is Request {
@@ -364,8 +381,29 @@ export async function customFetch<T = unknown>(
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);
+    maybeNotifyAccountDeleted(response.status, errorData);
     throw new ApiError(response, errorData, requestInfo);
   }
 
   return (await parseSuccessBody(response, responseType, requestInfo)) as T;
+}
+
+function extractErrorCode(data: unknown): string | undefined {
+  if (!data || typeof data !== "object") return undefined;
+  const err = (data as { error?: unknown }).error;
+  if (!err || typeof err !== "object") return undefined;
+  const code = (err as { code?: unknown }).code;
+  return typeof code === "string" ? code : undefined;
+}
+
+function maybeNotifyAccountDeleted(status: number, data: unknown): void {
+  if (status !== 401) return;
+  if (extractErrorCode(data) !== "ACCOUNT_DELETED") return;
+  if (!_authFailureHandler || _accountDeletedSignOutScheduled) return;
+  _accountDeletedSignOutScheduled = true;
+  try {
+    _authFailureHandler({ code: "ACCOUNT_DELETED", status });
+  } catch {
+    _accountDeletedSignOutScheduled = false;
+  }
 }

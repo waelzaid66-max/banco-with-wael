@@ -70,6 +70,13 @@ const NOTIFICATION_TYPES = [
   // Additive (Task #40): B2B investment interest + global-supply response.
   "investment",
   "global_supply",
+  // Stay bookings + billing + car-import — must be mutable in Settings or
+  // those channels become unmuteable notification storms.
+  "booking",
+  "payment_success",
+  "payment_failed",
+  "subscription_expiring",
+  "car_import",
 ] as const;
 
 const badRequest = (message: string) =>

@@ -12,7 +12,20 @@ Required:
 - `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` (EAS builds)
 - `SESSION_SECRET`
 - `PAYMENT_CONFIG_ENCRYPTION_KEY`
-- Object storage — **required for Coolify**: `OBJECT_STORAGE_PROVIDER=s3` plus S3 endpoint/keys (`OBJECT_STORAGE_*`). If unset, API defaults to Replit sidecar `:1106` and media uploads fail.
+- Object storage — **required for Coolify (Hostinger VPS has no IAM role)**:
+  - `OBJECT_STORAGE_PROVIDER=s3`
+  - `AWS_REGION`
+  - `S3_BUCKET`
+  - `AWS_ACCESS_KEY_ID`
+  - `AWS_SECRET_ACCESS_KEY`
+  - `PUBLIC_OBJECT_SEARCH_PATHS`
+  - `PRIVATE_OBJECT_DIR`
+  - Do **not** invent `OBJECT_STORAGE_*` key names — the runtime reads the vars above (`objectStorage.s3.ts`).
+  - If unset in production (non-Replit), the API **refuses to start**. `OBJECT_STORAGE_PROVIDER=replit` is rejected when Coolify/Cloud Run/AWS markers are present.
+- Deploy pin (optional but required for F1 fingerprint): `GIT_SHA` and/or Coolify `SOURCE_COMMIT`
+- Website plug kill-switch (optional): `WEB_PLUG_ENABLED` (default `true`)
+- Consumer bake URLs (optional): `BANCO_WEB_MARKET_URL`, `BANCO_WEB_ADMIN_URL`, `NEXT_PUBLIC_APP_ANDROID_URL`, `NEXT_PUBLIC_APP_IOS_URL`
+  - Prefer Coolify path map values `/market/` and `/admin/` (or absolute URLs). Legacy `/dealer-os/` and `/admin-os/` are redirected by nginx on the `web` service.
 
 Optional:
 

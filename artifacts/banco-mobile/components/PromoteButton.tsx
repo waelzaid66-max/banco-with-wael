@@ -9,7 +9,7 @@ import {
 } from "@workspace/api-client-react";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -75,6 +75,7 @@ export function PromoteButton({
   const hasPromo = !!promo?.campaign_enabled && promoBalance > 0;
 
   const boost = useBoostListing();
+  const attemptKeyRef = useRef<string | null>(null);
 
   const goPlans = () => {
     setOpen(false);
@@ -98,10 +99,23 @@ export function PromoteButton({
   const promote = (adType: AdType) => {
     if (boost.isPending) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // Stable per-attempt key so retries never double-charge wallet/promo.
+    const idempotencyKey =
+      attemptKeyRef.current ??
+      `boost:${listingId}:${adType}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    attemptKeyRef.current = idempotencyKey;
     boost.mutate(
-      { data: { listing_id: listingId, ad_type: adType, duration_days: 7 } },
+      {
+        data: {
+          listing_id: listingId,
+          ad_type: adType,
+          duration_days: 7,
+          idempotency_key: idempotencyKey,
+        },
+      },
       {
         onSuccess: (res) => {
+          attemptKeyRef.current = null;
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           setOpen(false);
           onPromoted?.();

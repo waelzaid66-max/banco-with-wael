@@ -1,11 +1,12 @@
 import { db } from "@workspace/db";
-import { ads, listings } from "@workspace/db/schema";
+import { ads, listings, users } from "@workspace/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { validateImpression, type ImpressionContext } from "./AbuseService";
 import { applyTransaction } from "./WalletService";
 import { consumePromoCredit } from "./PromoAdCreditService";
 import { resolveEffectivePlan, type UserRole } from "./PlanService";
-import { isUniqueViolation, notFound, toMoney } from "../lib/billing";
+import { isUniqueViolation, notFound, toMoney, conflict } from "../lib/billing";
+import { publicVisibilityConditions } from "../lib/feedVisibility";
 
 /**
  * Boost (promote) a listing. The boost fee is read SERVER-SIDE from the
@@ -56,7 +57,9 @@ export async function boostListing(
   idempotencyKey?: string | null,
 ): Promise<BoostResult> {
   // Replay guard: a boost retried with the same key returns the original ad and
-  // never re-consumes promo or re-charges the wallet.
+  // never re-consumes promo or re-charges the wallet — but ONLY when the
+  // fingerprint (listing + ad type) matches. Key reuse across listings must not
+  // silently return a free "success" for the wrong inventory.
   if (idempotencyKey) {
     const [existing] = await db
       .select({
@@ -64,11 +67,17 @@ export async function boostListing(
         listingId: ads.listingId,
         adType: ads.adType,
         expiresAt: ads.expiresAt,
+        sellerId: ads.sellerId,
       })
       .from(ads)
-      .where(eq(ads.boostIdempotencyKey, idempotencyKey))
+      .where(
+        and(eq(ads.boostIdempotencyKey, idempotencyKey), eq(ads.sellerId, sellerId)),
+      )
       .limit(1);
     if (existing) {
+      if (existing.listingId !== listingId || existing.adType !== adType) {
+        throw conflict("Idempotency key already used for a different boost");
+      }
       return toBoostResult(existing, durationDays, "0.00", "0.00");
     }
   }
@@ -107,6 +116,34 @@ export async function boostListing(
   let result: BoostResult;
   try {
     result = await db.transaction(async (tx) => {
+      // Serialize against archive/status updates — a plain SELECT can pass
+      // "active" while a concurrent archive commits before the charge.
+      await tx.execute(
+        sql`SELECT id FROM listings WHERE id = ${listingId} AND user_id = ${sellerId} FOR UPDATE`,
+      );
+      const [locked] = await tx
+        .select({ id: listings.id, status: listings.status })
+        .from(listings)
+        .where(and(eq(listings.id, listingId), eq(listings.userId, sellerId)))
+        .limit(1);
+      if (!locked || locked.status !== "active") {
+        throw Object.assign(new Error("Only active listings can be promoted"), {
+          code: "INVALID_DATA",
+        });
+      }
+
+      // Soft-deleted sellers must not be charged for boosts — public surfaces
+      // already hide their inventory; debiting here would drain a tombstone wallet.
+      const [sellerRow] = await tx
+        .select({ id: users.id, deletedAt: users.deletedAt })
+        .from(users)
+        .where(eq(users.id, sellerId))
+        .for("update")
+        .limit(1);
+      if (!sellerRow || sellerRow.deletedAt != null) {
+        throw notFound("Listing not found or access denied");
+      }
+
       // Insert the ad first so the charge can reference it (FK-free polymorphic
       // link). A failed debit rolls this insert back.
       const [created] = await tx
@@ -162,7 +199,9 @@ export async function boostListing(
     });
   } catch (err) {
     // Concurrent boost with the same key: the unique constraint aborted the
-    // second insert before any charge. Return the ad the winner created.
+    // second insert before any charge. Return the ad the winner created — but
+    // ONLY for this seller + matching listing/adType. A cross-tenant key
+    // collision must never look like a free successful boost.
     if (idempotencyKey && isUniqueViolation(err)) {
       const [existing] = await db
         .select({
@@ -170,11 +209,19 @@ export async function boostListing(
           listingId: ads.listingId,
           adType: ads.adType,
           expiresAt: ads.expiresAt,
+          sellerId: ads.sellerId,
         })
         .from(ads)
         .where(eq(ads.boostIdempotencyKey, idempotencyKey))
         .limit(1);
       if (existing) {
+        if (
+          existing.sellerId !== sellerId ||
+          existing.listingId !== listingId ||
+          existing.adType !== adType
+        ) {
+          throw conflict("Idempotency key already used for a different boost");
+        }
         return toBoostResult(existing, durationDays, "0.00", "0.00");
       }
     }
@@ -200,6 +247,7 @@ export async function recordImpression(
     .select({
       id: ads.id,
       sellerId: ads.sellerId,
+      listingId: ads.listingId,
       isActive: ads.isActive,
       budgetTotal: ads.budgetTotal,
       budgetSpent: ads.budgetSpent,
@@ -223,13 +271,30 @@ export async function recordImpression(
     return { counted: true, billable: false, reason: "inactive", deactivated: true };
   }
 
+  // Do not bill budget after the listing is hidden from public surfaces
+  // (flagged / shadow-banned / soft-deleted seller / archived).
+  const [publicListing] = await db
+    .select({ id: listings.id })
+    .from(listings)
+    .leftJoin(users, eq(listings.userId, users.id))
+    .where(
+      and(
+        eq(listings.id, ad.listingId),
+        eq(listings.status, "active"),
+        ...publicVisibilityConditions(),
+      ),
+    )
+    .limit(1);
+  if (!publicListing) {
+    return { counted: true, billable: false, reason: "listing_hidden", deactivated: false };
+  }
+
   const decision = await validateImpression({ ...ctx, adId, sellerId: ad.sellerId });
   if (!decision.ok) {
     return { counted: true, billable: false, reason: decision.reason, deactivated: false };
   }
 
   const cost = Number(ad.costPerImpression ?? 0);
-  const spent = Number(ad.budgetSpent ?? 0);
   const total = ad.budgetTotal != null ? Number(ad.budgetTotal) : null;
 
   // No budget cap configured → count as billable but nothing to deduct/deactivate.
@@ -241,17 +306,35 @@ export async function recordImpression(
     return { counted: true, billable: true, deactivated: false };
   }
 
-  const newSpent = spent + cost;
-  const exhausted = newSpent >= total;
-
-  await db
+  // Atomic spend: only one concurrent impression can win the remaining budget.
+  // Read-modify-write overspent under parallel billable impressions.
+  const [spentRow] = await db
     .update(ads)
     .set({
       billableImpressions: sql`${ads.billableImpressions} + 1`,
-      budgetSpent: String(newSpent),
-      isActive: exhausted ? false : ad.isActive,
+      budgetSpent: sql`(${ads.budgetSpent})::numeric + ${String(cost)}::numeric`,
+      isActive: sql`CASE
+        WHEN (${ads.budgetSpent})::numeric + ${String(cost)}::numeric >= (${ads.budgetTotal})::numeric
+        THEN false
+        ELSE ${ads.isActive}
+      END`,
     })
-    .where(eq(ads.id, adId));
+    .where(
+      and(
+        eq(ads.id, adId),
+        eq(ads.isActive, true),
+        sql`(${ads.budgetSpent})::numeric + ${String(cost)}::numeric <= (${ads.budgetTotal})::numeric`,
+      ),
+    )
+    .returning({ isActive: ads.isActive });
 
-  return { counted: true, billable: true, deactivated: exhausted };
+  if (!spentRow) {
+    return { counted: true, billable: false, reason: "budget_exhausted", deactivated: false };
+  }
+
+  return {
+    counted: true,
+    billable: true,
+    deactivated: spentRow.isActive === false,
+  };
 }

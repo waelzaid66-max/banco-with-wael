@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { pushTokens, users } from "@workspace/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 
 /**
  * PushService — registration + best-effort remote delivery of Expo push
@@ -82,7 +82,7 @@ export async function unregisterPushToken(
 
   await db
     .delete(pushTokens)
-    .where(eq(pushTokens.token, token.trim()));
+    .where(and(eq(pushTokens.token, token.trim()), eq(pushTokens.userId, user.id)));
 
   return { removed: true };
 }

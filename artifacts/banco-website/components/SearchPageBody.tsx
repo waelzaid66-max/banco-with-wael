@@ -218,6 +218,7 @@ export function SearchPageBody({
           enabled={liveSearchEnabled}
           browseCategory={criteria.category as Category}
           category={apiParams.category}
+          marketCountry={apiParams.market_country ?? criteria.marketCountry}
         />
         {mapSearchEnabled ? (
           <SearchMapPanel

@@ -407,6 +407,36 @@ const CHECKS = [
     why: "Clerk accountTypeChosen must be set only after /me updateMe succeeds",
   },
   {
+    id: "P-consent-type-chosen-after-me",
+    file: "artifacts/banco-mobile/app/(tabs)/profile.tsx",
+    test: (s) => {
+      const terms = s.indexOf("termsAcceptedAt: new Date().toISOString()");
+      const post = s.indexOf("post-signup account_type save failed");
+      if (terms < 0 || post < 0 || terms > post) return false;
+      // Consent metadata write before /me must not stamp accountTypeChosen.
+      if (s.slice(terms, post).includes("accountTypeChosen: true")) return false;
+      const after = s.slice(post, post + 1600);
+      const u = after.indexOf("await updateMe");
+      // Flag write appears after successful sync block (after !synced return).
+      const c = after.indexOf("accountTypeChosen: true");
+      return (
+        /if \(!synced\) return/.test(after) &&
+        c >= 0 &&
+        after.indexOf("accountTypeChosen: true") >
+          after.indexOf("if (!synced) return")
+      );
+    },
+    why: "Email signup consent must not set accountTypeChosen before /me succeeds",
+  },
+  {
+    id: "P-verify-go-back-locked",
+    file: "artifacts/banco-mobile/app/(tabs)/profile.tsx",
+    test: (s) =>
+      /testID="verify-go-back"/.test(s) &&
+      /disabled=\{isSigningUp\}/.test(s),
+    why: "Verify Go Back must not clear consent while finalize is in flight",
+  },
+  {
     id: "P-mobile-archive-wired",
     file: "artifacts/banco-mobile/app/listings/mine.tsx",
     test: (s) =>
@@ -532,6 +562,1013 @@ const CHECKS = [
       !/createIntermediary/.test(s) &&
       !/createBank/.test(s),
     why: "FI onboarding must not auto-create intermediary orgs",
+  },
+  {
+    id: "P-auth-reject-tombstone",
+    file: "artifacts/api-server/src/middlewares/authGuard.ts",
+    test: (s) =>
+      /ACCOUNT_DELETED/.test(s) &&
+      /deletedAt/.test(s) &&
+      /findActiveUserByClerkId/.test(s),
+    why: "requireAuth must reject soft-deleted accounts (not only dealer/admin guards)",
+  },
+  {
+    id: "P-intent-before-psp",
+    file: "artifacts/api-server/src/services/PaymentIntentService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function createTopupIntent"));
+      const insertAt = fn.indexOf("insert(paymentIntents)");
+      const chargeAt = fn.indexOf("createProviderCharge");
+      return insertAt >= 0 && chargeAt >= 0 && insertAt < chargeAt;
+    },
+    why: "Durable payment_intents row must exist before PSP charge (no stranded money)",
+  },
+  {
+    id: "P-plug-redirect-not-rewrite",
+    file: "artifacts/banco-website/middleware.ts",
+    test: (s) =>
+      /NextResponse\.redirect\(url\)/.test(s) &&
+      !/NextResponse\.rewrite\(url\)/.test(s) &&
+      /REDIRECTED to \/maintenance/.test(s),
+    why: "Plug-off must redirect (not rewrite) so SiteChrome pathname matches maintenance",
+  },
+  {
+    id: "P-delete-revokes-fi-seats",
+    file: "artifacts/api-server/src/services/UserService.ts",
+    test: (s) =>
+      /financingSeats/.test(s) &&
+      /delete\(financingSeats\)/.test(s) &&
+      /eq\(financingSeats\.userId/.test(s),
+    why: "Account deletion must revoke FI seats (inbox PII)",
+  },
+  {
+    id: "P-ad-budget-atomic",
+    file: "artifacts/api-server/src/services/AdsService.ts",
+    test: (s) =>
+      /budget_exhausted/.test(s) &&
+      /budgetSpent\}\)::numeric/.test(s) &&
+      /budgetTotal\}\)::numeric/.test(s),
+    why: "Ad impression spend must be conditional UPDATE (no concurrent overspend)",
+  },
+  {
+    id: "P-fi-status-predicate",
+    file: "artifacts/api-server/src/services/FinancingService.ts",
+    test: (s) =>
+      /statusChanging/.test(s) &&
+      /eq\(financingRequests\.status, existing\.status\)/.test(s) &&
+      /CONFLICT/.test(s),
+    why: "FI request status updates must be conditional (no last-write-wins reopen)",
+  },
+  {
+    id: "P-chat-media-assert-before-insert",
+    file: "artifacts/api-server/src/services/ConversationService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function sendMessage"));
+      const assertAt = fn.indexOf("assertCallerMayUseUpload");
+      const insertAt = fn.indexOf("insert(messages)");
+      return assertAt >= 0 && insertAt >= 0 && assertAt < insertAt;
+    },
+    why: "Chat media ownership must be proven before message insert (no durable stolen URL)",
+  },
+  {
+    id: "P-company-brand-assert-before-write",
+    file: "artifacts/api-server/src/services/CompanyService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function upsertMyCompanyProfile"));
+      const assertAt = fn.indexOf("assertCallerMayUseUpload");
+      const insertAt = fn.indexOf("insert(companyProfiles)");
+      return assertAt >= 0 && insertAt >= 0 && assertAt < insertAt;
+    },
+    why: "Company brand media ownership must be proven before profile write",
+  },
+  {
+    id: "P-notif-enum-car-import",
+    file: "artifacts/api-server/src/validators/schemas.ts",
+    test: (s) =>
+      /NotificationTypeEnum[\s\S]*car_import/.test(s) &&
+      /subscription_expiring/.test(s),
+    why: "Response Zod enum must include car_import or GET /notifications 500s",
+  },
+  {
+    id: "P-prefs-billing-mutable",
+    file: "artifacts/api-server/src/services/ProfileService.ts",
+    test: (s) =>
+      /"booking"/.test(s) &&
+      /"payment_success"/.test(s) &&
+      /"car_import"/.test(s) &&
+      /NOTIFICATION_TYPES/.test(s),
+    why: "Settings must expose booking/billing/import mute categories",
+  },
+  {
+    id: "P-delete-clerk-fail-soft",
+    file: "artifacts/api-server/src/services/UserService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function deleteAccount"));
+      return (
+        /clerkClient\.users\.deleteUser/.test(fn) &&
+        /returning success so client signs out/.test(fn) &&
+        !/AUTH_PROVIDER_ERROR/.test(fn)
+      );
+    },
+    why: "Clerk delete failure must not block client sign-out after privacy wipe",
+  },
+  {
+    id: "P-push-response-dedupe",
+    file: "artifacts/banco-mobile/hooks/usePushNotifications.tsx",
+    test: (s) =>
+      /handledResponseIds/.test(s) &&
+      /getLastNotificationResponseAsync/.test(s) &&
+      /addNotificationResponseReceivedListener/.test(s),
+    why: "Cold-start push deep-link must dedupe last-response vs listener",
+  },
+  {
+    id: "P-biometric-bg-only",
+    file: "artifacts/banco-mobile/context/BiometricContext.tsx",
+    test: (s) =>
+      /state === "background"/.test(s) &&
+      !/state === "background" \|\| state === "inactive"/.test(s) &&
+      !/\(state === "background" \|\| state === "inactive"\)/.test(s),
+    why: "Biometric must not re-lock on inactive (permission sheet storms)",
+  },
+  {
+    id: "P-svg-icon-registry",
+    file: "artifacts/banco-mobile/components/icons.tsx",
+    test: (s) =>
+      /lucide-react-native/.test(s) &&
+      /react-native-svg/.test(s) &&
+      !/from ["']@expo\/vector-icons["']/.test(s),
+    why: "SVG icon registry must remain the sole runtime glyph source (no vector-font regression)",
+  },
+  {
+    id: "P-push-unregister-scoped",
+    file: "artifacts/api-server/src/services/PushService.ts",
+    test: (s) =>
+      /eq\(pushTokens\.userId, user\.id\)/.test(s) &&
+      /delete\(pushTokens\)/.test(s),
+    why: "unregisterPushToken must scope DELETE to caller userId (no cross-user wipe)",
+  },
+  {
+    id: "P-message-notif-cooldown",
+    file: "artifacts/api-server/src/services/ConversationService.ts",
+    test: (s) =>
+      /MESSAGE_NOTIF_COOLDOWN_MS/.test(s) &&
+      /conversation_id/.test(s) &&
+      /recentNotif/.test(s),
+    why: "Message push/email must cooldown per thread (no chat storms)",
+  },
+  {
+    id: "P-follower-notif-route",
+    file: "artifacts/banco-mobile/lib/notificationRouting.ts",
+    test: (s) =>
+      /follower_id/.test(s) &&
+      /\/notifications/.test(s) &&
+      /open_notifications/.test(s),
+    why: "Follower system pings must deep-link to notifications feed (not dead null)",
+  },
+  {
+    id: "P-signout-unregister-first",
+    file: "artifacts/banco-mobile/app/settings.tsx",
+    test: (s) =>
+      /unregisterCachedPushTokenBestEffort/.test(s) &&
+      /confirmSignOut/.test(s),
+    why: "Sign-out must unregister push while session is still valid",
+  },
+  {
+    id: "P-account-deleted-signout",
+    file: "artifacts/banco-mobile/app/_layout.tsx",
+    test: (s) =>
+      /setAuthFailureHandler/.test(s) &&
+      /ACCOUNT_DELETED/.test(s) &&
+      /signOut/.test(s),
+    why: "Lingering JWT after soft-delete must force client sign-out",
+  },
+  {
+    id: "P-search-market-country-wired",
+    file: "artifacts/api-server/src/controllers/searchController.ts",
+    test: (s) =>
+      /query\.market_country/.test(s) &&
+      /parsed\.market_country/.test(s) &&
+      /query\.material/.test(s) &&
+      /parsed\.material/.test(s),
+    why: "Search controller must forward market_country + material into ParsedSearchQuery",
+  },
+  {
+    id: "P-search-material-sql",
+    file: "artifacts/api-server/src/services/SearchService.ts",
+    test: (s) =>
+      /market_country\?:/.test(s) &&
+      /f\.material/.test(s) &&
+      /specs\}->>'material'/.test(s),
+    why: "Search SQL must apply material + market_country attribute filters",
+  },
+  {
+    id: "P-mobile-emit-market-country",
+    file: "artifacts/banco-mobile/lib/searchParams.ts",
+    test: (s) =>
+      /market_country/.test(s) &&
+      /marketCountry\.trim\(\)/.test(s) &&
+      !/UI-only market selector/.test(s),
+    why: "Mobile buildSearchParams must emit market_country to the API",
+  },
+  {
+    id: "P-rq-focus-bridge",
+    file: "artifacts/banco-mobile/app/_layout.tsx",
+    test: (s) =>
+      /focusManager\.setFocused/.test(s) &&
+      /ReactQueryFocusBridge/.test(s) &&
+      /<ReactQueryFocusBridge\s*\/>/.test(s),
+    why: "React Query must pause background polls via AppState focus bridge",
+  },
+  {
+    id: "P-push-mute-cold-unregister",
+    file: "artifacts/banco-mobile/hooks/usePushNotifications.tsx",
+    test: (s) =>
+      /getCachedPushToken/.test(s) &&
+      /isSignedIn && !notificationsEnabled/.test(s) &&
+      /obtainExpoPushToken/.test(s) &&
+      /unregisterPushToken/.test(s),
+    why: "Muted push after cold start must still resolve token and unregister",
+  },
+  {
+    id: "P-review-notify-first-only",
+    file: "artifacts/api-server/src/services/ReviewService.ts",
+    test: (s) =>
+      /isNewReview/.test(s) &&
+      /Notify only on first review/.test(s) &&
+      /onConflictDoUpdate/.test(s),
+    why: "Re-rate must not storm seller with duplicate review notifications",
+  },
+  {
+    id: "P-booking-reject-tombstone",
+    file: "artifacts/api-server/src/services/BookingService.ts",
+    test: (s) => {
+      const create = s.slice(s.indexOf("export async function createBooking"));
+      const list = s.slice(s.indexOf("export async function listBookings"));
+      const update = s.slice(s.indexOf("export async function updateBookingStatus"));
+      return (
+        /isNull\(users\.deletedAt\)/.test(create) &&
+        /isNull\(users\.deletedAt\)/.test(list) &&
+        /isNull\(users\.deletedAt\)/.test(update)
+      );
+    },
+    why: "Booking mutations must reject soft-deleted clerk sessions",
+  },
+  {
+    id: "P-optional-auth-tombstone",
+    file: "artifacts/api-server/src/middlewares/authGuard.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export function optionalAuth"));
+      return (
+        /ACCOUNT_DELETED/.test(fn) &&
+        /deletedAt/.test(fn) &&
+        /Authentication unavailable/.test(fn)
+      );
+    },
+    why: "optionalAuth must fail-closed on soft-deleted JWTs (no private owner leak)",
+  },
+  {
+    id: "P-rfq-award-cas",
+    file: "artifacts/api-server/src/services/RfqService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function acceptOffer"));
+      return (
+        /FOR UPDATE/.test(fn) &&
+        /eq\(rfqs\.status, "open"\)/.test(fn) &&
+        /awarded\.length === 0/.test(fn)
+      );
+    },
+    why: "RFQ award must serialize open→awarded (no dual winner notify)",
+  },
+  {
+    id: "P-has-installment-boolparam",
+    file: "artifacts/api-server/src/validators/schemas.ts",
+    test: (s) => {
+      const block = s.slice(s.indexOf("export const SearchQuerySchema"));
+      return /has_installment: boolParam\.optional\(\)/.test(block);
+    },
+    why: "has_installment=false must not coerce truthy via z.coerce.boolean",
+  },
+  {
+    id: "P-import-stage-cas",
+    file: "artifacts/api-server/src/services/ImportOrderService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function updateImportOrderStage"));
+      return (
+        /eq\(importOrders\.stage, row\.stage\)/.test(fn) &&
+        /CONFLICT/.test(fn)
+      );
+    },
+    why: "Import stage transitions must CAS on current stage (no dual notify)",
+  },
+  {
+    id: "P-company-reject-tombstone",
+    file: "artifacts/api-server/src/services/CompanyService.ts",
+    test: (s) =>
+      /isNull\(users\.deletedAt\)/.test(s) &&
+      /Soft-deleted accounts are also suppressed/.test(s),
+    why: "Deleted businesses must not remain public/followable",
+  },
+  {
+    id: "P-session-scoped-storage",
+    file: "artifacts/banco-mobile/context/SessionContext.tsx",
+    test: (s) =>
+      /scopedKey/.test(s) &&
+      /userId/.test(s) &&
+      /:u:/.test(s) &&
+      /feedCacheRef\.current\.clear/.test(s),
+    why: "Account switch must not leak saves/searches across users",
+  },
+  {
+    id: "P-rq-clear-on-identity",
+    file: "artifacts/banco-mobile/app/_layout.tsx",
+    test: (s) =>
+      /queryClient\.clear\(\)/.test(s) &&
+      /cancelQueries/.test(s) &&
+      /userId/.test(s),
+    why: "React Query must drop private cache on Clerk identity change",
+  },
+  {
+    id: "P-plan-respects-expiry",
+    file: "artifacts/api-server/src/services/PlanService.ts",
+    test: (s) =>
+      /gt\(subscriptions\.expiresAt/.test(s) &&
+      /eq\(subscriptions\.status, "active"\)/.test(s),
+    why: "Expired subscriptions must not grant entitlements while cron lags",
+  },
+  {
+    id: "P-settle-reject-tombstone",
+    file: "artifacts/api-server/src/services/PaymentIntentService.ts",
+    test: (s) =>
+      /isNull\(users\.deletedAt\)/.test(s) &&
+      /Soft-deleted owners must not receive wallet credit/.test(s),
+    why: "Late PSP webhooks must not credit soft-deleted accounts",
+  },
+  {
+    id: "P-alert-once-per-user",
+    file: "artifacts/api-server/src/services/AlertService.ts",
+    test: (s) =>
+      /notified\.has\(search\.userId\)/.test(s) &&
+      /Atomic cooldown claim/.test(s) &&
+      /cooldownCutoff/.test(s) &&
+      /listingMatchesSavedSearchFilters/.test(s),
+    why: "Overlapping saved searches must not multiply new_match storms; structured filters fail-closed",
+  },
+  {
+    id: "P-boost-idempotency-required",
+    file: "artifacts/api-server/src/validators/schemas.ts",
+    test: (s) => {
+      const block = s.slice(s.indexOf("export const BoostListingSchema"));
+      return /idempotency_key: z\.string\(\)\.min\(8\)/.test(block);
+    },
+    why: "Boost retries without idempotency key must be rejected",
+  },
+  {
+    id: "P-topup-idempotency-required",
+    file: "artifacts/api-server/src/validators/schemas.ts",
+    test: (s) => {
+      const block = s.slice(s.indexOf("export const TopupCreateSchema"));
+      return /idempotency_key: z\.string\(\)\.uuid\(\)/.test(block);
+    },
+    why: "Wallet top-up must require client UUID idempotency key",
+  },
+  {
+    id: "P-subscribe-idempotency-required",
+    file: "artifacts/api-server/src/validators/schemas.ts",
+    test: (s) => {
+      const block = s.slice(s.indexOf("export const SubscribeSchema"));
+      return /idempotency_key: z\.string\(\)\.uuid\(\)/.test(block);
+    },
+    why: "Subscribe must require client UUID idempotency key",
+  },
+  {
+    id: "P-topup-intent-uses-idempotency-id",
+    file: "artifacts/api-server/src/services/PaymentIntentService.ts",
+    test: (s) =>
+      /idempotencyKey: string/.test(s) &&
+      /const intentId = input\.idempotencyKey\.trim\(\)/.test(s) &&
+      /assertTopupIdempotencyMatch/.test(s),
+    why: "Top-up intent id must equal client idempotency key with replay guard",
+  },
+  {
+    id: "P-saved-search-match-version",
+    file: "artifacts/api-server/src/services/savedSearchMatch.ts",
+    test: (s) =>
+      /SAVED_SEARCH_MATCH_VERSION = 1/.test(s) &&
+      /match_version !== SAVED_SEARCH_MATCH_VERSION/.test(s) &&
+      /market_country/.test(s),
+    why: "Saved-search alerts must fail-closed without match_version 1",
+  },
+  {
+    id: "P-mobile-saved-search-versioned-filters",
+    file: "artifacts/banco-mobile/context/SessionContext.tsx",
+    test: (s) =>
+      /match_version: 1/.test(s) &&
+      /buildSearchParams\(input\.criteria/.test(s),
+    why: "Mobile must persist versioned snake_case filters for alert matching",
+  },
+  {
+    id: "P-feed-material-wired",
+    file: "artifacts/api-server/src/controllers/feedController.ts",
+    test: (s) => /material: query\.material/.test(s),
+    why: "Feed must forward material filter (search parity)",
+  },
+  {
+    id: "P-paymob-order-bind",
+    file: "artifacts/api-server/src/services/PaymentIntentService.ts",
+    test: (s) =>
+      /claimPaymobOrderForIntent/.test(s) &&
+      /paymob_order_id/.test(s) &&
+      /pg_advisory_xact_lock/.test(s),
+    why: "Signed Paymob order.id must bind to exactly one local intent",
+  },
+  {
+    id: "P-paymob-require-callback",
+    file: "artifacts/api-server/src/lib/paymentProvider.ts",
+    test: (s) =>
+      /PUBLIC_API_BASE_URL must be an https URL/.test(s) &&
+      /callbackBaseUrl/.test(s),
+    why: "Paymob charges must fail closed without https PUBLIC_API_BASE_URL",
+  },
+  {
+    id: "P-delete-scrub-public-content",
+    file: "artifacts/api-server/src/services/UserService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function deleteAccount"));
+      return (
+        /delete\(stories\)/.test(fn) &&
+        /sellerReviews\.authorId/.test(fn) &&
+        /listingComments/.test(fn) &&
+        /paymentIntents/.test(fn)
+      );
+    },
+    why: "Account deletion must scrub stories/reviews/comments and kill pending intents",
+  },
+  {
+    id: "P-rate-limited-contract",
+    file: "artifacts/api-server/src/middlewares/rateLimiter.ts",
+    test: (s) =>
+      /RATE_LIMITED/.test(s) &&
+      !/INVALID_DATA/.test(s),
+    why: "429 responses must use RATE_LIMITED error contract",
+  },
+  {
+    id: "P-coolify-api-loopback",
+    file: "docker-compose.coolify.yml",
+    test: (s) => /127\.0\.0\.1:\$\{API_HOST_PORT/.test(s),
+    why: "Coolify API host port must not be world-bindable (rate-limit spoof)",
+  },
+  {
+    id: "P-saved-search-nav-emit",
+    file: "artifacts/banco-mobile/app/(tabs)/saved.tsx",
+    test: (s) =>
+      /searchCriteriaToNavParams/.test(s) &&
+      /search\.criteria/.test(s),
+    why: "Saved-search tap must emit rich criteria via searchNavParams",
+  },
+  {
+    id: "P-saved-search-nav-consume",
+    file: "artifacts/banco-mobile/app/(tabs)/search.tsx",
+    test: (s) =>
+      /parseMobileSearchNavParams/.test(s) &&
+      /hasIncomingSearchNavParams/.test(s) &&
+      /s\.criteria/.test(s),
+    why: "Search tab must restore rich criteria from nav params and applySaved",
+  },
+  {
+    id: "P-b2b-tombstone-investments",
+    file: "artifacts/api-server/src/services/InvestmentService.ts",
+    test: (s) =>
+      /users\.deletedAt\} IS NULL/.test(s) &&
+      /owner_deleted_at/.test(s),
+    why: "Public investment boards must hide soft-deleted owners",
+  },
+  {
+    id: "P-b2b-tombstone-rfq",
+    file: "artifacts/api-server/src/services/RfqService.ts",
+    test: (s) =>
+      /users\.deletedAt\} IS NULL/.test(s) &&
+      /buyerDeletedAt/.test(s),
+    why: "Open RFQ board + offers must fail-closed for soft-deleted buyers",
+  },
+  {
+    id: "P-b2b-tombstone-supply",
+    file: "artifacts/api-server/src/services/GlobalSupplyService.ts",
+    test: (s) =>
+      /users\.deletedAt\} IS NULL/.test(s) &&
+      /buyerDeletedAt/.test(s),
+    why: "Global supply board + respond must fail-closed for soft-deleted buyers",
+  },
+  {
+    id: "P-banco-web-topup-idempotency",
+    file: "artifacts/banco-web/components/workspace/WalletPanel.tsx",
+    test: (s) =>
+      /idempotency_key/.test(s) &&
+      /topupAttemptKeyRef/.test(s),
+    why: "Frozen banco-web must still send top-up idempotency after Round 7 schema change",
+  },
+  {
+    id: "P-push-prefs-identity-scoped",
+    file: "artifacts/banco-mobile/context/SoundContext.tsx",
+    test: (s) =>
+      /scopedPrefKey/.test(s) &&
+      /useAuth\(\)/.test(s) &&
+      /userId/.test(s),
+    why: "Push/sound mute prefs must not leak across Clerk identities",
+  },
+  {
+    id: "P-listing-draft-identity-scoped",
+    file: "artifacts/banco-mobile/lib/listingDraft.ts",
+    test: (s) =>
+      /listingDraftStorageKey/.test(s) &&
+      /:u:/.test(s) &&
+      /:guest/.test(s),
+    why: "Listing draft phones/prices must be keyed per identity",
+  },
+  {
+    id: "P-listing-draft-create-scoped",
+    file: "artifacts/banco-mobile/app/listings/create.tsx",
+    test: (s) =>
+      /listingDraftStorageKey\(user\?\.id\)/.test(s) &&
+      /draftKey/.test(s) &&
+      !/AsyncStorage\.(setItem|getItem|removeItem)\(\s*LISTING_DRAFT_KEY\s*,/.test(s),
+    why: "Create wizard must read/write identity-scoped draft keys (legacy migrate only)",
+  },
+  {
+    id: "P-home-feed-market-country",
+    file: "artifacts/banco-mobile/app/(tabs)/index.tsx",
+    test: (s) =>
+      /market_country:\s*marketCountry/.test(s) &&
+      /loadPreferredMarketCountry/.test(s),
+    why: "Home feed + rails must filter by preferred market_country like Search",
+  },
+  {
+    id: "P-web-map-server-clusters",
+    file: "artifacts/banco-mobile/components/search/SearchResultsMap.web.tsx",
+    test: (s) =>
+      /getMapClusters/.test(s) &&
+      /BANCO_MAP/.test(s) &&
+      /setClusters/.test(s) &&
+      /serverTotal/.test(s),
+    why: "Web search map must inject server clusters like native WebView host",
+  },
+  {
+    id: "P-lead-charge-idempotency",
+    file: "artifacts/api-server/src/services/LeadService.ts",
+    test: (s) => /idempotencyKey:\s*`lead_charge:\$\{lead\.id\}`/.test(s),
+    why: "CPL lead_charge must use lead-id idempotency key at wallet chokepoint",
+  },
+  {
+    id: "P-listing-detail-tombstone",
+    file: "artifacts/api-server/src/services/ListingService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function getListingDetail"));
+      return (
+        /seller_deleted_at/.test(fn) &&
+        /seller_shadow_banned/.test(fn) &&
+        /is_flagged/.test(fn) &&
+        /!isOwner/.test(fn)
+      );
+    },
+    why: "Public listing detail must hide soft-deleted/shadow-banned/flagged sellers",
+  },
+  {
+    id: "P-topup-provider-opening-cas",
+    file: "artifacts/api-server/src/services/PaymentIntentService.ts",
+    test: (s) =>
+      /provider_opening/.test(s) &&
+      /claimProviderOpening/.test(s) &&
+      /waitForTopupCheckout/.test(s),
+    why: "Concurrent top-up retries must CAS before opening a second Paymob checkout",
+  },
+  {
+    id: "P-paymob-resolve-bound-order",
+    file: "artifacts/api-server/src/controllers/paymentsController.ts",
+    test: (s) =>
+      /findIntentIdByPaymobOrderId/.test(s) &&
+      /boundIntentId/.test(s),
+    why: "Webhook must settle the intent already bound to signed order.id",
+  },
+  {
+    id: "P-trending-market-country",
+    file: "artifacts/api-server/src/services/SearchService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function getTrending"));
+      return /marketCountry/.test(fn) && /buildAttributeConditions/.test(fn);
+    },
+    why: "Trending must honor market_country like feed/search",
+  },
+  {
+    id: "P-facets-market-country",
+    file: "artifacts/api-server/src/services/SearchService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function getFacets"));
+      return (
+        /marketCountry/.test(fn) &&
+        /buildAttributeConditions\(\{\s*market_country:\s*marketCountry/.test(fn)
+      );
+    },
+    why: "Facets must honor market_country like search/trending (P2-M1)",
+  },
+  {
+    id: "P-facets-handler-market",
+    file: "artifacts/api-server/src/controllers/searchController.ts",
+    test: (s) =>
+      /getFacets\(query\.category,\s*query\.market_country\)/.test(s) &&
+      /FacetsQuerySchema/.test(s),
+    why: "Facets handler must forward market_country into getFacets",
+  },
+  {
+    id: "P-mobile-facets-market",
+    file: "artifacts/banco-mobile/lib/facets.ts",
+    test: (s) =>
+      /marketCountry/.test(s) &&
+      /market_country:\s*market/.test(s) &&
+      /useGetFacets/.test(s),
+    why: "Mobile inventory facets must request market_country from API",
+  },
+  {
+    id: "P-wallet-idempotency-fingerprint",
+    file: "artifacts/api-server/src/services/WalletService.ts",
+    test: (s) =>
+      /Idempotency key already used for a different transaction/.test(s) &&
+      /existing\.type === input\.type/.test(s),
+    why: "Ledger idempotency replay must fingerprint type/user/amount/reference",
+  },
+  {
+    id: "P-subscription-wallet-key-namespace",
+    file: "artifacts/api-server/src/services/SubscriptionService.ts",
+    test: (s) => /subscription_wallet:\$\{idempotencyKey\}/.test(s),
+    why: "Wallet subscription ledger keys must not collide with top-up intent UUIDs",
+  },
+  {
+    id: "P-boost-listing-for-update",
+    file: "artifacts/api-server/src/services/AdsService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function boostListing"));
+      return /FOR UPDATE/.test(fn);
+    },
+    why: "Boost charge must lock listing row against mid-flight archive",
+  },
+  {
+    id: "P-paymob-amount-before-claim",
+    file: "artifacts/api-server/src/controllers/paymentsController.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function paymobWebhookHandler"));
+      const amountAt = fn.indexOf("amountCents == null");
+      const currencyAt = fn.indexOf('currency !== "EGP"');
+      const claimAt = fn.indexOf("await claimPaymobOrderForIntent");
+      return amountAt > 0 && currencyAt > 0 && claimAt > amountAt && claimAt > currencyAt;
+    },
+    why: "Paymob must reject bad/missing amount/currency before binding order.id",
+  },
+  {
+    id: "P-booking-tombstone",
+    file: "artifacts/api-server/src/services/BookingService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function createBooking"));
+      return /publicVisibilityConditions/.test(fn) && /sellerDeletedAt/.test(fn);
+    },
+    why: "Bookings must fail-closed on soft-deleted/flagged/shadow-banned hosts",
+  },
+  {
+    id: "P-ad-impression-listing-visible",
+    file: "artifacts/api-server/src/services/AdsService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function recordImpression"));
+      return /listing_hidden/.test(fn) && /publicVisibilityConditions/.test(fn);
+    },
+    why: "Ad impression billing must stop when listing is publicly hidden",
+  },
+  {
+    id: "P-home-sort-market",
+    file: "artifacts/banco-mobile/app/(tabs)/index.tsx",
+    test: (s) =>
+      /sort:\s*key/.test(s) &&
+      /market_country:\s*marketCountry/.test(s),
+    why: "Home sort navigation must carry preferred market_country",
+  },
+  {
+    id: "P-web-trending-market",
+    file: "artifacts/banco-web/components/HomeTrendingStrip.tsx",
+    test: (s) =>
+      /useGetTrending\(\{\s*market_country:\s*DEFAULT_MARKET_COUNTRY/.test(s),
+    why: "Coolify banco-web trending must not mix markets",
+  },
+  {
+    id: "P-promo-consume-fingerprint",
+    file: "artifacts/api-server/src/services/PromoAdCreditService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function consumePromoCredit"));
+      return (
+        /Idempotency key already used for a different promo consume/.test(fn) &&
+        /existing\.userId === userId/.test(fn) &&
+        /existing\.type === "consume"/.test(fn)
+      );
+    },
+    why: "Promo consume replay must fingerprint user/type/reference (post-delete key reuse)",
+  },
+  {
+    id: "P-paymob-resume-preserves-order",
+    file: "artifacts/api-server/src/services/PaymentIntentService.ts",
+    test: (s) =>
+      /resumeFailedPaymentMetadataSql/.test(s) &&
+      /paymobOrderIdFromMeta/.test(s) &&
+      /already has a provider order/.test(s) &&
+      /checkoutBoundPaymentMetadataSql/.test(s),
+    why: "Failed Paymob resume must not wipe paymob_order_id / open a second paid order",
+  },
+  {
+    id: "P-dealer-bulk-boost-idempotency",
+    file: "artifacts/dealer-os/src/pages/listings.tsx",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("const handleBulkBoost"));
+      return /idempotency_key:\s*`boost:\$\{id\}/.test(fn);
+    },
+    why: "Dealer-os bulk boost must send required idempotency_key per listing",
+  },
+  {
+    id: "P-prod-compose-api-loopback",
+    file: "docker-compose.prod.yml",
+    test: (s) => /127\.0\.0\.1:\$\{API_HOST_PORT/.test(s),
+    why: "Prod compose must not world-bind API :8080 (X-Forwarded-For trust)",
+  },
+  {
+    id: "P-readyz-money-schema",
+    file: "artifacts/api-server/src/routes/health.ts",
+    test: (s) =>
+      /money_schema/.test(s) &&
+      /SELECT 1 FROM payment_intents LIMIT 0/.test(s) &&
+      /SELECT 1 FROM transactions LIMIT 0/.test(s),
+    why: "readyz must fail closed when money tables are missing",
+  },
+  {
+    id: "P-web-clerk-fail-closed",
+    file: "artifacts/banco-web/middleware.ts",
+    test: (s) =>
+      /NODE_ENV === "production"/.test(s) &&
+      /isProtectedRoute\(req\)/.test(s) &&
+      /status: 503/.test(s),
+    why: "Production web without Clerk key must fail closed on protected routes",
+  },
+  {
+    id: "P-paymob-reject-refund-void-auth",
+    file: "artifacts/api-server/src/lib/paymentProvider.ts",
+    test: (s) =>
+      /is_refunded !== true/.test(s) &&
+      /is_voided !== true/.test(s) &&
+      /is_auth === true && obj\.is_capture !== true/.test(s),
+    why: "Paymob success must reject refunded/voided/auth-only signed outcomes",
+  },
+  {
+    id: "P-wallet-credit-blocks-deleted",
+    file: "artifacts/api-server/src/services/WalletService.ts",
+    test: (s) =>
+      /Soft-deleted owners must never receive credits/.test(s) &&
+      /isNull\(users\.deletedAt\)/.test(s),
+    why: "Ledger credits must require deleted_at IS NULL",
+  },
+  {
+    id: "P-paymob-claim-for-update-merge",
+    file: "artifacts/api-server/src/services/PaymentIntentService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function claimPaymobOrderForIntent"));
+      return (
+        /\.for\("update"\)/.test(fn) &&
+        /jsonb_build_object\('paymob_order_id'/.test(fn)
+      );
+    },
+    why: "Paymob order claim must lock intent and merge order id into metadata",
+  },
+  {
+    id: "P-boost-idempotency-fingerprint",
+    file: "artifacts/api-server/src/services/AdsService.ts",
+    test: (s) =>
+      /Idempotency key already used for a different boost/.test(s) &&
+      /existing\.sellerId !== sellerId/.test(s),
+    why: "Boost key replay must fingerprint seller/listing/adType (no cross-tenant free boost)",
+  },
+  {
+    id: "P-mobile-keep-topup-key-pending",
+    file: "artifacts/banco-mobile/app/wallet.tsx",
+    test: (s) => {
+      const pending = s.slice(s.indexOf('polled.status === "pending"'));
+      const block = pending.slice(0, pending.indexOf("} else {"));
+      return (
+        /setPayState\("pending"\)/.test(block) &&
+        !/topupAttemptKeyRef\.current = null/.test(block)
+      );
+    },
+    why: "Mobile must not clear top-up attempt key while intent is still pending",
+  },
+  {
+    id: "P-aws-migrate-exports-database-url",
+    file: "deploy/aws/scripts/deploy.sh",
+    test: (s) =>
+      /DATABASE_URL="\$\(grep -E '\^DATABASE_URL='/.test(s) &&
+      /export DATABASE_URL/.test(s),
+    why: "AWS deploy must export SSM-rendered DATABASE_URL before db-migrate",
+  },
+  {
+    id: "P-paymob-post-settlement-reversal",
+    file: "artifacts/api-server/src/controllers/paymentsController.ts",
+    test: (s) =>
+      /isRefunded \|\| verification\.isVoided/.test(s) &&
+      /reverseTopupAfterPspReversal/.test(s) &&
+      /reverseSubscriptionAfterPspReversal/.test(s),
+    why: "Refund/void webhooks must reverse completed settlements, not no-op mark-failed",
+  },
+  {
+    id: "P-provider-opening-lease",
+    file: "artifacts/api-server/src/services/PaymentIntentService.ts",
+    test: (s) =>
+      /provider_opening_at/.test(s) &&
+      /PROVIDER_OPENING_LEASE_SEC/.test(s),
+    why: "provider_opening CAS must expire so crashed openers are not permanent locks",
+  },
+  {
+    id: "P-lead-listing-for-update",
+    file: "artifacts/api-server/src/services/LeadService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function contactLead"));
+      return (
+        /SELECT id FROM listings WHERE id = \$\{input\.listingId\}::uuid FOR UPDATE/.test(fn) &&
+        /publicVisibilityConditions\(\)/.test(fn)
+      );
+    },
+    why: "CPL contact must re-lock listing visibility inside the charge transaction",
+  },
+  {
+    id: "P-rfq-accept-supplier-tombstone",
+    file: "artifacts/api-server/src/services/RfqService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function acceptOffer"));
+      return (
+        /isShadowBanned/.test(fn) &&
+        /deletedAt/.test(fn) &&
+        /This offer is no longer available/.test(fn)
+      );
+    },
+    why: "RFQ award must fail closed on deleted/shadow-banned suppliers",
+  },
+  {
+    id: "P-import-stage-permission",
+    file: "artifacts/api-server/src/routes/v1/import-orders.ts",
+    test: (s) =>
+      /requirePermission\("manage_financing"\)/.test(s) &&
+      /updateImportOrderStageHandler/.test(s),
+    why: "Import stage/quote changes must require manage_financing, not bare admin role",
+  },
+  {
+    id: "P-comments-active-listing",
+    file: "artifacts/api-server/src/services/CommentService.ts",
+    test: (s) =>
+      /eq\(listings\.status, "active"\)/.test(s) &&
+      /publicVisibilityConditions\(\)/.test(s),
+    why: "Public comments must require active + public visibility",
+  },
+  {
+    id: "P-paymob-prebind-intention-order",
+    file: "artifacts/api-server/src/lib/paymentProvider.ts",
+    test: (s) =>
+      /intention_order_id/.test(s) &&
+      /providerOrderId/.test(s),
+    why: "Intention create must capture order id when Paymob returns it (first-bind TOFU)",
+  },
+  // ── Round 15 ──────────────────────────────────────────────
+  {
+    id: "P-topup-settle-refuses-psp-reversed",
+    file: "artifacts/api-server/src/services/PaymentIntentService.ts",
+    test: (s) =>
+      /pspReversedFromMeta/.test(s) &&
+      /function settleTopupIntent/.test(s) &&
+      /for\("update"\)/.test(s) &&
+      /type: "adjustment"/.test(s),
+    why: "Top-up settle must lock intent and refuse credit after durable PSP reverse; clawback is adjustment debit",
+  },
+  {
+    id: "P-sub-reverse-orphan-and-pending",
+    file: "artifacts/api-server/src/services/SubscriptionService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function reverseSubscriptionAfterPspReversal"));
+      return (
+        /orphan_topup/.test(fn) &&
+        /psp_reversed/.test(fn) &&
+        /type: "adjustment"/.test(fn) &&
+        /status === "pending" \|\| intent\.status === "failed"/.test(fn)
+      );
+    },
+    why: "Subscription reverse must terminalize pending with psp_reversed and claw orphan_topup",
+  },
+  {
+    id: "P-web-keep-topup-key-pending",
+    file: "artifacts/banco-web/components/workspace/WalletPanel.tsx",
+    test: (s) => {
+      const pending = s.slice(s.indexOf('polled.status === "pending"'));
+      const block = pending.slice(0, pending.indexOf("} else {"));
+      return (
+        /setPayState\("pending"\)/.test(block) &&
+        !/topupAttemptKeyRef\.current = null/.test(block)
+      );
+    },
+    why: "Web WalletPanel must not clear top-up attempt key while intent is still pending",
+  },
+  {
+    id: "P-dealer-bulk-boost-batch-ref",
+    file: "artifacts/dealer-os/src/pages/listings.tsx",
+    test: (s) =>
+      /bulkBoostBatchRef/.test(s) &&
+      /if \(!bulkBoostBatchRef\.current\)/.test(s),
+    why: "Dealer bulk boost must reuse one batch token across double-confirm / retries",
+  },
+  {
+    id: "P-save-visibility-gate",
+    file: "artifacts/api-server/src/services/SaveService.ts",
+    test: (s) =>
+      /publicVisibilityConditions\(\)/.test(s) &&
+      /eq\(listings\.status, "active"\)/.test(s),
+    why: "New saves must require active + public visibility; unsaves stay allowed",
+  },
+  {
+    id: "P-globalsupply-supplier-tombstone",
+    file: "artifacts/api-server/src/services/GlobalSupplyService.ts",
+    test: (s) => {
+      const fetch = s.slice(s.indexOf("async function fetchResponses"));
+      const matches = s.slice(s.indexOf("async function computeSupplierMatches"));
+      return (
+        /deletedAt} IS NULL/.test(fetch) &&
+        /deletedAt} IS NULL/.test(matches)
+      );
+    },
+    why: "GlobalSupply must hide deleted suppliers from matches and buyer response lists",
+  },
+  {
+    id: "P-aws-ssm-wait-command",
+    file: ".github/workflows/deploy.yml",
+    test: (s) =>
+      /aws ssm wait command-executed/.test(s) &&
+      /get-command-invocation/.test(s) &&
+      /STATUS/.test(s) &&
+      /Success/.test(s),
+    why: "AWS deploy must wait for SSM and fail the job when Status is not Success",
+  },
+  // ── Round 16 ──────────────────────────────────────────────
+  {
+    id: "P-paymob-partial-refund-claw",
+    file: "artifacts/api-server/src/controllers/paymentsController.ts",
+    test: (s) =>
+      /isPspReverse/.test(s) &&
+      /clawAmountEgp/.test(s) &&
+      /amountCents > intentCents/.test(s),
+    why: "Refund/void must claw partial amount_cents instead of ACK no-op on mismatch",
+  },
+  {
+    id: "P-boost-seller-tombstone",
+    file: "artifacts/api-server/src/services/AdsService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function boostListing"));
+      return /deletedAt/.test(fn) && /for\("update"\)/.test(fn);
+    },
+    why: "Boost must not debit a soft-deleted seller",
+  },
+  {
+    id: "P-review-create-tombstone",
+    file: "artifacts/api-server/src/services/ReviewService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function createReview"));
+      return /isNull\(users\.deletedAt\)/.test(fn);
+    },
+    why: "createReview must fail closed on soft-deleted sellers like listReviews",
+  },
+  {
+    id: "P-globalsupply-respond-shadowban",
+    file: "artifacts/api-server/src/services/GlobalSupplyService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function respondToRequest"));
+      return /Account cannot submit offers/.test(fn) && /isShadowBanned/.test(fn);
+    },
+    why: "GlobalSupply respond must reject shadow-banned suppliers (RFQ parity)",
+  },
+  {
+    id: "P-delete-account-notif-scrub",
+    file: "artifacts/api-server/src/services/UserService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function deleteAccount"));
+      return (
+        /company_user_id/.test(fn) &&
+        /follower_id/.test(fn) &&
+        /authoredReviewIds/.test(fn) &&
+        /authoredCommentIds/.test(fn) &&
+        /type,\s*"comment"/.test(fn)
+      );
+    },
+    why: "Account delete must purge follower/review/comment notifications that embed the deleted name",
+  },
+  {
+    id: "P-prod-compose-healthy-depends",
+    file: "docker-compose.prod.yml",
+    test: (s) =>
+      (s.match(/condition: service_healthy/g) || []).length >= 3,
+    why: "Prod compose frontends must wait for API readyz health like Coolify",
   },
 ];
 

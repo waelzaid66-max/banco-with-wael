@@ -41,6 +41,7 @@ import {
   messages,
   notifications,
   pushTokens,
+  listingComments,
 } from "@workspace/db/schema";
 
 const deleteUserMock = vi.mocked(clerkClient.users.deleteUser);
@@ -315,6 +316,63 @@ describe("deleteAccount", () => {
     expect(tokens).toHaveLength(0);
   });
 
+  it("purges comment notifications that embed the deleted author's name", async () => {
+    const f = await seedUserWithFootprint();
+
+    const [comment] = await db
+      .insert(listingComments)
+      .values({
+        listingId: f.listingId,
+        authorId: f.userId,
+        body: "هل السعر قابل للتفاوض؟",
+      })
+      .returning({ id: listingComments.id });
+
+    await db.insert(notifications).values({
+      userId: f.sellerId,
+      type: "comment",
+      title: "Real Name سأل عن إعلانك · asked a question",
+      body: "هل السعر قابل للتفاوض؟",
+      data: {
+        listing_id: f.listingId,
+        comment_id: comment.id,
+        parent_id: null,
+      },
+    });
+
+    const [unrelated] = await db
+      .insert(notifications)
+      .values({
+        userId: f.sellerId,
+        type: "comment",
+        title: "Someone Else سأل عن إعلانك",
+        body: "unrelated comment notif survives",
+        data: {
+          listing_id: f.listingId,
+          comment_id: randomUUID(),
+          parent_id: null,
+        },
+      })
+      .returning({ id: notifications.id });
+
+    await deleteAccount(f.clerkId);
+
+    const [blanked] = await db
+      .select()
+      .from(listingComments)
+      .where(eq(listingComments.id, comment.id));
+    expect(blanked.body).toBe("");
+
+    const sellerNotifs = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, f.sellerId));
+    expect(sellerNotifs.map((n) => n.title)).not.toContain(
+      "Real Name سأل عن إعلانك · asked a question",
+    );
+    expect(sellerNotifs.map((n) => n.id)).toContain(unrelated.id);
+  });
+
   it("throws NOT_FOUND and never touches Clerk for an unknown user", async () => {
     await expect(deleteAccount(uniq("missing-clerk"))).rejects.toMatchObject({
       code: "NOT_FOUND",
@@ -322,16 +380,15 @@ describe("deleteAccount", () => {
     expect(deleteUserMock).not.toHaveBeenCalled();
   });
 
-  it("throws AUTH_PROVIDER_ERROR but keeps local data anonymized when Clerk deletion fails", async () => {
+  it("returns deleted:true and keeps local anonymization when Clerk deletion fails", async () => {
     const f = await seedUserWithFootprint();
     deleteUserMock.mockRejectedValue(new Error("clerk down"));
 
-    await expect(deleteAccount(f.clerkId)).rejects.toMatchObject({
-      code: "AUTH_PROVIDER_ERROR",
-    });
+    const result = await deleteAccount(f.clerkId);
+    expect(result).toEqual({ deleted: true });
 
     // The privacy obligation (local wipe) must already be durable even though
-    // the auth-provider step failed.
+    // the auth-provider step failed — client can sign out on success.
     const [user] = await db.select().from(users).where(eq(users.id, f.userId));
     expect(user.name).toBe("Deleted User");
     expect(user.email).toBeNull();

@@ -5,6 +5,7 @@ import { useGetTrending } from "@workspace/api-client-react";
 import { ListingCard } from "./ListingCard";
 import type { SiteLocale } from "../lib/hub-config";
 import { searchConfig } from "../lib/search-config";
+import { DEFAULT_MARKET_COUNTRY } from "../lib/search-markets";
 
 const sectionStyle: React.CSSProperties = {
   marginTop: "1.5rem",
@@ -50,7 +51,7 @@ export function HomeTrendingStrip({ locale = "ar" }: HomeTrendingStripProps) {
     return null;
   }
 
-  const query = useGetTrending();
+  const query = useGetTrending({ market_country: DEFAULT_MARKET_COUNTRY });
   const items = query.data?.data ?? [];
 
   if (query.isLoading) {

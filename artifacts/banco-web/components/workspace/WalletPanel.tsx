@@ -15,7 +15,7 @@ import {
   type WalletTransactionType,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { localeFromPathname } from "../../lib/hub-config";
 import {
   TX_CREDIT,
@@ -95,6 +95,7 @@ export function WalletPanel() {
   const [method, setMethod] = useState<CreateTopupBodyMethod>("vodafone_cash");
   const [payState, setPayState] = useState<PayState>("idle");
   const [newBalance, setNewBalance] = useState<string | null>(null);
+  const topupAttemptKeyRef = useRef<string | null>(null);
 
   const refreshWallet = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: getGetWalletQueryKey() });
@@ -132,7 +133,21 @@ export function WalletPanel() {
     setAmountError(false);
     try {
       setPayState("processing");
-      const res = await createTopup({ amount: amt, method });
+      const idempotencyKey =
+        topupAttemptKeyRef.current ??
+        (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (ch) => {
+              const r = (Math.random() * 16) | 0;
+              const v = ch === "x" ? r : (r & 0x3) | 0x8;
+              return v.toString(16);
+            }));
+      topupAttemptKeyRef.current = idempotencyKey;
+      const res = await createTopup({
+        amount: amt,
+        method,
+        idempotency_key: idempotencyKey,
+      });
       const intent = res.data;
       if (!intent?.intent_id || !intent.checkout_url) {
         throw new Error("no checkout");
@@ -140,10 +155,13 @@ export function WalletPanel() {
       window.open(intent.checkout_url, "_blank", "noopener,noreferrer");
       const polled = await pollTopup(intent.intent_id);
       if (polled.status === "completed") {
+        topupAttemptKeyRef.current = null;
         setNewBalance(polled.balance);
         setPayState("done");
         refreshWallet();
       } else if (polled.status === "pending") {
+        // Keep the attempt key — clearing it here opened a second Paymob
+        // checkout (and a second wallet credit) on the next tap.
         setPayState("pending");
         refreshWallet();
       } else {

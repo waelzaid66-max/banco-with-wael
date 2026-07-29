@@ -8,6 +8,11 @@ import {
   messages,
   notifications,
   pushTokens,
+  financingSeats,
+  stories,
+  listingComments,
+  sellerReviews,
+  paymentIntents,
 } from "@workspace/db/schema";
 import { eq, and, ne, isNull, isNotNull, or, inArray, sql } from "drizzle-orm";
 import { clerkClient } from "@clerk/express";
@@ -24,7 +29,16 @@ export async function getOrCreateUser(clerkId: string, data?: { name?: string; e
     .where(eq(users.clerkId, clerkId))
     .limit(1);
 
-  if (existing) return existing;
+  if (existing) {
+    // Soft-deleted accounts must not regain API access via first-touch paths
+    // while a Clerk session still exists (Clerk delete can lag or fail).
+    if (existing.deletedAt) {
+      throw Object.assign(new Error("Account has been deleted"), {
+        code: "ACCOUNT_DELETED",
+      });
+    }
+    return existing;
+  }
 
   // First-touch upsert: the mobile app can fire several authenticated calls in
   // parallel on first open, so two inserts may race. ON CONFLICT keeps the
@@ -49,6 +63,11 @@ export async function getOrCreateUser(clerkId: string, data?: { name?: string; e
       .from(users)
       .where(eq(users.clerkId, clerkId))
       .limit(1);
+    if (row?.deletedAt) {
+      throw Object.assign(new Error("Account has been deleted"), {
+        code: "ACCOUNT_DELETED",
+      });
+    }
     return row;
   }
 
@@ -63,11 +82,12 @@ export async function getOrCreateUser(clerkId: string, data?: { name?: string; e
   return created;
 }
 
+/** Active (non-tombstoned) user by Clerk id — soft-deleted rows are invisible. */
 export async function getDbUser(clerkId: string) {
   const [user] = await db
     .select()
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   return user ?? null;
 }
@@ -129,6 +149,11 @@ export async function updateUserProfile(
 
   if (!user) {
     throw Object.assign(new Error("User not found"), { code: "NOT_FOUND" });
+  }
+  if (user.deletedAt) {
+    throw Object.assign(new Error("Account has been deleted"), {
+      code: "ACCOUNT_DELETED",
+    });
   }
 
   // Anti-abuse: cap profile-mutation bursts per user (feeds suspicion → auto
@@ -285,6 +310,31 @@ export async function deleteAccount(clerkId: string): Promise<{ deleted: boolean
     .map((r) => r.url)
     .filter((u): u is string => !!u);
 
+  // Story media + KYC document URLs captured before the privacy wipe nulls them.
+  const storyRows = await db
+    .select({ url: stories.mediaUrl })
+    .from(stories)
+    .where(eq(stories.userId, user.id));
+  const storyMediaUrls = storyRows.map((r) => r.url).filter((u): u is string => !!u);
+
+  const [kycUser] = await db
+    .select({ companyDetails: users.companyDetails })
+    .from(users)
+    .where(eq(users.id, user.id))
+    .limit(1);
+  const kycUrls: string[] = [];
+  const details = kycUser?.companyDetails;
+  if (details && typeof details === "object" && !Array.isArray(details)) {
+    const docs = (details as Record<string, unknown>).documents;
+    if (docs && typeof docs === "object" && !Array.isArray(docs)) {
+      for (const v of Object.values(docs as Record<string, unknown>)) {
+        if (typeof v === "string" && v.length > 0) kycUrls.push(v);
+      }
+    }
+    const photo = (details as Record<string, unknown>).identity_photo_url;
+    if (typeof photo === "string" && photo.length > 0) kycUrls.push(photo);
+  }
+
   // Atomic local anonymization + personal-data wipe.
   await db.transaction(async (tx) => {
     // Anonymize the user record. We keep the row (soft delete) so seller
@@ -298,6 +348,8 @@ export async function deleteAccount(clerkId: string): Promise<{ deleted: boolean
         phone: null,
         companyDetails: null,
         isVerified: false,
+        isAdmin: false,
+        staffRole: "user",
         deletedAt: now,
       })
       .where(eq(users.id, user.id));
@@ -311,6 +363,36 @@ export async function deleteAccount(clerkId: string): Promise<{ deleted: boolean
     // Remove the user's personal collections/behavior history entirely.
     await tx.delete(savedListings).where(eq(savedListings.userId, user.id));
     await tx.delete(userBehavior).where(eq(userBehavior.userId, user.id));
+
+    // Public content authored by the deleted user must not remain discoverable.
+    // Capture review/comment ids BEFORE wipe so counterparties' notifications
+    // (which embed the author's name) can be purged below.
+    const authoredReviews = await tx
+      .select({ id: sellerReviews.id })
+      .from(sellerReviews)
+      .where(eq(sellerReviews.authorId, user.id));
+    const authoredReviewIds = authoredReviews.map((r) => r.id);
+
+    const authoredComments = await tx
+      .select({ id: listingComments.id })
+      .from(listingComments)
+      .where(eq(listingComments.authorId, user.id));
+    const authoredCommentIds = authoredComments.map((c) => c.id);
+
+    await tx.delete(stories).where(eq(stories.userId, user.id));
+    await tx.delete(sellerReviews).where(eq(sellerReviews.authorId, user.id));
+    await tx
+      .update(listingComments)
+      .set({ body: "" })
+      .where(eq(listingComments.authorId, user.id));
+
+    // Pending PSP checkouts must not settle onto a tombstone later.
+    await tx
+      .update(paymentIntents)
+      .set({ status: "failed" })
+      .where(
+        and(eq(paymentIntents.userId, user.id), eq(paymentIntents.status, "pending")),
+      );
 
     // Chat privacy (Play/GDPR account deletion): blank the CONTENT of every
     // message this user sent (empty tombstone — thread structure survives so
@@ -352,20 +434,70 @@ export async function deleteAccount(clerkId: string): Promise<{ deleted: boolean
         );
     }
 
+    // Follower alerts embed the pre-delete seller name in counterparties' inboxes.
+    await tx
+      .delete(notifications)
+      .where(
+        and(
+          eq(notifications.type, "new_match"),
+          sql`${notifications.data}->>'company_user_id' = ${user.id}`,
+        ),
+      );
+
+    // Follow notifications embed the follower's name on the company inbox.
+    await tx
+      .delete(notifications)
+      .where(
+        and(
+          eq(notifications.type, "system"),
+          sql`${notifications.data}->>'follower_id' = ${user.id}`,
+        ),
+      );
+
+    // Review notifications embed the author's name in the seller inbox.
+    if (authoredReviewIds.length > 0) {
+      await tx
+        .delete(notifications)
+        .where(
+          and(
+            eq(notifications.type, "review"),
+            inArray(sql`${notifications.data}->>'review_id'`, authoredReviewIds),
+          ),
+        );
+    }
+
+    // Comment notifications embed the author's name in listing-owner / parent
+    // author inboxes (CommentService createNotification type "comment").
+    if (authoredCommentIds.length > 0) {
+      await tx
+        .delete(notifications)
+        .where(
+          and(
+            eq(notifications.type, "comment"),
+            inArray(sql`${notifications.data}->>'comment_id'`, authoredCommentIds),
+          ),
+        );
+    }
+
     // The deleted account's devices must stop receiving pushes immediately.
     await tx.delete(pushTokens).where(eq(pushTokens.userId, user.id));
+
+    // Revoke FI operational seats so a lingering Clerk JWT cannot keep reading
+    // the institution inbox / buyer PII after soft-delete.
+    await tx.delete(financingSeats).where(eq(financingSeats.userId, user.id));
   });
 
   // Best-effort storage cleanup AFTER the tombstone is durable: delete the
   // actual chat media objects so blobs can't outlive the DB scrub. A storage
   // failure is logged loudly but never resurrects the account — the DB, the
   // source of truth, is already scrubbed.
-  if (chatMediaUrls.length > 0) {
-    const media = await getObjectStorageService().deleteServingUrls(chatMediaUrls);
+  const purgeUrls = [...chatMediaUrls, ...storyMediaUrls, ...kycUrls];
+  if (purgeUrls.length > 0) {
+    const media = await getObjectStorageService().deleteServingUrls(purgeUrls);
     if (media.failed > 0) {
       logger.error(
         { user_id: user.id, ...media },
-        "Chat media cleanup incomplete after account deletion",
+        "Media cleanup incomplete after account deletion",
       );
     }
   }
@@ -376,13 +508,12 @@ export async function deleteAccount(clerkId: string): Promise<{ deleted: boolean
   try {
     await clerkClient.users.deleteUser(clerkId);
   } catch (err) {
+    // Privacy wipe is already durable. Throwing here left clients signed-in
+    // with a tombstoned DB user (401 ACCOUNT_DELETED forever, no retry path).
+    // Return success so the client signs out; ops cleans orphan Clerk rows.
     logger.error(
       { err, user_id: user.id },
-      "Account data anonymized but Clerk user deletion failed",
-    );
-    throw Object.assign(
-      new Error("Account data removed but auth-provider deletion failed"),
-      { code: "AUTH_PROVIDER_ERROR" },
+      "Account data anonymized but Clerk user deletion failed — returning success so client signs out",
     );
   }
 

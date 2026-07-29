@@ -1,5 +1,12 @@
 import { db } from "@workspace/db";
-import { savedSearches, companyFollows, users } from "@workspace/db/schema";
+import {
+  savedSearches,
+  companyFollows,
+  users,
+  listings,
+  listingAttributes,
+  paymentOptions,
+} from "@workspace/db/schema";
 import { and, eq, ne, or, isNull, lte, gte } from "drizzle-orm";
 import { createNotification } from "./NotificationService";
 import { getSaverUserIds } from "./SaveService";
@@ -8,6 +15,10 @@ import {
   sendNewMatchEmail,
   sendPriceDropEmail,
 } from "./EmailService";
+import {
+  listingMatchesSavedSearchFilters,
+  type ListingAlertSnapshot,
+} from "./savedSearchMatch";
 
 /**
  * AlertService — best-effort, non-blocking dispatch of the two demand-side
@@ -21,11 +32,94 @@ import {
 // dealer bulk-publishing inventory can't flood a saver with notifications.
 const NEW_MATCH_COOLDOWN_MS = 10 * 60_000;
 
+async function loadListingAlertSnapshot(
+  listingId: string,
+  fallback: {
+    category: string;
+    price: number;
+    title: string;
+  },
+): Promise<ListingAlertSnapshot | null> {
+  const [row] = await db
+    .select({
+      id: listings.id,
+      category: listings.category,
+      title: listings.title,
+      description: listings.description,
+      price: listings.basePriceCash,
+      location: listings.location,
+      isRequest: listings.isRequest,
+      specs: listingAttributes.specs,
+      condition: listingAttributes.condition,
+      propertyType: listingAttributes.propertyType,
+      finishingType: listingAttributes.finishingType,
+      fuelType: listingAttributes.fuelType,
+      transmission: listingAttributes.transmission,
+      industry: listingAttributes.industry,
+      originType: listingAttributes.originType,
+      industrialType: listingAttributes.industrialType,
+    })
+    .from(listings)
+    .leftJoin(listingAttributes, eq(listingAttributes.listingId, listings.id))
+    .where(eq(listings.id, listingId))
+    .limit(1);
+
+  if (!row) return null;
+
+  const pays = await db
+    .select({
+      mode: paymentOptions.mode,
+      monthlyPayment: paymentOptions.monthlyPayment,
+      isIslamicCompliant: paymentOptions.isIslamicCompliant,
+    })
+    .from(paymentOptions)
+    .where(eq(paymentOptions.listingId, listingId));
+
+  const withMonthly = pays.filter((p) => p.monthlyPayment != null);
+  const nonCashMonthly = withMonthly.filter((p) => p.mode !== "cash");
+
+  const specs =
+    row.specs && typeof row.specs === "object" && !Array.isArray(row.specs)
+      ? (row.specs as Record<string, unknown>)
+      : {};
+
+  const priceNum = Number(row.price ?? fallback.price);
+  return {
+    id: row.id,
+    category: row.category ?? fallback.category,
+    title: row.title ?? fallback.title,
+    description: row.description ?? null,
+    price: Number.isFinite(priceNum) ? priceNum : fallback.price,
+    location: row.location ?? null,
+    isRequest: row.isRequest ?? false,
+    specs,
+    condition: row.condition ?? null,
+    propertyType: row.propertyType ?? null,
+    finishingType: row.finishingType ?? null,
+    fuelType: row.fuelType ?? null,
+    transmission: row.transmission ?? null,
+    industry: row.industry ?? null,
+    originType: row.originType ?? null,
+    industrialType: row.industrialType ?? null,
+    hasNonCashMonthly: nonCashMonthly.length > 0,
+    hasBankFinanceMonthly: nonCashMonthly.some((p) => p.mode === "bank_finance"),
+    hasSellerInstallmentMonthly: nonCashMonthly.some(
+      (p) => p.mode === "seller_installment",
+    ),
+    hasIslamicNonCashMonthly: nonCashMonthly.some(
+      (p) => p.isIslamicCompliant === true,
+    ),
+  };
+}
+
 /**
  * Notify owners of alerts-enabled saved searches whose criteria match a newly
- * created listing. Matching is conservative and REAL: category (when set),
- * price range (when set), and an optional free-text term against the title.
+ * created listing. Matching is conservative:
+ *  - SQL prefilter: category + price columns
+ *  - free-text `query` column against title (legacy)
+ *  - structured `filters` via savedSearchMatch (fail-closed when unversioned)
  * Never alerts the seller about their own listing.
+ * Cooldown is claimed ONLY after a confirmed match (never burns on misses).
  */
 export async function notifyNewMatch(listing: {
   id: string;
@@ -33,8 +127,12 @@ export async function notifyNewMatch(listing: {
   price: number;
   title: string;
   sellerId: string;
-}): Promise<void> {
+}): Promise<Set<string>> {
+  const notified = new Set<string>();
   try {
+    const snapshot = await loadListingAlertSnapshot(listing.id, listing);
+    if (!snapshot) return notified;
+
     const candidates = await db
       .select()
       .from(savedSearches)
@@ -50,14 +148,38 @@ export async function notifyNewMatch(listing: {
 
     const now = Date.now();
     const titleLower = listing.title.toLowerCase();
+    const cooldownCutoff = new Date(now - NEW_MATCH_COOLDOWN_MS);
 
     for (const search of candidates) {
-      // Free-text term (if any) must appear in the listing title.
-      if (search.query && !titleLower.includes(search.query.trim().toLowerCase())) continue;
+      // Free-text term (if any) must appear in the listing title (legacy column).
+      if (search.query && !titleLower.includes(search.query.trim().toLowerCase())) {
+        continue;
+      }
 
-      // Per-search cooldown to prevent notification storms.
-      const last = search.lastNotifiedListingAt ? search.lastNotifiedListingAt.getTime() : 0;
-      if (now - last < NEW_MATCH_COOLDOWN_MS) continue;
+      // Structured filters: null = legacy columns only; unversioned = fail closed.
+      if (!listingMatchesSavedSearchFilters(search.filters, snapshot)) {
+        continue;
+      }
+
+      // One alert per user per listing — overlapping saved searches must not storm.
+      if (notified.has(search.userId)) continue;
+
+      // Atomic cooldown claim — concurrent publishes cannot both pass a stale read.
+      // Claimed ONLY after match confirmation so misses never burn the window.
+      const claimed = await db
+        .update(savedSearches)
+        .set({ lastNotifiedListingAt: new Date() })
+        .where(
+          and(
+            eq(savedSearches.id, search.id),
+            or(
+              isNull(savedSearches.lastNotifiedListingAt),
+              lte(savedSearches.lastNotifiedListingAt, cooldownCutoff),
+            ),
+          ),
+        )
+        .returning({ id: savedSearches.id });
+      if (claimed.length === 0) continue;
 
       await createNotification({
         userId: search.userId,
@@ -66,11 +188,7 @@ export async function notifyNewMatch(listing: {
         body: `إعلان جديد يطابق «${search.name}» · A new listing matches "${search.name}"`,
         data: { listing_id: listing.id, saved_search_id: search.id },
       });
-
-      await db
-        .update(savedSearches)
-        .set({ lastNotifiedListingAt: new Date() })
-        .where(eq(savedSearches.id, search.id));
+      notified.add(search.userId);
 
       // Best-effort email — never blocks or throws into the caller.
       void (async () => {
@@ -97,6 +215,7 @@ export async function notifyNewMatch(listing: {
   } catch (err) {
     console.error("[Alert new_match]", err);
   }
+  return notified;
 }
 
 /**
@@ -167,6 +286,8 @@ export async function notifyFollowersOfNewListing(listing: {
   id: string;
   title: string;
   sellerId: string;
+  /** Users already pinged for this listing (e.g. via saved-search match). */
+  skipUserIds?: ReadonlySet<string>;
 }): Promise<void> {
   try {
     const followers = await db
@@ -184,6 +305,7 @@ export async function notifyFollowersOfNewListing(listing: {
 
     for (const f of followers) {
       if (f.followerId === listing.sellerId) continue;
+      if (listing.skipUserIds?.has(f.followerId)) continue;
       await createNotification({
         userId: f.followerId,
         type: "new_match",

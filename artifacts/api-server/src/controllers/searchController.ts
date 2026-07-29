@@ -40,6 +40,8 @@ function parsedFromSearchQuery(query: z.infer<typeof SearchQuerySchema>) {
   if (query.industry) parsed.industry = query.industry;
   if (query.origin_type) parsed.origin_type = query.origin_type;
   if (query.is_request !== undefined) parsed.is_request = query.is_request;
+  if (query.market_country) parsed.market_country = query.market_country;
+  if (query.material) parsed.material = query.material;
   // sort always has a value (schema default "recommended").
   parsed.sort = query.sort;
   return parsed;
@@ -120,7 +122,7 @@ export async function autocompleteHandler(req: Request, res: Response) {
 export async function facetsHandler(req: Request, res: Response) {
   try {
     const query = FacetsQuerySchema.parse(req.query);
-    const facets = await getFacets(query.category);
+    const facets = await getFacets(query.category, query.market_country);
     const validated = validateResponse(FacetCountsSchema, facets);
     res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
     return res.json(successResponse(validated, { total: facets.total }));
@@ -136,7 +138,12 @@ export async function facetsHandler(req: Request, res: Response) {
 export async function trendingHandler(req: Request, res: Response) {
   try {
     const limit = Math.min(Number(req.query.limit ?? 20), 50);
-    const items = await getTrending(limit);
+    const rawMarket =
+      typeof req.query.market_country === "string"
+        ? req.query.market_country.trim().toUpperCase()
+        : "";
+    const marketCountry = /^[A-Z]{2}$/.test(rawMarket) ? rawMarket : undefined;
+    const items = await getTrending(limit, marketCountry);
     const validated = validateResponse(FeedItemSchema.array(), items);
     res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
     return res.json(successResponse(validated, { total: validated.length }));
@@ -149,7 +156,12 @@ export async function trendingHandler(req: Request, res: Response) {
 export async function recommendationsHandler(req: Request, res: Response) {
   try {
     const limit = Math.min(Number(req.query.limit ?? 20), 50);
-    const items = await getRecommendations(req.userId ?? "", limit);
+    const rawMarket =
+      typeof req.query.market_country === "string"
+        ? req.query.market_country.trim().toUpperCase()
+        : "";
+    const marketCountry = /^[A-Z]{2}$/.test(rawMarket) ? rawMarket : undefined;
+    const items = await getRecommendations(req.userId ?? "", limit, marketCountry);
     const validated = validateResponse(FeedItemSchema.array(), items);
     return res.json(successResponse(validated, { total: validated.length }));
   } catch (err) {

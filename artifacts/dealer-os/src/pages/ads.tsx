@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import {
   useGetDealerListings,
@@ -41,6 +41,8 @@ export default function AdsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [adType, setAdType] = useState<AdType>("featured");
   const [duration, setDuration] = useState("7");
+  /** Stable across retries of the same boost attempt (cleared on success). */
+  const boostAttemptKeyRef = useRef<string | null>(null);
 
   const { data: listingsData, isLoading } = useGetDealerListings(
     { limit: 100, status: "active" },
@@ -60,15 +62,28 @@ export default function AdsPage() {
     setSelectedId(id);
     setAdType("featured");
     setDuration("7");
+    boostAttemptKeyRef.current = null;
     setBoostOpen(true);
   }
 
   function handleBoost() {
     if (!selectedId) return;
+    const idempotency_key =
+      boostAttemptKeyRef.current ??
+      `boost:${selectedId}:${adType}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    boostAttemptKeyRef.current = idempotency_key;
     boostMutation.mutate(
-      { data: { listing_id: selectedId, ad_type: adType, duration_days: parseInt(duration) } },
+      {
+        data: {
+          listing_id: selectedId,
+          ad_type: adType,
+          duration_days: parseInt(duration),
+          idempotency_key,
+        },
+      },
       {
         onSuccess: () => {
+          boostAttemptKeyRef.current = null;
           toast({
             title: t("ads.toast.boosted"),
             description: t("ads.toast.boostedDesc", { label: adTypeLabel(adType), count: duration }),

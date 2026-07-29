@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser } from '@clerk/react';
+import { ClerkProvider, SignIn, SignUp, Show, useAuth, useClerk, useUser } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
 import { Switch, Route, useLocation, Redirect, Router as WouterRouter } from 'wouter';
@@ -9,6 +9,7 @@ import {
   getGetMeQueryKey,
   useUpdateMe,
   UpdateMeBodyBusinessActivityType,
+  setAuthFailureHandler,
 } from "@workspace/api-client-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Loader2, Building2 } from "lucide-react";
@@ -27,6 +28,7 @@ import RfqsPage from "./pages/rfqs";
 import InvestmentsPage from "./pages/investments";
 import CompanyProfilePage from "./pages/company-profile";
 import GlobalSupplyPage from "./pages/global-supply";
+import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
 
@@ -107,6 +109,19 @@ function ClerkQueryClientCacheInvalidator() {
     });
     return unsubscribe;
   }, [addListener, queryClient]);
+  return null;
+}
+
+/** Soft-deleted accounts reject with 401 ACCOUNT_DELETED while Clerk session may linger. */
+function AuthFailureBridge() {
+  const { signOut } = useAuth();
+  useEffect(() => {
+    setAuthFailureHandler(({ code }) => {
+      if (code !== "ACCOUNT_DELETED") return;
+      void signOut().catch(() => {});
+    });
+    return () => setAuthFailureHandler(null);
+  }, [signOut]);
   return null;
 }
 
@@ -370,6 +385,7 @@ function ClerkProviderWithRoutes() {
     >
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
+        <AuthFailureBridge />
         <Switch>
           {/* Public legal pages — NO sign-in / RoleGuard. Required for the
               Google Play "Privacy policy" URL and mirror the in-app legal copy. */}
@@ -390,6 +406,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/company" component={() => <><Show when="signed-in"><RoleGuard><CompanyProfilePage /></RoleGuard></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>} />
           <Route path="/wallet" component={() => <><Show when="signed-in"><RoleGuard><WalletPage /></RoleGuard></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>} />
           <Route path="/subscription" component={() => <><Show when="signed-in"><RoleGuard><SubscriptionPage /></RoleGuard></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>} />
+          <Route component={() => <><Show when="signed-in"><RoleGuard><NotFound /></RoleGuard></Show><Show when="signed-out"><Redirect to="/sign-in" /></Show></>} />
         </Switch>
         <Toaster />
       </QueryClientProvider>

@@ -360,8 +360,13 @@ test("listing detail fetch effect guards on both !isLoaded and !isSignedIn", () 
 test("SessionContext server reconciliation only runs for signed-in users", () => {
   assert.match(
     session,
-    /if \(!isSignedIn\) return/,
+    /if \(!isSignedIn \|\| !userId\) return/,
     "the server-side save reconciliation useEffect must early-return when the " +
       "user is not signed in — guests must never trigger backend sync"
+  );
+  assert.match(
+    session,
+    /scopedKey/,
+    "saves/searches must be keyed per Clerk userId to prevent cross-account leak"
   );
 });

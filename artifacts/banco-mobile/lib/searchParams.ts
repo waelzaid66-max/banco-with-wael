@@ -69,7 +69,7 @@ export interface SearchCriteria {
   material: string | null;
   /** Facilities/materials sub-type within the industrial group ("all" = whole group). */
   industrialType: IndustrialType;
-  /** UI-only market selector for rental-term chips (not sent to API). */
+  /** Market country (ISO-3166 alpha-2) — sent to API as market_country. */
   marketCountry: string;
   /** Near-me geo filter — all three coords + radius sent when enabled. */
   nearMeEnabled: boolean;
@@ -271,6 +271,12 @@ export function buildSearchParams(
   // Commodity material — materials company only (never facilities / cars / RE).
   if (c.category === "materials" && c.material) {
     (sp as SearchParams & { material?: string }).material = c.material;
+  }
+
+  // Market country — must reach search + map (was previously dropped client-side).
+  if (c.marketCountry.trim()) {
+    (sp as SearchParams & { market_country?: string }).market_country =
+      c.marketCountry.trim().toUpperCase();
   }
 
   // Sale vs buyer-request browse — mirrors @workspace/search-contract.

@@ -12,6 +12,7 @@ import { Platform } from "react-native";
 
 import { useSound } from "@/context/SoundContext";
 import { routeForNotification } from "@/lib/notificationRouting";
+import { getCachedPushToken, setCachedPushToken } from "@/lib/pushTokenCache";
 
 /**
  * Remote push wiring (Task #102).
@@ -65,8 +66,20 @@ function navigateWhenReady(dest: Parameters<typeof router.push>[0], attempt = 0)
   }
 }
 
+const handledResponseIds = new Set<string>();
+
 function handleResponse(response: Notifications.NotificationResponse | null) {
   if (!response) return;
+  const id = response.notification.request.identifier;
+  if (id && handledResponseIds.has(id)) return;
+  if (id) {
+    handledResponseIds.add(id);
+    // Bound memory: keep only recent ids across long sessions.
+    if (handledResponseIds.size > 64) {
+      const first = handledResponseIds.values().next().value;
+      if (first !== undefined) handledResponseIds.delete(first);
+    }
+  }
   const data = (response.notification.request.content.data ?? {}) as Record<
     string,
     unknown
@@ -132,15 +145,42 @@ export function PushNotificationsBridge() {
         .then((token) => {
           if (cancelled || !token) return;
           tokenRef.current = token;
+          setCachedPushToken(token);
           return registerPushToken({ token, platform: platformTag() });
         })
         .catch((err) => {
           console.warn("[Push] registration skipped:", err);
         });
-    } else if (tokenRef.current) {
-      const token = tokenRef.current;
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    // Mute (or signed-out): clear server registration. Cold start after kill
+    // leaves tokenRef empty even when AsyncStorage says muted — re-resolve
+    // the device token while still authenticated, then unregister.
+    if (isSignedIn && !notificationsEnabled) {
+      const known = tokenRef.current ?? getCachedPushToken();
       tokenRef.current = null;
-      unregisterPushToken({ token }).catch(() => {});
+      setCachedPushToken(null);
+      const unregister = (token: string) => {
+        if (cancelled) return;
+        unregisterPushToken({ token }).catch(() => {});
+      };
+      if (known) {
+        unregister(known);
+      } else {
+        obtainExpoPushToken()
+          .then((token) => {
+            if (token) unregister(token);
+          })
+          .catch(() => {});
+      }
+    } else {
+      // Signed out — local clear only. Caller must unregister BEFORE signOut
+      // (otherwise this would 401 with a dead session).
+      tokenRef.current = null;
+      setCachedPushToken(null);
     }
 
     return () => {

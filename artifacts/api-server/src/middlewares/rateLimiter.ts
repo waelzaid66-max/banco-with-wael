@@ -7,7 +7,7 @@ export const publicRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: (_req, res) => {
-    res.status(429).json(errorResponse("INVALID_DATA", "Too many requests, please slow down"));
+    res.status(429).json(errorResponse("RATE_LIMITED", "Too many requests, please slow down"));
   },
 });
 
@@ -17,7 +17,7 @@ export const searchRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: (_req, res) => {
-    res.status(429).json(errorResponse("INVALID_DATA", "Too many search requests"));
+    res.status(429).json(errorResponse("RATE_LIMITED", "Too many search requests"));
   },
 });
 
@@ -27,7 +27,7 @@ export const writeRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: (_req, res) => {
-    res.status(429).json(errorResponse("INVALID_DATA", "Too many write requests"));
+    res.status(429).json(errorResponse("RATE_LIMITED", "Too many write requests"));
   },
 });
 
@@ -39,6 +39,6 @@ export const aiRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: (_req, res) => {
-    res.status(429).json(errorResponse("INVALID_DATA", "Too many assistant requests, please slow down"));
+    res.status(429).json(errorResponse("RATE_LIMITED", "Too many assistant requests, please slow down"));
   },
 });

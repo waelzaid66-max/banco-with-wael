@@ -34,6 +34,7 @@ import { useI18n } from "@/context/LanguageContext";
 import { useSound } from "@/context/SoundContext";
 import { useThemeMode } from "@/context/ThemeContext";
 import { useColors } from "@/hooks/useColors";
+import { unregisterCachedPushTokenBestEffort } from "@/lib/unregisterPushBestEffort";
 
 type Colors = ReturnType<typeof useColors>;
 
@@ -50,6 +51,10 @@ const CATEGORY_ORDER: NotificationPreferenceType[] = [
   "price_drop",
   "investment",
   "global_supply",
+  "payment_success",
+  "payment_failed",
+  "subscription_expiring",
+  "car_import",
   "system",
 ];
 
@@ -473,8 +478,11 @@ export default function SettingsScreen() {
         text: t("settings.signOut"),
         style: "destructive",
         onPress: () => {
-          signOut().catch(() => {});
-          router.replace("/(tabs)");
+          void (async () => {
+            await unregisterCachedPushTokenBestEffort();
+            await signOut().catch(() => {});
+            router.replace("/(tabs)");
+          })();
         },
       },
     ]);
@@ -619,6 +627,7 @@ export default function SettingsScreen() {
       await deleteAccount();
       setShowDelete(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await unregisterCachedPushTokenBestEffort();
       await signOut();
       router.replace("/(tabs)");
     } catch {
@@ -671,6 +680,7 @@ export default function SettingsScreen() {
       await deleteAccount();
       setShowDeletePw(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await unregisterCachedPushTokenBestEffort();
       await signOut();
       router.replace("/(tabs)");
     } catch {

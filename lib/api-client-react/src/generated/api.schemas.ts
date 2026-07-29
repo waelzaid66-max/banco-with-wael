@@ -17,6 +17,65 @@ export interface HealthStatus {
   status: HealthStatusStatus;
 }
 
+/**
+ * Optional deploy identity baked at image build (null when unset — never invented).
+ */
+export interface DeployPinFields {
+  gitSha?: string | null;
+  buildId?: string | null;
+}
+
+/**
+ * Process liveness with deploy pin. Does not touch the database.
+ */
+export type LiveStatus = HealthStatus & DeployPinFields;
+
+export type ReadyStatusStatus = typeof ReadyStatusStatus[keyof typeof ReadyStatusStatus];
+
+
+export const ReadyStatusStatus = {
+  ok: 'ok',
+  degraded: 'degraded',
+} as const;
+
+export type ReadyStatusChecksDatabase = typeof ReadyStatusChecksDatabase[keyof typeof ReadyStatusChecksDatabase];
+
+
+export const ReadyStatusChecksDatabase = {
+  ok: 'ok',
+  down: 'down',
+} as const;
+
+export type ReadyStatusChecksMoneySchema = typeof ReadyStatusChecksMoneySchema[keyof typeof ReadyStatusChecksMoneySchema];
+
+
+export const ReadyStatusChecksMoneySchema = {
+  ok: 'ok',
+  down: 'down',
+} as const;
+
+export type ReadyStatusChecks = {
+  database?: ReadyStatusChecksDatabase;
+  money_schema?: ReadyStatusChecksMoneySchema;
+  [key: string]: unknown;
+};
+
+/**
+ * Readiness — database reachable and money-path tables present.
+ */
+export interface ReadyStatus {
+  status: ReadyStatusStatus;
+  checks: ReadyStatusChecks;
+  gitSha?: string | null;
+  buildId?: string | null;
+}
+
+export interface PaymobWebhookAck {
+  ok: boolean;
+  /** Present on some non-settlement failures (e.g. intent_not_found). */
+  error?: string;
+}
+
 export type ApiErrorCode = typeof ApiErrorCode[keyof typeof ApiErrorCode];
 
 
@@ -29,6 +88,8 @@ export const ApiErrorCode = {
   RATE_LIMITED: 'RATE_LIMITED',
   INVALID_TOKEN: 'INVALID_TOKEN',
   CONFLICT: 'CONFLICT',
+  ACCOUNT_DELETED: 'ACCOUNT_DELETED',
+  SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
 } as const;
 
 export interface ApiError {
@@ -2472,6 +2533,20 @@ export type GetPlaceSuggestions200 = {
   meta?: Meta;
 };
 
+export type PaymobWebhookParams = {
+/**
+ * Paymob HMAC over the signed object fields
+ */
+hmac?: string;
+};
+
+export type PaymobWebhookBodyObj = { [key: string]: unknown };
+
+export type PaymobWebhookBody = {
+  obj?: PaymobWebhookBodyObj;
+  [key: string]: unknown;
+ };
+
 export type GetMe200 = {
   data?: UserState;
   error?: ApiError | null;
@@ -3445,9 +3520,14 @@ export type GetMapClusters200 = {
 
 export type GetFacetsParams = {
 /**
- * Scope counts to a single category (the category facet stays unscoped).
+ * Scope attribute counts to a single category (the category facet map stays category-unscoped).
  */
 category?: GetFacetsCategory;
+/**
+ * ISO 3166-1 alpha-2 market country (EG, SA, …). Filters inventory by specs.market_country; listings without the key are treated as EG. Same contract as search/trending.
+ * @pattern ^[A-Za-z]{2}$
+ */
+market_country?: string;
 };
 
 export type GetFacetsCategory = typeof GetFacetsCategory[keyof typeof GetFacetsCategory];
@@ -3475,10 +3555,36 @@ export type GetAutocomplete200 = {
   meta?: Meta;
 };
 
+export type GetTrendingParams = {
+/**
+ * @minimum 1
+ * @maximum 50
+ */
+limit?: number;
+/**
+ * ISO 3166-1 alpha-2 market country (EG, SA, …). Filters inventory by specs.market_country; listings without the key are treated as EG.
+ * @pattern ^[A-Za-z]{2}$
+ */
+market_country?: string;
+};
+
 export type GetTrending200 = {
   data?: FeedItem[];
   error?: ApiError | null;
   meta?: Meta;
+};
+
+export type GetRecommendationsParams = {
+/**
+ * @minimum 1
+ * @maximum 50
+ */
+limit?: number;
+/**
+ * ISO 3166-1 alpha-2 market country (EG, SA, …). Filters inventory by specs.market_country; listings without the key are treated as EG.
+ * @pattern ^[A-Za-z]{2}$
+ */
+market_country?: string;
 };
 
 export type GetRecommendations200 = {
@@ -4143,6 +4249,8 @@ export const CreateTopupBodyMethod = {
 export type CreateTopupBody = {
   amount: number;
   method: CreateTopupBodyMethod;
+  /** Client-stable UUID reused as payment_intents.id so retries never open a second PSP checkout. */
+  idempotency_key: string;
 };
 
 export type CreateTopup200 = {
@@ -4183,6 +4291,8 @@ export const SubscribeBodyPaymentMethod = {
 export type SubscribeBody = {
   plan_slug: string;
   payment_method?: SubscribeBodyPaymentMethod;
+  /** Client-stable UUID; external rails reuse as payment_intents.id. */
+  idempotency_key: string;
 };
 
 export type Subscribe200 = {

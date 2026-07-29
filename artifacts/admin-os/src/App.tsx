@@ -1,10 +1,14 @@
 import { useEffect, useRef } from "react";
-import { ClerkProvider, SignIn, SignUp, Show, useClerk, useUser } from '@clerk/react';
+import { ClerkProvider, SignIn, SignUp, Show, useAuth, useClerk, useUser } from '@clerk/react';
 import { publishableKeyFromHost } from '@clerk/react/internal';
 import { shadcn } from '@clerk/themes';
 import { Switch, Route, useLocation, Redirect, Router as WouterRouter } from 'wouter';
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
-import { useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
+import {
+  useGetMe,
+  getGetMeQueryKey,
+  setAuthFailureHandler,
+} from "@workspace/api-client-react";
 import { Toaster } from "@/components/ui/toaster";
 import { Loader2 } from "lucide-react";
 
@@ -112,6 +116,19 @@ function ClerkQueryClientCacheInvalidator() {
   return null;
 }
 
+/** Soft-deleted accounts reject with 401 ACCOUNT_DELETED while Clerk session may linger. */
+function AuthFailureBridge() {
+  const { signOut } = useAuth();
+  useEffect(() => {
+    setAuthFailureHandler(({ code }) => {
+      if (code !== "ACCOUNT_DELETED") return;
+      void signOut().catch(() => {});
+    });
+    return () => setAuthFailureHandler(null);
+  }, [signOut]);
+  return null;
+}
+
 function AdminGuard({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn } = useUser();
   const { data: me, isLoading } = useGetMe({
@@ -203,6 +220,7 @@ function ClerkProviderWithRoutes() {
     >
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
+        <AuthFailureBridge />
         <Switch>
           <Route path="/" component={HomeRedirect} />
           <Route path="/sign-in/*?" component={SignInPage} />

@@ -28,6 +28,7 @@ export async function feedHandler(req: Request, res: Response) {
       industry: query.industry,
       originType: query.origin_type,
       marketCountry: query.market_country,
+      material: query.material,
       isRequest: query.is_request,
       sessionId: query.session_id,
       userId: req.userId,

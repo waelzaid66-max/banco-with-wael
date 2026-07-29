@@ -5,7 +5,7 @@ import {
   companyProfiles,
   users,
 } from "@workspace/db/schema";
-import { and, eq, desc, sql, or } from "drizzle-orm";
+import { and, eq, desc, sql, or, isNull } from "drizzle-orm";
 import { createNotification } from "./NotificationService";
 import type {
   GlobalSupplyRequestDTO,
@@ -68,6 +68,7 @@ interface RequestRow {
   notes: string | null;
   status: RequestStatus;
   buyer_is_shadow_banned: boolean | null;
+  buyer_deleted_at: Date | null;
   created_at: Date | null;
 }
 
@@ -87,6 +88,7 @@ const requestSelect = {
   notes: globalSupplyRequests.notes,
   status: globalSupplyRequests.status,
   buyer_is_shadow_banned: users.isShadowBanned,
+  buyer_deleted_at: users.deletedAt,
   created_at: globalSupplyRequests.createdAt,
 } as const;
 
@@ -115,7 +117,7 @@ async function resolveUserId(clerkId: string): Promise<string> {
   const [user] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   if (!user) throw Object.assign(new Error("User not found"), { code: "UNAUTHORIZED" });
   return user.id;
@@ -126,7 +128,7 @@ async function resolveUserIdOpt(clerkId?: string): Promise<string | null> {
   const [user] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   return user?.id ?? null;
 }
@@ -141,8 +143,9 @@ export async function listGlobalRequests(
 ): Promise<{ items: GlobalSupplyRequestDTO[]; cursor?: string; has_next: boolean }> {
   const conditions = [
     eq(globalSupplyRequests.status, filters.status ?? "open"),
-    // Never surface requests from shadow-banned buyers on the public board.
+    // Never surface requests from shadow-banned or soft-deleted buyers.
     sql`${users.isShadowBanned} IS NOT TRUE`,
+    sql`${users.deletedAt} IS NULL`,
   ];
   if (filters.industry) conditions.push(eq(globalSupplyRequests.industry, filters.industry));
   if (filters.destination_country)
@@ -222,8 +225,13 @@ export async function getGlobalRequestDetail(
   const viewerUserId = await resolveUserIdOpt(viewerClerkId);
   const viewerIsBuyer = viewerUserId != null && viewerUserId === row.buyer_id;
 
-  // Hide a shadow-banned buyer's request from everyone except the buyer.
-  if (!viewerIsBuyer && row.buyer_is_shadow_banned === true) return null;
+  // Hide a shadow-banned / soft-deleted buyer's request from everyone except the buyer.
+  if (
+    !viewerIsBuyer &&
+    (row.buyer_is_shadow_banned === true || row.buyer_deleted_at != null)
+  ) {
+    return null;
+  }
 
   const [countRow] = await db
     .select({ count: sql<number>`COUNT(*)` })
@@ -255,7 +263,12 @@ async function fetchResponses(
   viewerUserId: string | null,
   onlySupplierId?: string,
 ): Promise<GlobalSupplyResponseDTO[]> {
-  const conditions = [eq(globalSupplyResponses.requestId, requestId)];
+  const conditions = [
+    eq(globalSupplyResponses.requestId, requestId),
+    // Never surface responses from soft-deleted / shadow-banned suppliers to buyers.
+    sql`${users.isShadowBanned} IS NOT TRUE`,
+    sql`${users.deletedAt} IS NULL`,
+  ];
   if (onlySupplierId) conditions.push(eq(globalSupplyResponses.supplierId, onlySupplierId));
 
   const rows = await db
@@ -277,7 +290,7 @@ async function fetchResponses(
       created_at: globalSupplyResponses.createdAt,
     })
     .from(globalSupplyResponses)
-    .leftJoin(users, eq(globalSupplyResponses.supplierId, users.id))
+    .innerJoin(users, eq(globalSupplyResponses.supplierId, users.id))
     .where(and(...conditions))
     .orderBy(desc(globalSupplyResponses.createdAt));
 
@@ -332,6 +345,7 @@ async function computeSupplierMatches(req: {
     .where(
       and(
         sql`${users.isShadowBanned} IS NOT TRUE`,
+        sql`${users.deletedAt} IS NULL`,
         or(exportsMatch, industryMatch),
       ),
     )
@@ -400,6 +414,17 @@ export async function respondToRequest(
 ): Promise<{ id: string; submitted: boolean }> {
   const supplierId = await resolveUserId(clerkId);
 
+  const [supplierRow] = await db
+    .select({ isShadowBanned: users.isShadowBanned })
+    .from(users)
+    .where(eq(users.id, supplierId))
+    .limit(1);
+  if (supplierRow?.isShadowBanned === true) {
+    throw Object.assign(new Error("Account cannot submit offers"), {
+      code: "FORBIDDEN",
+    });
+  }
+
   const [req] = await db
     .select({
       id: globalSupplyRequests.id,
@@ -407,16 +432,16 @@ export async function respondToRequest(
       status: globalSupplyRequests.status,
       productText: globalSupplyRequests.productText,
       buyerIsShadowBanned: users.isShadowBanned,
+      buyerDeletedAt: users.deletedAt,
     })
     .from(globalSupplyRequests)
     .innerJoin(users, eq(globalSupplyRequests.buyerId, users.id))
     .where(eq(globalSupplyRequests.id, requestId))
     .limit(1);
   if (!req) throw Object.assign(new Error("Request not found"), { code: "NOT_FOUND" });
-  // A shadow-banned buyer's request is suppressed for everyone but the buyer; the
-  // responder is by definition not the buyer (self-response blocked below), so an
-  // outsider must not be able to act on it via a direct ID. Mirror detail semantics.
-  if (req.buyerIsShadowBanned === true) {
+  // A shadow-banned / soft-deleted buyer's request is suppressed for everyone
+  // but the buyer; the responder is by definition not the buyer.
+  if (req.buyerIsShadowBanned === true || req.buyerDeletedAt != null) {
     throw Object.assign(new Error("Request not found"), { code: "NOT_FOUND" });
   }
   if (req.buyerId === supplierId) {
@@ -425,6 +450,18 @@ export async function respondToRequest(
   if (req.status !== "open") {
     throw Object.assign(new Error("This request is no longer open"), { code: "CONFLICT" });
   }
+
+  const [prior] = await db
+    .select({ id: globalSupplyResponses.id })
+    .from(globalSupplyResponses)
+    .where(
+      and(
+        eq(globalSupplyResponses.requestId, requestId),
+        eq(globalSupplyResponses.supplierId, supplierId),
+      ),
+    )
+    .limit(1);
+  const isNewResponse = !prior;
 
   const [response] = await db
     .insert(globalSupplyResponses)
@@ -457,13 +494,15 @@ export async function respondToRequest(
     })
     .returning({ id: globalSupplyResponses.id });
 
-  void createNotification({
-    userId: req.buyerId,
-    type: "global_supply",
-    title: "رد مورّد جديد · New supply response",
-    body: `ردّ مورّد على طلبك «${req.productText}» · A supplier responded to your request`,
-    data: { request_id: requestId, response_id: response.id },
-  });
+  if (isNewResponse) {
+    void createNotification({
+      userId: req.buyerId,
+      type: "global_supply",
+      title: "رد مورّد جديد · New supply response",
+      body: `ردّ مورّد على طلبك «${req.productText}» · A supplier responded to your request`,
+      data: { request_id: requestId, response_id: response.id },
+    });
+  }
 
   return { id: response.id, submitted: true };
 }

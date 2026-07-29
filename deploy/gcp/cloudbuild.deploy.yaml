@@ -82,7 +82,7 @@ steps:
           --timeout=300
           --execution-environment=gen2
           --set-env-vars=NODE_ENV=production,TZ=UTC,LOG_LEVEL=info
-          --startup-probe=path=/api/healthz,port=8080,initial-delay-seconds=15,period-seconds=10,failure-threshold=5,timeout-seconds=5
+          --startup-probe=path=/api/readyz,port=8080,initial-delay-seconds=15,period-seconds=10,failure-threshold=5,timeout-seconds=5
           --liveness-probe=path=/api/healthz,port=8080,period-seconds=30,failure-threshold=3,timeout-seconds=5
         )
 

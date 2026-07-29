@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
 import {
   plans,
@@ -6,17 +5,25 @@ import {
   paymentIntents,
   transactions,
   listings,
+  users,
   type Plan,
 } from "@workspace/db/schema";
-import { and, asc, count, eq, gte } from "drizzle-orm";
+import { and, asc, count, eq, gte, gt, inArray, isNull, sql } from "drizzle-orm";
 import {
   applyTransaction,
   getWalletBalance,
   type LedgerPaymentMethod,
 } from "./WalletService";
+import {
+  resumeFailedPaymentMetadataSql,
+  chargeErrorPaymentMetadataSql,
+  checkoutBoundPaymentMetadataSql,
+  paymobOrderIdFromMeta,
+  pspReversedFromMeta,
+} from "./PaymentIntentService";
 import { resolveEffectivePlan, type UserRole } from "./PlanService";
 import { createProviderCharge, type EgyptianRail } from "../lib/paymentProvider";
-import { invalidData, isUniqueViolation, notFound, toMoney } from "../lib/billing";
+import { invalidData, isUniqueViolation, notFound, toMoney, conflict } from "../lib/billing";
 import {
   schedulePaymentSuccess,
   notifyPaymentIntentFailed,
@@ -102,7 +109,13 @@ async function getActiveSubscription(userId: string): Promise<SubscriptionRow | 
   const [sub] = await db
     .select()
     .from(subscriptions)
-    .where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, "active")))
+    .where(
+      and(
+        eq(subscriptions.userId, userId),
+        eq(subscriptions.status, "active"),
+        gt(subscriptions.expiresAt, new Date()),
+      ),
+    )
     .limit(1);
   return sub ?? null;
 }
@@ -164,6 +177,8 @@ export interface StartSubscriptionInput {
   role: UserRole;
   planSlug: string;
   paymentMethod: SubscribePaymentMethod;
+  /** Client-stable UUID. External rails reuse it as payment_intents.id. */
+  idempotencyKey: string;
 }
 
 /**
@@ -194,6 +209,12 @@ export async function startSubscription(input: StartSubscriptionInput) {
   }
 
   const price = toMoney(plan.monthlyPrice);
+  const idempotencyKey = input.idempotencyKey.trim();
+  if (!idempotencyKey) throw invalidData("idempotency_key is required");
+  // Namespace away from payment_intents.id / top-up ledger keys (same UUID
+  // space) so a reused client key cannot replay a wallet_topup credit as a
+  // free subscription_charge.
+  const walletLedgerKey = `subscription_wallet:${idempotencyKey}`;
 
   if (input.paymentMethod === "wallet") {
     let sub: SubscriptionRow;
@@ -221,6 +242,7 @@ export async function startSubscription(input: StartSubscriptionInput) {
             referenceType: "subscription",
             referenceId: created.id,
             description: `Subscription: ${plan.name} (${PERIOD_DAYS}d)`,
+            idempotencyKey: walletLedgerKey,
             invoice: {
               lineItems: [
                 { label: `${plan.name} subscription (${PERIOD_DAYS}d)`, amount: price },
@@ -255,9 +277,30 @@ export async function startSubscription(input: StartSubscriptionInput) {
         });
       }
     } catch (err) {
-      // Lost race for the one-active-subscription slot.
+      // Lost race for the one-active-subscription slot — or a client retry after
+      // the first request already activated. Replay via the ledger idempotency key.
       if (isUniqueViolation(err)) {
+        const settled = await findSubscriptionByChargeKey(walletLedgerKey);
+        if (settled && settled.sub.userId === input.userId) {
+          return {
+            mode: "active" as const,
+            subscription: mapSubscription(settled.sub, settled.plan),
+            intent: null,
+          };
+        }
         throw invalidData("You already have an active subscription.");
+      }
+      // Fingerprint mismatch / conflict from applyTransaction on concurrent
+      // same-key retries — resolve to the winner's subscription if present.
+      if ((err as { code?: string })?.code === "CONFLICT") {
+        const settled = await findSubscriptionByChargeKey(walletLedgerKey);
+        if (settled && settled.sub.userId === input.userId) {
+          return {
+            mode: "active" as const,
+            subscription: mapSubscription(settled.sub, settled.plan),
+            intent: null,
+          };
+        }
       }
       throw err;
     }
@@ -269,47 +312,243 @@ export async function startSubscription(input: StartSubscriptionInput) {
     };
   }
 
-  // External rail → open a real PSP charge and create a pending subscription
-  // intent (no money moves until the signed provider webhook settles it). The
-  // intent id is generated up front so it can be the unique merchant reference.
-  const intentId = randomUUID();
-  const charge = await createProviderCharge({
-    amount: price,
-    method: input.paymentMethod,
-    intentId,
-    purpose: "subscription",
-    userId: input.userId,
-    description: `Subscription: ${plan.name}`,
-  });
-  const [intent] = await db
-    .insert(paymentIntents)
-    .values({
-      id: intentId,
-      userId: input.userId,
+  // External rail → durable pending intent FIRST (id = client idempotency key),
+  // then open the PSP charge. Retries with the same key replay the checkout URL.
+  const intentId = idempotencyKey;
+
+  function checkoutUrlFromMeta(metadata: unknown): string | null {
+    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+      return null;
+    }
+    const url = (metadata as Record<string, unknown>).checkout_url;
+    return typeof url === "string" && url.length > 0 ? url : null;
+  }
+
+  function assertSubIntentMatch(existing: typeof paymentIntents.$inferSelect): void {
+    if (existing.userId !== input.userId) {
+      throw conflict("Idempotency key already used");
+    }
+    if (existing.purpose !== "subscription") {
+      throw conflict("Idempotency key already used");
+    }
+    if (existing.method !== input.paymentMethod) {
+      throw invalidData("Idempotency key reused with a different payment method");
+    }
+    if (existing.planId && existing.planId !== plan.id) {
+      throw invalidData("Idempotency key reused with a different plan");
+    }
+    if (toMoney(existing.amount) !== price) {
+      throw invalidData("Idempotency key reused with a different amount");
+    }
+  }
+
+  function intentResult(row: typeof paymentIntents.$inferSelect, checkoutUrl: string | null) {
+    return {
+      mode: "intent" as const,
+      subscription: null,
+      intent: {
+        intent_id: row.id,
+        plan_slug: plan.slug,
+        amount: row.amount,
+        method: row.method as EgyptianRail,
+        status: row.status,
+        provider_ref: row.providerRef,
+        checkout_url: checkoutUrl,
+        created_at: (row.createdAt ?? new Date()).toISOString(),
+      },
+    };
+  }
+
+  let intent: typeof paymentIntents.$inferSelect | undefined;
+  const [existingIntent] = await db
+    .select()
+    .from(paymentIntents)
+    .where(eq(paymentIntents.id, intentId))
+    .limit(1);
+
+  if (existingIntent) {
+    assertSubIntentMatch(existingIntent);
+    if (existingIntent.status === "completed" || existingIntent.status === "expired") {
+      throw conflict("This subscription payment was already completed");
+    }
+    const replayUrl = checkoutUrlFromMeta(existingIntent.metadata);
+    if (
+      existingIntent.status === "pending" &&
+      replayUrl &&
+      existingIntent.providerRef
+    ) {
+      return intentResult(existingIntent, replayUrl);
+    }
+    if (existingIntent.status === "failed") {
+      const boundOrder = paymobOrderIdFromMeta(existingIntent.metadata);
+      if (boundOrder) {
+        await db
+          .update(paymentIntents)
+          .set({
+            status: "pending",
+            planId: plan.id,
+            metadata: resumeFailedPaymentMetadataSql(),
+          })
+          .where(
+            and(
+              eq(paymentIntents.id, intentId),
+              eq(paymentIntents.status, "failed"),
+            ),
+          );
+        throw conflict(
+          "This payment already has a provider order; wait for confirmation",
+        );
+      }
+      const [resumed] = await db
+        .update(paymentIntents)
+        .set({
+          status: "pending",
+          providerRef: null,
+          planId: plan.id,
+          metadata: resumeFailedPaymentMetadataSql(),
+        })
+        .where(
+          and(
+            eq(paymentIntents.id, intentId),
+            eq(paymentIntents.status, "failed"),
+          ),
+        )
+        .returning();
+      intent = resumed ?? existingIntent;
+    } else {
+      intent = existingIntent;
+    }
+  } else {
+    try {
+      const [inserted] = await db
+        .insert(paymentIntents)
+        .values({
+          id: intentId,
+          userId: input.userId,
+          amount: price,
+          method: input.paymentMethod,
+          purpose: "subscription",
+          status: "pending",
+          providerRef: null,
+          planId: plan.id,
+          metadata: { provider: "paymob" },
+        })
+        .returning();
+      intent = inserted;
+    } catch (err) {
+      if (!isUniqueViolation(err)) throw err;
+      const [raced] = await db
+        .select()
+        .from(paymentIntents)
+        .where(eq(paymentIntents.id, intentId))
+        .limit(1);
+      if (!raced) throw err;
+      assertSubIntentMatch(raced);
+      const replayUrl = checkoutUrlFromMeta(raced.metadata);
+      if (raced.status === "pending" && replayUrl && raced.providerRef) {
+        return intentResult(raced, replayUrl);
+      }
+      if (raced.status === "completed" || raced.status === "expired") {
+        throw conflict("This subscription payment was already completed");
+      }
+      intent = raced;
+    }
+  }
+
+  if (!intent) throw invalidData("Failed to create subscription intent");
+
+  const earlyUrl = checkoutUrlFromMeta(intent.metadata);
+  if (intent.status === "pending" && earlyUrl && intent.providerRef) {
+    return intentResult(intent, earlyUrl);
+  }
+
+  if (paymobOrderIdFromMeta(intent.metadata)) {
+    throw conflict(
+      "This payment already has a provider order; wait for confirmation",
+    );
+  }
+
+  const [openingClaim] = await db
+    .update(paymentIntents)
+    .set({
+      metadata: sql`
+        (COALESCE(${paymentIntents.metadata}, '{}'::jsonb)
+          - 'provider_opening_at')
+        || jsonb_build_object(
+          'provider', 'paymob',
+          'provider_opening', true,
+          'provider_opening_at', (extract(epoch from now()))::text
+        )
+      `,
+    })
+    .where(
+      and(
+        eq(paymentIntents.id, intentId),
+        eq(paymentIntents.status, "pending"),
+        isNull(paymentIntents.providerRef),
+        sql`COALESCE(${paymentIntents.metadata}->>'checkout_url', '') = ''`,
+        sql`(
+          COALESCE(${paymentIntents.metadata}->>'provider_opening', '') <> 'true'
+          OR COALESCE((${paymentIntents.metadata}->>'provider_opening_at')::double precision, 0)
+            < extract(epoch from now()) - 120
+        )`,
+      ),
+    )
+    .returning({ id: paymentIntents.id });
+
+  if (!openingClaim) {
+    for (let i = 0; i < 40; i++) {
+      await new Promise((r) => setTimeout(r, 50));
+      const [fresh] = await db
+        .select()
+        .from(paymentIntents)
+        .where(eq(paymentIntents.id, intentId))
+        .limit(1);
+      if (!fresh) break;
+      assertSubIntentMatch(fresh);
+      const url = checkoutUrlFromMeta(fresh.metadata);
+      if (fresh.status === "pending" && url && fresh.providerRef) {
+        return intentResult(fresh, url);
+      }
+      if (fresh.status === "failed") break;
+      if (fresh.status === "completed" || fresh.status === "expired") {
+        throw conflict("This subscription payment was already completed");
+      }
+    }
+    throw conflict("Subscription checkout is being prepared; retry shortly");
+  }
+
+  let charge;
+  try {
+    charge = await createProviderCharge({
       amount: price,
       method: input.paymentMethod,
+      intentId,
       purpose: "subscription",
-      status: "pending",
+      userId: input.userId,
+      description: `Subscription: ${plan.name}`,
+    });
+  } catch (err) {
+    await db
+      .update(paymentIntents)
+      .set({ status: "failed", metadata: chargeErrorPaymentMetadataSql() })
+      .where(and(eq(paymentIntents.id, intentId), eq(paymentIntents.status, "pending")));
+    throw err;
+  }
+
+  const [updated] = await db
+    .update(paymentIntents)
+    .set({
       providerRef: charge.providerRef,
-      planId: plan.id,
-      metadata: { provider: "paymob", checkout_url: charge.checkoutUrl },
+      metadata: checkoutBoundPaymentMetadataSql(
+        charge.checkoutUrl,
+        charge.providerOrderId,
+      ),
     })
+    .where(eq(paymentIntents.id, intentId))
     .returning();
 
-  return {
-    mode: "intent" as const,
-    subscription: null,
-    intent: {
-      intent_id: intent.id,
-      plan_slug: plan.slug,
-      amount: intent.amount,
-      method: intent.method as EgyptianRail,
-      status: intent.status,
-      provider_ref: intent.providerRef,
-      checkout_url: charge.checkoutUrl,
-      created_at: (intent.createdAt ?? new Date()).toISOString(),
-    },
-  };
+  return intentResult(updated ?? intent, charge.checkoutUrl);
 }
 
 /* ── confirm subscription intent ───────────────────────── */
@@ -371,10 +610,33 @@ export async function settleSubscriptionIntentByWebhook(
   if (!intent) throw notFound("Payment intent not found");
   if (intent.purpose !== "subscription") throw invalidData("Not a subscription intent");
   if (intent.status === "completed") return; // idempotent replay
-  if (intent.status !== "pending") {
+  // Refund/void already recorded — never activate/credit after PSP reverse won.
+  if (pspReversedFromMeta(intent.metadata)) {
+    return;
+  }
+  if (intent.status !== "pending" && intent.status !== "failed") {
     throw invalidData(`Cannot settle a ${intent.status} intent`);
   }
   if (!intent.planId) throw invalidData("Subscription intent is missing its plan");
+
+  // Soft-deleted owners must not receive an active subscription from late webhooks.
+  const [owner] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(eq(users.id, intent.userId), isNull(users.deletedAt)))
+    .limit(1);
+  if (!owner) {
+    await db
+      .update(paymentIntents)
+      .set({ status: "failed" })
+      .where(
+        and(
+          eq(paymentIntents.id, intent.id),
+          inArray(paymentIntents.status, ["pending", "failed"]),
+        ),
+      );
+    return;
+  }
 
   const [plan] = await db.select().from(plans).where(eq(plans.id, intent.planId)).limit(1);
   if (!plan) throw notFound("Plan not found");
@@ -387,12 +649,49 @@ export async function settleSubscriptionIntentByWebhook(
     await db
       .update(paymentIntents)
       .set({ status: "completed", completedAt: new Date() })
-      .where(and(eq(paymentIntents.id, intent.id), eq(paymentIntents.status, "pending")));
+      .where(
+        and(
+          eq(paymentIntents.id, intent.id),
+          inArray(paymentIntents.status, ["pending", "failed"]),
+        ),
+      );
     return;
   }
 
   try {
     const settled = await db.transaction(async (tx) => {
+      const [lockedIntent] = await tx
+        .select()
+        .from(paymentIntents)
+        .where(eq(paymentIntents.id, intent.id))
+        .for("update")
+        .limit(1);
+      if (!lockedIntent) return null;
+      if (lockedIntent.status === "completed") return null;
+      if (pspReversedFromMeta(lockedIntent.metadata)) return null;
+      if (lockedIntent.status !== "pending" && lockedIntent.status !== "failed") {
+        throw invalidData(`Cannot settle a ${lockedIntent.status} intent`);
+      }
+
+      const [locked] = await tx
+        .select({ id: users.id, deletedAt: users.deletedAt })
+        .from(users)
+        .where(eq(users.id, userId))
+        .for("update")
+        .limit(1);
+      if (!locked || locked.deletedAt) {
+        await tx
+          .update(paymentIntents)
+          .set({ status: "failed" })
+          .where(
+            and(
+              eq(paymentIntents.id, intent.id),
+              inArray(paymentIntents.status, ["pending", "failed"]),
+            ),
+          );
+        return null;
+      }
+
       await applyTransaction(tx, {
         userId,
         type: "wallet_topup",
@@ -443,13 +742,20 @@ export async function settleSubscriptionIntentByWebhook(
       await tx
         .update(paymentIntents)
         .set({ status: "completed", completedAt: new Date() })
-        .where(and(eq(paymentIntents.id, intent.id), eq(paymentIntents.status, "pending")));
+        .where(
+          and(
+            eq(paymentIntents.id, intent.id),
+            inArray(paymentIntents.status, ["pending", "failed"]),
+          ),
+        );
 
       return {
         transactionId: charge.transactionId,
         balanceAfter: charge.balanceAfter,
       };
     });
+
+    if (!settled) return;
 
     schedulePaymentSuccess({
       userId,
@@ -462,8 +768,62 @@ export async function settleSubscriptionIntentByWebhook(
     });
   } catch (err) {
     if (isUniqueViolation(err)) {
-      // Concurrent delivery already activated, or the active-subscription slot
-      // is taken — either way this webhook is a no-op.
+      // Concurrent delivery already activated this charge key — complete intent.
+      if (await findSubscriptionByChargeKey(chargeKey)) {
+        await db
+          .update(paymentIntents)
+          .set({ status: "completed", completedAt: new Date() })
+          .where(
+            and(
+              eq(paymentIntents.id, intent.id),
+              inArray(paymentIntents.status, ["pending", "failed"]),
+            ),
+          );
+        return;
+      }
+      // Active-subscription unique slot taken by another sub: still credit the
+      // verified PSP payment as a wallet top-up so money is not stranded, then
+      // complete the intent (never ACK success while leaving intent pending).
+      try {
+        await db.transaction(async (tx) => {
+          const [lockedIntent] = await tx
+            .select()
+            .from(paymentIntents)
+            .where(eq(paymentIntents.id, intent.id))
+            .for("update")
+            .limit(1);
+          if (!lockedIntent || lockedIntent.status === "completed") return;
+          if (pspReversedFromMeta(lockedIntent.metadata)) return;
+          if (lockedIntent.status !== "pending" && lockedIntent.status !== "failed") return;
+
+          await applyTransaction(tx, {
+            userId,
+            type: "wallet_topup",
+            direction: "credit",
+            amount: intent.amount,
+            paymentMethod: intent.method as LedgerPaymentMethod,
+            referenceType: "payment_intent",
+            referenceId: intent.id,
+            description: `Subscription payment credited (active plan already held)`,
+            idempotencyKey: `${intent.id}:orphan_topup`,
+            metadata: opts.providerTxnId
+              ? { provider_txn_id: opts.providerTxnId, orphan_reason: "active_slot_taken" }
+              : { orphan_reason: "active_slot_taken" },
+          });
+          await tx
+            .update(paymentIntents)
+            .set({ status: "completed", completedAt: new Date() })
+            .where(
+              and(
+                eq(paymentIntents.id, intent.id),
+                inArray(paymentIntents.status, ["pending", "failed"]),
+              ),
+            );
+        });
+      } catch (err2) {
+        if (isUniqueViolation(err2)) return;
+        throw err2;
+      }
       return;
     }
     throw err;
@@ -479,6 +839,149 @@ export async function markSubscriptionIntentFailed(intentId: string): Promise<vo
     .returning({ id: paymentIntents.id });
 
   if (updated.length > 0) {
+    await notifyPaymentIntentFailed(intentId);
+  }
+}
+
+/**
+ * Paymob refund/void after subscription settlement (or pre-settle race).
+ * - pending/failed: durable `psp_reversed` so late success cannot settle.
+ * - completed: expire the charge-linked active sub; claw back orphan wallet
+ *   credit (`:orphan_topup`) via adjustment debit (not `refund` — UI treats
+ *   refund as credit). Net-zero topup+charge paths need no clawback.
+ */
+export async function reverseSubscriptionAfterPspReversal(
+  intentId: string,
+  opts: {
+    reason: "refunded" | "voided";
+    providerTxnId?: string | null;
+    /** EGP magnitude for orphan clawback; defaults to full orphan credit. */
+    clawAmountEgp?: string | number | null;
+  },
+): Promise<void> {
+  let notifyFailed = false;
+
+  await db.transaction(async (tx) => {
+    const [intent] = await tx
+      .select()
+      .from(paymentIntents)
+      .where(eq(paymentIntents.id, intentId))
+      .for("update")
+      .limit(1);
+    if (!intent || intent.purpose !== "subscription") return;
+
+    const meta =
+      intent.metadata && typeof intent.metadata === "object" && !Array.isArray(intent.metadata)
+        ? ({ ...(intent.metadata as Record<string, unknown>) } as Record<string, unknown>)
+        : ({} as Record<string, unknown>);
+    if (meta.psp_reversed === true) return;
+
+    meta.psp_reversed = true;
+    meta.psp_reversal_reason = opts.reason;
+    if (opts.providerTxnId) meta.psp_reversal_txn_id = opts.providerTxnId;
+
+    if (intent.status === "pending" || intent.status === "failed") {
+      await tx
+        .update(paymentIntents)
+        .set({ status: "failed", metadata: meta })
+        .where(eq(paymentIntents.id, intent.id));
+      notifyFailed = intent.status === "pending";
+      return;
+    }
+    if (intent.status !== "completed") return;
+
+    // Expire any active subscription created from this settlement charge key.
+    const chargeKey = `${intent.id}:charge`;
+    const [chargeTx] = await tx
+      .select({ id: transactions.id })
+      .from(transactions)
+      .where(eq(transactions.idempotencyKey, chargeKey))
+      .limit(1);
+    if (chargeTx) {
+      await tx
+        .update(subscriptions)
+        .set({
+          status: "cancelled",
+          cancelledAt: new Date(),
+          autoRenew: false,
+          expiresAt: new Date(),
+        })
+        .where(
+          and(
+            eq(subscriptions.userId, intent.userId),
+            eq(subscriptions.transactionId, chargeTx.id),
+            eq(subscriptions.status, "active"),
+          ),
+        );
+    }
+
+    // Orphan path credited `${id}:orphan_topup` without a matching charge.
+    const orphanKey = `${intent.id}:orphan_topup`;
+    const [orphanCredit] = await tx
+      .select({
+        id: transactions.id,
+        amount: transactions.amount,
+        type: transactions.type,
+      })
+      .from(transactions)
+      .where(eq(transactions.idempotencyKey, orphanKey))
+      .limit(1);
+    if (orphanCredit && Number(orphanCredit.amount) > 0) {
+      const orphanTotal = Number(orphanCredit.amount);
+      const requestedRaw =
+        opts.clawAmountEgp != null && opts.clawAmountEgp !== ""
+          ? Number(opts.clawAmountEgp)
+          : orphanTotal;
+      const clawTarget =
+        Number.isFinite(requestedRaw) && requestedRaw > 0
+          ? Math.min(orphanTotal, Math.round(requestedRaw * 100) / 100)
+          : orphanTotal;
+      const [lockedUser] = await tx
+        .select({ bal: users.walletBalance })
+        .from(users)
+        .where(eq(users.id, intent.userId))
+        .for("update")
+        .limit(1);
+      const avail = Math.max(0, Number(lockedUser?.bal ?? 0));
+      const claw = Math.min(avail, clawTarget);
+      if (claw > 0) {
+        await applyTransaction(tx, {
+          userId: intent.userId,
+          type: "adjustment",
+          direction: "debit",
+          amount: claw.toFixed(2),
+          paymentMethod: intent.method as LedgerPaymentMethod,
+          referenceType: "payment_intent",
+          referenceId: intent.id,
+          description: `PSP ${opts.reason} clawback for orphan subscription top-up`,
+          idempotencyKey: `${intent.id}:psp_reversal_clawback:orphan`,
+          metadata: {
+            psp_reversal: opts.reason,
+            provider_txn_id: opts.providerTxnId ?? null,
+            original_idempotency_key: orphanKey,
+            clawback_amount: claw.toFixed(2),
+          },
+        });
+      }
+      if (claw < clawTarget) {
+        meta.psp_reversal_shortfall = true;
+        meta.psp_reversal_shortfall_amount = (clawTarget - claw).toFixed(2);
+        meta.psp_reversal_needs_manual_review = true;
+        console.error(
+          "[Paymob subscription reversal] orphan shortfall — ops must recover",
+          intentId,
+          meta.psp_reversal_shortfall_amount,
+        );
+      }
+    }
+
+    await tx
+      .update(paymentIntents)
+      .set({ metadata: meta })
+      .where(eq(paymentIntents.id, intent.id));
+  });
+
+  if (notifyFailed) {
     await notifyPaymentIntentFailed(intentId);
   }
 }

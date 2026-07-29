@@ -58,25 +58,68 @@ export interface ObjectStorage {
 
 let cached: ObjectStorage | null = null;
 
-/** Resolve the configured object-storage backend (memoised per process). */
+/** True when this process is clearly a Replit runtime (sidecar :1106 available). */
+function isReplitRuntime(): boolean {
+  return Boolean(
+    process.env.REPL_ID?.trim() ||
+      process.env.REPL_SLUG?.trim() ||
+      process.env.REPLIT_DEPLOYMENT?.trim() ||
+      process.env.REPLIT_DOMAINS?.trim() ||
+      process.env.REPLIT_DEV_DOMAIN?.trim(),
+  );
+}
+
+/**
+ * Resolve the configured object-storage backend (memoised per process).
+ *
+ * Production / Coolify / Docker MUST set OBJECT_STORAGE_PROVIDER=s3.
+ * Unset provider only falls back to the Replit sidecar when a Replit runtime
+ * marker is present; otherwise production fail-closes so media cannot
+ * silently 503 against a missing :1106 sidecar.
+ */
 export function getObjectStorageService(): ObjectStorage {
   if (cached) return cached;
   const rawProvider = process.env.OBJECT_STORAGE_PROVIDER?.trim().toLowerCase();
-  if (!rawProvider) {
-    // Replit pollution: historic default was the Replit sidecar at :1106.
-    // Coolify / Docker / AWS MUST set OBJECT_STORAGE_PROVIDER=s3 or media
-    // uploads (avatar, KYC docs, listing photos) silently fail.
-    console.error(
-      "[BANCO] OBJECT_STORAGE_PROVIDER is unset — defaulting to 'replit' sidecar. " +
-        "Set OBJECT_STORAGE_PROVIDER=s3 for non-Replit deployments.",
-    );
+  let provider = rawProvider || "";
+
+  if (!provider) {
+    if (isReplitRuntime()) {
+      console.error(
+        "[BANCO] OBJECT_STORAGE_PROVIDER is unset on Replit — using 'replit' sidecar. " +
+          "Set OBJECT_STORAGE_PROVIDER=s3 for Coolify/AWS/Docker.",
+      );
+      provider = "replit";
+    } else if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "OBJECT_STORAGE_PROVIDER is unset in production. " +
+          "Set OBJECT_STORAGE_PROVIDER=s3 (Coolify/AWS/Docker) or =replit (Replit only).",
+      );
+    } else {
+      console.error(
+        "[BANCO] OBJECT_STORAGE_PROVIDER is unset — defaulting to 'replit' for local/dev. " +
+          "Set OBJECT_STORAGE_PROVIDER=s3 for non-Replit deployments.",
+      );
+      provider = "replit";
+    }
   }
-  const provider = rawProvider || "replit";
+
   if (provider === "s3") {
     cached = new S3ObjectStorageService();
     return cached;
   }
   if (provider === "replit") {
+    if (
+      process.env.NODE_ENV === "production" &&
+      !isReplitRuntime() &&
+      (process.env.COOLIFY_URL ||
+        process.env.COOLIFY_FQDN ||
+        process.env.AWS_EXECUTION_ENV ||
+        process.env.K_SERVICE)
+    ) {
+      throw new Error(
+        'OBJECT_STORAGE_PROVIDER=replit is forbidden on Coolify/Cloud Run/AWS. Set OBJECT_STORAGE_PROVIDER=s3.',
+      );
+    }
     cached = new ReplitObjectStorageService();
     return cached;
   }

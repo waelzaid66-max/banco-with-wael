@@ -123,6 +123,7 @@ export async function contactLead(input: ContactLeadInput): Promise<{ phone: str
 
   const sellerId = listing.userId;
   const sellerRole = (listing.sellerRole ?? "individual") as UserRole;
+  let disclosedPhone: string | null = listing.sellerPhone ?? null;
 
   // Pre-flight token check (no lock, no side-effects).
   // Rejected here before any rate counters are touched — an attacker flooding
@@ -197,6 +198,42 @@ export async function contactLead(input: ContactLeadInput): Promise<{ phone: str
       );
     }
 
+    // Re-check listing visibility under row lock — seller may have archived,
+    // sold, flagged, or been deleted between the outer read and this charge.
+    await tx.execute(
+      sql`SELECT id FROM listings WHERE id = ${input.listingId}::uuid FOR UPDATE`,
+    );
+    const [liveListing] = await tx
+      .select({
+        userId: listings.userId,
+        sellerPhone: users.phone,
+      })
+      .from(listings)
+      .innerJoin(users, eq(listings.userId, users.id))
+      .where(
+        and(
+          eq(listings.id, input.listingId),
+          eq(listings.status, "active"),
+          ...publicVisibilityConditions(),
+        ),
+      )
+      .limit(1);
+    if (!liveListing?.userId) {
+      throw Object.assign(
+        new Error("Listing not found or not publicly contactable"),
+        { code: "NOT_FOUND" },
+      );
+    }
+    // Prefer the locked seller id for all money/privacy writes.
+    const lockedSellerId = liveListing.userId;
+    if (lockedSellerId !== sellerId) {
+      throw Object.assign(
+        new Error("Listing not found or not publicly contactable"),
+        { code: "NOT_FOUND" },
+      );
+    }
+    disclosedPhone = liveListing.sellerPhone ?? null;
+
     await tx.update(leadTokens).set({ usedAt: txNow }).where(eq(leadTokens.id, token.id));
 
     const [lead] = await tx
@@ -238,6 +275,7 @@ export async function contactLead(input: ContactLeadInput): Promise<{ phone: str
         referenceType: "lead",
         referenceId: lead.id,
         description: `Lead charge (${input.actionType})`,
+        idempotencyKey: `lead_charge:${lead.id}`,
         invoice: {
           lineItems: [{ label: `Lead (${input.actionType})`, amount: cpl }],
         },
@@ -360,7 +398,7 @@ export async function contactLead(input: ContactLeadInput): Promise<{ phone: str
       });
   });
 
-  return { phone: listing.sellerPhone ?? null };
+  return { phone: disclosedPhone };
 }
 
 /**
@@ -472,6 +510,7 @@ export async function processLead(input: TrackLeadInput): Promise<void> {
           referenceType: "lead",
           referenceId: lead.id,
           description: `Lead charge (${input.actionType})`,
+          idempotencyKey: `lead_charge:${lead.id}`,
           invoice: {
             lineItems: [{ label: `Lead (${input.actionType})`, amount: cpl }],
           },

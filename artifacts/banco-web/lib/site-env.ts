@@ -1,7 +1,9 @@
 export function getApiBaseUrl(): string {
   const fromEnv = process.env.NEXT_PUBLIC_API_URL?.trim();
   if (fromEnv) return fromEnv.replace(/\/+$/, "");
-  return "http://localhost:5000";
+  // Must match next.config.ts rewrite fallback (8080) — diverging ports
+  // silently split RSC fetches from same-origin /api rewrites in local/misbake.
+  return "http://localhost:8080";
 }
 
 export function getSiteUrl(): string {

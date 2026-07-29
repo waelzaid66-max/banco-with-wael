@@ -41,6 +41,7 @@ export class ObjectNotFoundError extends Error {
 
 /** Thrown when a user tries to promote or attach another user's upload. */
 export class UploadOwnershipError extends Error {
+  readonly code = "FORBIDDEN" as const;
   constructor(message = "You do not own this upload") {
     super(message);
     this.name = "UploadOwnershipError";

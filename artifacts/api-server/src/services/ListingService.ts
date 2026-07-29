@@ -9,7 +9,7 @@ import {
   interactions,
   locations,
 } from "@workspace/db/schema";
-import { eq, and, desc, asc, sql, count } from "drizzle-orm";
+import { eq, and, desc, asc, sql, count, or, isNull, lte } from "drizzle-orm";
 import { normalizePaymentOptions, computeOffers } from "./PaymentService";
 import { normalizeListing, detectDuplicate, computeTrustScore, validateMedia } from "./NormalizationService";
 import { checkListingRate, auditListingFlag } from "./AbuseService";
@@ -263,7 +263,7 @@ export async function createListing(
   const [user] = await db
     .select({ id: users.id, isVerified: users.isVerified, role: users.role })
     .from(users)
-    .where(eq(users.clerkId, userId))
+    .where(and(eq(users.clerkId, userId), isNull(users.deletedAt)))
     .limit(1);
 
   if (!user) {
@@ -471,7 +471,8 @@ export async function createListing(
   recomputeDealerQuality(user.id);
 
   // Best-effort: alert owners of matching alerts-enabled saved searches.
-  void notifyNewMatch({
+  // Capture who was notified so follower fan-out does not double-ping them.
+  const matchNotified = notifyNewMatch({
     id: created.id,
     category: input.category,
     price: input.base_price_cash ?? 0,
@@ -483,11 +484,16 @@ export async function createListing(
   // "wanted" requests are skipped — followers subscribe to what a company
   // SELLS, not to its purchasing needs.
   if (!input.is_request) {
-    void notifyFollowersOfNewListing({
-      id: created.id,
-      title: normalized.title,
-      sellerId: user.id,
-    });
+    void matchNotified.then((skipUserIds) =>
+      notifyFollowersOfNewListing({
+        id: created.id,
+        title: normalized.title,
+        sellerId: user.id,
+        skipUserIds,
+      }),
+    );
+  } else {
+    void matchNotified;
   }
 
   return created;
@@ -511,7 +517,7 @@ export async function bumpListing(
   const [user] = await db
     .select({ id: users.id, isShadowBanned: users.isShadowBanned })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   if (!user) throw Object.assign(new Error("User not found"), { code: "UNAUTHORIZED" });
 
@@ -544,20 +550,42 @@ export async function bumpListing(
   // Cooldown is measured from the LAST recycle. A listing that has never been
   // recycled can be bumped immediately — that is the whole point (lifting an old
   // listing); a fresh one is already at the top so the bump is effectively a no-op.
+  // Enforce atomically via conditional UPDATE so concurrent bumps cannot both pass
+  // an in-memory cooldown check (TOCTOU).
   const now = Date.now();
-  const last = listing.bumpedAt ? new Date(listing.bumpedAt).getTime() : null;
-  if (last !== null && now - last < BUMP_COOLDOWN_MS) {
+  const cooldownCutoff = new Date(now - BUMP_COOLDOWN_MS);
+  const bumpedAt = new Date(now);
+
+  const [updated] = await db
+    .update(listings)
+    .set({ bumpedAt })
+    .where(
+      and(
+        eq(listings.id, listingId),
+        or(isNull(listings.bumpedAt), lte(listings.bumpedAt, cooldownCutoff)),
+      ),
+    )
+    .returning({ bumpedAt: listings.bumpedAt });
+
+  if (!updated) {
+    const [fresh] = await db
+      .select({ bumpedAt: listings.bumpedAt })
+      .from(listings)
+      .where(eq(listings.id, listingId))
+      .limit(1);
+    const last = fresh?.bumpedAt
+      ? new Date(fresh.bumpedAt).getTime()
+      : listing.bumpedAt
+        ? new Date(listing.bumpedAt).getTime()
+        : now;
     throw Object.assign(
       new Error("This listing was recycled recently. Please try again later."),
       {
         code: "RATE_LIMITED",
         nextBumpAvailableAt: new Date(last + BUMP_COOLDOWN_MS).toISOString(),
-      }
+      },
     );
   }
-
-  const bumpedAt = new Date(now);
-  await db.update(listings).set({ bumpedAt }).where(eq(listings.id, listingId));
 
   return {
     id: listingId,
@@ -581,9 +609,12 @@ export async function getListingDetail(listingId: string, viewerClerkId?: string
       created_at: listings.createdAt,
       is_request: listings.isRequest,
       user_id: listings.userId,
+      is_flagged: listings.isFlagged,
       seller_clerk_id: users.clerkId,
       seller_name: users.name,
       seller_role: users.role,
+      seller_deleted_at: users.deletedAt,
+      seller_shadow_banned: users.isShadowBanned,
       // seller_phone intentionally excluded — phone reveal is gated behind
       // POST /leads/contact so that every access is a server-observed contact event.
       is_verified: users.isVerified,
@@ -603,14 +634,25 @@ export async function getListingDetail(listingId: string, viewerClerkId?: string
 
   if (!listing) return null;
 
+  const isOwner = !!(viewerClerkId && viewerClerkId === listing.seller_clerk_id);
+
   // Non-active listings are only visible to their owner.
   // Public and authenticated non-owner callers receive a 404 to prevent
   // access to withdrawn inventory and seller contact details.
-  if (listing.status !== "active" && viewerClerkId !== listing.seller_clerk_id) {
+  if (listing.status !== "active" && !isOwner) {
     return null;
   }
 
-  const isOwner = viewerClerkId && viewerClerkId === listing.seller_clerk_id;
+  // Public/non-owner reads must match feed/search tombstone gates — otherwise
+  // soft-deleted / shadow-banned / flagged sellers remain reachable by URL.
+  if (
+    !isOwner &&
+    (listing.is_flagged === true ||
+      listing.seller_shadow_banned === true ||
+      listing.seller_deleted_at != null)
+  ) {
+    return null;
+  }
 
   const [mediaRows, paymentRows, attrRows, linkedListings, contactToken, sellerSocialRows] =
     await Promise.all([
@@ -746,6 +788,23 @@ export async function getListingDetail(listingId: string, viewerClerkId?: string
     // Opt-in only — true only when the seller explicitly enabled WhatsApp.
     whatsapp_enabled: (specs as Record<string, unknown>).whatsapp_enabled === true,
   };
+}
+
+/** Active + publicVisibilityConditions — same gate as feed/search for id-keyed reads. */
+export async function listingIsPubliclyVisible(listingId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: listings.id })
+    .from(listings)
+    .leftJoin(users, eq(listings.userId, users.id))
+    .where(
+      and(
+        eq(listings.id, listingId),
+        eq(listings.status, "active"),
+        ...publicVisibilityConditions(),
+      ),
+    )
+    .limit(1);
+  return !!row;
 }
 
 /* ── Public SEO Page Data ──────────────────────────────── */
@@ -954,7 +1013,7 @@ export async function getMyManagedListings(
   const [user] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   if (!user) return { items: [], cursor: undefined, has_next: false };
   return getDealerListings(user.id, options);
@@ -1073,7 +1132,7 @@ export async function updateListing(
   const [user] = await db
     .select({ id: users.id, isVerified: users.isVerified })
     .from(users)
-    .where(eq(users.clerkId, clerkUserId))
+    .where(and(eq(users.clerkId, clerkUserId), isNull(users.deletedAt)))
     .limit(1);
 
   if (!user) throw Object.assign(new Error("User not found"), { code: "UNAUTHORIZED" });
@@ -1348,7 +1407,7 @@ export async function deleteListing(
   const [user] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkUserId))
+    .where(and(eq(users.clerkId, clerkUserId), isNull(users.deletedAt)))
     .limit(1);
 
   if (!user) throw Object.assign(new Error("User not found"), { code: "UNAUTHORIZED" });

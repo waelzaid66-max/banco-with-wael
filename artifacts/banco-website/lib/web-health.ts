@@ -4,9 +4,11 @@ import { webPlugStatus } from "./web-plug-config";
 export function buildWebHealthPayload() {
   return {
     status: "ok" as const,
-    surface: "banco-web" as const,
+    // Canonical consumer/marketing Next surface (artifacts/banco-website).
+    // Do not report "banco-web" — that package is FROZEN and a deploy twin only.
+    surface: "banco-website" as const,
     plug: webPlugStatus(),
-    wave: "phase8-soft-launch",
+    wave: "w4.1",
     ts: new Date().toISOString(),
   };
 }

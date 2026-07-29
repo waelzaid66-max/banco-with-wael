@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { rfqs, rfqOffers, users } from "@workspace/db/schema";
-import { and, eq, desc, sql, ne } from "drizzle-orm";
+import { and, eq, desc, sql, ne, isNull } from "drizzle-orm";
 import { createNotification } from "./NotificationService";
 import type { Rfq, RfqDetail, RfqOffer } from "../validators/schemas";
 
@@ -106,7 +106,7 @@ async function resolveUserId(clerkId: string): Promise<string> {
   const [user] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   if (!user) throw Object.assign(new Error("User not found"), { code: "UNAUTHORIZED" });
   return user.id;
@@ -140,7 +140,12 @@ export async function listOpenRfqs(
   cursor?: string,
   limit = 20
 ): Promise<{ items: Rfq[]; cursor?: string; has_next: boolean }> {
-  const conditions = [eq(rfqs.status, "open")];
+  const conditions = [
+    eq(rfqs.status, "open"),
+    // Never surface open RFQs from shadow-banned or soft-deleted buyers.
+    sql`${users.isShadowBanned} IS NOT TRUE`,
+    sql`${users.deletedAt} IS NULL`,
+  ];
   if (filters.category) conditions.push(eq(rfqs.category, filters.category));
   if (filters.industry) conditions.push(eq(rfqs.industry, filters.industry));
   if (filters.industrial_type) conditions.push(eq(rfqs.industrialType, filters.industrial_type));
@@ -199,7 +204,11 @@ export async function getRfqDetail(
   viewerClerkId?: string
 ): Promise<RfqDetail | null> {
   const [row] = await db
-    .select(rfqSelect)
+    .select({
+      ...rfqSelect,
+      buyer_is_shadow_banned: users.isShadowBanned,
+      buyer_deleted_at: users.deletedAt,
+    })
     .from(rfqs)
     .leftJoin(users, eq(rfqs.buyerId, users.id))
     .where(eq(rfqs.id, rfqId))
@@ -212,12 +221,21 @@ export async function getRfqDetail(
     const [viewer] = await db
       .select({ id: users.id })
       .from(users)
-      .where(eq(users.clerkId, viewerClerkId))
+      .where(and(eq(users.clerkId, viewerClerkId), isNull(users.deletedAt)))
       .limit(1);
     viewerUserId = viewer?.id ?? null;
   }
 
   const viewerIsBuyer = viewerUserId != null && viewerUserId === row.buyer_id;
+
+  // Soft-deleted / shadow-banned buyers: hide from everyone except the buyer
+  // (who cannot authenticate after delete — so effectively public-hidden).
+  if (
+    !viewerIsBuyer &&
+    (row.buyer_is_shadow_banned === true || row.buyer_deleted_at != null)
+  ) {
+    return null;
+  }
 
   let offers: RfqOffer[] = [];
   if (viewerIsBuyer) {
@@ -257,8 +275,14 @@ async function fetchOffers(
       created_at: rfqOffers.createdAt,
     })
     .from(rfqOffers)
-    .leftJoin(users, eq(rfqOffers.supplierId, users.id))
-    .where(and(...conditions))
+    .innerJoin(users, eq(rfqOffers.supplierId, users.id))
+    .where(
+      and(
+        ...conditions,
+        isNull(users.deletedAt),
+        sql`${users.isShadowBanned} IS NOT TRUE`,
+      ),
+    )
     .orderBy(desc(rfqOffers.createdAt));
 
   return rows.map((o) => ({
@@ -289,19 +313,47 @@ export async function submitOffer(
   input: SubmitOfferInput
 ): Promise<{ id: string; submitted: boolean }> {
   const supplierId = await resolveUserId(clerkId);
+  const [supplierRow] = await db
+    .select({ isShadowBanned: users.isShadowBanned })
+    .from(users)
+    .where(eq(users.id, supplierId))
+    .limit(1);
+  if (supplierRow?.isShadowBanned === true) {
+    throw Object.assign(new Error("Account cannot submit offers"), {
+      code: "FORBIDDEN",
+    });
+  }
 
   const [rfq] = await db
-    .select({ id: rfqs.id, buyerId: rfqs.buyerId, status: rfqs.status, title: rfqs.title })
+    .select({
+      id: rfqs.id,
+      buyerId: rfqs.buyerId,
+      status: rfqs.status,
+      title: rfqs.title,
+      buyerIsShadowBanned: users.isShadowBanned,
+      buyerDeletedAt: users.deletedAt,
+    })
     .from(rfqs)
+    .leftJoin(users, eq(rfqs.buyerId, users.id))
     .where(eq(rfqs.id, rfqId))
     .limit(1);
   if (!rfq) throw Object.assign(new Error("RFQ not found"), { code: "NOT_FOUND" });
+  if (rfq.buyerIsShadowBanned === true || rfq.buyerDeletedAt != null) {
+    throw Object.assign(new Error("RFQ not found"), { code: "NOT_FOUND" });
+  }
   if (rfq.buyerId === supplierId) {
     throw Object.assign(new Error("You cannot offer on your own RFQ"), { code: "FORBIDDEN" });
   }
   if (rfq.status !== "open") {
     throw Object.assign(new Error("This RFQ is no longer open"), { code: "CONFLICT" });
   }
+
+  const [prior] = await db
+    .select({ id: rfqOffers.id })
+    .from(rfqOffers)
+    .where(and(eq(rfqOffers.rfqId, rfqId), eq(rfqOffers.supplierId, supplierId)))
+    .limit(1);
+  const isNewOffer = !prior;
 
   const [offer] = await db
     .insert(rfqOffers)
@@ -328,13 +380,16 @@ export async function submitOffer(
     })
     .returning({ id: rfqOffers.id });
 
-  void createNotification({
-    userId: rfq.buyerId,
-    type: "rfq",
-    title: "عرض جديد على طلبك · New RFQ offer",
-    body: `وصلك عرض جديد على «${rfq.title}» · You received a new offer`,
-    data: { rfq_id: rfqId, offer_id: offer.id },
-  });
+  // Notify only on first offer — upsert edits must not storm the buyer inbox.
+  if (isNewOffer) {
+    void createNotification({
+      userId: rfq.buyerId,
+      type: "rfq",
+      title: "عرض جديد على طلبك · New RFQ offer",
+      body: `وصلك عرض جديد على «${rfq.title}» · You received a new offer`,
+      data: { rfq_id: rfqId, offer_id: offer.id },
+    });
+  }
 
   return { id: offer.id, submitted: true };
 }
@@ -373,6 +428,44 @@ export async function acceptOffer(
 
   const now = new Date();
   await db.transaction(async (tx) => {
+    // Serialize award: concurrent accepts must not both mark winners / notify.
+    await tx.execute(sql`SELECT id FROM rfqs WHERE id = ${rfqId} FOR UPDATE`);
+    const [locked] = await tx
+      .select({ status: rfqs.status })
+      .from(rfqs)
+      .where(eq(rfqs.id, rfqId))
+      .limit(1);
+    if (!locked || locked.status !== "open") {
+      throw Object.assign(new Error("This RFQ is no longer open"), { code: "CONFLICT" });
+    }
+
+    // Supplier may have been deleted/shadow-banned after offering.
+    const [supplier] = await tx
+      .select({
+        id: users.id,
+        deletedAt: users.deletedAt,
+        isShadowBanned: users.isShadowBanned,
+      })
+      .from(users)
+      .where(eq(users.id, offer.supplierId))
+      .for("update")
+      .limit(1);
+    if (!supplier || supplier.deletedAt != null || supplier.isShadowBanned === true) {
+      throw Object.assign(
+        new Error("This offer is no longer available"),
+        { code: "CONFLICT" },
+      );
+    }
+
+    const awarded = await tx
+      .update(rfqs)
+      .set({ status: "awarded", updatedAt: now })
+      .where(and(eq(rfqs.id, rfqId), eq(rfqs.status, "open")))
+      .returning({ id: rfqs.id });
+    if (awarded.length === 0) {
+      throw Object.assign(new Error("This RFQ is no longer open"), { code: "CONFLICT" });
+    }
+
     await tx
       .update(rfqOffers)
       .set({ status: "accepted", updatedAt: now })
@@ -381,10 +474,6 @@ export async function acceptOffer(
       .update(rfqOffers)
       .set({ status: "rejected", updatedAt: now })
       .where(and(eq(rfqOffers.rfqId, rfqId), ne(rfqOffers.id, offerId)));
-    await tx
-      .update(rfqs)
-      .set({ status: "awarded", updatedAt: now })
-      .where(eq(rfqs.id, rfqId));
   });
 
   void createNotification({

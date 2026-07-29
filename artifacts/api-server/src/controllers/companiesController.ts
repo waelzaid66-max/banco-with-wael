@@ -136,9 +136,11 @@ export async function updateMyCompanyHandler(req: Request, res: Response) {
     if (err instanceof ZodError) {
       return res.status(400).json(errorResponse("INVALID_DATA", err.errors[0]?.message ?? "Invalid data"));
     }
-    const e = err as { code?: string; message?: string };
+    const e = err as { code?: string; message?: string; name?: string };
     if (e.code === "UNAUTHORIZED") return res.status(401).json(errorResponse("UNAUTHORIZED", e.message ?? "Unauthorized"));
-    if (e.code === "FORBIDDEN") return res.status(403).json(errorResponse("UNAUTHORIZED", e.message ?? "Forbidden"));
+    if (e.code === "FORBIDDEN" || e.name === "UploadOwnershipError") {
+      return res.status(403).json(errorResponse("FORBIDDEN", e.message ?? "Forbidden"));
+    }
     console.error("[Company update]", err);
     return res.status(500).json(errorResponse("INTERNAL_ERROR", "Failed to update company"));
   }

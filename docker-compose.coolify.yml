@@ -94,6 +94,10 @@ services:
     build:
       context: .
       dockerfile: deploy/coolify/Dockerfile.api
+      args:
+        # F1 deploy pin — Coolify often exposes SOURCE_COMMIT; prefer explicit GIT_SHA.
+        GIT_SHA: ${GIT_SHA:-${SOURCE_COMMIT:-}}
+        BUILD_ID: ${BUILD_ID:-${SOURCE_COMMIT:-}}
     image: banco-api:latest
     restart: always
     depends_on:
@@ -101,8 +105,10 @@ services:
         condition: service_healthy
     networks:
       - banco_net
+    # Loopback-only host publish: public traffic must enter via Coolify/Nginx.
+    # Binding 0.0.0.0 made express-rate-limit trust spoofable X-Forwarded-For.
     ports:
-      - "${API_HOST_PORT:-8080}:8080"
+      - "127.0.0.1:${API_HOST_PORT:-8080}:8080"
     environment:
       PORT: "8080"
       NODE_ENV: production
@@ -116,6 +122,7 @@ services:
       PAYMENT_CONFIG_ENCRYPTION_KEY: ${PAYMENT_CONFIG_ENCRYPTION_KEY:?PAYMENT_CONFIG_ENCRYPTION_KEY is required}
       # CORS: list of allowed origins (comma-separated public URLs of all frontends).
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+      # Set to https://api.example.com whenever Paymob is enabled (charge creation fail-closes without it).
       PUBLIC_API_BASE_URL: ${PUBLIC_API_BASE_URL:-}
       PUBLIC_APP_URL: ${PUBLIC_APP_URL:-}
       ADMIN_EMAILS: ${ADMIN_EMAILS:-}
@@ -130,12 +137,22 @@ services:
       PAYMOB_SECRET_KEY: ${PAYMOB_SECRET_KEY:-}
       PAYMOB_HMAC_SECRET: ${PAYMOB_HMAC_SECRET:-}
       PAYMOB_INTEGRATION_IDS: ${PAYMOB_INTEGRATION_IDS:-}
-      # Object storage (optional — required for media uploads)
+      # Object storage (optional — required for media uploads).
+      # Hostinger VPS has no IAM role — static keys must reach the container when
+      # OBJECT_STORAGE_PROVIDER=s3 (see objectStorage.s3 + COOLIFY deploy docs).
       OBJECT_STORAGE_PROVIDER: ${OBJECT_STORAGE_PROVIDER:-}
       AWS_REGION: ${AWS_REGION:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       S3_BUCKET: ${S3_BUCKET:-}
       PUBLIC_OBJECT_SEARCH_PATHS: ${PUBLIC_OBJECT_SEARCH_PATHS:-}
       PRIVATE_OBJECT_DIR: ${PRIVATE_OBJECT_DIR:-}
+      # Coolify markers — objectStorageProvider forbids replit when these are set.
+      COOLIFY_URL: ${COOLIFY_URL:-}
+      COOLIFY_FQDN: ${COOLIFY_FQDN:-}
+      # Runtime deploy pin (also baked via build args when Coolify supplies them).
+      GIT_SHA: ${GIT_SHA:-${SOURCE_COMMIT:-}}
+      BUILD_ID: ${BUILD_ID:-${SOURCE_COMMIT:-}}
       # Observability
       ERROR_ALERT_WEBHOOK: ${ERROR_ALERT_WEBHOOK:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
@@ -143,7 +160,7 @@ services:
       CRON_TIMEZONE: ${CRON_TIMEZONE:-Africa/Cairo}
     healthcheck:
       test: ["CMD", "node", "-e",
-        "fetch('http://127.0.0.1:8080/api/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+        "fetch('http://127.0.0.1:8080/api/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       start_period: 45s
@@ -185,6 +202,8 @@ services:
       NODE_ENV: production
       # Runtime-only secrets for Clerk (server-side only, never in the browser bundle)
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
+      # Kill-switch (web-plug-config) — ops can unplug without image rebuild.
+      WEB_PLUG_ENABLED: ${WEB_PLUG_ENABLED:-true}
     healthcheck:
       test: ["CMD", "node", "-e",
         "fetch('http://127.0.0.1:3000/api/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
@@ -193,7 +212,7 @@ services:
       start_period: 60s
       retries: 3
 
-  # ── banco-website (Next.js marketing website) ────────────────────────────────
+  # ── banco-website (canonical Next consumer/marketing — see FROZEN.md on banco-web)
   banco-website:
     build:
       context: .
@@ -201,8 +220,20 @@ services:
       args:
         NEXT_PUBLIC_API_URL: http://api:8080
         NEXT_PUBLIC_SITE_URL: ${BANCO_WEBSITE_URL:-http://localhost:3001}
+        # Parity with banco-web bake args — site-env already reads these; without
+        # compose wiring, Coolify builds forever show App Store "soon" even when
+        # NEXT_PUBLIC_APP_*_URL secrets are set on the project.
+        NEXT_PUBLIC_MARKET_URL: ${BANCO_WEB_MARKET_URL:-}
+        NEXT_PUBLIC_ADMIN_URL: ${BANCO_WEB_ADMIN_URL:-}
+        NEXT_PUBLIC_APP_ANDROID_URL: ${NEXT_PUBLIC_APP_ANDROID_URL:-}
+        NEXT_PUBLIC_APP_IOS_URL: ${NEXT_PUBLIC_APP_IOS_URL:-}
+        NEXT_PUBLIC_WEB_SEARCH_LIVE: ${NEXT_PUBLIC_WEB_SEARCH_LIVE:-false}
+        NEXT_PUBLIC_WEB_SEARCH_MAP: ${NEXT_PUBLIC_WEB_SEARCH_MAP:-false}
+        NEXT_PUBLIC_WEB_MARKET_COPY: ${NEXT_PUBLIC_WEB_MARKET_COPY:-false}
+        NEXT_PUBLIC_SEARCH_ENABLED: ${NEXT_PUBLIC_SEARCH_ENABLED:-true}
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}
         NEXT_PUBLIC_CLERK_PROXY_URL: ${NEXT_PUBLIC_CLERK_PROXY_URL:-}
+        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}
     image: banco-website:latest
     restart: always
     depends_on:
@@ -217,6 +248,7 @@ services:
       PORT: "3000"
       NODE_ENV: production
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
+      WEB_PLUG_ENABLED: ${WEB_PLUG_ENABLED:-true}
     healthcheck:
       test: ["CMD", "node", "-e",
         "fetch('http://127.0.0.1:3000/api/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]

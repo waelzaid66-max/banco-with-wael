@@ -7,6 +7,7 @@ import {
 } from "@workspace/api-client-react";
 import { ListingCard } from "./ListingCard";
 import { searchConfig } from "../lib/search-config";
+import { DEFAULT_MARKET_COUNTRY } from "../lib/search-markets";
 
 const sectionStyle: React.CSSProperties = {
   marginTop: "1.25rem",
@@ -81,7 +82,11 @@ export function HubFeedTeaser({
     );
   }
 
-  const query = useGetFeed({ limit: 6, category });
+  const query = useGetFeed({
+    limit: 6,
+    category,
+    market_country: DEFAULT_MARKET_COUNTRY,
+  });
   const items = query.data?.data ?? [];
 
   if (query.isLoading) {

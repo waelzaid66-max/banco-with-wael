@@ -71,6 +71,10 @@ import {
   visibleEngines,
   visibleIndustrialTypes,
 } from "@/lib/facets";
+import {
+  loadPreferredMarketCountry,
+  readPreferredMarketCountrySync,
+} from "@/lib/marketPreference";
 import { SkeletonCard } from "@/components/SkeletonCard";
 import { SmartAssetCard } from "@/components/SmartAssetCard";
 import {
@@ -313,6 +317,14 @@ export default function FeedScreen() {
   const isBusiness = ["dealer", "company", "enterprise"].includes(role);
   const [showLogoMenu, setShowLogoMenu] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
+  // Preferred market scopes home feed the same way Search does — without
+  // market_country, SA users see EG inventory (and reverse) on the home rails.
+  const [marketCountry, setMarketCountry] = useState(readPreferredMarketCountrySync);
+  useEffect(() => {
+    void loadPreferredMarketCountry().then((iso) => {
+      setMarketCountry(iso);
+    });
+  }, []);
 
   const notifQuery = useListNotifications({
     query: {
@@ -397,7 +409,7 @@ export default function FeedScreen() {
   // inventory. Fails open while facets load (never hides real inventory on a
   // transient error); new taxonomy chips fail closed (see lib/facets).
   const { globalFacets, scopedFacets, loading: facetsLoading } =
-    useInventoryFacets(category);
+    useInventoryFacets(category, marketCountry);
   const activeGroup = industrialGroupForCategory(category);
   const visibleCats = useMemo(
     () => visibleCategories(CATEGORY_ORDER, globalFacets),
@@ -475,6 +487,7 @@ export default function FeedScreen() {
         const params: Parameters<typeof getFeed>[0] = {
           limit: PAGE_SIZE,
           session_id: sessionId,
+          market_country: marketCountry,
         };
         if (apiCat) {
           params.category = apiCat;
@@ -509,7 +522,7 @@ export default function FeedScreen() {
         if (reset) setError(true);
       }
     },
-    [category, industrialType, engineKey, sessionId, prefetchImages]
+    [category, industrialType, engineKey, sessionId, marketCountry, prefetchImages]
   );
 
   // Discovery rails — fetched once; independent of the category filter below.
@@ -517,14 +530,21 @@ export default function FeedScreen() {
   // so home rails don't waterfall three feed round-trips on cold open.
   const loadRails = useCallback(async () => {
     const [trendingRes, poolRes, industrialRes, geoCity] = await Promise.all([
-      getTrending().catch(() => ({ data: [] as FeedItem[] })),
-      getFeed({ limit: 40, session_id: sessionId }).catch(() => ({
+      getTrending({ market_country: marketCountry }).catch(() => ({
+        data: [] as FeedItem[],
+      })),
+      getFeed({
+        limit: 40,
+        session_id: sessionId,
+        market_country: marketCountry,
+      }).catch(() => ({
         data: [] as FeedItem[],
       })),
       getFeed({
         category: "industrial" as GetFeedCategory,
         limit: 20,
         session_id: sessionId,
+        market_country: marketCountry,
       }).catch(() => ({ data: [] as FeedItem[] })),
       detectCity().catch(() => null as string | null),
     ]);
@@ -553,7 +573,7 @@ export default function FeedScreen() {
     setRecentlyAddedItems(pool.slice(0, 12));
 
     setIndustrialItems(industrialRes.data ?? []);
-  }, [sessionId]);
+  }, [sessionId, marketCountry]);
 
   const loadRecommendations = useCallback(async () => {
     if (!isSignedIn) {
@@ -561,12 +581,12 @@ export default function FeedScreen() {
       return;
     }
     try {
-      const res = await getRecommendations();
+      const res = await getRecommendations({ market_country: marketCountry });
       setRecommendedItems(res.data ?? []);
     } catch {
       setRecommendedItems([]);
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, marketCountry]);
 
   useEffect(() => {
     loadRails();
@@ -597,7 +617,7 @@ export default function FeedScreen() {
     setCursor(undefined);
     setHasNext(true);
     fetchFeed(true).then(() => setLoading(false));
-  }, [category, industrialType, engineKey]);
+  }, [category, industrialType, engineKey, marketCountry]);
 
   const handleRetry = async () => {
     setLoading(true);
@@ -1100,7 +1120,11 @@ export default function FeedScreen() {
     // tab (search.tsx reads `sort` and commits it as criteria.sort).
     router.push({
       pathname: "/(tabs)/search",
-      params: { sort: key, ts: String(Date.now()) },
+      params: {
+        sort: key,
+        market_country: marketCountry,
+        ts: String(Date.now()),
+      },
     });
   };
 

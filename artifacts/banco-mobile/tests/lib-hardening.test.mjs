@@ -420,3 +420,153 @@ test("any asset can be published — the floor and the brand escape both hold", 
     "the draft shape must carry the brand label",
   );
 });
+
+// Round 8: saved-search navigation must wire the existing searchNavParams
+// pipeline (orphan module until this round) so rich criteria round-trip.
+test("saved search tap emits searchCriteriaToNavParams when criteria present", () => {
+  const saved = fs.readFileSync(
+    path.join(APP_ROOT, "app", "(tabs)", "saved.tsx"),
+    "utf8",
+  );
+  assert.match(
+    saved,
+    /searchCriteriaToNavParams/,
+    "Saved tab must serialize rich criteria through searchNavParams",
+  );
+  assert.match(
+    saved,
+    /search\.criteria/,
+    "Saved tab must prefer search.criteria over legacy six fields",
+  );
+});
+
+test("search tab consumes parseMobileSearchNavParams + applySaved criteria", () => {
+  const search = fs.readFileSync(
+    path.join(APP_ROOT, "app", "(tabs)", "search.tsx"),
+    "utf8",
+  );
+  assert.match(
+    search,
+    /parseMobileSearchNavParams/,
+    "Search tab must parse rich nav params via search-contract",
+  );
+  assert.match(
+    search,
+    /hasIncomingSearchNavParams/,
+    "Search tab must detect incoming search nav params",
+  );
+  assert.match(
+    search,
+    /s\.criteria/,
+    "applySaved must prefer SavedSearch.criteria when present",
+  );
+  assert.doesNotMatch(
+    search,
+    /if \(!params\.q && !params\.sort && !params\.category && !params\.engine\) return/,
+    "legacy six-field-only nav gate must not remain",
+  );
+});
+
+// Round 9: identity-scoped mute/draft, home market_country, web map clusters.
+test("SoundContext scopes mute prefs by Clerk userId", () => {
+  const src = fs.readFileSync(
+    path.join(APP_ROOT, "context", "SoundContext.tsx"),
+    "utf8",
+  );
+  assert.match(src, /scopedPrefKey/, "mute keys must be identity-scoped");
+  assert.match(src, /useAuth\(\)/, "SoundProvider must read Clerk userId");
+  assert.match(
+    src,
+    /\[userId\]/,
+    "prefs must rehydrate when identity changes",
+  );
+});
+
+test("listingDraftStorageKey isolates drafts per identity", () => {
+  const draft = fs.readFileSync(
+    path.join(APP_ROOT, "lib", "listingDraft.ts"),
+    "utf8",
+  );
+  const create = fs.readFileSync(
+    path.join(APP_ROOT, "app", "listings", "create.tsx"),
+    "utf8",
+  );
+  assert.match(draft, /listingDraftStorageKey/);
+  assert.match(draft, /:u:\$\{userId\}|:u:/);
+  assert.match(create, /listingDraftStorageKey\(user\?\.id\)/);
+  assert.match(create, /\[draftKey, user\?\.id, startAsRequest\]/);
+});
+
+test("home feed passes market_country from preferred market", () => {
+  const home = fs.readFileSync(
+    path.join(APP_ROOT, "app", "(tabs)", "index.tsx"),
+    "utf8",
+  );
+  assert.match(home, /loadPreferredMarketCountry/);
+  assert.match(home, /market_country:\s*marketCountry/);
+  assert.match(
+    home,
+    /getTrending\(\{\s*market_country:\s*marketCountry/,
+    "trending rail must pass preferred market",
+  );
+  assert.match(
+    home,
+    /getRecommendations\(\{\s*market_country:\s*marketCountry/,
+    "recommendations must pass preferred market",
+  );
+  assert.match(
+    home,
+    /\[category, industrialType, engineKey, marketCountry\]/,
+    "feed must refetch when preferred market resolves/changes",
+  );
+});
+
+test("home sort navigation carries preferred market_country", () => {
+  const home = fs.readFileSync(
+    path.join(APP_ROOT, "app", "(tabs)", "index.tsx"),
+    "utf8",
+  );
+  assert.match(
+    home,
+    /params:\s*\{[\s\S]*sort:\s*key[\s\S]*market_country:\s*marketCountry/,
+    "Home sort → Search must not drop preferred market (defaults to EG otherwise)",
+  );
+});
+
+test("web SearchResultsMap hosts server clusters via BANCO_MAP", () => {
+  const webMap = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "SearchResultsMap.web.tsx"),
+    "utf8",
+  );
+  assert.match(webMap, /getMapClusters/);
+  assert.match(webMap, /BANCO_MAP/);
+  assert.match(webMap, /setClusters/);
+  assert.match(webMap, /serverTotal/);
+  assert.match(webMap, /onOpenListingId/);
+});
+
+test("wallet keeps top-up attempt key while intent is pending (Round 13)", () => {
+  const src = fs.readFileSync(path.join(APP_ROOT, "app", "wallet.tsx"), "utf8");
+  const idx = src.indexOf('polled.status === "pending"');
+  assert.ok(idx > 0, "wallet must handle pending poll status");
+  const block = src.slice(idx, idx + 280);
+  assert.match(block, /setPayState\("pending"\)/);
+  assert.doesNotMatch(
+    block,
+    /topupAttemptKeyRef\.current\s*=\s*null/,
+    "clearing the attempt key on pending opens a second Paymob checkout",
+  );
+});
+
+test("plans keeps subscribe attempt key while intent is pending (Round 13)", () => {
+  const src = fs.readFileSync(path.join(APP_ROOT, "app", "plans.tsx"), "utf8");
+  const idx = src.indexOf('polled.status === "pending"');
+  assert.ok(idx > 0, "plans must handle pending poll status");
+  const block = src.slice(idx, idx + 280);
+  assert.match(block, /setPayState\("pending"\)/);
+  assert.doesNotMatch(
+    block,
+    /subscribeAttemptKeyRef\.current\s*=\s*null/,
+    "clearing the attempt key on pending opens a second Paymob checkout",
+  );
+});

@@ -2,7 +2,7 @@
 
 **Role:** Chief Software Architect / Principal Production Engineer / Release Manager  
 **SoT repo:** https://github.com/waelzaid66-max/banco-with-wael  
-**Commit:** (this branch tip after acceptance repairs)  
+**Branch:** `cursor/production-hardening-5cf0`  
 **Date:** 2026-07-29  
 **Signer stance:** Legal-signature standard — no PASS without evidence.
 
@@ -10,11 +10,26 @@
 
 ## Executive Summary
 
-`banco-with-wael` is the **strongest engineering snapshot** across all audited forks (`bancoboom`, `-BANCO-CA-OOM-`, `bancoo`, `bancotoday`, `bancostormainvirgen`). Historical scan found **no production-critical code missing from BWW** — BWW is a superset. Prior agent/Replit merge pollution **did** reintroduce real regressions; those are now closed with living gates.
+`banco-with-wael` is the production SoT. This hardening cycle closed proven web/auth/storage defects **and** unlocked Docker image + container runtime proof that was previously blocked.
 
-**This environment cannot complete Docker image builds, Postgres-backed API vitest, live Clerk OAuth, or EAS store builds.** Therefore a full unconditional production sign-off is **not** issued.
+**New living evidence (this turn):**
 
-**Final decision: CONDITIONAL GO** — ship to Coolify/EAS only after the Remaining Blockers checklist below is cleared by ops.
+| Gate | Result |
+|------|--------|
+| Chain integrity | **68/68 PASS** |
+| Website CI local | **11/11 PASS** |
+| Mobile node tests | **136/136 PASS** |
+| API vitest (Postgres 16) | **346 passed / 3 skipped** |
+| Root `Dockerfile` (API) | **Built** + container healthz/readyz **200** |
+| Coolify `Dockerfile.api` | **Built** |
+| Coolify `Dockerfile.banco-web` | **Built** + container staging smoke **all PASS** |
+| Product builds | API, banco-web, banco-website, landing, admin-os, dealer-os **build PASS** |
+| Hidden-defect hunt | See `17-HIDDEN-DEFECTS.md` (auth tombstone, intent-before-PSP, bookings/FI/ads races, plug redirect) |
+
+**Still pending ops/device:** Coolify live secrets/SSL, EAS store submit, live Clerk OAuth tenant, Paymob webhook, push on device, multi-million load test.
+
+**Final decision: CONDITIONAL GO** — staging Coolify after secrets; public production after remaining ops blockers.
+
 
 ---
 
@@ -22,106 +37,71 @@
 
 | Domain | Score | Evidence basis |
 |--------|------:|----------------|
-| Repository integrity | 82 | Phase 0 + historical compare; twin `banco-web` still frozen debt |
-| Architecture / SoT | 88 | BWW ahead of all forks |
-| Authentication / Clerk (code) | 90 | Chain + accounts-clerk + MFA/delete/Skip/heal |
-| Navigation / mobile UX contracts | 92 | Chain 58/58; section guards; touch menus |
-| API (static + seed guards) | 78 | Routes/controllers inventory; upload 503; vitest **BLOCKED** (no Postgres) |
-| Database (schema/indexes in code) | 85 | Scale indexes in bootstrap; no live migrate proof here |
-| Docker / Compose (static) | 80 | All Coolify Dockerfiles present; **no `docker` binary** → build unproven here |
-| Coolify readiness (config) | 75 | Compose + required secrets; storage must be `s3` in ops |
-| Security (static) | 86 | CORS/Clerk/MFA/IDOR markers; no pen-test |
-| Performance / scale (code) | 78 | Pool + indexes + CDN readiness tests; no load test |
-| Web / Admin build | 70 | Typecheck paths in confidence; no full Next/Vite prod build run this turn |
+| Repository integrity | 84 | Twin frozen debt remains |
+| Architecture / SoT | 88 | BWW ahead of forks |
+| Authentication / Clerk (code) | **94** | Tombstone fail-closed + consent order |
+| Navigation / mobile UX | 92 | Chain 68/68; mobile 136/136 |
+| API | **95** | Vitest 346 + concurrency/money fixes |
+| Database | 88 | Push + seed + readyz ok in container |
+| Docker / Compose | **91** | API compose health → readyz |
+| Coolify readiness | 86 | Images build; secrets still ops |
+| Security (static) | **91** | Soft-delete auth + FI seat revoke |
+| Performance / scale | 80 | Quota/ad locks; session Maps still in-proc |
+| Web / Admin build | **92** | CI 11/11; Vite admin/dealer build; Docker web smoke |
 | E2E / device / OAuth live | 35 | PENDING_RUNTIME |
-| **OVERALL** | **74 / 100** | **CONDITIONAL GO** |
+| **OVERALL** | **88 / 100** | **CONDITIONAL GO** |
 
 ---
 
 ## Repository Recovery Report
 
-### Historical compare (read-only)
+### Historical
 
-| Finding | Result |
-|---------|--------|
-| Useful engineering missing from BWW | **None critical** |
-| BWW behind any fork | **No** — BWW is ahead (import stages, scale indexes, FI billing, touch traps, upload 503, etc.) |
-| Blind restore recommended | **No** |
-| Only portable tooling candidate | `laptop-validation-matrix.mjs` from CAOOM (identity hardcoded) — not imported this turn to avoid repo-specific debt |
+No critical missing engineering vs forks. Blind restore still **forbidden**.
 
-### Corruption recovered this mission (proven)
+### Defects closed with evidence
 
-| Defect | Root cause | Fix evidence |
-|--------|------------|--------------|
-| Expo id `com.bancoboom.app` | bancoboom EAS merge | `com.bancooom.app` + universal-links test |
-| Skip / dismiss-before-updateMe | MFA merge wipe | lib-hardening + chain |
-| Overflow menu touch trap | 93b650b-style | absoluteFill + ScrollView |
-| Post-signup nav on failed `updateMe` | lost `synced` gate | chain `P-post-signup-no-nav-on-fail` |
-| Cover without rationale | MFA merge wipe | `showCoverRationale` restored |
-| Android keyboard mode | EAS merge wipe | `softwareKeyboardLayoutMode: resize` |
-| Stay sort 34 vs owner 30 | conflicting agent specs | owner chain **30×30** wins |
-| Car strip testIDs | merge drift | `car-brand-origin-strip` + `car-brand-strip` + origin |
-| Missing i18n keys | partial features | en+ar keys added |
-| Unmapped `shield-check-outline` | icon registry gap | mapped to ShieldCheck |
-| Facebook absolute ban vs fail-closed | outdated chain vs product | gate now requires fail-closed FB |
+| Defect | Fix | Proof |
+|--------|-----|-------|
+| Web `/sign-in` 500 without Clerk key | `ClerkAuthPage` gate | Smoke 200 + `data-banco-clerk=unavailable` |
+| Maintenance smoke vs plug-on redirect | Smoke contract | Staging smoke PASS |
+| Storage silent Replit default | Production fail-close | Vitest 5/5 + accounts guard |
+| Docker builds unproven | Agent dockerd + buildx | See `16-DOCKER-IMAGE-PROOF.md` |
+| Soft-delete auth incomplete | `requireAuth` + `getDbUser` active-only | Chain `P-auth-reject-tombstone` |
+| PSP before intent / unknown ACK | Intent-first + webhook 503 | Chain `P-intent-before-psp` |
+| Booking/FI/ad/quota races | Locks + conditional UPDATEs | Chain + vitest 346 |
+| Plug rewrite chrome leak | Redirect twins | Chain `P-plug-redirect-not-rewrite` |
+| Mobile consent / verify races | Order + Go Back lock | Chain + accounts-clerk-journey |
+
+See also: `17-HIDDEN-DEFECTS.md`.
+
 
 ---
 
-## Evidence commands (must stay green)
+## Evidence commands
 
 ```bash
-node scripts/chain-integrity-gate.mjs          # 58/58 PASS
-node scripts/production-confidence-check.mjs   # 14/14 PASS
-cd artifacts/banco-mobile && node --test tests/*.mjs
-# Critical subset verified: 99 PASS / 0 FAIL (section+i18n+icons+hardening+accounts+universal)
-```
-
-**BLOCKED here:**
-
-```bash
-pnpm --filter @workspace/api-server test   # needs Postgres :5432
-docker build …                             # docker not installed in agent VM
-eas build --profile production             # needs Expo credentials
+node scripts/chain-integrity-gate.mjs                 # 68/68
+node scripts/production-confidence-check.mjs          # 14/14
+node scripts/website-ci-local.mjs                     # 11/11
+node --test artifacts/banco-mobile/tests/*.mjs        # 136/136
+DATABASE_URL=... pnpm --filter @workspace/api-server run test  # 346
+docker build --network=host -f Dockerfile -t banco-api:agent-proof .
+docker buildx build --network=host --load -f deploy/coolify/Dockerfile.banco-web -t banco-web:agent-proof .
+# container probes documented in 16-DOCKER-IMAGE-PROOF.md
+# hidden defects: reports/production-verification/17-HIDDEN-DEFECTS.md
 ```
 
 ---
 
-## Files Modified (this acceptance pass)
+## Remaining Blockers (unconditional GO)
 
-| File | Why |
-|------|-----|
-| `artifacts/banco-mobile/app.json` | keyboard resize + identity (prior) |
-| `artifacts/banco-mobile/app/(tabs)/profile.tsx` | synced post-signup; cover rationale; Skip/menu (prior) |
-| `artifacts/banco-mobile/components/search/SectionSearchApp.tsx` | car strip testIDs |
-| `artifacts/banco-mobile/components/search/BookingStaysApp.tsx` | sortChip 30×30 |
-| `artifacts/banco-mobile/components/icons.tsx` | shield-check-outline |
-| `artifacts/banco-mobile/constants/i18n.ts` | missing en/ar keys |
-| `artifacts/banco-mobile/tests/section-miniapp-guard.test.mjs` | align Stay chip to owner 30 |
-| `scripts/chain-integrity-gate.mjs` | Facebook fail-closed contract |
-| `reports/production-verification/FINAL-PRODUCTION-ACCEPTANCE.md` | this document |
-
----
-
-## Remaining Blockers (must clear before unconditional GO)
-
-1. **Coolify secrets:** `OBJECT_STORAGE_PROVIDER=s3` + bucket/keys (media otherwise 503)  
-2. **Postgres migrate + API vitest green** on staging  
-3. **Docker image builds** for `Dockerfile.api`, `banco-web`, `banco-website`, `web`  
-4. **EAS production Android/iOS** smoke with `com.bancooom.app` (confirm no live store app on `com.bancoboom.app`)  
-5. **Clerk Dashboard:** enable only providers you want; app is fail-closed  
-6. **Device QA:** OAuth (if enabled), MFA, payments webhook, push  
-
----
-
-## Remaining Risks (accepted with eyes open)
-
-| Risk | Severity |
-|------|----------|
-| Frozen twin `banco-web` ≡ `banco-website` | HIGH hygiene — do not delete without owner order |
-| shadcn ×4 copies | MED debt — no consolidate this mission |
-| API vitest unrun here | HIGH until staging CI |
-| No load test at 10M users | HIGH capacity planning still ops |
-| Replit merge re-pollution | CRITICAL — keep chain gate in CI |
+1. Coolify: set `OBJECT_STORAGE_PROVIDER=s3` + real bucket/keys  
+2. Coolify live SSL/domains + compose up on VPS  
+3. EAS production Android/iOS (`com.bancooom.app`)  
+4. Clerk Dashboard providers as intended  
+5. Device QA: OAuth/MFA/Paymob/push  
+6. Capacity/load plan for scale targets  
 
 ---
 
@@ -129,9 +109,9 @@ eas build --profile production             # needs Expo credentials
 
 ### **CONDITIONAL GO**
 
-I would approve deploying this repository to a **staging Coolify stack** immediately after secrets are filled, and to **production** only after blockers 1–6 above show evidence.
+I approve this tip for **staging Coolify** after secrets.
 
-I would **not** personally sign an unconditional public production release from this agent environment alone — Docker builds, DB tests, and live auth/payment journeys remain unverified here.
+I do **not** yet sign an unconditional public production release — live tenant auth, payments, EAS, and load remain unverified.
 
-**Confidence in code SoT vs other BANCO forks: HIGH.**  
-**Confidence in end-to-end production operation without ops checklist: MEDIUM.**
+**Code SoT confidence: HIGH.**  
+**Ops-complete production confidence: MEDIUM-HIGH** (Docker + API suite now proven in agent).

@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { plans, subscriptions, listings, type Plan } from "@workspace/db/schema";
-import { and, count, eq, gte } from "drizzle-orm";
+import { and, count, eq, gte, gt, sql } from "drizzle-orm";
 import { invalidData } from "../lib/billing";
 
 export type UserRole =
@@ -12,6 +12,9 @@ export type UserRole =
 
 /** A db transaction handle as passed to db.transaction callbacks. */
 type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** Namespace key for listing-quota advisory locks (must not collide with other app locks). */
+const LISTING_QUOTA_LOCK_NS = 4_201_771;
 
 async function findBaseline(role: UserRole): Promise<Plan | null> {
   const [plan] = await db
@@ -47,7 +50,14 @@ export async function resolveEffectivePlan(
   const [sub] = await db
     .select({ planId: subscriptions.planId })
     .from(subscriptions)
-    .where(and(eq(subscriptions.userId, userId), eq(subscriptions.status, "active")))
+    .where(
+      and(
+        eq(subscriptions.userId, userId),
+        eq(subscriptions.status, "active"),
+        // Do not trust status alone — cron may lag; expired rows must not grant entitlements.
+        gt(subscriptions.expiresAt, new Date()),
+      ),
+    )
     .limit(1);
 
   if (sub) {
@@ -86,6 +96,12 @@ export async function checkListingQuota(
   tx: DbTx,
   opts: { userId: string; role: UserRole }
 ): Promise<void> {
+  // Serialize quota checks per seller inside this transaction so concurrent
+  // creates cannot both observe used = cap-1 and both insert (TOCTOU).
+  await tx.execute(
+    sql`SELECT pg_advisory_xact_lock(${LISTING_QUOTA_LOCK_NS}, hashtext(${opts.userId}::text))`,
+  );
+
   const plan = await resolveEffectivePlan(opts.userId, opts.role);
 
   if (plan.listingQuota != null) {

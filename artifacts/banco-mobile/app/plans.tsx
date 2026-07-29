@@ -8,10 +8,11 @@ import {
   type SubscriptionMe,
   type SubscribeBodyPaymentMethod,
 } from "@workspace/api-client-react";
+import * as Crypto from "expo-crypto";
 import * as Haptics from "expo-haptics";
 import * as WebBrowser from "expo-web-browser";
 import { router } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -77,6 +78,8 @@ export default function PlansScreen() {
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [method, setMethod] = useState<Method>("vodafone_cash");
   const [payState, setPayState] = useState<PayState>("idle");
+  /** Stable across retries of the same subscribe attempt (cleared on success). */
+  const subscribeAttemptKeyRef = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -104,6 +107,11 @@ export default function PlansScreen() {
     setSelectedPlan(p);
     setMethod("vodafone_cash");
     setPayState("idle");
+    // Keep attempt key when re-opening the same plan mid-pending Paymob checkout.
+    // Switching plans must mint a new key (fingerprint includes plan).
+    if (selectedPlan?.slug !== p.slug) {
+      subscribeAttemptKeyRef.current = null;
+    }
     setSheetOpen(true);
   };
 
@@ -129,15 +137,20 @@ export default function PlansScreen() {
     if (!selectedPlan) return;
     try {
       setPayState("processing");
+      const idempotencyKey =
+        subscribeAttemptKeyRef.current ?? Crypto.randomUUID();
+      subscribeAttemptKeyRef.current = idempotencyKey;
       const res = await subscribe({
         plan_slug: selectedPlan.slug,
         payment_method: method,
+        idempotency_key: idempotencyKey,
       });
       const result = res.data;
       if (!result) throw new Error("no result");
 
       // Wallet settles immediately; an Egyptian rail returns a checkout intent.
       if (result.mode === "active") {
+        subscribeAttemptKeyRef.current = null;
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setPayState("done");
         load();
@@ -151,10 +164,13 @@ export default function PlansScreen() {
       await WebBrowser.openBrowserAsync(intent.checkout_url);
       const polled = await pollIntentStatus(intent.intent_id);
       if (polled.status === "completed") {
+        subscribeAttemptKeyRef.current = null;
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setPayState("done");
         load();
       } else if (polled.status === "pending") {
+        // Keep the attempt key — clearing it here opened a second Paymob
+        // checkout; a second paid intent can strand money against active-sub.
         setPayState("pending");
         load();
       } else {

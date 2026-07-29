@@ -28,7 +28,7 @@ export const GetPlaceSuggestionsResponse = zod.object({
   "popularity": zod.number()
 }).describe('A geo\/real-estate reference place matched for autocomplete.')).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -46,6 +46,58 @@ export const GetPlaceSuggestionsResponse = zod.object({
 export const HealthCheckResponse = zod.object({
   "status": zod.enum(['ok', 'degraded'])
 })
+
+
+/**
+ * Process is up. Does not touch the database. Includes optional deploy pin (gitSha/buildId) when baked into the image.
+ * @summary Liveness probe
+ */
+export const LiveCheckResponse = zod.object({
+  "status": zod.enum(['ok', 'degraded'])
+}).and(zod.object({
+  "gitSha": zod.string().nullish(),
+  "buildId": zod.string().nullish()
+}).describe('Optional deploy identity baked at image build (null when unset — never invented).')).describe('Process liveness with deploy pin. Does not touch the database.')
+
+
+/**
+ * Returns 200 only when the database is reachable and money-path tables exist (payment_intents, transactions, promo_ad_transactions). Otherwise 503 so load balancers stop routing. Includes optional deploy pin.
+ * @summary Readiness probe
+ */
+export const ReadyCheckResponse = zod.object({
+  "status": zod.enum(['ok', 'degraded']),
+  "checks": zod.object({
+  "database": zod.enum(['ok', 'down']).optional(),
+  "money_schema": zod.enum(['ok', 'down']).optional()
+}),
+  "gitSha": zod.string().nullish(),
+  "buildId": zod.string().nullish()
+}).describe('Readiness — database reachable and money-path tables present.')
+
+
+/**
+ * Server-to-server settle path. No Clerk auth — authenticated by Paymob HMAC (query `hmac`). Invalid signature → 401. This is the only path that settles wallet top-ups and subscriptions.
+ * @summary Paymob transaction-processed webhook
+ */
+export const PaymobWebhookQueryParams = zod.object({
+  "hmac": zod.coerce.string().optional().describe('Paymob HMAC over the signed object fields')
+})
+
+export const PaymobWebhookBody = zod.object({
+  "obj": zod.record(zod.string(), zod.unknown()).optional()
+})
+
+export const PaymobWebhookResponse = zod.object({
+  "ok": zod.boolean(),
+  "error": zod.string().optional().describe('Present on some non-settlement failures (e.g. intent_not_found).')
+})
+
+
+/**
+ * Informational page after hosted Paymob checkout. Settlement is handled by the webhook; clients poll intent status separately.
+ * @summary Post-checkout HTML landing
+ */
+export const PaymentReturnResponse = zod.unknown()
 
 
 /**
@@ -67,7 +119,7 @@ export const GetMeResponse = zod.object({
   "created_at": zod.string()
 }).optional().describe('Authoritative current-user state. DB is the source of truth for role.'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -114,7 +166,7 @@ export const UpdateMeResponse = zod.object({
   "created_at": zod.string()
 }).optional().describe('Authoritative current-user state. DB is the source of truth for role.'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -189,7 +241,7 @@ export const GetFeedResponse = zod.object({
   "is_bookable": zod.boolean().nullish().describe('Additive. True when this listing is a furnished\/daily rental (hotel model) that can be reserved from its detail. Lets the feed, search card, and map pin surface a \"قابل للحجز \/ Bookable\" affordance without fetching the detail. Null\/false for everything else.')
 }).describe('Immutable v1 contract — exactly 11 fields. No renames, no removals allowed in v1. Breaking changes go to \/v2\/\*.\n')).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -216,7 +268,7 @@ export const RequestUploadUrlResponse = zod.object({
   "url": zod.string()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -240,7 +292,7 @@ export const PromoteUploadResponse = zod.object({
   "promoted": zod.boolean()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -267,7 +319,7 @@ export const VerifyUploadResponse = zod.object({
   "size": zod.number().nullable()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -317,7 +369,7 @@ export const GetListingsResponse = zod.object({
   "is_bookable": zod.boolean().nullish().describe('Additive. True when this listing is a furnished\/daily rental (hotel model) that can be reserved from its detail. Lets the feed, search card, and map pin surface a \"قابل للحجز \/ Bookable\" affordance without fetching the detail. Null\/false for everything else.')
 }).describe('Immutable v1 contract — exactly 11 fields. No renames, no removals allowed in v1. Breaking changes go to \/v2\/\*.\n')).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -368,7 +420,7 @@ export const CreateListingResponse = zod.object({
   "id": zod.string().optional()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -487,7 +539,7 @@ export const GetListingResponse = zod.object({
   "whatsapp_enabled": zod.boolean().nullish().describe('True when the seller opted this listing in to WhatsApp contact. Opt-in only (default false); clients gate the WhatsApp CTA on it.\n')
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -534,7 +586,7 @@ export const UpdateListingResponse = zod.object({
   "updated": zod.boolean().optional()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -558,7 +610,7 @@ export const DeleteListingResponse = zod.object({
   "deleted": zod.boolean().optional()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -604,7 +656,7 @@ export const GetSimilarListingsResponse = zod.object({
   "is_bookable": zod.boolean().nullish().describe('Additive. True when this listing is a furnished\/daily rental (hotel model) that can be reserved from its detail. Lets the feed, search card, and map pin surface a \"قابل للحجز \/ Bookable\" affordance without fetching the detail. Null\/false for everything else.')
 }).describe('Immutable v1 contract — exactly 11 fields. No renames, no removals allowed in v1. Breaking changes go to \/v2\/\*.\n')).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -645,7 +697,7 @@ export const GetListingInsightsResponse = zod.object({
 }).describe('One month of aggregated real prices for a market segment.'))
 }).optional().describe('A listing\'s price versus its market segment. `rating` is insufficient_data (and the figures null) until the segment has enough real observations — never a fabricated number.\n'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -670,7 +722,7 @@ export const GetListingAvailabilityResponse = zod.object({
   "check_out": zod.string()
 }).describe('A booked (unavailable) date range for a furnished\/daily rental.')).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -711,7 +763,7 @@ export const CreateBookingResponse = zod.object({
   "created_at": zod.string().nullish()
 }).optional().describe('A short‑stay reservation of a furnished\/daily rental (hotel model).'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -750,7 +802,7 @@ export const ListBookingsResponse = zod.object({
   "counterparty_name": zod.string().nullish()
 }).describe('A booking enriched for the inbox — the underlying reservation plus the listing title\/location and the other party\'s name (the guest in the host view, the host in the guest view).')).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -788,7 +840,7 @@ export const UpdateBookingResponse = zod.object({
   "created_at": zod.string().nullish()
 }).optional().describe('A short‑stay reservation of a furnished\/daily rental (hotel model).'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -830,7 +882,7 @@ export const CreateImportOrderResponse = zod.object({
   "updated_at": zod.string().nullish()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -858,7 +910,7 @@ export const ListMyImportOrdersResponse = zod.object({
   "updated_at": zod.string().nullish()
 }).describe('An import order enriched for the buyer\'s tracking list.')).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -894,7 +946,7 @@ export const GetImportOrderResponse = zod.object({
   "updated_at": zod.string().nullish()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -920,7 +972,7 @@ export const BumpListingResponse = zod.object({
   "next_bump_available_at": zod.string().optional().describe('ISO 8601 timestamp when the listing may be recycled again (cooldown end).')
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -1006,7 +1058,7 @@ export const SearchListingsResponse = zod.object({
   "is_bookable": zod.boolean().nullish().describe('Additive. True when this listing is a furnished\/daily rental (hotel model) that can be reserved from its detail. Lets the feed, search card, and map pin surface a \"قابل للحجز \/ Bookable\" affordance without fetching the detail. Null\/false for everything else.')
 }).describe('Immutable v1 contract — exactly 11 fields. No renames, no removals allowed in v1. Breaking changes go to \/v2\/\*.\n')).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -1074,7 +1126,7 @@ export const GetMapClustersResponse = zod.object({
   "listing_id": zod.string().nullable()
 }).describe('One occupied grid cell on the map — its centroid and how many listings it aggregates. listing_id is set ONLY when count is 1 (a single tappable pin); for multi-listing cells it is null and the client shows a count bubble.\n')).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -1086,11 +1138,15 @@ export const GetMapClustersResponse = zod.object({
 
 
 /**
- * Counts of active, publicly-visible listings grouped by each filterable attribute, optionally scoped to a category. Each count uses the same column/specs matching logic as the search filters, so a chip's badge count equals the size of the result set that chip produces. Clients gate filter chips on count > 0 to avoid offering filters that return nothing.
+ * Counts of active, publicly-visible listings grouped by each filterable attribute, optionally scoped to a category and/or market_country. Each count uses the same column/specs matching logic as the search filters, so a chip's badge count equals the size of the result set that chip produces. Clients gate filter chips on count > 0 to avoid offering filters that return nothing. The category facet map stays category- unscoped but still respects market_country when provided.
  * @summary Per-value counts of the currently-visible inventory
  */
+export const getFacetsQueryMarketCountryRegExp = new RegExp('^[A-Za-z]{2}$');
+
+
 export const GetFacetsQueryParams = zod.object({
-  "category": zod.enum(['car', 'real_estate', 'industrial']).optional().describe('Scope counts to a single category (the category facet stays unscoped).')
+  "category": zod.enum(['car', 'real_estate', 'industrial']).optional().describe('Scope attribute counts to a single category (the category facet map stays category-unscoped).'),
+  "market_country": zod.coerce.string().regex(getFacetsQueryMarketCountryRegExp).optional().describe('ISO 3166-1 alpha-2 market country (EG, SA, …). Filters inventory by specs.market_country; listings without the key are treated as EG. Same contract as search\/trending.\n')
 })
 
 export const GetFacetsResponse = zod.object({
@@ -1112,7 +1168,7 @@ export const GetFacetsResponse = zod.object({
   "has_installment": zod.number()
 }).optional().describe('Per-value counts of the currently-visible inventory. Each map is keyed by the attribute value (e.g. fuel_type \"diesel\") with the count of matching active, publicly-visible listings. Maps only include values that have at least one listing, so clients can render facet chips directly. The category map is unscoped; all other maps respect the requested category.'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -1133,7 +1189,7 @@ export const GetAutocompleteQueryParams = zod.object({
 export const GetAutocompleteResponse = zod.object({
   "data": zod.array(zod.string()).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -1147,6 +1203,16 @@ export const GetAutocompleteResponse = zod.object({
 /**
  * @summary Trending listings by engagement score
  */
+export const getTrendingQueryLimitMax = 50;
+
+export const getTrendingQueryMarketCountryRegExp = new RegExp('^[A-Za-z]{2}$');
+
+
+export const GetTrendingQueryParams = zod.object({
+  "limit": zod.coerce.number().min(1).max(getTrendingQueryLimitMax).optional(),
+  "market_country": zod.coerce.string().regex(getTrendingQueryMarketCountryRegExp).optional().describe('ISO 3166-1 alpha-2 market country (EG, SA, …). Filters inventory by specs.market_country; listings without the key are treated as EG.\n')
+})
+
 export const GetTrendingResponse = zod.object({
   "data": zod.array(zod.object({
   "id": zod.string().describe('Listing identifier (use for detail navigation).'),
@@ -1175,7 +1241,7 @@ export const GetTrendingResponse = zod.object({
   "is_bookable": zod.boolean().nullish().describe('Additive. True when this listing is a furnished\/daily rental (hotel model) that can be reserved from its detail. Lets the feed, search card, and map pin surface a \"قابل للحجز \/ Bookable\" affordance without fetching the detail. Null\/false for everything else.')
 }).describe('Immutable v1 contract — exactly 11 fields. No renames, no removals allowed in v1. Breaking changes go to \/v2\/\*.\n')).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -1189,6 +1255,16 @@ export const GetTrendingResponse = zod.object({
 /**
  * @summary Personalized recommendations
  */
+export const getRecommendationsQueryLimitMax = 50;
+
+export const getRecommendationsQueryMarketCountryRegExp = new RegExp('^[A-Za-z]{2}$');
+
+
+export const GetRecommendationsQueryParams = zod.object({
+  "limit": zod.coerce.number().min(1).max(getRecommendationsQueryLimitMax).optional(),
+  "market_country": zod.coerce.string().regex(getRecommendationsQueryMarketCountryRegExp).optional().describe('ISO 3166-1 alpha-2 market country (EG, SA, …). Filters inventory by specs.market_country; listings without the key are treated as EG.\n')
+})
+
 export const GetRecommendationsResponse = zod.object({
   "data": zod.array(zod.object({
   "id": zod.string().describe('Listing identifier (use for detail navigation).'),
@@ -1217,7 +1293,7 @@ export const GetRecommendationsResponse = zod.object({
   "is_bookable": zod.boolean().nullish().describe('Additive. True when this listing is a furnished\/daily rental (hotel model) that can be reserved from its detail. Lets the feed, search card, and map pin surface a \"قابل للحجز \/ Bookable\" affordance without fetching the detail. Null\/false for everything else.')
 }).describe('Immutable v1 contract — exactly 11 fields. No renames, no removals allowed in v1. Breaking changes go to \/v2\/\*.\n')).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -1245,7 +1321,7 @@ export const ContactLeadResponse = zod.object({
   "phone": zod.string().nullish()
 }).nullable(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1272,7 +1348,7 @@ export const SendBehaviorSignalResponse = zod.object({
   "received": zod.boolean()
 }),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1295,7 +1371,7 @@ export const ToggleSaveListingResponse = zod.object({
   "saved": zod.boolean().optional()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -1312,7 +1388,7 @@ export const ToggleSaveListingResponse = zod.object({
 export const GetSavedListingsResponse = zod.object({
   "data": zod.array(zod.string()).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -1340,7 +1416,7 @@ export const ListConversationsResponse = zod.object({
   "viewer_role": zod.enum(['buyer', 'seller'])
 })),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1372,7 +1448,7 @@ export const CreateConversationResponse = zod.object({
   "viewer_role": zod.enum(['buyer', 'seller'])
 }),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1395,7 +1471,7 @@ export const DeleteConversationResponse = zod.object({
   "deleted": zod.boolean()
 }),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1439,7 +1515,7 @@ export const GetMessagesResponse = zod.object({
 }).nullish().describe('A listing shared as a card inside the chat.')
 })),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1491,7 +1567,7 @@ export const SendMessageResponse = zod.object({
 }).nullish().describe('A listing shared as a card inside the chat.')
 }),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1520,7 +1596,7 @@ export const ReactToMessageResponse = zod.object({
   "my_reactions": zod.array(zod.string())
 }),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1543,7 +1619,7 @@ export const MarkConversationReadResponse = zod.object({
   "read": zod.boolean()
 }),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1568,7 +1644,7 @@ export const ListNotificationsResponse = zod.object({
   "created_at": zod.string()
 })),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1591,7 +1667,7 @@ export const MarkNotificationsReadResponse = zod.object({
   "read": zod.boolean()
 }),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1615,7 +1691,7 @@ export const RegisterPushTokenResponse = zod.object({
   "registered": zod.boolean()
 }),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1638,7 +1714,7 @@ export const UnregisterPushTokenResponse = zod.object({
   "removed": zod.boolean()
 }),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1662,7 +1738,7 @@ export const GetMyMetricsResponse = zod.object({
   "is_verified": zod.boolean().describe('Real admin-set verification flag; never inferred client-side.')
 }).describe('Public seller stats — safe to expose, no lead PII (Task'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1711,7 +1787,7 @@ export const GetMyListingsResponse = zod.object({
   "is_bookable": zod.boolean().nullish().describe('Additive. True when this listing is a furnished\/daily rental (hotel model) that can be reserved from its detail. Lets the feed, search card, and map pin surface a \"قابل للحجز \/ Bookable\" affordance without fetching the detail. Null\/false for everything else.')
 }).describe('Immutable v1 contract — exactly 11 fields. No renames, no removals allowed in v1. Breaking changes go to \/v2\/\*.\n')),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1750,7 +1826,7 @@ export const GetMyManagedListingsResponse = zod.object({
   "leads": zod.number().optional()
 })),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1791,7 +1867,7 @@ export const AskBancoAssistantResponse = zod.object({
 }).describe('An actionable suggestion the assistant attaches to a reply so the client can deep-link the user to the right place. Every action is built server-side from REAL data (real listing ids, the user\'s real conversations, real search filters) — never fabricated by the model.\n')).optional().describe('Optional deep-link suggestions (real listings, a search, a conversation, or an app screen). Additive\/back-compatible — older clients ignore it.\n')
 }),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1811,7 +1887,7 @@ export const GetMySocialLinksResponse = zod.object({
   "value": zod.string().describe('URL (website\/linkedin\/instagram) or phone (whatsapp), normalized server-side.')
 }).describe('Public seller\/company social link shown on the profile (Task')),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1838,7 +1914,7 @@ export const SetMySocialLinksResponse = zod.object({
   "value": zod.string().describe('URL (website\/linkedin\/instagram) or phone (whatsapp), normalized server-side.')
 }).describe('Public seller\/company social link shown on the profile (Task')),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1859,7 +1935,7 @@ export const GetMyNotificationPreferencesResponse = zod.object({
   "email": zod.boolean()
 }).describe('Per-category notification preference. Absence of a row = enabled (Task')),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1888,7 +1964,7 @@ export const SetMyNotificationPreferencesResponse = zod.object({
   "email": zod.boolean()
 }).describe('Per-category notification preference. Absence of a row = enabled (Task')),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1915,7 +1991,7 @@ export const ListMySavedSearchesResponse = zod.object({
   "created_at": zod.string()
 }).describe('A saved search with optional price-tracking + match alerts (Task')),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1952,7 +2028,7 @@ export const CreateSavedSearchResponse = zod.object({
   "created_at": zod.string()
 }).describe('A saved search with optional price-tracking + match alerts (Task'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -1990,7 +2066,7 @@ export const UpdateSavedSearchResponse = zod.object({
   "created_at": zod.string()
 }).describe('A saved search with optional price-tracking + match alerts (Task'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -2013,7 +2089,7 @@ export const DeleteSavedSearchResponse = zod.object({
   "deleted": zod.boolean()
 }),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -2043,7 +2119,7 @@ export const ListStoriesResponse = zod.object({
   "view_count": zod.number().optional()
 })),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -2079,7 +2155,7 @@ export const CreateStoryResponse = zod.object({
   "view_count": zod.number().optional()
 }),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -2102,7 +2178,7 @@ export const ViewStoryResponse = zod.object({
   "viewed": zod.boolean()
 }),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -2121,7 +2197,7 @@ export const DeleteAccountResponse = zod.object({
   "deleted": zod.boolean()
 }),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -2148,7 +2224,7 @@ export const GetDealerStatsResponse = zod.object({
 })).optional()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -2175,7 +2251,7 @@ export const GetDealerAnalyticsResponse = zod.object({
 })).optional()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -2212,7 +2288,7 @@ export const GetDealerListingsResponse = zod.object({
   "leads": zod.number().optional()
 })).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -2257,7 +2333,7 @@ export const BoostListingResponse = zod.object({
   "wallet_charged": zod.string().optional().describe('Real wallet money charged — the remainder after promo credit — as a 2-dp string.\n')
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -2282,7 +2358,7 @@ export const BulkImportListingsResponse = zod.object({
 })).optional()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -2315,7 +2391,7 @@ export const GetDealerLeadsResponse = zod.object({
   "created_at": zod.string().optional()
 })).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -2363,7 +2439,7 @@ export const CreateReportResponse = zod.object({
   "resolved_at": zod.string().nullish()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -2398,7 +2474,7 @@ export const CreateSupportTicketResponse = zod.object({
 })).optional()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -2413,7 +2489,7 @@ export const GetWalletResponse = zod.object({
   "currency": zod.enum(['EGP'])
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -2438,7 +2514,7 @@ export const GetPromoAdSummaryResponse = zod.object({
   "months_remaining": zod.number()
 }).optional().describe('A user\'s promo ad-credit standing. Promo credit is spent before the real wallet on a boost and lapses (use-it-or-lose-it) at expires_at.\n'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -2478,7 +2554,7 @@ export const ListTransactionsResponse = zod.object({
   "created_at": zod.string()
 })).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -2494,7 +2570,8 @@ export const ListTransactionsResponse = zod.object({
  */
 export const CreateTopupBody = zod.object({
   "amount": zod.number(),
-  "method": zod.enum(['vodafone_cash', 'fawry', 'instapay', 'bank_transfer'])
+  "method": zod.enum(['vodafone_cash', 'fawry', 'instapay', 'bank_transfer']),
+  "idempotency_key": zod.string().uuid().describe('Client-stable UUID reused as payment_intents.id so retries never open a second PSP checkout.')
 })
 
 export const CreateTopupResponse = zod.object({
@@ -2508,7 +2585,7 @@ export const CreateTopupResponse = zod.object({
   "created_at": zod.string()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -2535,7 +2612,7 @@ export const ConfirmTopupResponse = zod.object({
   "already_processed": zod.boolean()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -2570,7 +2647,7 @@ export const ListPlansResponse = zod.object({
   "sort_order": zod.number().nullable()
 })).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -2641,7 +2718,7 @@ export const GetMySubscriptionResponse = zod.object({
 })
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -2659,7 +2736,8 @@ export const subscribeBodyPaymentMethodDefault = `wallet`;
 
 export const SubscribeBody = zod.object({
   "plan_slug": zod.string(),
-  "payment_method": zod.enum(['wallet', 'vodafone_cash', 'fawry', 'instapay', 'bank_transfer']).default(subscribeBodyPaymentMethodDefault)
+  "payment_method": zod.enum(['wallet', 'vodafone_cash', 'fawry', 'instapay', 'bank_transfer']).default(subscribeBodyPaymentMethodDefault),
+  "idempotency_key": zod.string().uuid().describe('Client-stable UUID; external rails reuse as payment_intents.id.')
 })
 
 export const SubscribeResponse = zod.object({
@@ -2705,7 +2783,7 @@ export const SubscribeResponse = zod.object({
 }).nullable()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -2759,7 +2837,7 @@ export const ConfirmSubscriptionResponse = zod.object({
   "already_processed": zod.boolean()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -2803,7 +2881,7 @@ export const CancelSubscriptionResponse = zod.object({
   "cancelled_at": zod.string().nullable()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -2844,7 +2922,7 @@ export const ListInvoicesResponse = zod.object({
   "created_at": zod.string().nullable()
 })).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -2889,7 +2967,7 @@ export const GetInvoiceResponse = zod.object({
   "created_at": zod.string().nullable()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -2931,7 +3009,7 @@ export const GetBillingReportResponse = zod.object({
 }))
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -2962,7 +3040,7 @@ export const AdImpressionResponse = zod.object({
   "deactivated": zod.boolean()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -2991,7 +3069,7 @@ export const GetAdminOverviewResponse = zod.object({
   "error_rate": zod.number().optional()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -3037,7 +3115,7 @@ export const GetAdminUsersResponse = zod.object({
 }).nullish().describe('Business \/ FI onboarding payload used for KYC review (activity, names, city, document URLs). Null when the user never submitted business verification.\n')
 })).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -3089,7 +3167,7 @@ export const SetUserBanResponse = zod.object({
 }).nullish().describe('Business \/ FI onboarding payload used for KYC review (activity, names, city, document URLs). Null when the user never submitted business verification.\n')
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -3136,7 +3214,7 @@ export const SetUserRoleResponse = zod.object({
 }).nullish().describe('Business \/ FI onboarding payload used for KYC review (activity, names, city, document URLs). Null when the user never submitted business verification.\n')
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -3183,7 +3261,7 @@ export const SetUserVerifiedResponse = zod.object({
 }).nullish().describe('Business \/ FI onboarding payload used for KYC review (activity, names, city, document URLs). Null when the user never submitted business verification.\n')
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -3219,7 +3297,7 @@ export const GetAdminListingsResponse = zod.object({
   "created_at": zod.string().optional()
 })).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -3257,7 +3335,7 @@ export const GetModerationQueueResponse = zod.object({
   "created_at": zod.string().optional()
 })).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -3299,7 +3377,7 @@ export const ModerateListingResponse = zod.object({
   "created_at": zod.string().optional()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -3326,7 +3404,7 @@ export const GetAdminLeadsResponse = zod.object({
   "created_at": zod.string().optional()
 })).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -3373,7 +3451,7 @@ export const GetFinancingRequestsResponse = zod.object({
   "updated_at": zod.string().nullish()
 })).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -3434,7 +3512,7 @@ export const UpdateFinancingRequestResponse = zod.object({
   "updated_at": zod.string().nullish()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -3455,7 +3533,7 @@ export const GetFinancingIntermediariesResponse = zod.object({
   "created_at": zod.string().nullish()
 })).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -3488,7 +3566,7 @@ export const CreateFinancingIntermediaryResponse = zod.object({
   "created_at": zod.string().nullish()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -3522,7 +3600,7 @@ export const UpdateFinancingIntermediaryResponse = zod.object({
   "created_at": zod.string().nullish()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -3545,7 +3623,7 @@ export const GetFinancingBranchesResponse = zod.object({
   "created_at": zod.string().nullish()
 })).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -3573,7 +3651,7 @@ export const CreateFinancingBranchResponse = zod.object({
   "created_at": zod.string().nullish()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -3598,7 +3676,7 @@ export const GetFinancingSeatsResponse = zod.object({
   "created_at": zod.string().nullish()
 })).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -3629,7 +3707,7 @@ export const CreateFinancingSeatResponse = zod.object({
   "created_at": zod.string().nullish()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -3681,7 +3759,7 @@ export const GetInstitutionInboxResponse = zod.object({
   "has_next": zod.boolean()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -3722,7 +3800,7 @@ export const UpdateInstitutionRequestResponse = zod.object({
   "updated_at": zod.string().nullish()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -3754,7 +3832,7 @@ export const GetAdminAdsResponse = zod.object({
   "created_at": zod.string().nullish()
 })).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -3788,7 +3866,7 @@ export const GetAdminReportsResponse = zod.object({
   "resolved_at": zod.string().nullish()
 })).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -3825,7 +3903,7 @@ export const ResolveReportResponse = zod.object({
   "resolved_at": zod.string().nullish()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -3860,7 +3938,7 @@ export const GetSupportTicketsResponse = zod.object({
 })).optional()
 })).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -3898,7 +3976,7 @@ export const GetSupportTicketResponse = zod.object({
 })).optional()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -3935,7 +4013,7 @@ export const RespondSupportTicketResponse = zod.object({
 })).optional()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -3972,7 +4050,7 @@ export const ResolveSupportTicketResponse = zod.object({
 })).optional()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -3997,7 +4075,7 @@ export const GetAdminRevenueResponse = zod.object({
 })).optional()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -4032,7 +4110,7 @@ export const GetAdminAnalyticsResponse = zod.object({
 })).optional()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -4053,7 +4131,7 @@ export const GetFraudSignalsResponse = zod.object({
   "created_at": zod.string().optional()
 })).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -4073,7 +4151,7 @@ export const GetAdminAlertsResponse = zod.object({
   "created_at": zod.string().optional()
 })).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -4101,7 +4179,7 @@ export const GetAdminMonitoringResponse = zod.object({
 })).optional()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -4127,7 +4205,7 @@ export const GetPaymentConfigResponse = zod.object({
   "updated_by": zod.string().nullish()
 }).optional().describe('Masked payment-provider config for the admin UI. Secret material is NEVER included — only booleans indicating whether secrets are stored.\n'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -4163,7 +4241,7 @@ export const UpdatePaymentConfigResponse = zod.object({
   "updated_by": zod.string().nullish()
 }).optional().describe('Masked payment-provider config for the admin UI. Secret material is NEVER included — only booleans indicating whether secrets are stored.\n'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -4181,7 +4259,7 @@ export const TestPaymentConfigResponse = zod.object({
   "source": zod.enum(['db', 'env', 'none'])
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -4208,7 +4286,7 @@ export const GetEmailConfigResponse = zod.object({
   "updated_by": zod.string().nullish()
 }).optional().describe('Masked email-provider (Resend) config for the admin UI. The API key is NEVER included — only a boolean indicating whether a key is stored.\n'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -4245,7 +4323,7 @@ export const UpdateEmailConfigResponse = zod.object({
   "updated_by": zod.string().nullish()
 }).optional().describe('Masked email-provider (Resend) config for the admin UI. The API key is NEVER included — only a boolean indicating whether a key is stored.\n'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -4263,7 +4341,7 @@ export const TestEmailConfigResponse = zod.object({
   "source": zod.enum(['db', 'env', 'none'])
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -4288,7 +4366,7 @@ export const GetPromoCampaignResponse = zod.object({
   "months_remaining": zod.number()
 }).optional().describe('Admin view of the promo ad-credit campaign — a SEPARATE virtual ad-only allowance auto-granted monthly to every user, tiered by verification, and use-it-or-lose-it. Not real money.\n'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -4324,7 +4402,7 @@ export const UpdatePromoCampaignResponse = zod.object({
   "months_remaining": zod.number()
 }).optional().describe('Admin view of the promo ad-credit campaign — a SEPARATE virtual ad-only allowance auto-granted monthly to every user, tiered by verification, and use-it-or-lose-it. Not real money.\n'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -4360,7 +4438,7 @@ export const RenewPromoCampaignResponse = zod.object({
   "months_remaining": zod.number()
 }).optional().describe('Admin view of the promo ad-credit campaign — a SEPARATE virtual ad-only allowance auto-granted monthly to every user, tiered by verification, and use-it-or-lose-it. Not real money.\n'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -4392,7 +4470,7 @@ export const GetAdminPlansResponse = zod.object({
   "sort_order": zod.number()
 }).describe('A subscription plan — the platform\'s economic levers (pricing, listing quota, cost-per-lead, boost price, ranking weight, feature flags).\n')).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -4449,7 +4527,7 @@ export const CreateAdminPlanResponse = zod.object({
   "sort_order": zod.number()
 }).optional().describe('A subscription plan — the platform\'s economic levers (pricing, listing quota, cost-per-lead, boost price, ranking weight, feature flags).\n'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -4503,7 +4581,7 @@ export const UpdateAdminPlanResponse = zod.object({
   "sort_order": zod.number()
 }).optional().describe('A subscription plan — the platform\'s economic levers (pricing, listing quota, cost-per-lead, boost price, ranking weight, feature flags).\n'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish()
 })
@@ -4527,7 +4605,7 @@ export const CreateListingLinkResponse = zod.object({
   "created": zod.boolean()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -4557,7 +4635,7 @@ export const GetListingCommentsResponse = zod.object({
   "created_at": zod.string()
 }).describe('A listing Q&A entry — a question (parent_id null) or a reply (Task')),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -4592,7 +4670,7 @@ export const CreateListingCommentResponse = zod.object({
   "created_at": zod.string()
 }).describe('A listing Q&A entry — a question (parent_id null) or a reply (Task'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -4616,7 +4694,7 @@ export const DeleteListingCommentResponse = zod.object({
   "deleted": zod.boolean()
 }).describe('Result of deleting a comment (author or listing owner).'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -4659,7 +4737,7 @@ export const GetSellerReviewsResponse = zod.object({
   "my_rating": zod.number().min(1).max(getSellerReviewsResponseDataMyRatingMax).nullable().describe('The viewer\'s existing rating, if any (for prefill).')
 }).describe('A seller\'s reviews with aggregate + viewer-aware eligibility (Task'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -4701,7 +4779,7 @@ export const CreateSellerReviewResponse = zod.object({
   "created_at": zod.string()
 }).describe('A buyer\'s rating\/review of a seller (Task'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullable(),
   "meta": zod.object({
@@ -4754,7 +4832,7 @@ export const GetCompanyResponse = zod.object({
   "latest_listing_id": zod.string().nullish().describe('Additive. The seller\'s newest visible listing — anchors the profile \"Message\" button (conversations are listing-anchored).\n')
 }).optional().describe('Public company \/ supplier profile (Task'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -4807,7 +4885,7 @@ export const GetCompanyListingsResponse = zod.object({
   "is_bookable": zod.boolean().nullish().describe('Additive. True when this listing is a furnished\/daily rental (hotel model) that can be reserved from its detail. Lets the feed, search card, and map pin surface a \"قابل للحجز \/ Bookable\" affordance without fetching the detail. Null\/false for everything else.')
 }).describe('Immutable v1 contract — exactly 11 fields. No renames, no removals allowed in v1. Breaking changes go to \/v2\/\*.\n')).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -4843,7 +4921,7 @@ export const UpdateMyCompanyResponse = zod.object({
   "updated": zod.boolean()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -4887,7 +4965,7 @@ export const ListRfqsResponse = zod.object({
   "created_at": zod.string()
 }).describe('RFQ summary (list item + base of the detail) (Task')).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -4921,7 +4999,7 @@ export const CreateRfqResponse = zod.object({
   "id": zod.string()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -4962,7 +5040,7 @@ export const ListMyRfqsResponse = zod.object({
   "created_at": zod.string()
 }).describe('RFQ summary (list item + base of the detail) (Task')).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -5016,7 +5094,7 @@ export const GetRfqResponse = zod.object({
   "viewer_is_buyer": zod.boolean()
 }).optional().describe('RFQ detail. offers visibility is enforced server-side: the buyer sees ALL offers; a supplier sees only their own; the public sees none (Task #33).\n'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -5050,7 +5128,7 @@ export const SubmitRfqOfferResponse = zod.object({
   "submitted": zod.boolean()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -5076,7 +5154,7 @@ export const AcceptRfqOfferResponse = zod.object({
   "awarded": zod.boolean()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -5125,7 +5203,7 @@ export const ListInvestmentsResponse = zod.object({
   "created_at": zod.coerce.date()
 }).describe('Additive (Task #40). Investment opportunity summary. A standalone entity (NOT a listing). All financial figures are seller-provided or estimates (see figures_source) and nullable — never fabricated.\n')).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -5165,7 +5243,7 @@ export const CreateInvestmentResponse = zod.object({
   "id": zod.string()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -5210,7 +5288,7 @@ export const ListMyInvestmentsResponse = zod.object({
   "created_at": zod.coerce.date()
 }).describe('Additive (Task #40). Investment opportunity summary. A standalone entity (NOT a listing). All financial figures are seller-provided or estimates (see figures_source) and nullable — never fabricated.\n')).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -5258,7 +5336,7 @@ export const GetInvestmentResponse = zod.object({
   "viewer_is_owner": zod.boolean()
 })).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -5301,7 +5379,7 @@ export const UpdateInvestmentResponse = zod.object({
   "updated": zod.boolean()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -5333,7 +5411,7 @@ export const SubmitInvestmentInterestResponse = zod.object({
   "submitted": zod.boolean()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -5377,7 +5455,7 @@ export const ListGlobalSupplyResponse = zod.object({
   "created_at": zod.coerce.date()
 }).describe('Additive (Task #40). A buyer\'s global sourcing \/ import-export request.\n')).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -5411,7 +5489,7 @@ export const CreateGlobalSupplyResponse = zod.object({
   "id": zod.string()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -5452,7 +5530,7 @@ export const ListMyGlobalSupplyResponse = zod.object({
   "created_at": zod.coerce.date()
 }).describe('Additive (Task #40). A buyer\'s global sourcing \/ import-export request.\n')).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -5519,7 +5597,7 @@ export const GetGlobalSupplyResponse = zod.object({
   "viewer_is_buyer": zod.boolean()
 })).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -5556,7 +5634,7 @@ export const RespondGlobalSupplyResponse = zod.object({
   "submitted": zod.boolean()
 }).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -5594,7 +5672,7 @@ export const GetMarketTrendsResponse = zod.object({
   "generated_at": zod.coerce.date()
 }).optional().describe('Additive (Task #40). LIVE market intelligence payload. period_label + generated_at carry provenance so the client renders figures honestly.\n'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -5634,7 +5712,7 @@ export const ListCompaniesResponse = zod.object({
   "is_following": zod.boolean()
 }).describe('Additive (Task #40). Suppliers directory entry with real active-listing and follower counts. is_following is viewer-relative (false when unauthenticated).\n')).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -5658,7 +5736,7 @@ export const FollowCompanyResponse = zod.object({
   "follower_count": zod.number()
 }).optional().describe('Additive (Task'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -5682,7 +5760,7 @@ export const UnfollowCompanyResponse = zod.object({
   "follower_count": zod.number()
 }).optional().describe('Additive (Task'),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({
@@ -5718,7 +5796,7 @@ export const ListMyFollowingResponse = zod.object({
   "is_following": zod.boolean()
 }).describe('Additive (Task #40). Suppliers directory entry with real active-listing and follower counts. is_following is viewer-relative (false when unauthenticated).\n')).optional(),
   "error": zod.object({
-  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT']),
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
   "message": zod.string()
 }).nullish(),
   "meta": zod.object({

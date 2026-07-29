@@ -38,6 +38,23 @@ test("account-type heal covers stuck sessions without racing email signup", () =
   assert.match(src, /consentPendingRef\.current \|\| signupInFlightRef\.current/);
   assert.match(src, /accountTypeChosen/);
   assert.match(src, /setNeedsAccountType\(true\)/);
+  // Heal must not reopen picker when /me already has a business role.
+  assert.match(src, /role !== "individual"/);
+  // Consent must not stamp accountTypeChosen before updateMe.
+  const terms = src.indexOf("termsAcceptedAt: new Date().toISOString()");
+  const post = src.indexOf("post-signup account_type save failed");
+  assert.ok(terms >= 0 && post > terms);
+  assert.equal(
+    src.slice(terms, post).includes("accountTypeChosen: true"),
+    false,
+    "consent metadata must not set accountTypeChosen before /me",
+  );
+});
+
+test("verify Go Back is locked while signup finalize is in flight", () => {
+  const src = read("artifacts/banco-mobile/app/(tabs)/profile.tsx");
+  assert.match(src, /testID="verify-go-back"/);
+  assert.match(src, /disabled=\{isSigningUp\}/);
 });
 
 test("FI onboarding keeps intent=fi (never demotes to dealer path)", () => {
@@ -87,6 +104,8 @@ test("object storage warns when provider unset (Replit default trap)", () => {
   const src = read("artifacts/api-server/src/lib/objectStorageProvider.ts");
   assert.match(src, /OBJECT_STORAGE_PROVIDER is unset/);
   assert.match(src, /OBJECT_STORAGE_PROVIDER=s3/);
+  assert.match(src, /unset in production/);
+  assert.match(src, /forbidden on Coolify/);
 });
 
 test("routerOrigin prefers PUBLIC_APP_URL over bare replit.com", () => {

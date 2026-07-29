@@ -29,7 +29,7 @@ if [ "$MODE" = "all" ]; then
   (pnpm --filter dealer-os run dev -- --port 5174 >/tmp/banco-market.log 2>&1 &)
   (pnpm --filter landing run dev -- --port 5175 >/tmp/banco-landing.log 2>&1 &)
   echo "[turbo] READY — logs: /tmp/banco-*.log"
-  echo "  API     http://localhost:$PORT/api/v1/health"
+  echo "  API     http://localhost:$PORT/api/healthz"
   echo "  Admin   http://localhost:5173"
   echo "  Market  http://localhost:5174"
   echo "  Landing http://localhost:5175"

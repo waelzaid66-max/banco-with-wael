@@ -8,7 +8,7 @@ import {
 import { and, asc, eq, gt, isNull, lte, or, sql } from "drizzle-orm";
 import { withAdvisoryLock } from "../lib/advisoryLock";
 import { logger } from "../lib/logger";
-import { invalidData } from "../lib/billing";
+import { conflict, invalidData } from "../lib/billing";
 
 /** The transaction handle passed to a `db.transaction(async (tx) => …)` body. */
 type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -393,7 +393,9 @@ export interface ConsumeResult {
  * Expired balance is never spent. The user row is locked FOR UPDATE so a
  * concurrent boost can't double-spend, and the guarded UPDATE is the final
  * race guard. When `idempotencyKey` matches an existing consume row this is a
- * no-op replay.
+ * no-op replay — but ONLY when the fingerprint matches. Listing hard-delete
+ * cascades `ads` (losing boostIdempotencyKey), while promo ledger rows survive;
+ * a reused client key on a new ad must NEVER silently undercharge.
  */
 export async function consumePromoCredit(
   tx: DbTx,
@@ -413,11 +415,26 @@ export async function consumePromoCredit(
       .select({
         amount: promoAdTransactions.amount,
         balanceAfter: promoAdTransactions.balanceAfter,
+        userId: promoAdTransactions.userId,
+        type: promoAdTransactions.type,
+        referenceType: promoAdTransactions.referenceType,
+        referenceId: promoAdTransactions.referenceId,
       })
       .from(promoAdTransactions)
       .where(eq(promoAdTransactions.idempotencyKey, idempotencyKey))
       .limit(1);
     if (existing) {
+      const userOk = existing.userId === userId;
+      const typeOk = existing.type === "consume";
+      const refTypeOk =
+        (ref.referenceType ?? null) === (existing.referenceType ?? null);
+      const refIdOk =
+        (ref.referenceId ?? null) === (existing.referenceId ?? null);
+      if (!userOk || !typeOk || !refTypeOk || !refIdOk) {
+        throw conflict(
+          "Idempotency key already used for a different promo consume",
+        );
+      }
       return {
         promo_used: money(Math.abs(Number(existing.amount))),
         balance_after: existing.balanceAfter,

@@ -23,7 +23,9 @@ const clerkGuard = clerkMiddleware(async (auth, req) => {
 
 /**
  * Phase 6 plug gate — runs before Clerk.
- * When WEB_PLUG_ENABLED=false, public traffic is rewritten to /maintenance.
+ * When WEB_PLUG_ENABLED=false, public traffic is REDIRECTED to /maintenance
+ * (not rewritten) so the client pathname matches the maintenance surface and
+ * SiteChrome does not paint full chrome around a rewritten home URL.
  * /api/health and /api/healthz stay up so container/CDN probes still succeed.
  */
 function plugGate(req: NextRequest): NextResponse | null {
@@ -60,7 +62,7 @@ function plugGate(req: NextRequest): NextResponse | null {
 
   const url = req.nextUrl.clone();
   url.pathname = maintenancePathFor(pathname);
-  const res = NextResponse.rewrite(url);
+  const res = NextResponse.redirect(url);
   res.headers.set("Retry-After", "300");
   res.headers.set("X-Banco-Web-Plug", "off");
   return res;
@@ -69,9 +71,8 @@ function plugGate(req: NextRequest): NextResponse | null {
 // Clerk's publishable key is inlined at build time. When it is absent — the CI
 // SEO/Lighthouse smoke, static previews, keyless local runs — clerkMiddleware
 // throws on every request, so no page (not even the public home) can render.
-// Fall back to a pass-through in that case so public pages stay servable;
-// protected routes are still gated on every build that ships a key (all real
-// production builds), so production behaviour is unchanged.
+// Fall back to a pass-through for public routes in that case. In production,
+// protected routes must FAIL CLOSED (503) — never silently skip auth.protect().
 export default function middleware(req: NextRequest, event: NextFetchEvent) {
   const gated = plugGate(req);
 
@@ -81,6 +82,12 @@ export default function middleware(req: NextRequest, event: NextFetchEvent) {
   }
 
   if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
+    if (process.env.NODE_ENV === "production" && isProtectedRoute(req)) {
+      return new NextResponse("Authentication is not configured", {
+        status: 503,
+        headers: { "Cache-Control": "no-store" },
+      });
+    }
     return NextResponse.next();
   }
 

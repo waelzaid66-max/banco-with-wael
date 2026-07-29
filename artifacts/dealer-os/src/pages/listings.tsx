@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { SidebarLayout } from "@/components/layout/sidebar-layout";
 import {
   useGetDealerListings, getGetDealerListingsQueryKey,
@@ -53,6 +53,10 @@ export default function ListingsPage() {
   const [boostListingId, setBoostListingId] = useState<string | null>(null);
   const [boostType, setBoostType] = useState<"featured" | "native_feed" | "top_search">("featured");
   const [boostDuration, setBoostDuration] = useState("7");
+  /** Stable across retries of the same boost attempt (cleared on success). */
+  const boostAttemptKeyRef = useRef<string | null>(null);
+  // Stable across React Query retries / double-clicks of the same bulk confirm.
+  const bulkBoostBatchRef = useRef<string | null>(null);
 
   const { data: listingsData, isLoading } = useGetDealerListings(
     { limit: 100 },
@@ -110,13 +114,30 @@ export default function ListingsPage() {
     let completed = 0;
     let failed = 0;
     const total = selectedIds.length;
+    // Schema requires idempotency_key (single-boost dialog already sends one).
+    // One batch token so React Query retries of the same mutate stay stable;
+    // each listing still gets a distinct key. Persist in a ref so a second
+    // confirm click before the dialog closes does not open a new charge set.
+    if (!bulkBoostBatchRef.current) {
+      bulkBoostBatchRef.current = `bulk:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    }
+    const batchToken = bulkBoostBatchRef.current;
+    const durationDays = parseInt(bulkBoostDuration);
     selectedIds.forEach(id => {
       boostMutation.mutate(
-        { data: { listing_id: id, ad_type: bulkBoostType, duration_days: parseInt(bulkBoostDuration) } },
+        {
+          data: {
+            listing_id: id,
+            ad_type: bulkBoostType,
+            duration_days: durationDays,
+            idempotency_key: `boost:${id}:${bulkBoostType}:${durationDays}:${batchToken}`,
+          },
+        },
         {
           onSuccess: () => {
             completed++;
             if (completed + failed === total) {
+              bulkBoostBatchRef.current = null;
               toast({ title: failed
                 ? t("listings.toast.boostedNfailed", { count: completed, failed })
                 : t("listings.toast.boostedN", { count: completed }) });
@@ -128,6 +149,7 @@ export default function ListingsPage() {
           onError: () => {
             failed++;
             if (completed + failed === total) {
+              bulkBoostBatchRef.current = null;
               toast({ title: t("listings.toast.boostedNfailed", { count: completed, failed }), variant: failed === total ? "destructive" : "default" });
               setBulkBoostOpen(false);
               refreshPromo();
@@ -172,10 +194,20 @@ export default function ListingsPage() {
 
   const handleBoostSubmit = () => {
     if (!boostListingId) return;
+    const idempotency_key =
+      boostAttemptKeyRef.current ??
+      `boost:${boostListingId}:${boostType}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    boostAttemptKeyRef.current = idempotency_key;
     boostMutation.mutate({
-      data: { listing_id: boostListingId, ad_type: boostType, duration_days: parseInt(boostDuration) }
+      data: {
+        listing_id: boostListingId,
+        ad_type: boostType,
+        duration_days: parseInt(boostDuration),
+        idempotency_key,
+      }
     }, {
       onSuccess: (res) => {
+        boostAttemptKeyRef.current = null;
         const promoUsed = Number(res?.data?.promo_used ?? "0");
         const walletCharged = Number(res?.data?.wallet_charged ?? "0");
         const description =
@@ -310,6 +342,7 @@ export default function ListingsPage() {
               className="h-8 bg-primary hover:bg-primary/90 text-white"
               onClick={() => {
                 setBoostListingId(row.original.id!);
+                boostAttemptKeyRef.current = null;
                 setBoostModalOpen(true);
               }}
               data-testid={`btn-boost-${row.original.id}`}

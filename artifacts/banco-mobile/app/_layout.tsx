@@ -13,12 +13,12 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
+import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
+import { setAuthTokenGetter, setAuthFailureHandler, setBaseUrl } from "@workspace/api-client-react";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -102,12 +102,48 @@ function ClerkLoadGate({
 }
 
 function AuthTokenBridge() {
-  const { getToken } = useAuth();
+  const { getToken, signOut, userId } = useAuth();
   useEffect(() => {
     // getToken can reject while clerk-js is still initializing (or failed to
     // init). API calls must degrade to anonymous, never crash the request.
     setAuthTokenGetter(() => getToken().catch(() => null));
   }, [getToken]);
+
+  // Drop private React Query cache on identity change so user B never briefly
+  // sees user A's /me, notifications, or messages from a shared QueryClient.
+  useEffect(() => {
+    void queryClient.cancelQueries();
+    queryClient.clear();
+  }, [userId]);
+
+  useEffect(() => {
+    // Soft-deleted accounts reject with 401 ACCOUNT_DELETED while Clerk JWT
+    // may still exist — clear the local session once so the user is not stuck.
+    setAuthFailureHandler(({ code }) => {
+      if (code !== "ACCOUNT_DELETED") return;
+      void signOut().catch(() => {});
+    });
+    return () => setAuthFailureHandler(null);
+  }, [signOut]);
+
+  return null;
+}
+
+/**
+ * Pause React Query refetchInterval while the app is backgrounded. Without
+ * this bridge RN is always "focused", so message/notif/feed polls keep firing
+ * under memory pressure and drain battery/auth.
+ */
+function ReactQueryFocusBridge() {
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+    const onChange = (status: string) => {
+      focusManager.setFocused(status === "active");
+    };
+    const sub = AppState.addEventListener("change", onChange);
+    onChange(AppState.currentState);
+    return () => sub.remove();
+  }, []);
   return null;
 }
 
@@ -373,6 +409,7 @@ export default function RootLayout() {
           <ClerkLoadGate waitExpired={clerkWaitExpired}>
             <QueryClientProvider client={queryClient}>
               <AuthTokenBridge />
+              <ReactQueryFocusBridge />
               <ThemeProvider>
                 <LanguageProvider>
                   <AuthGateProvider>

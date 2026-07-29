@@ -48,17 +48,42 @@ services:
       retries: 5
       start_period: 30s
 
+  # ── DB migrate (one-off; NEVER runs on `up`) — Coolify parity ─────────────
+  #   docker compose -f docker-compose.prod.yml --profile with-db --profile migrate \
+  #     --env-file .env.production run --rm migrate
+  # When using managed Postgres (no with-db), set DATABASE_URL and:
+  #   docker compose -f docker-compose.prod.yml --profile migrate \
+  #     --env-file .env.production run --rm migrate
+  migrate:
+    profiles: ["migrate"]
+    build:
+      context: .
+      dockerfile: deploy/coolify/Dockerfile.api
+      target: builder
+    restart: "no"
+    networks:
+      - banco_net
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+    command: ["pnpm", "--filter", "@workspace/db", "run", "push", "--", "--force"]
+
   # ── API server ──────────────────────────────────────────────────────────────
   api:
     build:
       context: .
       dockerfile: deploy/coolify/Dockerfile.api
+      args:
+        GIT_SHA: ${GIT_SHA:-${SOURCE_COMMIT:-}}
+        BUILD_ID: ${BUILD_ID:-${SOURCE_COMMIT:-}}
     image: banco-api:latest
     restart: always
     networks:
       - banco_net
     ports:
-      - "${API_HOST_PORT:-8080}:8080"
+      # Loopback-only on the host (parity with docker-compose.coolify.yml).
+      # The API trusts X-Forwarded-For from the edge proxy; world-binding :8080
+      # would let clients spoof client IP. Publish via nginx/Caddy, not raw API.
+      - "127.0.0.1:${API_HOST_PORT:-8080}:8080"
     environment:
       PORT: "8080"
       NODE_ENV: production
@@ -83,15 +108,19 @@ services:
       PAYMOB_INTEGRATION_IDS: ${PAYMOB_INTEGRATION_IDS:-}
       OBJECT_STORAGE_PROVIDER: ${OBJECT_STORAGE_PROVIDER:-}
       AWS_REGION: ${AWS_REGION:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       S3_BUCKET: ${S3_BUCKET:-}
       PUBLIC_OBJECT_SEARCH_PATHS: ${PUBLIC_OBJECT_SEARCH_PATHS:-}
       PRIVATE_OBJECT_DIR: ${PRIVATE_OBJECT_DIR:-}
+      GIT_SHA: ${GIT_SHA:-${SOURCE_COMMIT:-}}
+      BUILD_ID: ${BUILD_ID:-${SOURCE_COMMIT:-}}
       ERROR_ALERT_WEBHOOK: ${ERROR_ALERT_WEBHOOK:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       CRON_TIMEZONE: ${CRON_TIMEZONE:-Africa/Cairo}
     healthcheck:
       test: ["CMD", "node", "-e",
-        "fetch('http://127.0.0.1:8080/api/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+        "fetch('http://127.0.0.1:8080/api/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 5s
       start_period: 45s
@@ -122,7 +151,8 @@ services:
     image: banco-web:latest
     restart: always
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     networks:
       - banco_net
     ports:
@@ -131,6 +161,7 @@ services:
       PORT: "3000"
       NODE_ENV: production
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
+      WEB_PLUG_ENABLED: ${WEB_PLUG_ENABLED:-true}
     healthcheck:
       test: ["CMD", "node", "-e",
         "fetch('http://127.0.0.1:3000/api/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
@@ -150,12 +181,23 @@ services:
         # where the `api` hostname is not resolvable from the Next.js container.
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://api:8080}
         NEXT_PUBLIC_SITE_URL: ${BANCO_WEBSITE_URL:-http://localhost:3001}
+        # Parity with Coolify + banco-web bake — site-env already reads these.
+        NEXT_PUBLIC_MARKET_URL: ${BANCO_WEB_MARKET_URL:-}
+        NEXT_PUBLIC_ADMIN_URL: ${BANCO_WEB_ADMIN_URL:-}
+        NEXT_PUBLIC_APP_ANDROID_URL: ${NEXT_PUBLIC_APP_ANDROID_URL:-}
+        NEXT_PUBLIC_APP_IOS_URL: ${NEXT_PUBLIC_APP_IOS_URL:-}
+        NEXT_PUBLIC_WEB_SEARCH_LIVE: ${NEXT_PUBLIC_WEB_SEARCH_LIVE:-false}
+        NEXT_PUBLIC_WEB_SEARCH_MAP: ${NEXT_PUBLIC_WEB_SEARCH_MAP:-false}
+        NEXT_PUBLIC_WEB_MARKET_COPY: ${NEXT_PUBLIC_WEB_MARKET_COPY:-false}
+        NEXT_PUBLIC_SEARCH_ENABLED: ${NEXT_PUBLIC_SEARCH_ENABLED:-true}
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}
         NEXT_PUBLIC_CLERK_PROXY_URL: ${NEXT_PUBLIC_CLERK_PROXY_URL:-}
+        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}
     image: banco-website:latest
     restart: always
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     networks:
       - banco_net
     ports:
@@ -164,6 +206,7 @@ services:
       PORT: "3000"
       NODE_ENV: production
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
+      WEB_PLUG_ENABLED: ${WEB_PLUG_ENABLED:-true}
     healthcheck:
       test: ["CMD", "node", "-e",
         "fetch('http://127.0.0.1:3000/api/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
@@ -188,7 +231,8 @@ services:
     image: banco-web-static:latest
     restart: always
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     networks:
       - banco_net
     ports:

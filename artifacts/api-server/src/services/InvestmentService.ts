@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { investmentOpportunities, investmentInterests, users } from "@workspace/db/schema";
-import { and, eq, desc, sql, inArray } from "drizzle-orm";
+import { and, eq, desc, sql, inArray, isNull } from "drizzle-orm";
 import { createNotification } from "./NotificationService";
 import type { InvestmentSummary, InvestmentDetail } from "../validators/schemas";
 
@@ -79,6 +79,7 @@ interface InvestmentRow {
   growth_potential_note: string | null;
   is_flagged: boolean | null;
   owner_is_shadow_banned: boolean | null;
+  owner_deleted_at: Date | null;
   created_at: Date | null;
 }
 
@@ -105,6 +106,7 @@ const investmentSelect = {
   growth_potential_note: investmentOpportunities.growthPotentialNote,
   is_flagged: investmentOpportunities.isFlagged,
   owner_is_shadow_banned: users.isShadowBanned,
+  owner_deleted_at: users.deletedAt,
   created_at: investmentOpportunities.createdAt,
 } as const;
 
@@ -114,6 +116,7 @@ function investmentPublicConditions() {
   return [
     sql`${investmentOpportunities.isFlagged} IS NOT TRUE`,
     sql`${users.isShadowBanned} IS NOT TRUE`,
+    sql`${users.deletedAt} IS NULL`,
   ];
 }
 
@@ -154,7 +157,7 @@ async function resolveUserId(clerkId: string): Promise<string> {
   const [user] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   if (!user) throw Object.assign(new Error("User not found"), { code: "UNAUTHORIZED" });
   return user.id;
@@ -165,7 +168,7 @@ async function resolveUserIdOpt(clerkId?: string): Promise<string | null> {
   const [user] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   return user?.id ?? null;
 }
@@ -248,10 +251,16 @@ export async function getInvestmentDetail(
   const viewerIsOwner = viewerUserId != null && viewerUserId === row.owner_id;
 
   // Non-owners only see public-status opportunities, and never flagged ones or
-  // those from shadow-banned owners (abuse-control parity with listings).
+  // those from shadow-banned / soft-deleted owners (abuse-control parity with listings).
   if (!viewerIsOwner) {
     if (!(PUBLIC_STATUSES as readonly string[]).includes(row.status)) return null;
-    if (row.is_flagged === true || row.owner_is_shadow_banned === true) return null;
+    if (
+      row.is_flagged === true ||
+      row.owner_is_shadow_banned === true ||
+      row.owner_deleted_at != null
+    ) {
+      return null;
+    }
   }
 
   const [countRow] = await db
@@ -291,7 +300,7 @@ export async function createInvestment(
   const [user] = await db
     .select({ id: users.id, role: users.role })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
   if (!user) throw Object.assign(new Error("User not found"), { code: "UNAUTHORIZED" });
   if (!BUSINESS_ROLES.includes(user.role)) {
@@ -394,6 +403,7 @@ export async function submitInterest(
       title: investmentOpportunities.title,
       isFlagged: investmentOpportunities.isFlagged,
       ownerShadowBanned: users.isShadowBanned,
+      ownerDeletedAt: users.deletedAt,
     })
     .from(investmentOpportunities)
     .leftJoin(users, eq(investmentOpportunities.ownerId, users.id))
@@ -405,13 +415,29 @@ export async function submitInterest(
       code: "FORBIDDEN",
     });
   }
-  // A flagged opportunity or a shadow-banned owner is invisible to outsiders.
-  if (inv.isFlagged === true || inv.ownerShadowBanned === true) {
+  // A flagged opportunity or a shadow-banned / soft-deleted owner is invisible to outsiders.
+  if (
+    inv.isFlagged === true ||
+    inv.ownerShadowBanned === true ||
+    inv.ownerDeletedAt != null
+  ) {
     throw Object.assign(new Error("Investment not found"), { code: "NOT_FOUND" });
   }
   if (!(PUBLIC_STATUSES as readonly string[]).includes(inv.status)) {
     throw Object.assign(new Error("This opportunity is not open for interest"), { code: "CONFLICT" });
   }
+
+  const [prior] = await db
+    .select({ id: investmentInterests.id })
+    .from(investmentInterests)
+    .where(
+      and(
+        eq(investmentInterests.investmentId, investmentId),
+        eq(investmentInterests.userId, userId),
+      ),
+    )
+    .limit(1);
+  const isNewInterest = !prior;
 
   const [interest] = await db
     .insert(investmentInterests)
@@ -433,13 +459,15 @@ export async function submitInterest(
     })
     .returning({ id: investmentInterests.id });
 
-  void createNotification({
-    userId: inv.ownerId,
-    type: "investment",
-    title: "اهتمام استثماري جديد · New investment interest",
-    body: `هناك مهتم بفرصة «${inv.title}» · Someone is interested in your opportunity`,
-    data: { investment_id: investmentId, kind: input.kind },
-  });
+  if (isNewInterest) {
+    void createNotification({
+      userId: inv.ownerId,
+      type: "investment",
+      title: "اهتمام استثماري جديد · New investment interest",
+      body: `هناك مهتم بفرصة «${inv.title}» · Someone is interested in your opportunity`,
+      data: { investment_id: investmentId, kind: input.kind },
+    });
+  }
 
   return { id: interest.id, submitted: true };
 }

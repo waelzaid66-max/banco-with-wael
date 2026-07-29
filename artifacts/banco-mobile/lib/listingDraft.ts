@@ -70,6 +70,16 @@ export type ListingDraftInput = Omit<ListingDraftV1, "v" | "savedAt">;
 export const LISTING_DRAFT_KEY = "banco:listing-draft:v1";
 export const LISTING_DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
+/**
+ * Per-identity draft key — a guest/account A draft must never restore into
+ * account B (phones / WhatsApp / prices are PII).
+ */
+export function listingDraftStorageKey(
+  userId: string | null | undefined,
+): string {
+  return userId ? `${LISTING_DRAFT_KEY}:u:${userId}` : `${LISTING_DRAFT_KEY}:guest`;
+}
+
 const isStr = (x: unknown): x is string => typeof x === "string";
 const isBool = (x: unknown): x is boolean => typeof x === "boolean";
 const isNum = (x: unknown): x is number => typeof x === "number" && Number.isFinite(x);

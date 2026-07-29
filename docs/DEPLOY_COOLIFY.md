@@ -126,8 +126,18 @@ Click **Deploy** in Coolify. Coolify will:
 | `OBJECT_STORAGE_PROVIDER` | `replit` | `s3` or `replit` — **NOT `gcs`** (the API rejects `gcs`: "Unsupported OBJECT_STORAGE_PROVIDER … Supported: s3, replit"). For a VPS/Coolify deploy use `s3` (any S3-compatible endpoint). |
 | `S3_BUCKET` | — | S3 bucket name |
 | `AWS_REGION` | — | AWS region |
+| `AWS_ACCESS_KEY_ID` | — | **Required on Coolify/Hostinger VPS** (no IAM role). Optional on EC2/ECS when an instance role is attached. |
+| `AWS_SECRET_ACCESS_KEY` | — | Pair with `AWS_ACCESS_KEY_ID` on VPS |
 | `PUBLIC_OBJECT_SEARCH_PATHS` | — | Public S3 path prefix for listing images |
 | `PRIVATE_OBJECT_DIR` | — | Private S3 dir for internal assets |
+| `GIT_SHA` | — | Deploy pin for `/api/readyz` (Coolify may also inject `SOURCE_COMMIT`) |
+| `BUILD_ID` | — | Optional build id surfaced on health/readyz |
+| `COOLIFY_URL` / `COOLIFY_FQDN` | — | Coolify markers — forbids `OBJECT_STORAGE_PROVIDER=replit` in-container |
+| `WEB_PLUG_ENABLED` | `true` | Consumer Next kill-switch (`false` → maintenance) |
+| `BANCO_WEB_MARKET_URL` | — | Baked into Next as `NEXT_PUBLIC_MARKET_URL` (prefer `/market/` or absolute) |
+| `BANCO_WEB_ADMIN_URL` | — | Baked into Next as `NEXT_PUBLIC_ADMIN_URL` (prefer `/admin/` or absolute) |
+| `NEXT_PUBLIC_APP_ANDROID_URL` | — | Play Store URL (store CTAs stay “soon” when unset) |
+| `NEXT_PUBLIC_APP_IOS_URL` | — | App Store URL |
 | `ERROR_ALERT_WEBHOOK` | — | Webhook URL for error alerts |
 | `LOG_LEVEL` | `info` | Pino log level |
 | `LOG_DIR` | — | Directory for log file output (omit to log to stdout only) |
@@ -173,15 +183,17 @@ DATABASE_URL="postgresql://banco:<password>@<vps-ip>:5432/banco" \
 
 ### Subsequent deployments
 
-For schema changes after the initial deploy:
+Schema apply uses Drizzle **push** (there is no `generate` / `migrate` script
+in `@workspace/db`). After the DB is healthy:
 
 ```bash
-# Generate a migration file (run locally, commit it)
-pnpm --filter @workspace/db run generate
-
-# Apply migrations in production (via API container shell or CI job)
-pnpm --filter @workspace/db run migrate
+# One-shot (profile-gated — never runs on a normal `up`)
+docker compose -f docker-compose.coolify.yml --profile migrate run --rm migrate
 ```
+
+That runs `pnpm --filter @workspace/db run push -- --force` inside the API
+builder image. On a real data migration, review the SQL first; re-runs are
+idempotent for additive schema.
 
 ### Postgres connection string
 
@@ -319,7 +331,7 @@ Before going live:
 - [ ] Set all **required** environment variables (see table above)
 - [ ] Set `BANCO_WEB_URL`, `BANCO_WEBSITE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` before first build
 - [ ] Configure domains in Coolify → Traefik issues TLS certificates automatically
-- [ ] Run database schema push (first time) or migrate (subsequent changes)
+- [ ] Run database schema push once via Coolify migrate profile (`--profile migrate run --rm migrate`)
 - [ ] Set `PAYMOB_MODE=live` and fill in production Paymob credentials
 - [ ] Verify `CORS_ALLOWED_ORIGINS` includes all frontend domains
 - [ ] Set up object storage (`S3_BUCKET` etc.) for media uploads

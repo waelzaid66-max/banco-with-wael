@@ -40,8 +40,12 @@ export function errorResponse(
     | "FORBIDDEN"
     | "RATE_LIMITED"
     | "INVALID_TOKEN"
+    // Soft-deleted account with a lingering Clerk JWT.
+    | "ACCOUNT_DELETED"
     // Duplicate resource (e.g. seating a user twice in the same institution).
-    | "CONFLICT",
+    | "CONFLICT"
+    // Transient auth/DB resolution failure (HTTP 503) — used by authGuard.
+    | "SERVICE_UNAVAILABLE",
   message: string
 ): GlobalResponse<never[]> {
   return { data: [], error: { code, message }, meta: {} };
@@ -557,6 +561,7 @@ export const NotificationTypeEnum = z.enum([
   "payment_success",
   "payment_failed",
   "subscription_expiring",
+  "car_import",
 ]);
 
 export const NotificationItemSchema = z
@@ -867,6 +872,8 @@ const engineFilterFields = {
     .regex(/^[A-Za-z]{2}$/)
     .transform((s) => s.toUpperCase())
     .optional(),
+  // Commodity material (specs.material) — materials/raw_material browse.
+  material: z.string().trim().min(1).max(80).optional(),
 } as const;
 
 // Result ordering for the search results screen. `recommended` (default) and
@@ -956,7 +963,7 @@ export const SearchQuerySchema = z.object({
   near_lat: z.coerce.number().min(-90).max(90).optional(),
   near_lng: z.coerce.number().min(-180).max(180).optional(),
   radius_km: z.coerce.number().min(0.1).max(500).optional(),
-  has_installment: z.coerce.boolean().optional(),
+  has_installment: boolParam.optional(),
   industrial_type: industrialTypeParam,
   ...engineFilterFields,
   sort: z.enum(SearchSortValues).default("recommended"),
@@ -1086,10 +1093,18 @@ export const UpdateBookingSchema = z
   .strict();
 
 // GET /v1/search/facets — per-value counts of the currently-visible inventory,
-// optionally scoped to a category. The client gates chips on count > 0 so it
-// never offers a filter that would return an empty page.
+// optionally scoped to a category and/or market_country (same COALESCE rule as
+// search/trending). The client gates chips on count > 0 so it never offers a
+// filter that would return an empty page.
 export const FacetsQuerySchema = z.object({
   category: z.enum(["car", "real_estate", "industrial"]).optional(),
+  // ISO-3166 alpha-2; listings without specs.market_country count as EG.
+  market_country: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z]{2}$/)
+    .transform((s) => s.toUpperCase())
+    .optional(),
 });
 
 const FacetMap = z.record(z.number());
@@ -1328,7 +1343,8 @@ export const BoostListingSchema = z.object({
     .enum(["featured", "native_feed", "top_search"])
     .default("native_feed"),
   duration_days: z.number().int().min(1).max(30).default(7),
-  idempotency_key: z.string().min(1).max(200).optional(),
+  // Required — retries without a key double-charge wallet/promo.
+  idempotency_key: z.string().min(8).max(200),
 });
 
 export const ImpressionSchema = z.object({
@@ -1418,6 +1434,8 @@ export const EgyptianRailSchema = z.enum([
 export const TopupCreateSchema = z.object({
   amount: z.number().positive().max(1_000_000),
   method: EgyptianRailSchema,
+  /** Client-stable UUID; becomes payment_intents.id (required for PSP idempotency). */
+  idempotency_key: z.string().uuid(),
 });
 
 export const WalletTransactionsQuerySchema = z.object({
@@ -1500,6 +1518,8 @@ export const SubscribeSchema = z.object({
   payment_method: z
     .enum(["wallet", "vodafone_cash", "fawry", "instapay", "bank_transfer"])
     .default("wallet"),
+  /** Client-stable UUID; external rails reuse as payment_intents.id. */
+  idempotency_key: z.string().uuid(),
 });
 
 export const PlanSchema = z

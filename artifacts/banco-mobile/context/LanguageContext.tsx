@@ -121,7 +121,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <LanguageContext.Provider value={value}>
-      {children}
+      {ready ? children : null}
     </LanguageContext.Provider>
   );
 }

@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: payments
+    description: Paymob webhook settle path and post-checkout return landing
   - name: feed
     description: Adaptive feed
   - name: listings
@@ -41,13 +43,77 @@ components:
           type: string
           enum: [ok, degraded]
 
+    DeployPinFields:
+      type: object
+      description: Optional deploy identity baked at image build (null when unset — never invented).
+      properties:
+        gitSha:
+          type: string
+          nullable: true
+        buildId:
+          type: string
+          nullable: true
+
+    LiveStatus:
+      allOf:
+        - $ref: "#/components/schemas/HealthStatus"
+        - $ref: "#/components/schemas/DeployPinFields"
+      description: Process liveness with deploy pin. Does not touch the database.
+
+    ReadyStatus:
+      type: object
+      required: [status, checks]
+      description: Readiness — database reachable and money-path tables present.
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        checks:
+          type: object
+          additionalProperties:
+            type: string
+            enum: [ok, down]
+          properties:
+            database:
+              type: string
+              enum: [ok, down]
+            money_schema:
+              type: string
+              enum: [ok, down]
+        gitSha:
+          type: string
+          nullable: true
+        buildId:
+          type: string
+          nullable: true
+
+    PaymobWebhookAck:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        error:
+          type: string
+          description: Present on some non-settlement failures (e.g. intent_not_found).
+
     ApiError:
       type: object
       required: [code, message]
       properties:
         code:
           type: string
-          enum: [INVALID_DATA, NOT_FOUND, UNAUTHORIZED, INTERNAL_ERROR, FORBIDDEN, RATE_LIMITED, INVALID_TOKEN, CONFLICT]
+          enum:
+            - INVALID_DATA
+            - NOT_FOUND
+            - UNAUTHORIZED
+            - INTERNAL_ERROR
+            - FORBIDDEN
+            - RATE_LIMITED
+            - INVALID_TOKEN
+            - CONFLICT
+            - ACCOUNT_DELETED
+            - SERVICE_UNAVAILABLE
         message:
           type: string
 
@@ -3645,6 +3711,114 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
+  /livez:
+    get:
+      operationId: liveCheck
+      tags: [health]
+      summary: Liveness probe
+      description: >-
+        Process is up. Does not touch the database. Includes optional deploy pin
+        (gitSha/buildId) when baked into the image.
+      responses:
+        "200":
+          description: Alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LiveStatus"
+
+  /readyz:
+    get:
+      operationId: readyCheck
+      tags: [health]
+      summary: Readiness probe
+      description: >-
+        Returns 200 only when the database is reachable and money-path tables
+        exist (payment_intents, transactions, promo_ad_transactions). Otherwise
+        503 so load balancers stop routing. Includes optional deploy pin.
+      responses:
+        "200":
+          description: Ready for traffic
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyStatus"
+        "503":
+          description: Database unreachable or money schema incomplete
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadyStatus"
+
+  /v1/payments/webhook:
+    post:
+      operationId: paymobWebhook
+      tags: [payments]
+      summary: Paymob transaction-processed webhook
+      description: >-
+        Server-to-server settle path. No Clerk auth — authenticated by Paymob
+        HMAC (query `hmac`). Invalid signature → 401. This is the only path that
+        settles wallet top-ups and subscriptions.
+      parameters:
+        - name: hmac
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Paymob HMAC over the signed object fields
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                obj:
+                  type: object
+                  additionalProperties: true
+      responses:
+        "200":
+          description: Acknowledged (settled, ignored, or non-retryable)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymobWebhookAck"
+        "401":
+          description: Invalid HMAC
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymobWebhookAck"
+        "500":
+          description: Processing failure — provider should retry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymobWebhookAck"
+        "503":
+          description: Signed but intent not durable yet — provider should retry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymobWebhookAck"
+
+  /v1/payments/return:
+    get:
+      operationId: paymentReturn
+      tags: [payments]
+      summary: Post-checkout HTML landing
+      description: >-
+        Informational page after hosted Paymob checkout. Settlement is handled
+        by the webhook; clients poll intent status separately.
+      responses:
+        "200":
+          description: HTML landing page
+          content:
+            text/html:
+              schema:
+                type: string
+
   /v1/me:
     get:
       operationId: getMe
@@ -5091,18 +5265,29 @@ paths:
       summary: Per-value counts of the currently-visible inventory
       description: >-
         Counts of active, publicly-visible listings grouped by each filterable
-        attribute, optionally scoped to a category. Each count uses the same
-        column/specs matching logic as the search filters, so a chip's badge
-        count equals the size of the result set that chip produces. Clients gate
-        filter chips on count > 0 to avoid offering filters that return nothing.
+        attribute, optionally scoped to a category and/or market_country. Each
+        count uses the same column/specs matching logic as the search filters,
+        so a chip's badge count equals the size of the result set that chip
+        produces. Clients gate filter chips on count > 0 to avoid offering
+        filters that return nothing. The category facet map stays category-
+        unscoped but still respects market_country when provided.
       tags: [search]
       parameters:
         - in: query
           name: category
-          description: Scope counts to a single category (the category facet stays unscoped).
+          description: Scope attribute counts to a single category (the category facet map stays category-unscoped).
           schema:
             type: string
             enum: [car, real_estate, industrial]
+        - in: query
+          name: market_country
+          schema:
+            type: string
+            pattern: '^[A-Za-z]{2}$'
+          description: >
+            ISO 3166-1 alpha-2 market country (EG, SA, …). Filters inventory by
+            specs.market_country; listings without the key are treated as EG.
+            Same contract as search/trending.
       responses:
         "200":
           description: Facet counts
@@ -5153,6 +5338,21 @@ paths:
       operationId: getTrending
       summary: Trending listings by engagement score
       tags: [search]
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+        - in: query
+          name: market_country
+          schema:
+            type: string
+            pattern: '^[A-Za-z]{2}$'
+          description: >
+            ISO 3166-1 alpha-2 market country (EG, SA, …). Filters inventory by
+            specs.market_country; listings without the key are treated as EG.
       responses:
         "200":
           description: Trending
@@ -5178,6 +5378,21 @@ paths:
       tags: [search]
       security:
         - ClerkAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+        - in: query
+          name: market_country
+          schema:
+            type: string
+            pattern: '^[A-Za-z]{2}$'
+          description: >
+            ISO 3166-1 alpha-2 market country (EG, SA, …). Filters inventory by
+            specs.market_country; listings without the key are treated as EG.
       responses:
         "200":
           description: Recommendations
@@ -6781,13 +6996,17 @@ paths:
           application/json:
             schema:
               type: object
-              required: [amount, method]
+              required: [amount, method, idempotency_key]
               properties:
                 amount:
                   type: number
                 method:
                   type: string
                   enum: [vodafone_cash, fawry, instapay, bank_transfer]
+                idempotency_key:
+                  type: string
+                  format: uuid
+                  description: Client-stable UUID reused as payment_intents.id so retries never open a second PSP checkout.
       responses:
         "200":
           description: Top-up intent created
@@ -6894,7 +7113,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [plan_slug]
+              required: [plan_slug, idempotency_key]
               properties:
                 plan_slug:
                   type: string
@@ -6902,6 +7121,10 @@ paths:
                   type: string
                   enum: [wallet, vodafone_cash, fawry, instapay, bank_transfer]
                   default: wallet
+                idempotency_key:
+                  type: string
+                  format: uuid
+                  description: Client-stable UUID; external rails reuse as payment_intents.id.
       responses:
         "200":
           description: Subscription started or intent created

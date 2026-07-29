@@ -1,8 +1,9 @@
 import { db } from "@workspace/db";
 import { savedListings, users, listings } from "@workspace/db/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, isNull } from "drizzle-orm";
 
 import { createNotification } from "./NotificationService";
+import { publicVisibilityConditions } from "../lib/feedVisibility";
 
 /**
  * B-reaction → owner ping: a genuine NEW save notifies the listing owner
@@ -34,7 +35,7 @@ export async function saveOrUnsaveListing(clerkId: string, listingId: string): P
   const [user] = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.clerkId, clerkId))
+    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
     .limit(1);
 
   if (!user) throw Object.assign(new Error("User not found"), { code: "UNAUTHORIZED" });
@@ -69,6 +70,25 @@ export async function saveOrUnsaveListing(clerkId: string, listingId: string): P
           .where(eq(listings.id, listingId));
       }
       return { saved: false };
+    }
+
+    // New saves only on publicly contactable inventory (active + visibility).
+    // Unsaves of prior saves stay allowed even after withdraw/tombstone so the
+    // saver can clean their list.
+    const [visible] = await tx
+      .select({ id: listings.id })
+      .from(listings)
+      .leftJoin(users, eq(listings.userId, users.id))
+      .where(
+        and(
+          eq(listings.id, listingId),
+          eq(listings.status, "active"),
+          ...publicVisibilityConditions(),
+        ),
+      )
+      .limit(1);
+    if (!visible) {
+      throw Object.assign(new Error("Listing not found"), { code: "NOT_FOUND" });
     }
 
     // ON CONFLICT DO NOTHING makes a concurrent double-save safe: only the row
