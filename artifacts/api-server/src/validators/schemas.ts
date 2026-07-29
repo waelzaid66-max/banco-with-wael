@@ -1093,10 +1093,18 @@ export const UpdateBookingSchema = z
   .strict();
 
 // GET /v1/search/facets — per-value counts of the currently-visible inventory,
-// optionally scoped to a category. The client gates chips on count > 0 so it
-// never offers a filter that would return an empty page.
+// optionally scoped to a category and/or market_country (same COALESCE rule as
+// search/trending). The client gates chips on count > 0 so it never offers a
+// filter that would return an empty page.
 export const FacetsQuerySchema = z.object({
   category: z.enum(["car", "real_estate", "industrial"]).optional(),
+  // ISO-3166 alpha-2; listings without specs.market_country count as EG.
+  market_country: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z]{2}$/)
+    .transform((s) => s.toUpperCase())
+    .optional(),
 });
 
 const FacetMap = z.record(z.number());

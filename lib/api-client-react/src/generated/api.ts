@@ -2530,7 +2530,7 @@ export const getGetFacetsUrl = (params?: GetFacetsParams,) => {
 }
 
 /**
- * Counts of active, publicly-visible listings grouped by each filterable attribute, optionally scoped to a category. Each count uses the same column/specs matching logic as the search filters, so a chip's badge count equals the size of the result set that chip produces. Clients gate filter chips on count > 0 to avoid offering filters that return nothing.
+ * Counts of active, publicly-visible listings grouped by each filterable attribute, optionally scoped to a category and/or market_country. Each count uses the same column/specs matching logic as the search filters, so a chip's badge count equals the size of the result set that chip produces. Clients gate filter chips on count > 0 to avoid offering filters that return nothing. The category facet map stays category- unscoped but still respects market_country when provided.
  * @summary Per-value counts of the currently-visible inventory
  */
 export const getFacets = async (params?: GetFacetsParams, options?: RequestInit): Promise<GetFacets200> => {

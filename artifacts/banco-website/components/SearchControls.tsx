@@ -138,6 +138,7 @@ export function SearchControls({ liveEnabled }: SearchControlsProps) {
 
   const { globalFacets, scopedFacets } = useInventoryFacets(
     committed.category as Category,
+    committed.marketCountry,
   );
 
   const [draft, setDraft] = useState<SearchCriteria>(committed);

@@ -1158,6 +1158,35 @@ const CHECKS = [
     why: "Trending must honor market_country like feed/search",
   },
   {
+    id: "P-facets-market-country",
+    file: "artifacts/api-server/src/services/SearchService.ts",
+    test: (s) => {
+      const fn = s.slice(s.indexOf("export async function getFacets"));
+      return (
+        /marketCountry/.test(fn) &&
+        /buildAttributeConditions\(\{\s*market_country:\s*marketCountry/.test(fn)
+      );
+    },
+    why: "Facets must honor market_country like search/trending (P2-M1)",
+  },
+  {
+    id: "P-facets-handler-market",
+    file: "artifacts/api-server/src/controllers/searchController.ts",
+    test: (s) =>
+      /getFacets\(query\.category,\s*query\.market_country\)/.test(s) &&
+      /FacetsQuerySchema/.test(s),
+    why: "Facets handler must forward market_country into getFacets",
+  },
+  {
+    id: "P-mobile-facets-market",
+    file: "artifacts/banco-mobile/lib/facets.ts",
+    test: (s) =>
+      /marketCountry/.test(s) &&
+      /market_country:\s*market/.test(s) &&
+      /useGetFacets/.test(s),
+    why: "Mobile inventory facets must request market_country from API",
+  },
+  {
     id: "P-wallet-idempotency-fingerprint",
     file: "artifacts/api-server/src/services/WalletService.ts",
     test: (s) =>

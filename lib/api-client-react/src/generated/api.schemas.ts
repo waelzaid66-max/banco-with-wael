@@ -3520,9 +3520,14 @@ export type GetMapClusters200 = {
 
 export type GetFacetsParams = {
 /**
- * Scope counts to a single category (the category facet stays unscoped).
+ * Scope attribute counts to a single category (the category facet map stays category-unscoped).
  */
 category?: GetFacetsCategory;
+/**
+ * ISO 3166-1 alpha-2 market country (EG, SA, …). Filters inventory by specs.market_country; listings without the key are treated as EG. Same contract as search/trending.
+ * @pattern ^[A-Za-z]{2}$
+ */
+market_country?: string;
 };
 
 export type GetFacetsCategory = typeof GetFacetsCategory[keyof typeof GetFacetsCategory];

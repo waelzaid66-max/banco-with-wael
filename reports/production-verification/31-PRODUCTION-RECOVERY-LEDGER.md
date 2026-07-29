@@ -59,12 +59,13 @@
 | `0d49814` / `8317326` Phase 5 package | Release readiness + OPS handoff; gates re-verified; see `36-PHASE5-W41-RELEASE-READINESS.md` |
 | `05d0dd1` P2-M3 + smoke matrix | Website `/workspace/settings` delete UI; `37-COOLIFY-LIVE-SMOKE-MATRIX.md`; `38-P2-M3-*` |
 | Release execution gate | `39-RELEASE-EXECUTION-GO-NOGO.md` — **GO merge**; FULL CERT after Coolify smoke |
+| P2-M1 facets market | OpenAPI + `getFacets` + mobile/web clients; chain **167/167**; vitest **386** |
 
 ---
 
 ## 4. What remains (honest blockers)
 
-| Facets `market_country` MED | deferred (OpenAPI + handler category-only — not inventing API surface this wave) |
+| Facets `market_country` MED | **closed** — see `40-P2-M1-FACETS-MARKET-COUNTRY.md` |
 | Dual `banco-web`/`banco-website` cutover | owner |
 | Optional: set `NEXT_PUBLIC_WEB_SEARCH_LIVE/MAP=true` for live search (rebuild) | ops soft-launch |
 | Web account-delete UI (P2-M3) | **closed UI-only** on `banco-website` `/workspace/settings` — see `38-P2-M3-WEB-ACCOUNT-DELETE-UI.md` |
@@ -93,10 +94,10 @@
 
 | Gate | Result | When |
 |------|--------|------|
-| `chain-integrity-gate.mjs` | **164/164 PASS** | tip `05d0dd1` (post P2-M3) |
-| API vitest (deleteAccount + full suite) | **385 passed / 3 skipped** | tip `05d0dd1` |
-| production-confidence | **14/14 PASS** | tip `05d0dd1` |
-| banco-website tsc | **PASS** | tip `05d0dd1` |
+| `chain-integrity-gate.mjs` | **167/167 PASS** | post P2-M1 (+3 facet market markers) |
+| API vitest (deleteAccount + full suite) | **386 passed / 3 skipped** | +1 facets market test |
+| production-confidence | **14/14 PASS** | post P2-M1 |
+| banco-website tsc | **PASS** | post P2-M1 |
 | Mobile lib-hardening + universal-links | **33/33 PASS** | Phase 5 re-verify |
 | Coolify website bake parity | committed `ee4d2ba` | prior |
 | Landing PATHS ↔ Coolify + Clerk hops | committed | PATHS `/market|/admin` + VITE_*; DomainRouter `banco.today/dealer-os` + `banco.today/banco-mobile` |

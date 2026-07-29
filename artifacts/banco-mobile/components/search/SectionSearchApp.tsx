@@ -397,7 +397,7 @@ export function SectionSearchApp({
 
   // ── Facet gating (scoped to the locked category) ───────────────────────────
   const { scopedFacets, loading: facetsLoading } =
-    useInventoryFacets(criteria.category);
+    useInventoryFacets(criteria.category, criteria.marketCountry);
   const engineList = useMemo(
     () => visibleEngines(criteria.category, scopedFacets),
     [criteria.category, scopedFacets],

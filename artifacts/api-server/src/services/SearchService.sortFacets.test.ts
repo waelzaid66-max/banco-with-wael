@@ -29,6 +29,7 @@ async function carListing(opts: {
   year?: number;
   views?: number;
   clicks?: number;
+  marketCountry?: string;
 }): Promise<string> {
   const userId = randomUUID();
   uids.push(userId);
@@ -48,9 +49,12 @@ async function carListing(opts: {
     location: "Cairo",
     status: "active",
   });
+  const specs: Record<string, string> = {};
+  if (opts.year) specs.year = String(opts.year);
+  if (opts.marketCountry) specs.market_country = opts.marketCountry;
   await db.insert(listingAttributes).values({
     listingId,
-    specs: opts.year ? { year: String(opts.year) } : {},
+    specs,
     fuelType: opts.fuelType,
     transmission: opts.transmission,
   });
@@ -257,6 +261,48 @@ describe("getFacets counts mirror the filtered result set", () => {
     const all = await getFacets();
     const carScoped = await getFacets("car");
     expect(all.category.car ?? 0).toBe(carScoped.total);
+  });
+
+  it("market_country scopes facet totals like search (P2-M1)", async () => {
+    const t = token("MKTFC");
+    await carListing({
+      title: `${t} eg`,
+      price: "100000",
+      fuelType: "electric",
+      marketCountry: "EG",
+    });
+    await carListing({
+      title: `${t} sa`,
+      price: "100000",
+      fuelType: "electric",
+      marketCountry: "SA",
+    });
+
+    const eg = await getFacets("car", "EG");
+    const sa = await getFacets("car", "SA");
+    const egSearch = await searchListings(
+      { category: "car", market_country: "EG", fuel_type: "electric", brand: t },
+      undefined,
+      50,
+    );
+    const saSearch = await searchListings(
+      { category: "car", market_country: "SA", fuel_type: "electric", brand: t },
+      undefined,
+      50,
+    );
+
+    expect(egSearch.items.length).toBe(1);
+    expect(saSearch.items.length).toBe(1);
+    // Market-scoped facet fuel counts must not mix EG+SA inventory.
+    expect(eg.fuel_type.electric ?? 0).toBeGreaterThanOrEqual(1);
+    expect(sa.fuel_type.electric ?? 0).toBeGreaterThanOrEqual(1);
+    // Cross-market totals diverge once both markets have electric cars.
+    const egAllElectric = await searchListings(
+      { category: "car", market_country: "EG", fuel_type: "electric" },
+      undefined,
+      50,
+    );
+    expect(eg.fuel_type.electric ?? 0).toBe(egAllElectric.items.length);
   });
 });
 

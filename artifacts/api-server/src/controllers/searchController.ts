@@ -122,7 +122,7 @@ export async function autocompleteHandler(req: Request, res: Response) {
 export async function facetsHandler(req: Request, res: Response) {
   try {
     const query = FacetsQuerySchema.parse(req.query);
-    const facets = await getFacets(query.category);
+    const facets = await getFacets(query.category, query.market_country);
     const validated = validateResponse(FacetCountsSchema, facets);
     res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
     return res.json(successResponse(validated, { total: facets.total }));

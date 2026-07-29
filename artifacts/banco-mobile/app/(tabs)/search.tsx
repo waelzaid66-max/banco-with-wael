@@ -269,7 +269,7 @@ export default function SearchScreen() {
   // Category chips are facet-gated: only categories with live inventory show.
   // Fails open while facets load; the active category is always kept visible.
   const { globalFacets, scopedFacets, loading: facetsLoading } =
-    useInventoryFacets(criteria.category);
+    useInventoryFacets(criteria.category, criteria.marketCountry);
   const shownCategories = useMemo(() => {
     const visible = visibleCategories(CATEGORIES, globalFacets);
     return CATEGORIES.filter(

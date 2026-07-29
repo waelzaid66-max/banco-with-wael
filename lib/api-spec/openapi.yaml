@@ -5265,18 +5265,29 @@ paths:
       summary: Per-value counts of the currently-visible inventory
       description: >-
         Counts of active, publicly-visible listings grouped by each filterable
-        attribute, optionally scoped to a category. Each count uses the same
-        column/specs matching logic as the search filters, so a chip's badge
-        count equals the size of the result set that chip produces. Clients gate
-        filter chips on count > 0 to avoid offering filters that return nothing.
+        attribute, optionally scoped to a category and/or market_country. Each
+        count uses the same column/specs matching logic as the search filters,
+        so a chip's badge count equals the size of the result set that chip
+        produces. Clients gate filter chips on count > 0 to avoid offering
+        filters that return nothing. The category facet map stays category-
+        unscoped but still respects market_country when provided.
       tags: [search]
       parameters:
         - in: query
           name: category
-          description: Scope counts to a single category (the category facet stays unscoped).
+          description: Scope attribute counts to a single category (the category facet map stays category-unscoped).
           schema:
             type: string
             enum: [car, real_estate, industrial]
+        - in: query
+          name: market_country
+          schema:
+            type: string
+            pattern: '^[A-Za-z]{2}$'
+          description: >
+            ISO 3166-1 alpha-2 market country (EG, SA, …). Filters inventory by
+            specs.market_country; listings without the key are treated as EG.
+            Same contract as search/trending.
       responses:
         "200":
           description: Facet counts

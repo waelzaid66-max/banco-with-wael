@@ -657,15 +657,25 @@ export async function getTrending(
 
 /**
  * Per-value counts of the currently-visible inventory, optionally scoped to a
- * category. The mobile mini-app gates each filter chip on count > 0 so it never
- * offers a filter that would return an empty page. Every count uses the SAME
- * column / specs COALESCE expression as buildAttributeConditions, so a chip's
- * badge count always equals the size of the result set it produces.
+ * category and/or market_country. The mobile mini-app gates each filter chip on
+ * count > 0 so it never offers a filter that would return an empty page. Every
+ * count uses the SAME column / specs COALESCE expression as
+ * buildAttributeConditions, so a chip's badge count always equals the size of
+ * the result set it produces. market_country uses the same EG-default COALESCE
+ * as search/trending (P2-M1).
  */
 export async function getFacets(
-  category?: "car" | "real_estate" | "industrial"
+  category?: "car" | "real_estate" | "industrial",
+  marketCountry?: string,
 ): Promise<FacetCounts> {
-  const visible: SQL[] = [eq(listings.status, "active"), ...publicVisibilityConditions()];
+  const marketFilter = marketCountry
+    ? buildAttributeConditions({ market_country: marketCountry })
+    : [];
+  const visible: SQL[] = [
+    eq(listings.status, "active"),
+    ...publicVisibilityConditions(),
+    ...marketFilter,
+  ];
   const scoped: SQL[] = category ? [...visible, eq(listings.category, category)] : [...visible];
 
   const groupMap = async (expr: SQL, where: SQL[]): Promise<Record<string, number>> => {

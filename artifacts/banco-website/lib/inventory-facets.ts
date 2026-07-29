@@ -30,14 +30,24 @@ export type Facets = FacetCounts | undefined;
  * Live inventory facet counts — mirrors mobile `lib/facets.ts` so the web
  * browse company gates empty sections the same way (fail OPEN until loaded).
  */
-export function useInventoryFacets(category: Category): {
+export function useInventoryFacets(
+  category: Category,
+  marketCountry?: string,
+): {
   globalFacets: Facets;
   scopedFacets: Facets;
   loading: boolean;
 } {
   const apiCat = apiCategoryFor(category);
-  const globalQuery = useGetFacets();
-  const scopedQuery = useGetFacets(apiCat ? { category: apiCat } : undefined);
+  const market =
+    marketCountry && /^[A-Za-z]{2}$/.test(marketCountry.trim())
+      ? marketCountry.trim().toUpperCase()
+      : undefined;
+  const marketParams = market ? { market_country: market } : {};
+  const globalQuery = useGetFacets(market ? marketParams : undefined);
+  const scopedQuery = useGetFacets(
+    apiCat ? { category: apiCat, ...marketParams } : market ? marketParams : undefined,
+  );
 
   const globalFacets = globalQuery.data?.data;
   const scopedFacets = apiCat ? scopedQuery.data?.data : globalFacets;

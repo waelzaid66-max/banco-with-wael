@@ -409,7 +409,7 @@ export default function FeedScreen() {
   // inventory. Fails open while facets load (never hides real inventory on a
   // transient error); new taxonomy chips fail closed (see lib/facets).
   const { globalFacets, scopedFacets, loading: facetsLoading } =
-    useInventoryFacets(category);
+    useInventoryFacets(category, marketCountry);
   const activeGroup = industrialGroupForCategory(category);
   const visibleCats = useMemo(
     () => visibleCategories(CATEGORY_ORDER, globalFacets),

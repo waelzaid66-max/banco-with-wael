@@ -1,7 +1,7 @@
 # 39 — Release execution GO / NO-GO (`w.4.1`)
 
 **Engineering order:** Code tip verified → **owner merge** → **tag** → **Coolify** → **smoke matrix** → FULL CERT only if smoke passes.  
-**Tip under test:** `05d0dd1` (`cursor/w41-production-release-5cf0`)  
+**Tip under test:** living tip on `cursor/w41-production-release-5cf0` (includes P2-M1)  
 **Policy:** No new product invent in this gate. OPS cannot be faked from CI.
 
 ---
@@ -10,11 +10,11 @@
 
 | Check | Result @ `05d0dd1` |
 |-------|---------------------|
-| chain-integrity | **164/164 PASS** |
-| API vitest | **385 passed / 3 skipped** |
+| chain-integrity | **167/167 PASS** |
+| API vitest | **386 passed / 3 skipped** |
 | production-confidence | **14/14 PASS** |
 | `banco-website` tsc | **PASS** |
-| Ahead of `main` | **54** commits |
+| Ahead of `main` | see living tip |
 | PR on GitHub | **NONE** — open compare URL |
 | Tag `w.4.1` | **NONE** |
 
@@ -24,8 +24,9 @@
 |----|------|
 | P2-M2 | Tombstone auto-signOut web/SPA |
 | P2-M3 | Website `/workspace/settings` delete UI |
-| P2-M4 | OpenAPI livez/readyz/payments (140/166) |
+| P2-M4 | OpenAPI livez/readyz/payments |
 | P2-M9 | dealer-os NotFound catch-all |
+| P2-M1 | Facets honor `market_country` (API + mobile/web) |
 | w.4.1 reconnects | Coolify bake/paths/pin/S3 env/plug/notif scrub/CI |
 
 ### Still open (do not block merge; block FULL CERT)
@@ -35,7 +36,6 @@
 | — | Merge + tag + Coolify deploy | **you** |
 | P2-H2/H3 | S3 keys + migrate → readyz 200 | OPS |
 | P2-H1 | Paymob TOFU | Design later — no invent |
-| P2-M1 | Facets `market_country` | Post-ship code (MED) |
 | P2-M5/M6 | Dual web / search LIVE false | Cutover / bake flags |
 | Live Clerk/EAS/Paymob/device | UNVERIFIED | Smoke `37-*` |
 
@@ -79,11 +79,10 @@ Execute `37-COOLIFY-LIVE-SMOKE-MATRIX.md` at minimum: **S1–S3, S5–S9, S12–
 
 | Priority | Work | Why later |
 |----------|------|-----------|
-| 1 | Facets `market_country` (P2-M1) | Search chip parity — contract expansion |
-| 2 | Paymob TOFU design (P2-H1) | Needs signed correlation — no invent without design |
-| 3 | Owner cutover drop `banco-web` | Domain ownership |
-| 4 | Flip `WEB_SEARCH_LIVE/MAP=true` | Soft-launch product choice |
-| 5 | Product waves M2–N* | After ship unless ordered |
+| 1 | Paymob TOFU design (P2-H1) | Needs signed correlation — no invent without design |
+| 2 | Owner cutover drop `banco-web` | Domain ownership |
+| 3 | Flip `WEB_SEARCH_LIVE/MAP=true` | Soft-launch product choice |
+| 4 | Product waves M2–N* | After ship unless ordered |
 
 ---
 

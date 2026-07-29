@@ -27,6 +27,8 @@ type SearchFacetsPanelProps = {
   /** Browse company from URL criteria — drives which facet sections render. */
   browseCategory: Category;
   category?: GetFacetsCategory;
+  /** ISO market — same contract as search/trending (P2-M1). */
+  marketCountry?: string;
 };
 
 const panelStyle: React.CSSProperties = {
@@ -142,16 +144,25 @@ function SearchFacetsPanelDisabled() {
 function SearchFacetsPanelLive({
   browseCategory,
   category,
+  marketCountry,
 }: {
   browseCategory: Category;
   category?: GetFacetsCategory;
+  marketCountry?: string;
 }) {
   const locale = useSearchLocale();
   const copy = searchUiCopy(locale);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const query = useGetFacets(category ? { category } : undefined);
+  const market =
+    marketCountry && /^[A-Za-z]{2}$/.test(marketCountry.trim())
+      ? marketCountry.trim().toUpperCase()
+      : undefined;
+  const query = useGetFacets({
+    ...(category ? { category } : {}),
+    ...(market ? { market_country: market } : {}),
+  });
   const data = query.data?.data;
 
   const onPick = (section: string, value: string) => {
@@ -190,12 +201,17 @@ export function SearchFacetsPanel({
   enabled,
   browseCategory,
   category,
+  marketCountry,
 }: SearchFacetsPanelProps) {
   if (!enabled) {
     return <SearchFacetsPanelDisabled />;
   }
 
   return (
-    <SearchFacetsPanelLive browseCategory={browseCategory} category={category} />
+    <SearchFacetsPanelLive
+      browseCategory={browseCategory}
+      category={category}
+      marketCountry={marketCountry}
+    />
   );
 }

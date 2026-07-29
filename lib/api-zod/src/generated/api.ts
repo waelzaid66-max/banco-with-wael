@@ -1138,11 +1138,15 @@ export const GetMapClustersResponse = zod.object({
 
 
 /**
- * Counts of active, publicly-visible listings grouped by each filterable attribute, optionally scoped to a category. Each count uses the same column/specs matching logic as the search filters, so a chip's badge count equals the size of the result set that chip produces. Clients gate filter chips on count > 0 to avoid offering filters that return nothing.
+ * Counts of active, publicly-visible listings grouped by each filterable attribute, optionally scoped to a category and/or market_country. Each count uses the same column/specs matching logic as the search filters, so a chip's badge count equals the size of the result set that chip produces. Clients gate filter chips on count > 0 to avoid offering filters that return nothing. The category facet map stays category- unscoped but still respects market_country when provided.
  * @summary Per-value counts of the currently-visible inventory
  */
+export const getFacetsQueryMarketCountryRegExp = new RegExp('^[A-Za-z]{2}$');
+
+
 export const GetFacetsQueryParams = zod.object({
-  "category": zod.enum(['car', 'real_estate', 'industrial']).optional().describe('Scope counts to a single category (the category facet stays unscoped).')
+  "category": zod.enum(['car', 'real_estate', 'industrial']).optional().describe('Scope attribute counts to a single category (the category facet map stays category-unscoped).'),
+  "market_country": zod.coerce.string().regex(getFacetsQueryMarketCountryRegExp).optional().describe('ISO 3166-1 alpha-2 market country (EG, SA, …). Filters inventory by specs.market_country; listings without the key are treated as EG. Same contract as search\/trending.\n')
 })
 
 export const GetFacetsResponse = zod.object({
