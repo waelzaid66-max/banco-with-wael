@@ -158,6 +158,7 @@ export default function ProfileScreen() {
   const [lastName, setLastName] = useState("");
 
   const [showPhotoRationale, setShowPhotoRationale] = useState(false);
+  const [showCoverRationale, setShowCoverRationale] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [phone, setPhone] = useState("");
@@ -283,11 +284,13 @@ export default function ProfileScreen() {
         // Persist the chosen account type (server-authoritative role mapping)
         // plus optional phone. Clerk token is already wired by the
         // AuthTokenBridge once the session is active.
+        let synced = false;
         try {
           await updateMe({
             account_type: goBusiness ? "dealer" : "individual",
             ...(phoneToSave ? { phone: phoneToSave } : {}),
           });
+          synced = true;
         } catch (e) {
           console.warn("[profile] post-signup account_type save failed", e);
           Alert.alert(
@@ -295,7 +298,12 @@ export default function ProfileScreen() {
             t("profile.accountSetupRetryMessage") ??
               "Could not save your account type. Please try again from Settings.",
           );
+          // Re-open account-type / retry surface — do not leave a half-wired session.
+          setNeedsAccountType(true);
         }
+        // Never continue into business onboarding on a failed /me sync — that
+        // created a half-wired journey (Alert then still router.push).
+        if (!synced) return;
         // Business signups continue straight into fast onboarding.
         if (goBusiness) {
           router.push("/business/onboarding");
@@ -385,7 +393,7 @@ export default function ProfileScreen() {
   // Cover photo — reuses the shared media upload (returns a hosted URL) and
   // stores only the URL string in Clerk unsafeMetadata. No new endpoint.
   const launchCoverPicker = async () => {
-    setShowMenu(false);
+    setShowCoverRationale(false);
     try {
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) {
@@ -1113,7 +1121,10 @@ export default function ProfileScreen() {
         key: "cover",
         icon: "image",
         label: t("profile.changeCover"),
-        onPress: launchCoverPicker,
+        onPress: () => {
+          setShowMenu(false);
+          setShowCoverRationale(true);
+        },
       },
       {
         key: "listings",
@@ -1260,7 +1271,10 @@ export default function ProfileScreen() {
             ]}
           >
             <Pressable
-              onPress={launchCoverPicker}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowCoverRationale(true);
+              }}
               hitSlop={8}
               style={styles.coverActionBtn}
               accessibilityRole="button"
@@ -2212,6 +2226,23 @@ export default function ProfileScreen() {
           config={{
             icon: "image-outline",
             title: t("profile.photoAccessTitle"),
+            message: t("profile.photoAccessMessage"),
+            bullets: [
+              t("profile.photoAccessBullet1"),
+              t("profile.photoAccessBullet2"),
+              t("profile.photoAccessBullet3"),
+            ],
+            confirmLabel: t("profile.photoAccessConfirm"),
+          }}
+        />
+
+        <PermissionRationaleModal
+          visible={showCoverRationale}
+          onAcknowledge={launchCoverPicker}
+          onCancel={() => setShowCoverRationale(false)}
+          config={{
+            icon: "image-outline",
+            title: t("profile.coverAccessTitle"),
             message: t("profile.photoAccessMessage"),
             bullets: [
               t("profile.photoAccessBullet1"),

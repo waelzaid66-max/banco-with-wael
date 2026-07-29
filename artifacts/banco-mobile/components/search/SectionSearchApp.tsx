@@ -1496,9 +1496,10 @@ export function SectionSearchApp({
           showsHorizontalScrollIndicator={false}
           style={styles.hScroll}
           contentContainerStyle={[styles.chipStrip, { flexDirection: rowDir }]}
-          testID="car-brand-strip"
+          testID="car-brand-origin-strip"
         >
           {/* Collapsed brand button — single picker entry point */}
+          <View testID="car-brand-strip">
           <Pressable
             onPress={() => {
               playSound("tap");
@@ -1537,6 +1538,7 @@ export function SectionSearchApp({
               color={brandValue ? "#FFFFFF" : colors.mutedForeground}
             />
           </Pressable>
+          </View>
           {/* Thin divider between brand and origin */}
           <View style={[styles.chipStripDivider, { backgroundColor: colors.border }]} />
           {/* Origin chips inline */}

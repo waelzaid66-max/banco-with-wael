@@ -516,9 +516,13 @@ const CHECKS = [
     id: "P-no-facebook-oauth",
     file: "artifacts/banco-mobile/app/(tabs)/profile.tsx",
     test: (s) =>
-      !/oauth_facebook/.test(s) &&
-      /oauth_google/.test(s),
-    why: "Must not invent Facebook Login (tenant forbids)",
+      // Facebook is allowed ONLY when fail-closed behind tenant-enabled providers.
+      // Absolute ban was outdated: Clerk can enable FB later without dead-end buttons.
+      /oauth_facebook/.test(s) &&
+      /socialProviders\.includes\("facebook"\)/.test(s) &&
+      /oauth_google/.test(s) &&
+      /useSocialProviders/.test(s),
+    why: "Facebook OAuth must stay fail-closed via useSocialProviders (no ungated invent)",
   },
   {
     id: "P-no-fi-autocreate-onboarding",

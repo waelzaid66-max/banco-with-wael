@@ -1132,9 +1132,9 @@ const styles = StyleSheet.create({
     paddingBottom: 5,
   },
   sortChip: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,

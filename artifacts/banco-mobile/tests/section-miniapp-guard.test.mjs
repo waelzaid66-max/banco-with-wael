@@ -335,12 +335,12 @@ test("Stay auto-resets filters on back; rental strip + map latch wired", () => {
   assert.match(
     booking,
     /testID="stays-sort-cycle"/,
-    "Stay must expose W4-style 34px sort chip in type strip (every-section)",
+    "Stay must expose sort chip in type strip (every-section)",
   );
   assert.match(
     booking,
-    /sortChip:\s*\{[\s\S]*?width:\s*34[\s\S]*?height:\s*34/,
-    "Stay sort chip must be 34×34 (P-SECTION S6 / Claude W4)",
+    /sortChip:\s*\{[\s\S]*?width:\s*30[\s\S]*?height:\s*30/,
+    "Stay sort chip must be 30×30 (owner compact 4bf7cfb / chain P-stay-compact-sort)",
   );
 });
 
