@@ -28,13 +28,17 @@ function mapError(res: Response, err: unknown, label: string) {
       .status(400)
       .json(errorResponse("INVALID_DATA", err.errors[0]?.message ?? "Invalid data"));
   }
-  const e = err as { code?: string; message?: string };
+  const e = err as { code?: string; message?: string; name?: string };
   if (e.code === "INVALID_DATA")
     return res.status(400).json(errorResponse("INVALID_DATA", e.message ?? "Invalid data"));
   if (e.code === "UNAUTHORIZED")
     return res.status(401).json(errorResponse("UNAUTHORIZED", e.message ?? "Unauthorized"));
   if (e.code === "NOT_FOUND")
     return res.status(404).json(errorResponse("NOT_FOUND", e.message ?? "Not found"));
+  // UploadOwnershipError (and any FORBIDDEN-coded error) → 403, matching
+  // listings / company / upload controllers.
+  if (e.code === "FORBIDDEN" || e.name === "UploadOwnershipError")
+    return res.status(403).json(errorResponse("FORBIDDEN", e.message ?? "Forbidden"));
   console.error(label, err);
   return res.status(500).json(errorResponse("INTERNAL_ERROR", "Request failed"));
 }

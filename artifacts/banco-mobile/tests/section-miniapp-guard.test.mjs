@@ -848,6 +848,16 @@ test("Car section expands brand + origin strips; import deep-links engine", () =
     /router\.push\(SECTION_ROUTE\[cat\]\)/,
     "Discover section cards must ENTER SECTION_ROUTE (not melt strips)",
   );
+  // Profile menu is the second official entry — must open the hub, not only tracking.
+  const profile = fs.readFileSync(
+    path.join(APP_ROOT, "app", "(tabs)", "profile.tsx"),
+    "utf8",
+  );
+  assert.match(
+    profile,
+    /importHub\.title[\s\S]{0,200}?router\.push\("\/import"|router\.push\("\/import"[\s\S]{0,200}?importHub\.title/,
+    "Profile CAR IMPORT menu item must ENTER the hub (/import)",
+  );
 });
 
 test("Materials (toridat) restores material strip + origin + market matrix", () => {

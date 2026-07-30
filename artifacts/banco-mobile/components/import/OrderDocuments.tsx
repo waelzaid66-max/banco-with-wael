@@ -121,7 +121,7 @@ export function OrderDocuments({
 
   const confirmDelete = (doc: ImportOrderDocument) => {
     Alert.alert(t("importOrder.docsDeleteTitle"), t("importOrder.docsDeleteBody"), [
-      { text: t("importOrder.cancelKeep"), style: "cancel" },
+      { text: t("common.cancel"), style: "cancel" },
       {
         text: t("importOrder.docsDeleteConfirm"),
         style: "destructive",
@@ -151,6 +151,24 @@ export function OrderDocuments({
         {docsQuery.isLoading ? (
           <View style={styles.loadingRow}>
             <ActivityIndicator color={RED} size="small" />
+          </View>
+        ) : docsQuery.isError ? (
+          <View style={styles.errorBlock} testID="import-order-docs-error">
+            <AppText
+              style={[styles.emptyText, { color: colors.mutedForeground, textAlign }]}
+            >
+              {t("importOrder.docsLoadError")}
+            </AppText>
+            <Pressable
+              onPress={() => void docsQuery.refetch()}
+              accessibilityRole="button"
+              testID="import-order-docs-retry"
+              style={styles.retryBtn}
+            >
+              <AppText style={{ color: RED, fontWeight: "600" }}>
+                {t("common.retry")}
+              </AppText>
+            </Pressable>
           </View>
         ) : docs.length === 0 ? (
           <AppText
@@ -287,6 +305,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingRow: { paddingVertical: 12, alignItems: "center" },
+  errorBlock: { gap: 10, paddingVertical: 4 },
+  retryBtn: { alignSelf: "flex-start", paddingVertical: 4 },
   emptyText: { fontSize: 12.5, fontFamily: "Inter_400Regular", lineHeight: 18 },
   docRow: { alignItems: "center", gap: 12 },
   thumb: {

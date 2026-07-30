@@ -7,11 +7,20 @@ import {
 } from "@workspace/db/schema";
 import { and, eq, desc } from "drizzle-orm";
 import { createNotification } from "./NotificationService";
+import {
+  assertCallerMayUseUpload,
+  consumeUploadClaim,
+  parseServingWildcard,
+  servingWildcardToObjectPath,
+} from "../lib/uploadClaims";
+import { getObjectStorageService } from "../lib/objectStorageProvider";
 import type {
   ImportOrder,
   ImportOrderDocument,
   ImportOrderListItem,
 } from "../validators/schemas";
+
+const objectStorageService = getObjectStorageService();
 
 export interface CreateImportOrderInput {
   listing_id?: string;
@@ -313,6 +322,10 @@ export async function attachImportOrderDocument(
       { code: "INVALID_DATA" }
     );
 
+  // Same ownership gate as listings/chat/company: never persist a first-party
+  // upload URL the caller did not presign (or already own via ACL).
+  await assertCallerMayUseUpload(input.url, clerkId);
+
   const existing = await db
     .select({ id: importOrderDocuments.id })
     .from(importOrderDocuments)
@@ -326,6 +339,13 @@ export async function attachImportOrderDocument(
     .insert(importOrderDocuments)
     .values({ orderId, kind: input.kind, url: input.url })
     .returning();
+
+  // Promote so the buyer's Image viewer (no bearer) can load the file; then
+  // consume the claim so the slot cannot be re-attached elsewhere.
+  await objectStorageService.promoteServingUrlToPublic(created.url, clerkId);
+  const wildcard = parseServingWildcard(created.url);
+  if (wildcard) await consumeUploadClaim(servingWildcardToObjectPath(wildcard));
+
   return docToDto(created);
 }
 
@@ -334,7 +354,13 @@ export async function deleteImportOrderDocument(
   orderId: string,
   documentId: string
 ): Promise<void> {
-  await requireOwnOrder(clerkId, orderId);
+  const order = await requireOwnOrder(clerkId, orderId);
+  if (order.stage === "cancelled" || order.stage === "delivered")
+    throw Object.assign(
+      new Error(`Cannot delete documents on a ${order.stage} order`),
+      { code: "INVALID_DATA" }
+    );
+
   const [deleted] = await db
     .delete(importOrderDocuments)
     .where(
