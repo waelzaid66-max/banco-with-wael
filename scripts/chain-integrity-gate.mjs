@@ -416,15 +416,10 @@ const CHECKS = [
       // Consent metadata write before /me must not stamp accountTypeChosen.
       if (s.slice(terms, post).includes("accountTypeChosen: true")) return false;
       const after = s.slice(post, post + 1600);
-      const u = after.indexOf("await updateMe");
       // Flag write appears after successful sync block (after !synced return).
-      const c = after.indexOf("accountTypeChosen: true");
-      return (
-        /if \(!synced\) return/.test(after) &&
-        c >= 0 &&
-        after.indexOf("accountTypeChosen: true") >
-          after.indexOf("if (!synced) return")
-      );
+      const chosenAt = after.indexOf("accountTypeChosen: true");
+      const syncedGuardAt = after.indexOf("if (!synced) return");
+      return syncedGuardAt >= 0 && chosenAt > syncedGuardAt;
     },
     why: "Email signup consent must not set accountTypeChosen before /me succeeds",
   },

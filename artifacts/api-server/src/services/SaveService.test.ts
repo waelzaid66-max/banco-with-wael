@@ -116,6 +116,10 @@ describe("saveOrUnsaveListing tombstone gate (Round 15)", () => {
       .select({ userId: listings.userId })
       .from(listings)
       .where(eq(listings.id, listingId));
+    // listings.userId is nullable in schema; seeded rows always have a seller.
+    if (!listing?.userId) {
+      throw new Error("seed listing missing userId");
+    }
     await db
       .update(users)
       .set({ deletedAt: new Date() })
@@ -137,6 +141,9 @@ describe("saveOrUnsaveListing tombstone gate (Round 15)", () => {
       .select({ userId: listings.userId })
       .from(listings)
       .where(eq(listings.id, listingId));
+    if (!listing?.userId) {
+      throw new Error("seed listing missing userId");
+    }
     await db
       .update(users)
       .set({ deletedAt: new Date() })
