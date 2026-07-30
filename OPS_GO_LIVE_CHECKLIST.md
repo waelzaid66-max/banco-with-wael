@@ -70,6 +70,8 @@ docker compose -f docker-compose.coolify.yml --profile migrate run --rm migrate
 
 ## C. Smoke (after Deploy + migrate)
 
+Manual curls:
+
 ```bash
 curl -fsS https://banco.today/nginx-health
 curl -fsS https://banco.today/api/readyz
@@ -77,9 +79,22 @@ curl -fsS https://banco.today/.well-known/assetlinks.json
 curl -fsSI https://banco.today/.well-known/apple-app-site-association
 ```
 
+Machine gate (preferred — fails closed on Replit/Horizons HTML):
+
+```bash
+# After Coolify is up but REPLACE_* may still be present:
+pnpm ops:live-cutover -- --allow-placeholders
+
+# After Team ID + Play SHA-256 filled + web redeployed:
+pnpm ops:live-cutover
+```
+
+Baseline of **current** public DNS (still wrong): `reports/production-verification/56-LIVE-CUTOVER-BASELINE.md`
+
 - [ ] `/nginx-health` → `ok`
 - [ ] `/api/readyz` → JSON 200 (not HTML)
 - [ ] well-known returns JSON (not Horizons/Replit HTML)
+- [ ] `pnpm ops:live-cutover` exit **0** (use `--allow-placeholders` only until store IDs filled)
 
 ---
 
@@ -88,7 +103,7 @@ curl -fsSI https://banco.today/.well-known/apple-app-site-association
 - [ ] `banco.today` A/AAAA (or CNAME) → Coolify / Traefik (remove Replit)
 - [ ] `www.banco.today` → Coolify or HTTPS redirect to apex (remove Horizons)
 - [ ] Optional: `banco.deals` / `banco.autos` only if they stay in associated domains
-- [ ] Wait DNS TTL; re-run smoke in §C
+- [ ] Wait DNS TTL; re-run smoke in §C (`pnpm ops:live-cutover`)
 
 ---
 

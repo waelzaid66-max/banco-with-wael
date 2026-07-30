@@ -8,7 +8,8 @@
 | **Do NOT use** | `bancoo`, `bancoboom`, or any sister clone |
 | **Compose file path** | `docker-compose.coolify.yml` |
 | **Coolify resource type** | **Docker Compose** (not Dockerfile, not Nixpacks, not Static) |
-| **Branch to deploy** | After merge of PR #6 → `main`. Until then: `cursor/production-gap-certification-5cf0` |
+| **Branch to deploy** | **`main`** (certification PR #6 + OPS checklist PR #7 merged; tip ≥ `250d655`) |
+| **Live cutover proof** | `pnpm ops:live-cutover` (must exit 0 before Live Production Ready) |
 | **Mobile** | Expo EAS (`com.bancooom.app`) — **not** a Coolify container |
 
 ---
@@ -18,7 +19,7 @@
 1. Coolify → **New Resource** → **Docker Compose**
 2. Connect Git → select **`waelzaid66-max/banco-with-wael`**
 3. Compose path = **`docker-compose.coolify.yml`**
-4. Branch = **`main`** (or the certification branch until merged)
+4. Branch = **`main`**
 5. Save — **do not Deploy yet**
 
 ---
@@ -122,13 +123,16 @@ Full reference: `docs/DEPLOY_COOLIFY.md`.
 docker compose -f docker-compose.coolify.yml --profile migrate run --rm migrate
 ```
 
-4. Smoke:
+4. Smoke (after DNS points here):
 
 ```bash
 curl -fsS https://<apex>/nginx-health
 curl -fsS https://<apex>/api/readyz
 curl -fsS https://<apex>/.well-known/assetlinks.json
+pnpm ops:live-cutover -- --base https://<apex> --www https://www.<apex> --allow-placeholders
 ```
+
+See also `OPS_GO_LIVE_CHECKLIST.md` and `reports/production-verification/56-LIVE-CUTOVER-BASELINE.md`.
 
 ---
 
