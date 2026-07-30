@@ -2621,6 +2621,39 @@ export const ImportOrderCreateResultSchema = z
   .object({ id: z.string() })
   .strict();
 
+// Fixed checklist of paperwork kinds — mirrors the mobile Import Documents
+// screen (app/import/documents.tsx). New kinds are additive.
+export const ImportDocumentKindZ = z.enum([
+  "invoice",
+  "export",
+  "passport",
+  "id",
+  "poa",
+  "insurance",
+  "shipping",
+  "customs",
+]);
+
+export const ImportOrderDocumentSchema = z
+  .object({
+    id: z.string(),
+    order_id: z.string(),
+    kind: ImportDocumentKindZ,
+    url: z.string(),
+    created_at: z.string(),
+  })
+  .strict();
+
+export type ImportOrderDocument = z.infer<typeof ImportOrderDocumentSchema>;
+
+export const AttachImportOrderDocumentSchema = z
+  .object({
+    kind: ImportDocumentKindZ,
+    // Servable URL returned by the shared presigned-upload flow.
+    url: z.string().trim().url().max(2000),
+  })
+  .strict();
+
 export const SubmitOfferSchema = z
   .object({
     price_quote: z.number().positive().max(1_000_000_000),

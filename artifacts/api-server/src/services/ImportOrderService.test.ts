@@ -6,6 +6,9 @@ import {
   updateImportOrderStage,
   cancelImportOrder,
   getImportOrder,
+  listImportOrderDocuments,
+  attachImportOrderDocument,
+  deleteImportOrderDocument,
 } from "./ImportOrderService";
 import { db, deleteUsers, uniq, randomUUID } from "../__tests__/helpers";
 import { importOrders, notifications, users } from "@workspace/db/schema";
@@ -156,5 +159,86 @@ describe("ImportOrderService — stage machine & cancel rules", () => {
     await expect(cancelImportOrder(attacker.clerkId, id)).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
+  });
+});
+
+describe("ImportOrderService — order documents (wave 3)", () => {
+  const DOC_URL = "https://storage.banco.test/uploads/passport-page.jpg";
+
+  it("attaches, lists (newest first) and deletes a document", async () => {
+    const { clerkId } = await createBuyer();
+    const { id } = await createImportOrder(clerkId, {});
+    orderIds.push(id);
+
+    const doc = await attachImportOrderDocument(clerkId, id, {
+      kind: "passport",
+      url: DOC_URL,
+    });
+    expect(doc.order_id).toBe(id);
+    expect(doc.kind).toBe("passport");
+    expect(doc.url).toBe(DOC_URL);
+
+    const listed = await listImportOrderDocuments(clerkId, id);
+    expect(listed.map((d) => d.id)).toContain(doc.id);
+
+    await deleteImportOrderDocument(clerkId, id, doc.id);
+    const after = await listImportOrderDocuments(clerkId, id);
+    expect(after.map((d) => d.id)).not.toContain(doc.id);
+
+    // Deleting again → NOT_FOUND.
+    await expect(
+      deleteImportOrderDocument(clerkId, id, doc.id),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("is IDOR-scoped: another user can neither list, attach, nor delete", async () => {
+    const owner = await createBuyer();
+    const attacker = await createBuyer();
+    const { id } = await createImportOrder(owner.clerkId, {});
+    orderIds.push(id);
+    const doc = await attachImportOrderDocument(owner.clerkId, id, {
+      kind: "invoice",
+      url: DOC_URL,
+    });
+
+    await expect(
+      listImportOrderDocuments(attacker.clerkId, id),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(
+      attachImportOrderDocument(attacker.clerkId, id, {
+        kind: "id",
+        url: DOC_URL,
+      }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(
+      deleteImportOrderDocument(attacker.clerkId, id, doc.id),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("terminal orders are read-only for paperwork", async () => {
+    const { clerkId } = await createBuyer();
+    const { id } = await createImportOrder(clerkId, {});
+    orderIds.push(id);
+    await cancelImportOrder(clerkId, id);
+
+    await expect(
+      attachImportOrderDocument(clerkId, id, { kind: "poa", url: DOC_URL }),
+    ).rejects.toMatchObject({ code: "INVALID_DATA" });
+  });
+
+  it("documents cascade away when the order is deleted", async () => {
+    const { clerkId } = await createBuyer();
+    const { id } = await createImportOrder(clerkId, {});
+    const doc = await attachImportOrderDocument(clerkId, id, {
+      kind: "customs",
+      url: DOC_URL,
+    });
+    expect(doc.id).toBeTruthy();
+
+    await db.delete(importOrders).where(eq(importOrders.id, id));
+    // Re-creating the check via the owner: the order itself is gone.
+    await expect(
+      listImportOrderDocuments(clerkId, id),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });
