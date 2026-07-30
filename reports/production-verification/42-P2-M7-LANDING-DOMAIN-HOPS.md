@@ -1,9 +1,8 @@
 # 42 — P2-M7 Landing DomainRouter hops (evidence decision)
 
 **Finding ID:** P2-M7 (split **M7a** / **M7b**)  
-**Tip audited:** `bcede12` → this docs tip  
+**Tip audited:** `bcede12` → closed on inventory tip (see §5)  
 **Policy:** SoT · HIGH confidence · no invent · no Clerk allowlist guess  
-**Code change this turn:** **NONE** (application + nginx unchanged)
 
 ---
 
@@ -11,21 +10,21 @@
 
 | Sub-ID | Hop | Classification | Code now? |
 |--------|-----|----------------|-----------|
-| **M7a** | `banco.deals` → `https://banco.today/dealer-os/` | **Connected via Coolify/AWS nginx 301** → `/market/` | **No** |
-| **M7b** | `banco.autos` → `https://banco.today/banco-mobile/` | **Proven disconnect** on tip nginx path map (not hypothesis) | **No** — needs owner topology + Clerk |
+| **M7a** | `banco.deals` → `https://banco.today/market/` | Coolify nginx map direct (was `/dealer-os/` 301) | **YES — FIXED_IN_REPO** |
+| **M7b** | `banco.autos` → `VITE_WEB_URL` (https) or `https://banco.today/` | Removed dead `/banco-mobile/` hop | **YES — FIXED_IN_REPO** |
 
-Phase 2 called the whole item a hypothesis. **Source nginx on tip upgrades M7b to proven** for the Vite `web` container. Live Coolify *edge* in front of compose may still remap hosts — that remains **OPS UNVERIFIED**.
+**Closeout (2026-07-30 inventory):** Option A from §4 — no invented `/banco-mobile/` Next basePath. Expo remains EAS; optional Next consumer stays on compose services / baked `VITE_WEB_URL`. Gate: `scripts/production-confidence-check.mjs` → `checkLandingDomainHops`.
 
 ---
 
-## 2. Evidence
+## 2. Evidence (historical)
 
 ### 2.1 Landing source (`artifacts/landing/src/App.tsx`)
 
-- Same-origin **PATHS** already Coolify-aligned: `/market/`, `/admin/`, app via `VITE_*` (no `/banco-mobile/` default).
-- **DomainRouter** (Clerk live keys comment: bound to `banco.today` only):
-  - `banco.deals` → absolute `https://banco.today/dealer-os/`
-  - `banco.autos` → absolute `https://banco.today/banco-mobile/`
+- Same-origin **PATHS** Coolify-aligned: `/market/`, `/admin/`, app via `VITE_*`.
+- **DomainRouter (current):**
+  - `banco.deals` → absolute `https://banco.today/market/`
+  - `banco.autos` → absolute `VITE_WEB_URL` when `https://…`, else `https://banco.today/`
   - Relative redirects on deals/autos explicitly rejected (SSO / white-screen).
 
 ### 2.2 Coolify + AWS `nginx.conf` (identical relevant map)
@@ -36,7 +35,7 @@ Phase 2 called the whole item a hypothesis. **Source nginx on tip upgrades M7b t
 | `/admin/` | admin-os SPA |
 | `/dealer-os/` | **301 → `/market/`** |
 | `/admin-os/` | **301 → `/admin/`** |
-| `/banco-mobile/` | **absent** |
+| `/banco-mobile/` | **absent** (must not be hop target) |
 | `/` | landing SPA `try_files … /index.html` |
 
 Therefore `GET /banco-mobile/` on the `web` container is **not** a consumer app: it falls through to **landing** `index.html`. Hostname becomes `banco.today` → DomainRouter does not re-hop → user sees landing, not Next consumer, not Expo.

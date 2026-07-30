@@ -363,9 +363,11 @@ const CHECKS = [
     id: "P-landing-clerk-domain",
     file: "artifacts/landing/src/App.tsx",
     test: (s) =>
-      /banco\.today\/dealer-os/.test(s) &&
-      /banco\.today\/banco-mobile/.test(s),
-    why: "deals/autos must hop to banco.today for Clerk live origin",
+      /banco\.today\/market\//.test(s) &&
+      /banco\.today\//.test(s) &&
+      /VITE_WEB_URL/.test(s) &&
+      !/banco\.today\/banco-mobile\//.test(s),
+    why: "deals→/market/ and autos→VITE_WEB_URL|apex on banco.today (no dead /banco-mobile/)",
   },
   {
     id: "P-buyer-phone-from-me",

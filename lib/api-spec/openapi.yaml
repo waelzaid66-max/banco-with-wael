@@ -4223,6 +4223,41 @@ paths:
                   meta:
                     $ref: "#/components/schemas/Meta"
 
+  /v1/uploads/objects/{path}:
+    get:
+      operationId: serveUploadObject
+      summary: Serve an uploaded object from private/public storage
+      description: >-
+        Streams an object by storage path. Mounted in Express as
+        `GET /api/v1/uploads/objects/*path` (wildcard). Optional Clerk auth —
+        private objects require the owning session; public objects may be served
+        anonymously after promote.
+      tags: [uploads]
+      security:
+        - {}
+        - ClerkAuth: []
+      parameters:
+        - in: path
+          name: path
+          required: true
+          schema:
+            type: string
+          description: Object key path after /objects/ (may contain slashes).
+      responses:
+        "200":
+          description: Object bytes
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Private object without auth
+        "403":
+          description: Authenticated but not allowed
+        "404":
+          description: Object missing
+
   /v1/listings:
     get:
       operationId: getListings
@@ -4838,6 +4873,83 @@ paths:
       responses:
         "200":
           description: Import order
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ImportOrder"
+                  error:
+                    $ref: "#/components/schemas/ApiError"
+                    nullable: true
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+
+  /v1/import-orders/{id}/stage:
+    patch:
+      operationId: updateImportOrderStage
+      summary: Advance or update a car-import order stage (ops)
+      description: >-
+        Admin/ops only (`manage_financing`). Updates stage and optional quote.
+        Matches Express `PATCH /api/v1/import-orders/:id/stage`.
+      tags: [import-orders]
+      security:
+        - ClerkAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [stage]
+              properties:
+                stage:
+                  $ref: "#/components/schemas/ImportOrderStage"
+                quote_amount:
+                  type: number
+                  nullable: true
+      responses:
+        "200":
+          description: Updated import order
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ImportOrder"
+                  error:
+                    $ref: "#/components/schemas/ApiError"
+                    nullable: true
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+
+  /v1/import-orders/{id}/cancel:
+    post:
+      operationId: cancelImportOrder
+      summary: Cancel a car-import order (buyer)
+      description: >-
+        Signed-in buyer cancels their own import order. Matches Express
+        `POST /api/v1/import-orders/:id/cancel`.
+      tags: [import-orders]
+      security:
+        - ClerkAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cancelled import order
           content:
             application/json:
               schema:

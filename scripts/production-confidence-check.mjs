@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env node
+#!/usr/bin/env node
 /**
  * Local production-confidence gate â€” runs checks that do NOT need staging secrets.
  *
@@ -192,7 +192,42 @@ function checkOpenApi() {
     fail("openapi.yaml", "no /v1/ paths found");
     return;
   }
-  pass("openapi.yaml structure");
+  const requiredPaths = [
+    "/v1/uploads/objects/{path}",
+    "/v1/import-orders/{id}/stage",
+    "/v1/import-orders/{id}/cancel",
+  ];
+  const missing = requiredPaths.filter((p) => !text.includes(p));
+  if (missing.length) {
+    fail("openapi.yaml route parity", `missing Express-live paths: ${missing.join(", ")}`);
+    return;
+  }
+  pass("openapi.yaml structure", "includes upload objects + import-order stage/cancel");
+}
+
+function checkLandingDomainHops() {
+  const landing = path.join(ROOT, "artifacts/landing/src/App.tsx");
+  if (!fs.existsSync(landing)) {
+    fail("landing DomainRouter", "artifacts/landing/src/App.tsx missing");
+    return;
+  }
+  const src = fs.readFileSync(landing, "utf8");
+  if (/banco\.today\/banco-mobile\//.test(src)) {
+    fail(
+      "landing DomainRouter",
+      "must not hop to /banco-mobile/ — Coolify web has no such artifact (Expo=EAS)",
+    );
+    return;
+  }
+  if (!/banco\.today\/market\//.test(src)) {
+    fail("landing DomainRouter", "banco.deals hop must target /market/ Coolify map");
+    return;
+  }
+  if (!/VITE_WEB_URL/.test(src)) {
+    fail("landing DomainRouter", "banco.autos hop must prefer VITE_WEB_URL when absolute HTTPS");
+    return;
+  }
+  pass("landing DomainRouter", "deals→/market/ · autos→VITE_WEB_URL|apex (no /banco-mobile/)");
 }
 
 /** Anti-93b650b pollution: touch-trap menus + opaque upload 500 for missing storage. */
@@ -314,6 +349,7 @@ function checkMobileRuntimeDeps() {
   try {
     const pkg = readJson("artifacts/banco-mobile/package.json");
     const deps = pkg.dependencies ?? {};
+    const devDeps = pkg.devDependencies ?? {};
     const required = ["expo", "react", "react-native", "@clerk/expo", "expo-router"];
     const missing = required.filter((name) => !deps[name]);
     if (missing.length) {
@@ -323,7 +359,31 @@ function checkMobileRuntimeDeps() {
       );
       return;
     }
-    pass("mobile runtime dependencies", "expo/react-native/clerk in dependencies");
+    if (deps["react-native-maps"] || deps["@types/google.maps"]) {
+      fail(
+        "mobile unused map deps",
+        "maps use Leaflet WebView — react-native-maps / @types/google.maps must not be runtime deps",
+      );
+      return;
+    }
+    if (deps["@expo/vector-icons"]) {
+      fail(
+        "mobile icon dep placement",
+        "@expo/vector-icons must be in devDependencies only (SVG registry; icons.test contract)",
+      );
+      return;
+    }
+    if (!devDeps["@expo/vector-icons"]) {
+      fail(
+        "mobile icon dep placement",
+        "@expo/vector-icons missing from devDependencies (glyph-map authority for icons.test)",
+      );
+      return;
+    }
+    pass(
+      "mobile runtime dependencies",
+      "expo/react-native/clerk in dependencies; maps/icons placement clean",
+    );
   } catch (e) {
     fail("mobile runtime dependencies", e instanceof Error ? e.message : String(e));
   }
@@ -357,7 +417,7 @@ function summarize() {
   console.log(`\n--- ${results.length - failed.length}/${results.length} passed ---`);
   if (failed.length) {
     console.error("\nFailed:");
-    for (const f of failed) console.error(`  â€¢ ${f.name}: ${f.detail}`);
+    for (const f of failed) console.error(`  • ${f.name}: ${f.detail}`);
     process.exit(1);
   }
 }
@@ -374,6 +434,7 @@ function main() {
   checkExpoSdkAlignment();
   checkWorkspaceRefs();
   checkOpenApi();
+  checkLandingDomainHops();
   checkReplitWipePollution();
   checkWellKnownTemplates();
   checkMobileRuntimeDeps();
