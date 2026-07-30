@@ -1,7 +1,7 @@
 # PRODUCTION GAP MATRIX
 
 **SoT:** `waelzaid66-max/banco-with-wael`
-**Tip audited:** `64894c6` (`main` after merge of PR #6)
+**Tip audited:** `250d655` (`main` after merge of PR #7); this branch adds live cutover gate
 **Date:** 2026-07-30
 **Method:** Independent re-verification of repository state, CI, live probes, Docker builds, typecheck, ESLint, gates, OpenAPI, mobile config. Previous reports treated as claims only.
 
@@ -70,6 +70,8 @@
 | G59 | Delete-account skipped mobile KYC `documents: string[]` blob purge | PRIVACY | HIGH | Only object-map docs were walked; mobile onboarding stores URL arrays | YES | NO | NO | NO | NO | FIXED_IN_REPO |
 | G60 | Coolify operator confusion (service `web` vs `banco-web` / apex mapping) | DOCS | CRITICAL | Docs mixed Nginx static with Next twins | YES (`COOLIFY_DEPLOY_NOW.md` + `OPS_GO_LIVE_CHECKLIST.md`) | NO | YES (follow checklist) | NO | YES | FIXED_IN_REPO |
 | G61 | Certification merged to `main` (PR #6) | RELEASE | INFO | `64894c6` on `main`; CI 11/11 green | N/A | NO | YES (deploy from `main`) | NO | NO | FIXED_IN_REPO |
+| G62 | No machine-checkable public cutover gate | OPS | HIGH | Operators used ad-hoc curls; Replit/Horizons HTML easy to misread as “up” | YES (`scripts/ops-live-cutover-check.mjs` + `pnpm ops:live-cutover`) | NO | YES (re-run after DNS) | YES | YES | FIXED_IN_REPO |
+| G63 | Live cutover baseline evidence recorded | OPS | INFO | Apex Replit 404; www Horizons; see `56-LIVE-CUTOVER-BASELINE.md` | YES (report only) | NO | YES | YES | YES | REQUIRES_EXTERNAL_OPS |
 
 ---
 
@@ -77,8 +79,8 @@
 
 | Bucket | Count |
 |--------|-------|
-| FIXED_IN_REPO (this branch or prior verified main fixes) | 25 |
-| REQUIRES_EXTERNAL_OPS | 36 |
+| FIXED_IN_REPO (this branch or prior verified main fixes) | 26 |
+| REQUIRES_EXTERNAL_OPS | 37 |
 | OPEN_IN_REPO | **0** |
 
 Every finding is either fixed in the repository or requires external operations. No third category remains.
