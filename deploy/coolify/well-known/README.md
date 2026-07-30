@@ -3,6 +3,11 @@
 These files are copied into the `web` (nginx) image at `/.well-known/` so iOS
 Universal Links and Android App Links can verify after DNS points at Coolify.
 
+**Package identity (SoT):** `com.bancooom.app` only — never `com.bancoboom.app`.
+
+AASA `paths` are scoped to listing deep links (`/l`, `/listing`) to match Android
+`pathPrefix` filters — not a blanket `*`.
+
 ## Placeholders (MUST replace before store verification)
 
 | File | Placeholder | Source |
@@ -23,5 +28,5 @@ curl -sSI https://banco.today/.well-known/apple-app-site-association
 curl -sS https://banco.today/.well-known/assetlinks.json
 ```
 
-AASA must be `application/json` (nginx sets this). HTTP 200 with real Team ID /
-SHA-256 is required for store deep-link verification.
+AASA must be `application/json` (`default_type` in nginx). HTTP 200 with real
+Team ID / SHA-256 is required for store deep-link verification.

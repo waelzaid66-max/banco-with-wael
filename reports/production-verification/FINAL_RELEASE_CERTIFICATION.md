@@ -13,7 +13,7 @@
 
 ## 1. Executive Summary
 
-The monorepo **is ready as a Coolify/EAS deploy artifact set**: typecheck, ESLint, chain integrity (167/167), production-confidence (16/16), mobile regression pack (150/150), deploy-artifacts (37/37), and Docker image builds for `Dockerfile.api` / `Dockerfile.web` all pass on the **2026-07-30 re-verification** pass (local SoT tip `95c87af`).
+The monorepo **is ready as a Coolify/EAS deploy artifact set**: typecheck, ESLint, chain integrity (167/167), production-confidence (16/16), mobile regression pack (incl. executable H2 merge tests), deploy-artifacts (37/37), Expo config resolve, and Docker image builds for `Dockerfile.api` / `Dockerfile.web` all pass on the **2026-07-30 precision-hardening** pass (clean SoT branch — no nested patch blobs).
 
 **Live production is not certified.** Public DNS still points apex `banco.today` at a Replit placeholder and `www.banco.today` at Hostinger Horizons. Coolify secrets, migrate, EAS env bake, real AASA/assetlinks values, and device smoke remain external.
 
@@ -31,13 +31,14 @@ The monorepo **is ready as a Coolify/EAS deploy artifact set**: typecheck, ESLin
 | Typecheck (libs + mobile via confidence) | PASS |
 | ESLint (`scripts --max-warnings 0`) | PASS |
 | Chain integrity gate | **167/167 PASS** |
-| Production confidence | **16/16 PASS** |
-| Mobile `node --test tests/*.mjs` | **150/150 PASS** |
+| Production confidence | **16/16 PASS** (exact identity + parsed well-known JSON) |
+| Mobile regression pack | **PASS** (universal-links **8/8** executable merge) |
+| `expo config` resolve (H2 merge) | **PASS** (`www.banco.today` unions with app.json hosts) |
 | Deploy artifacts verify | **37/37 PASS** |
 | Identity | **`com.bancooom.app` / `bancooom` / `BANCO`** |
 | OpenAPI (`lib/api-spec/openapi.yaml`, server `/api`) | PASS structure |
 | Layout (`artifacts/*`, `deploy/coolify/*`, `lib/*`) | Intact |
-| In-repo gaps remaining open | **0** |
+| In-repo gaps remaining open | **0** (precision hardening closed soft gaps) |
 
 ---
 

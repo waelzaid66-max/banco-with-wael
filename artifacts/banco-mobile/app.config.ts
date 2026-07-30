@@ -1,4 +1,9 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
+import {
+  mergeAndroidAppLinkFilters,
+  mergeAssociatedDomains,
+  resolveWebAppLinkHost,
+} from "./lib/link-host-merge.mjs";
 
 /**
  * Deep-link / universal-link origin for expo-router static rendering.
@@ -13,33 +18,7 @@ const routerOrigin =
   process.env.EXPO_PUBLIC_PUBLIC_APP_URL?.trim() ||
   "https://replit.com/";
 
-/**
- * HTTPS app-link host for Universal Links (iOS) and App Links (Android).
- * Driven only by operator env — never hardcoded. Omitted when unset or replit.com.
- */
-function webAppLinkHost(): string | null {
-  for (const raw of [
-    process.env.EXPO_PUBLIC_PUBLIC_APP_URL,
-    process.env.EXPO_PUBLIC_ROUTER_ORIGIN,
-    process.env.EXPO_ROUTER_ORIGIN,
-  ]) {
-    const t = raw?.trim();
-    if (!t) continue;
-    try {
-      const url = t.includes("://") ? new URL(t) : new URL(`https://${t}`);
-      const host = url.hostname;
-      if (!host || host === "replit.com" || host.endsWith(".replit.dev")) {
-        continue;
-      }
-      return host;
-    } catch {
-      /* try next */
-    }
-  }
-  return null;
-}
-
-const webHost = webAppLinkHost();
+const webHost = resolveWebAppLinkHost(process.env);
 
 function withRouterOrigin(plugins: ExpoConfig["plugins"]): ExpoConfig["plugins"] {
   return (plugins ?? []).map((plugin) => {
@@ -50,74 +29,6 @@ function withRouterOrigin(plugins: ExpoConfig["plugins"]): ExpoConfig["plugins"]
     }
     return plugin;
   });
-}
-
-type AndroidIntentFilter = NonNullable<
-  NonNullable<ExpoConfig["android"]>["intentFilters"]
->[number];
-
-/**
- * Collect HTTPS hosts already declared on Android intent filters (from app.json).
- * Used so an env-driven primary host ADDS to the multi-host set instead of
- * wiping banco.deals / banco.autos (H2 regression).
- */
-function hostsFromIntentFilters(
-  filters: NonNullable<ExpoConfig["android"]>["intentFilters"] | undefined,
-): string[] {
-  const hosts: string[] = [];
-  for (const filter of filters ?? []) {
-    const data = filter.data;
-    const entries = Array.isArray(data) ? data : data ? [data] : [];
-    for (const entry of entries) {
-      if (
-        entry &&
-        typeof entry === "object" &&
-        "host" in entry &&
-        typeof entry.host === "string" &&
-        entry.host.length > 0
-      ) {
-        hosts.push(entry.host);
-      }
-    }
-  }
-  return hosts;
-}
-
-/**
- * Merge app.json multi-host App Links with the env primary host.
- * Path prefixes stay production-safe (/l, /listing) for every host in the union.
- */
-function mergeAndroidAppLinkFilters(
-  existing: NonNullable<ExpoConfig["android"]>["intentFilters"] | undefined,
-  primaryHost: string,
-): AndroidIntentFilter[] {
-  const hosts = Array.from(
-    new Set([...hostsFromIntentFilters(existing), primaryHost]),
-  );
-  return [
-    {
-      action: "VIEW",
-      autoVerify: true,
-      data: hosts.flatMap((host) => [
-        { scheme: "https", host, pathPrefix: "/l" },
-        { scheme: "https", host, pathPrefix: "/listing" },
-      ]),
-      category: ["BROWSABLE", "DEFAULT"],
-    },
-  ];
-}
-
-function mergeAssociatedDomains(
-  existing: string[] | undefined,
-  primaryHost: string,
-): string[] {
-  return Array.from(
-    new Set([
-      ...(existing ?? []),
-      `applinks:${primaryHost}`,
-      `webcredentials:${primaryHost}`,
-    ]),
-  );
 }
 
 // Canonical dynamic-config pattern: `config` IS the parsed app.json, so the

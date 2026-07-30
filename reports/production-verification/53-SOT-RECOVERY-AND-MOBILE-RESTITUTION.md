@@ -92,7 +92,20 @@ Base: `origin/main` (`b7212bf`)
 | Docker `Dockerfile.web` → `banco-web-static-cert:rerun` | **PASS** (well-known = `com.bancooom.app`, no `bancoboom`) |
 | Live DNS/HTTP | Apex Replit 404; www Horizons; well-known not JSON; `api.banco.today` NXDOMAIN; `banco.autos` TLS fail |
 
-Local tip: **`95c87af`** (+ cert doc refresh commit after this re-run).
+Local tip: **`precision-hardening` commit after clean 3-commit rewrite** (no nested patch blobs).
+
+### Precision hardening (this iteration)
+
+| Fix | Detail |
+|-----|--------|
+| Clean history | Dropped nested `format-patch` commits from SoT branch |
+| H2 merge module | `lib/link-host-merge.mjs` — normalize, reject replit/blank, dedupe case/dot |
+| Executable tests | 8 universal-link tests including real merge output |
+| Confidence gates | Exact SoT identity; parse AASA/assetlinks JSON; forbid `bancoboom`; COPY both well-known files |
+| nginx MIME | `default_type` only (no duplicate `add_header Content-Type`) |
+| AASA paths | Scoped to `/l` + `/listing` (no blanket `*`) |
+| Unused deps | Removed unused `@googlemaps/markerclusterer` + `@vis.gl/react-google-maps` |
+| Historical docs | `DEPLOYMENT_PLAN.md` + `BANCO-SAFE-RECOVERY-EXECUTION-PLAN.md` marked SUPERSEDED |
 
 ---
 

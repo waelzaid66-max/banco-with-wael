@@ -1,6 +1,8 @@
 # BANCO MARKET — Safe Recovery & Execution Plan (SoT)
 
-> **Owner:** Production Chief Architect (Claude) · **Target repo:** `bancoo` (source of truth) · **Deploy:** Coolify (approved) · **Date:** 2026-07-25
+> **SUPERSEDED (2026-07-30):** Authoritative Coolify SoT is **`waelzaid66-max/banco-with-wael`** with mobile **`com.bancooom.app`**. See `docs/DEPLOYMENT_SOURCE_OF_TRUTH.md`. The line below that named `bancoo` as SoT is **historical only**.
+
+> **Owner:** Production Chief Architect (Claude) · **Target repo (historical):** `bancoo` · **Deploy:** Coolify (approved) · **Date:** 2026-07-25
 > Evidence-based (code wins over docs). No guessing — unproven items marked UNKNOWN. Every fix has Impact + Rollback + Confidence. **No code until owner approves this plan.**
 
 ## 0. OWNER DECISIONS — LOCKED (resolve the prior audit's open F0)
