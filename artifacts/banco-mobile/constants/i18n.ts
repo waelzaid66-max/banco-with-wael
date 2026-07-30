@@ -517,6 +517,9 @@ const en = {
         reset: "Reset",
         carSub: "New, used, imported & installment cars",
         realEstateSub: "Apartments, villas & land — for sale & rent",
+        /** Compact RE mini-app mark — not a separate brand wall. */
+        propertyBrand: "B-PROPERTY",
+        propertyTypeAny: "All types",
         factoriesSub: "Factories, warehouses, machines & land",
         materialsSub: "Raw materials & production lines",
         bookingSub: "Furnished stays — daily, monthly & yearly rentals",
@@ -2718,6 +2721,9 @@ const ar: typeof en = {
         reset: "تصفير",
         carSub: "سيارات جديدة، مستعملة، مستوردة وبالتقسيط",
         realEstateSub: "شقق، فيلات وأراضي — للبيع والإيجار",
+        /** علامة الميني-أب المضغوطة — ليست براند مستقل. */
+        propertyBrand: "B-PROPERTY",
+        propertyTypeAny: "كل الأنواع",
         factoriesSub: "مصانع، مخازن، ماكينات وأراضي",
         materialsSub: "مواد خام وخطوط إنتاج",
         bookingSub: "إقامات مفروشة — إيجار يومي وشهري وسنوي",

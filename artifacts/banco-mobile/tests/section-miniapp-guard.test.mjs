@@ -467,7 +467,8 @@ test("Each section declares its OWN chrome — the shared mini-app never decides
   // shape by accident.
   for (const [file, expected] of [
     ["car", /listingMode:\s*"pill"[\s\S]*engines:\s*"pill"/],
-    ["real-estate", /engines:\s*"chips"/],
+    // RE: offer chips (flicked) + property-type pill (16 values — measured overflow).
+    ["real-estate", /engines:\s*"chips"[\s\S]*propertyType:\s*"pill"/],
     ["factories", /engines:\s*"chips"/],
     ["materials", /engines:\s*"chips"/],
   ]) {
@@ -763,8 +764,18 @@ test("Real-estate section uses offer strip + type strip (no listingMode clash)",
   const section = fs.readFileSync(SECTION_APP, "utf8");
   assert.match(
     section,
+    /axisShape\(chrome,\s*"propertyType"\)/,
+    "RE property-type shape must come from the section chrome (pill vs chips)",
+  );
+  assert.match(
+    section,
     /testID="re-type-strip"/,
     "RE must expose a dedicated property-type strip",
+  );
+  assert.match(
+    section,
+    /testID="re-property-brand"/,
+    "RE header must expose the compact B-PROPERTY mark",
   );
   // Owner 2026-07-27: RE joins Stay/cars/facilities — country + currency collapse
   // into the ONE compact MarketCountryButton. The spread 21-cell matrix (~6

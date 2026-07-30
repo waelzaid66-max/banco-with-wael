@@ -1092,6 +1092,18 @@ export function SectionSearchApp({
               {t(titleKey)}
             </AppText>
           </View>
+          {isRealEstateSection ? (
+            <AppText
+              style={[
+                styles.headerBrand,
+                { color: accent, textAlign },
+              ]}
+              numberOfLines={1}
+              testID="re-property-brand"
+            >
+              {t("search.discover.section.propertyBrand")}
+            </AppText>
+          ) : null}
           {subtitleKey ? (
             <AppText
               style={[
@@ -1430,60 +1442,92 @@ export function SectionSearchApp({
         }) : null}
       </View>
 
-      {/* ── RE property-type strip (Stay-parallel) — never mixed into offer row ── */}
+      {/* ── RE property-type axis (Stay-parallel) — never mixed into offer row.
+          Shape comes from the section screen via chrome.propertyType:
+          "pill" collapses 16 types into one control (B-PROPERTY content-first);
+          "chips" keeps the horizontal strip for any section that still wants it. ── */}
       {showReTypeStrip ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.hScroll}
-          contentContainerStyle={[styles.reTypeStrip, { flexDirection: rowDir }]}
-          testID="re-type-strip"
-        >
-          {[{ value: RE_TYPE_ALL, label: t("home.engines.all") }]
-            .concat(
-              reTypeTabs.map((v) => {
+        axisShape(chrome, "propertyType") === "pill" ? (
+          <View
+            style={[styles.reTypeStrip, { flexDirection: rowDir }]}
+            testID="re-type-strip"
+          >
+            <FilterPillSelect
+              icon="home"
+              title={t("create.fields.propertyType")}
+              options={reTypeTabs.map((v) => {
                 const def = PROPERTY_TYPES.find((p) => p.value === v);
                 return {
                   value: v,
                   label: def ? (isRTL ? def.ar : def.en) : v,
                 };
-              }),
-            )
-            .map((tab) => {
-              const active =
-                tab.value === RE_TYPE_ALL
-                  ? !criteria.propertyType
-                  : criteria.propertyType === tab.value;
-              return (
-                <Pressable
-                  key={tab.value}
-                  onPress={() => {
-                    playSound("tap");
-                    Haptics.selectionAsync();
-                    selectRePropertyType(tab.value);
-                  }}
-                  style={[
-                    styles.stripChip,
-                    {
-                      backgroundColor: active ? accent : colors.card,
-                      borderWidth: 1,
-                      borderColor: active ? accent : colors.border,
-                    },
-                  ]}
-                  testID={`re-type-${tab.value}`}
-                >
-                  <AppText
+              })}
+              selected={criteria.propertyType ?? RE_TYPE_ALL}
+              allValue={RE_TYPE_ALL}
+              allLabel={t("search.discover.section.propertyTypeAny")}
+              onSelect={(v) => {
+                playSound("tap");
+                Haptics.selectionAsync();
+                selectRePropertyType(v);
+              }}
+              accentColor={accent}
+              testID="re-type-pill"
+            />
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.hScroll}
+            contentContainerStyle={[styles.reTypeStrip, { flexDirection: rowDir }]}
+            testID="re-type-strip"
+          >
+            {[{ value: RE_TYPE_ALL, label: t("home.engines.all") }]
+              .concat(
+                reTypeTabs.map((v) => {
+                  const def = PROPERTY_TYPES.find((p) => p.value === v);
+                  return {
+                    value: v,
+                    label: def ? (isRTL ? def.ar : def.en) : v,
+                  };
+                }),
+              )
+              .map((tab) => {
+                const active =
+                  tab.value === RE_TYPE_ALL
+                    ? !criteria.propertyType
+                    : criteria.propertyType === tab.value;
+                return (
+                  <Pressable
+                    key={tab.value}
+                    onPress={() => {
+                      playSound("tap");
+                      Haptics.selectionAsync();
+                      selectRePropertyType(tab.value);
+                    }}
                     style={[
-                      styles.stripChipText,
-                      { color: active ? "#FFFFFF" : colors.foreground },
+                      styles.stripChip,
+                      {
+                        backgroundColor: active ? accent : colors.card,
+                        borderWidth: 1,
+                        borderColor: active ? accent : colors.border,
+                      },
                     ]}
+                    testID={`re-type-${tab.value}`}
                   >
-                    {tab.label}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-        </ScrollView>
+                    <AppText
+                      style={[
+                        styles.stripChipText,
+                        { color: active ? "#FFFFFF" : colors.foreground },
+                      ]}
+                    >
+                      {tab.label}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+          </ScrollView>
+        )
       ) : null}
 
       {/* ── Cars: brand-picker button + origin chips — ONE compact strip.
@@ -1919,6 +1963,12 @@ const styles = StyleSheet.create({
     minWidth: 0,
     fontSize: 18,
     fontFamily: "Inter_700Bold",
+  },
+  headerBrand: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.6,
+    marginTop: 2,
   },
   headerSub: {
     fontSize: 12,
