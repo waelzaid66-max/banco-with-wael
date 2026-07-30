@@ -3398,11 +3398,14 @@ const styles = StyleSheet.create({
   boostTextWrap: { flex: 1, gap: 2 },
   boostTitle: { fontSize: 15, fontFamily: "Inter_700Bold" },
   boostBody: { fontSize: 12.5, fontFamily: "Inter_400Regular", lineHeight: 18 },
+  // Hug content (rfq/investments pattern) — not a full-bleed bar. Wizard
+  // Next/Publish stays on footerNextBtn { flex: 1 } beside Back.
   primaryBtn: {
-    alignSelf: "stretch",
+    alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 15,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
     marginTop: 18,
   },
   primaryBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
