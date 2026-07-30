@@ -326,7 +326,13 @@ export async function deleteAccount(clerkId: string): Promise<{ deleted: boolean
   const details = kycUser?.companyDetails;
   if (details && typeof details === "object" && !Array.isArray(details)) {
     const docs = (details as Record<string, unknown>).documents;
-    if (docs && typeof docs === "object" && !Array.isArray(docs)) {
+    // Mobile onboarding stores `documents` as string[] (flat URL list).
+    // Older/web shapes may store a map of label → URL. Accept both.
+    if (Array.isArray(docs)) {
+      for (const v of docs) {
+        if (typeof v === "string" && v.length > 0) kycUrls.push(v);
+      }
+    } else if (docs && typeof docs === "object") {
       for (const v of Object.values(docs as Record<string, unknown>)) {
         if (typeof v === "string" && v.length > 0) kycUrls.push(v);
       }

@@ -13,6 +13,7 @@
 | **App scheme** | `bancooom` |
 | **App display name** | `BANCO` |
 | **Coolify compose file** | `docker-compose.coolify.yml` |
+| **Coolify click checklist** | **`COOLIFY_DEPLOY_NOW.md`** (start here) |
 | **Package manager** | `pnpm@11.9.0` |
 | **Node (Docker)** | **24** |
 

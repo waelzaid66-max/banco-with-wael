@@ -136,6 +136,8 @@ async function seedUserWithFootprint(): Promise<{
 beforeEach(() => {
   deleteUserMock.mockReset();
   deleteUserMock.mockResolvedValue(undefined as never);
+  deleteServingUrlsMock.mockClear();
+  deleteServingUrlsMock.mockResolvedValue({ deleted: 0, skipped: 0, failed: 0 });
 });
 
 describe("deleteAccount", () => {
@@ -401,6 +403,38 @@ describe("deleteAccount", () => {
       .from(savedListings)
       .where(eq(savedListings.userId, f.userId));
     expect(saves).toHaveLength(0);
+  });
+
+  it("purges mobile KYC documents stored as string[] (not only object maps)", async () => {
+    const f = await seedUserWithFootprint();
+    const DOC_A =
+      "https://app.example.com/api/v1/uploads/objects/uploads/kyc-doc-a";
+    const DOC_B =
+      "https://app.example.com/api/v1/uploads/objects/uploads/kyc-doc-b";
+    const PHOTO =
+      "https://app.example.com/api/v1/uploads/objects/uploads/kyc-id-photo";
+
+    await db
+      .update(users)
+      .set({
+        companyDetails: {
+          activity_type: "car_dealer",
+          business_name: "Acme Motors",
+          city: "Cairo",
+          // Mobile onboarding shape (business/onboarding.tsx)
+          documents: [DOC_A, DOC_B],
+          identity_photo_url: PHOTO,
+        },
+      })
+      .where(eq(users.id, f.userId));
+
+    await deleteAccount(f.clerkId);
+
+    expect(deleteServingUrlsMock).toHaveBeenCalled();
+    const allUrls = deleteServingUrlsMock.mock.calls.flatMap(
+      (call) => (call[0] as string[]) ?? [],
+    );
+    expect(allUrls).toEqual(expect.arrayContaining([DOC_A, DOC_B, PHOTO]));
   });
 });
 
