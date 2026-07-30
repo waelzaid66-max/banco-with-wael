@@ -6,6 +6,9 @@ import {
   getImportOrder,
   updateImportOrderStage,
   cancelImportOrder,
+  listImportOrderDocuments,
+  attachImportOrderDocument,
+  deleteImportOrderDocument,
 } from "../services/ImportOrderService";
 import {
   successResponse,
@@ -15,6 +18,8 @@ import {
   ImportOrderListItemSchema,
   CreateImportOrderSchema,
   ImportOrderCreateResultSchema,
+  ImportOrderDocumentSchema,
+  AttachImportOrderDocumentSchema,
 } from "../validators/schemas";
 
 function mapError(res: Response, err: unknown, label: string) {
@@ -95,5 +100,42 @@ export async function cancelImportOrderHandler(req: Request, res: Response) {
     return res.json(successResponse(validated));
   } catch (err) {
     return mapError(res, err, "[ImportOrder cancel]");
+  }
+}
+
+// GET /v1/import-orders/:id/documents — the order's attached paperwork.
+export async function listImportOrderDocumentsHandler(req: Request, res: Response) {
+  try {
+    const id = req.params.id as string;
+    const result = await listImportOrderDocuments(req.userId!, id);
+    const validated = validateResponse(ImportOrderDocumentSchema.array(), result);
+    return res.json(successResponse(validated));
+  } catch (err) {
+    return mapError(res, err, "[ImportOrder docs list]");
+  }
+}
+
+// POST /v1/import-orders/:id/documents — attach an uploaded file to the order.
+export async function attachImportOrderDocumentHandler(req: Request, res: Response) {
+  try {
+    const id = req.params.id as string;
+    const input = AttachImportOrderDocumentSchema.parse(req.body);
+    const result = await attachImportOrderDocument(req.userId!, id, input);
+    const validated = validateResponse(ImportOrderDocumentSchema, result);
+    return res.status(201).json(successResponse(validated));
+  } catch (err) {
+    return mapError(res, err, "[ImportOrder docs attach]");
+  }
+}
+
+// DELETE /v1/import-orders/:id/documents/:documentId — remove an attachment.
+export async function deleteImportOrderDocumentHandler(req: Request, res: Response) {
+  try {
+    const id = req.params.id as string;
+    const documentId = req.params.documentId as string;
+    await deleteImportOrderDocument(req.userId!, id, documentId);
+    return res.json(successResponse({ deleted: true }));
+  } catch (err) {
+    return mapError(res, err, "[ImportOrder docs delete]");
   }
 }

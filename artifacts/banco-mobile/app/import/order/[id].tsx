@@ -24,6 +24,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppText } from "@/components/AppText";
+import { OrderDocuments } from "@/components/import/OrderDocuments";
 import { useI18n } from "@/context/LanguageContext";
 import { useColors } from "@/hooks/useColors";
 
@@ -281,6 +282,13 @@ export default function ImportOrderDetailScreen() {
                 </View>
               ))}
           </View>
+
+          {/* Paperwork — attach photos of the checklist documents (wave 3).
+              Terminal orders show what was uploaded, read-only. */}
+          <OrderDocuments
+            orderId={order.id}
+            readOnly={cancelled || order.stage === "delivered"}
+          />
 
           {/* Actions */}
           {!cancelled && SELF_CANCEL_STAGES.has(order.stage) && (
