@@ -1,7 +1,7 @@
 # PRODUCTION GAP MATRIX
 
 **SoT:** `waelzaid66-max/banco-with-wael`
-**Tip audited:** inventory branch on `0109c2f` base — see `57-PRODUCTION-INVENTORY-HARMONY.md`
+**Tip audited:** codegen harmony on `238e34a` base — see `58-OPENAPI-CODEGEN-HARMONY.md`
 **Date:** 2026-07-30
 **Method:** Independent re-verification of repository state, CI, live probes, Docker builds, typecheck, ESLint, gates, OpenAPI, mobile config. Previous reports treated as claims only.
 
@@ -79,6 +79,10 @@
 | G68 | `@expo/vector-icons` in runtime dependencies | MOBILE | LOW | icons.test requires devDependency-only | YES (moved to devDependencies) | NO | NO | NO | NO | FIXED_IN_REPO |
 | G69 | UTF-8 BOM on `production-confidence-check.mjs` | CI | MEDIUM | Broke `node --check` / shebang tooling | YES (BOM stripped) | NO | NO | NO | NO | FIXED_IN_REPO |
 | G70 | Cloudflare stub named as if `bancoo` were SoT | DOCS | LOW | Historical Workers project id; comments clarified | YES | NO | NO | NO | NO | FIXED_IN_REPO |
+| G71 | OpenAPI clients stale after PR #9 path adds | SPEC | HIGH | orval not re-run; hooks/schemas missing | YES (codegen) | NO | NO | NO | NO | FIXED_IN_REPO |
+| G72 | OpenAPI omitted Express `GET /api` root liveness | SPEC | LOW | Health router `GET /` under `/api` mount | YES | NO | NO | NO | NO | FIXED_IN_REPO |
+| G73 | No codegen freshness gate | CI | HIGH | Stale generated clients could merge | YES (confidence check) | NO | NO | NO | NO | FIXED_IN_REPO |
+| G74 | DEPLOY_COOLIFY architecture diagram apex→banco-website | DOCS | CRITICAL | Contradicted recommended web:80 first deploy | YES | NO | YES (ops follow fixed doc) | NO | YES | FIXED_IN_REPO |
 
 ---
 
@@ -86,7 +90,7 @@
 
 | Bucket | Count |
 |--------|-------|
-| FIXED_IN_REPO (this branch or prior verified main fixes) | 33 |
+| FIXED_IN_REPO (this branch or prior verified main fixes) | 38 |
 | REQUIRES_EXTERNAL_OPS | 37 |
 | OPEN_IN_REPO | **0** |
 

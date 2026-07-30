@@ -49,6 +49,18 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * Express mounts health router at `/api`, so this is `GET /api`. Process up only — does not touch the database. Includes optional deploy pin.
+ * @summary API root liveness (platform probe)
+ */
+export const ApiRootLivenessResponse = zod.object({
+  "status": zod.enum(['ok', 'degraded'])
+}).and(zod.object({
+  "gitSha": zod.string().nullish(),
+  "buildId": zod.string().nullish()
+}).describe('Optional deploy identity baked at image build (null when unset — never invented).')).describe('Process liveness with deploy pin. Does not touch the database.')
+
+
+/**
  * Process is up. Does not touch the database. Includes optional deploy pin (gitSha/buildId) when baked into the image.
  * @summary Liveness probe
  */
@@ -328,6 +340,17 @@ export const VerifyUploadResponse = zod.object({
   "total": zod.number().optional()
 }).optional()
 })
+
+
+/**
+ * Streams an object by storage path. Mounted in Express as `GET /api/v1/uploads/objects/*path` (wildcard). Optional Clerk auth — private objects require the owning session; public objects may be served anonymously after promote.
+ * @summary Serve an uploaded object from private/public storage
+ */
+export const ServeUploadObjectParams = zod.object({
+  "path": zod.coerce.string().describe('Object key path after \/objects\/ (may contain slashes).')
+})
+
+export const ServeUploadObjectResponse = zod.unknown()
 
 
 /**
@@ -930,6 +953,83 @@ export const GetImportOrderParams = zod.object({
 })
 
 export const GetImportOrderResponse = zod.object({
+  "data": zod.object({
+  "id": zod.string(),
+  "user_id": zod.string().optional(),
+  "listing_id": zod.string().nullish(),
+  "stage": zod.enum(['order', 'review', 'confirm', 'shipping', 'customs', 'delivered', 'cancelled']).describe('Live sequential stage of a car-import order, matching the in-app import guide: order to review to confirm to shipping to customs to delivered, with cancelled as the terminal negative outcome.'),
+  "origin_country": zod.string().nullish(),
+  "destination_country": zod.string().nullish(),
+  "details": zod.record(zod.string(), zod.unknown()).nullish(),
+  "budget_amount": zod.number().nullish(),
+  "quote_amount": zod.number().nullish(),
+  "currency": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "created_at": zod.string().nullable(),
+  "updated_at": zod.string().nullish()
+}).optional(),
+  "error": zod.object({
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
+  "message": zod.string()
+}).nullish(),
+  "meta": zod.object({
+  "cursor": zod.string().optional(),
+  "has_next": zod.boolean().optional(),
+  "total": zod.number().optional()
+}).optional()
+})
+
+
+/**
+ * Admin/ops only (`manage_financing`). Updates stage and optional quote. Matches Express `PATCH /api/v1/import-orders/:id/stage`.
+ * @summary Advance or update a car-import order stage (ops)
+ */
+export const UpdateImportOrderStageParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateImportOrderStageBody = zod.object({
+  "stage": zod.enum(['order', 'review', 'confirm', 'shipping', 'customs', 'delivered', 'cancelled']).describe('Live sequential stage of a car-import order, matching the in-app import guide: order to review to confirm to shipping to customs to delivered, with cancelled as the terminal negative outcome.'),
+  "quote_amount": zod.number().nullish()
+})
+
+export const UpdateImportOrderStageResponse = zod.object({
+  "data": zod.object({
+  "id": zod.string(),
+  "user_id": zod.string().optional(),
+  "listing_id": zod.string().nullish(),
+  "stage": zod.enum(['order', 'review', 'confirm', 'shipping', 'customs', 'delivered', 'cancelled']).describe('Live sequential stage of a car-import order, matching the in-app import guide: order to review to confirm to shipping to customs to delivered, with cancelled as the terminal negative outcome.'),
+  "origin_country": zod.string().nullish(),
+  "destination_country": zod.string().nullish(),
+  "details": zod.record(zod.string(), zod.unknown()).nullish(),
+  "budget_amount": zod.number().nullish(),
+  "quote_amount": zod.number().nullish(),
+  "currency": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "created_at": zod.string().nullable(),
+  "updated_at": zod.string().nullish()
+}).optional(),
+  "error": zod.object({
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
+  "message": zod.string()
+}).nullish(),
+  "meta": zod.object({
+  "cursor": zod.string().optional(),
+  "has_next": zod.boolean().optional(),
+  "total": zod.number().optional()
+}).optional()
+})
+
+
+/**
+ * Signed-in buyer cancels their own import order. Matches Express `POST /api/v1/import-orders/:id/cancel`.
+ * @summary Cancel a car-import order (buyer)
+ */
+export const CancelImportOrderParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const CancelImportOrderResponse = zod.object({
   "data": zod.object({
   "id": zod.string(),
   "user_id": zod.string().optional(),

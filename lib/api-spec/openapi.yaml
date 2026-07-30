@@ -3711,6 +3711,22 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
+  /:
+    get:
+      operationId: apiRootLiveness
+      tags: [health]
+      summary: API root liveness (platform probe)
+      description: >-
+        Express mounts health router at `/api`, so this is `GET /api`. Process
+        up only — does not touch the database. Includes optional deploy pin.
+      responses:
+        "200":
+          description: Alive
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LiveStatus"
+
   /livez:
     get:
       operationId: liveCheck
