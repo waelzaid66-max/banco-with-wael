@@ -1,4 +1,9 @@
 import type { ConfigContext, ExpoConfig } from "expo/config";
+import {
+  mergeAndroidAppLinkFilters,
+  mergeAssociatedDomains,
+  resolveWebAppLinkHost,
+} from "./lib/link-host-merge.mjs";
 
 /**
  * Deep-link / universal-link origin for expo-router static rendering.
@@ -13,33 +18,7 @@ const routerOrigin =
   process.env.EXPO_PUBLIC_PUBLIC_APP_URL?.trim() ||
   "https://replit.com/";
 
-/**
- * HTTPS app-link host for Universal Links (iOS) and App Links (Android).
- * Driven only by operator env — never hardcoded. Omitted when unset or replit.com.
- */
-function webAppLinkHost(): string | null {
-  for (const raw of [
-    process.env.EXPO_PUBLIC_PUBLIC_APP_URL,
-    process.env.EXPO_PUBLIC_ROUTER_ORIGIN,
-    process.env.EXPO_ROUTER_ORIGIN,
-  ]) {
-    const t = raw?.trim();
-    if (!t) continue;
-    try {
-      const url = t.includes("://") ? new URL(t) : new URL(`https://${t}`);
-      const host = url.hostname;
-      if (!host || host === "replit.com" || host.endsWith(".replit.dev")) {
-        continue;
-      }
-      return host;
-    } catch {
-      /* try next */
-    }
-  }
-  return null;
-}
-
-const webHost = webAppLinkHost();
+const webHost = resolveWebAppLinkHost(process.env);
 
 function withRouterOrigin(plugins: ExpoConfig["plugins"]): ExpoConfig["plugins"] {
   return (plugins ?? []).map((plugin) => {
@@ -75,10 +54,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ...config.ios,
     ...(webHost
       ? {
-          associatedDomains: [
-            `applinks:${webHost}`,
-            `webcredentials:${webHost}`,
-          ],
+          associatedDomains: mergeAssociatedDomains(
+            config.ios?.associatedDomains,
+            webHost,
+          ),
         }
       : {}),
   },
@@ -86,17 +65,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ...config.android,
     ...(webHost
       ? {
-          intentFilters: [
-            {
-              action: "VIEW",
-              autoVerify: true,
-              data: [
-                { scheme: "https", host: webHost, pathPrefix: "/l" },
-                { scheme: "https", host: webHost, pathPrefix: "/listing" },
-              ],
-              category: ["BROWSABLE", "DEFAULT"],
-            },
-          ],
+          intentFilters: mergeAndroidAppLinkFilters(
+            config.android?.intentFilters,
+            webHost,
+          ),
         }
       : {}),
   },

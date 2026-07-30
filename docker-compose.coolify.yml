@@ -1,31 +1,39 @@
 # BANCO — Coolify Docker Compose resource (docker-compose.coolify.yml)
 #
+# ★ START HERE: /COOLIFY_DEPLOY_NOW.md  (foolproof Coolify clicks + name map)
+# SoT repo: waelzaid66-max/banco-with-wael  ·  NEVER sister bancoo
+#
 # This is the DEFINITIVE compose file for Coolify Docker Compose deployments on
-# Hostinger VPS. Upload it to a Coolify "Docker Compose" resource.
+# Hostinger VPS. Point Coolify at this path: docker-compose.coolify.yml
 #
 # Quick start on Coolify:
-#   1. Create a new project → New Resource → Docker Compose → Paste this file
-#      (or point to repository with compose file path = docker-compose.coolify.yml)
-#   2. Set all required environment variables in Coolify's env section
-#      (see docs/DEPLOY_COOLIFY.md for the full list)
-#   3. Click Deploy
+#   1. New Resource → Docker Compose → repo banco-with-wael
+#      compose file path = docker-compose.coolify.yml
+#   2. Set required env vars (see COOLIFY_DEPLOY_NOW.md) BEFORE first Deploy
+#   3. Map apex domain to service `web` port 80 (recommended single-origin)
+#   4. Deploy, then: docker compose --profile migrate run --rm migrate
 #
-# ─── Services ────────────────────────────────────────────────────────────────
-#   postgres      Postgres 16, persistent volume, internal-only
-#   api           Node.js API server  → port 8080
-#   banco-web     Next.js consumer app → port 3000
-#   banco-website Next.js marketing site → port 3001 (host) : 3000 (container)
-#   web           Nginx + Vite SPAs    → port 80
+# ─── Service ↔ Image map (DO NOT CONFUSE THESE NAMES) ────────────────────────
+#   Service          Image                    Role
+#   postgres         postgres:16              DB (internal)
+#   migrate          (profile migrate)        one-off drizzle push
+#   api              banco-api:latest         API · compose health = /api/readyz
+#                                             (Dockerfile HEALTHCHECK = /api/healthz
+#                                              is image liveness only; compose wins)
+#   banco-web        banco-web:latest         Next.js consumer
+#   banco-website    banco-website:latest     Next.js marketing/twin
+#   web              banco-web-static:latest  Nginx SPAs + /.well-known + /api proxy
 #
 # ─── Network ─────────────────────────────────────────────────────────────────
 #   All services share `banco_net`. Inter-service DNS uses the service name
 #   (e.g. `api` resolves to the API container from any other container).
+#   nginx upstream name `banco_api` is local to nginx.conf — real DNS is `api`.
 #
 # ─── Environment variables ───────────────────────────────────────────────────
 #   Runtime secrets (CLERK_SECRET_KEY, SESSION_SECRET, etc.) are injected by
 #   Coolify from its environment variable UI — never committed here.
 #   Build-time NEXT_PUBLIC_* / VITE_* args are passed via `build.args` below.
-#   See docs/DEPLOY_COOLIFY.md for the complete variable reference.
+#   See COOLIFY_DEPLOY_NOW.md + docs/DEPLOY_COOLIFY.md.
 #
 # ─── Migrations ──────────────────────────────────────────────────────────────
 #   Schema migrations are NOT run automatically on deploy. Apply them explicitly

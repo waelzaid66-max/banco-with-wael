@@ -42,14 +42,14 @@ eas env:create --environment production --name EXPO_PUBLIC_ROUTER_ORIGIN --value
 
 | Item | Why it blocks store / deep links |
 |------|----------------------------------|
-| Hosted `/.well-known/apple-app-site-association` | Missing today (404 on `banco.today`) — Universal Links cannot verify |
-| Hosted `/.well-known/assetlinks.json` | Missing today (404) — Android App Links `autoVerify` cannot succeed |
-| DNS `banco.today` → Coolify | Currently Replit placeholder — App Links verification fails |
+| Hosted `/.well-known/apple-app-site-association` | Repo ships template under `deploy/coolify/well-known/` — must replace `REPLACE_APPLE_TEAM_ID`, redeploy `web`, and point DNS at Coolify |
+| Hosted `/.well-known/assetlinks.json` | Repo ships template — must replace `REPLACE_PLAY_APP_SIGNING_SHA256` + DNS → Coolify |
+| DNS `banco.today` → Coolify | Apex currently Replit placeholder; `www` is Hostinger Horizons — App Links verification fails |
 | EAS credentials (Apple + Google Play) | Required for signed iOS/Android store builds |
 | `NSFaceIDUsageDescription` | Present in `app.json` (biometric unlock + delete-account confirm) |
 
 Do **not** ship store builds until AASA/assetlinks are served on the production
-host and DNS points at Coolify. Bundle/package id: `com.bancooom.app`.
+host **with real Team ID / SHA-256** and DNS points at Coolify. Bundle/package id: `com.bancooom.app`.
 
 `eas.json` profiles:
 - `preview` — internal APK (Android) + iOS device build; uses production env vars.

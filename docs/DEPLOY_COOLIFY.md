@@ -1,5 +1,8 @@
 # Banco — Coolify on Hostinger VPS Deployment Guide
 
+> **Start here for a no-guess deploy:** root file [`COOLIFY_DEPLOY_NOW.md`](../COOLIFY_DEPLOY_NOW.md)
+> **SoT repo only:** `waelzaid66-max/banco-with-wael` · compose `docker-compose.coolify.yml` · mobile `com.bancooom.app`
+
 ## Overview
 
 This guide explains how to deploy the entire Banco monorepo on
@@ -7,15 +10,16 @@ This guide explains how to deploy the entire Banco monorepo on
 
 ### Services deployed
 
-| Service | Type | Container Port | Description |
-|---------|------|---------------|-------------|
-| `postgres` | Postgres 16 | 5432 (internal) | Persistent database |
-| `api` | Node.js Express | 8080 | REST + WebSocket API server |
-| `banco-web` | Next.js standalone | 3000 | Consumer app (listings, bookings, Clerk auth) |
-| `banco-website` | Next.js standalone | 3000 (→ 3001 host) | Marketing website |
-| `web` | Nginx + Vite SPAs | 80 | landing / dealer-os / admin-os |
+| Service | Image name | Type | Container Port | Description |
+|---------|------------|------|---------------|-------------|
+| `postgres` | `postgres:16` | Postgres 16 | 5432 (internal) | Persistent database |
+| `api` | `banco-api` | Node.js Express | 8080 | REST + WebSocket — health **`/api/readyz`** |
+| `banco-web` | `banco-web` | Next.js standalone | 3000 | Consumer Next app |
+| `banco-website` | `banco-website` | Next.js standalone | 3000 (→ 3001 host) | Marketing / consumer twin |
+| `web` | **`banco-web-static`** | Nginx + Vite SPAs | 80 | Landing + dealer-os + admin-os + well-known + `/api/` proxy |
 
 The Expo mobile app (`artifacts/banco-mobile`) runs on iOS/Android via EAS — it is **not** deployed as a server container.
+
 
 ---
 
@@ -47,14 +51,34 @@ In Coolify's **Environment Variables** tab, add every variable listed in the
 
 ### 4. Configure domains in Coolify
 
-In the **Domains** tab, assign a domain to each exposed port:
+#### Recommended first deploy (single origin — least confusing)
 
-| Service | Host Port | Assign domain |
-|---------|-----------|---------------|
-| `api` | 8080 | `api.yourdomain.com` |
-| `banco-web` | 3000 | `app.yourdomain.com` |
-| `banco-website` | 3001 | `yourdomain.com` |
-| `web` (Nginx) | 80 | `static.yourdomain.com` (or your single-origin domain) |
+Assign your **apex** (e.g. `banco.today`) to service **`web`** port **80**.
+
+Service `web` is **Nginx** (image `banco-web-static`). It already serves:
+
+| Path | App |
+|------|-----|
+| `/` | Landing |
+| `/market/` | Dealer OS |
+| `/admin/` | Admin OS |
+| `/api/` | Reverse proxy → compose service `api:8080` |
+| `/.well-known/` | Universal / App Links templates |
+| `/nginx-health` | Liveness |
+
+This avoids putting the marketing Next app on the apex by accident.
+
+#### Optional split origins (advanced)
+
+| Service | Host Port | Example domain | Notes |
+|---------|-----------|----------------|-------|
+| `web` (Nginx) | 80 | `banco.today` (recommended) | Static SPAs + `/api/` proxy |
+| `api` | 8080 | `api.banco.today` | Only if you want a separate API host |
+| `banco-website` | 3001 | marketing host | Next.js — **not** the same as Nginx `web` |
+| `banco-web` | 3000 | app host | Next.js consumer twin |
+
+**Name trap:** compose service `web` ≠ compose service `banco-web`.
+`web` = Nginx image `banco-web-static`. `banco-web` = Next.js image `banco-web`.
 
 Coolify's built-in Traefik reverse proxy handles HTTPS/TLS automatically via
 Let's Encrypt.
@@ -263,6 +287,24 @@ via Expo Application Services (EAS), not as a Docker container.
 - Set `EXPO_PUBLIC_DOMAIN` to your API domain (e.g. `api.yourdomain.com`)
 - The mobile app communicates with the API over HTTPS — it is unaffected by
   Docker deployment topology
+
+### Universal Links / App Links (well-known)
+
+The `web` nginx image ships templates from `deploy/coolify/well-known/`:
+
+| URL | File |
+|-----|------|
+| `/.well-known/apple-app-site-association` | iOS Universal Links |
+| `/.well-known/assetlinks.json` | Android App Links |
+
+Before store deep-link verification:
+
+1. Replace `REPLACE_APPLE_TEAM_ID` with your Apple Team ID
+2. Replace `REPLACE_PLAY_APP_SIGNING_SHA256` with Play App Signing SHA-256
+3. Redeploy the `web` service
+4. Confirm DNS for `banco.today` (and any other associated hosts) points at Coolify — not Replit / Hostinger Horizons
+
+See `deploy/coolify/well-known/README.md`.
 
 ---
 

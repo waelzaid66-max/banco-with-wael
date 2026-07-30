@@ -6,10 +6,11 @@ This monorepo is designed for Coolify + Docker Compose. Deploy in this order so 
 
 Required:
 
-- `DATABASE_URL` or compose Postgres vars (`POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`)
+- Compose Postgres vars: `POSTGRES_PASSWORD` (required), optional `POSTGRES_USER` / `POSTGRES_DB`
+  (`DATABASE_URL` is **constructed by compose** from those — you do not need a separate `DATABASE_URL` for this Coolify file)
 - `CLERK_SECRET_KEY`
 - `CLERK_PUBLISHABLE_KEY` / `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-- `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` (EAS builds)
+- `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` (EAS builds — not Coolify)
 - `SESSION_SECRET`
 - `PAYMENT_CONFIG_ENCRYPTION_KEY`
 - Object storage — **required for Coolify (Hostinger VPS has no IAM role)**:

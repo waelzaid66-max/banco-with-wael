@@ -94,10 +94,24 @@ function checkExpoConfig() {
     } else {
       pass("app.json eas projectId");
     }
-    if (!json.expo?.android?.package || !json.expo?.ios?.bundleIdentifier) {
+    const androidPkg = json.expo?.android?.package;
+    const iosBundle = json.expo?.ios?.bundleIdentifier;
+    const scheme = json.expo?.scheme;
+    const name = json.expo?.name;
+    if (!androidPkg || !iosBundle) {
       fail("app identifiers", "android.package / ios.bundleIdentifier required");
+    } else if (
+      androidPkg !== "com.bancooom.app" ||
+      iosBundle !== "com.bancooom.app" ||
+      scheme !== "bancooom" ||
+      name !== "BANCO"
+    ) {
+      fail(
+        "app identifiers",
+        `canonical SoT identity required (BANCO / bancooom / com.bancooom.app); got name=${name} scheme=${scheme} android=${androidPkg} ios=${iosBundle}`,
+      );
     } else {
-      pass("app identifiers");
+      pass("app identifiers", "BANCO / bancooom / com.bancooom.app");
     }
     if (!fs.existsSync(appConfig)) {
       fail("app.config.ts", "missing â€” expo-router origin should be dynamic");
@@ -222,12 +236,102 @@ function checkReplitWipePollution() {
   pass("anti-wipe pollution guards", "menus touch-safe + upload 503 restored");
 }
 
+function checkWellKnownTemplates() {
+  const aasa = path.join(ROOT, "deploy/coolify/well-known/apple-app-site-association");
+  const assetlinks = path.join(ROOT, "deploy/coolify/well-known/assetlinks.json");
+  const nginx = path.join(ROOT, "deploy/coolify/nginx.conf");
+  const dockerfile = path.join(ROOT, "deploy/coolify/Dockerfile.web");
+  if (!fs.existsSync(aasa) || !fs.existsSync(assetlinks)) {
+    fail("well-known templates", "AASA or assetlinks.json missing under deploy/coolify/well-known/");
+    return;
+  }
+  const aasaText = fs.readFileSync(aasa, "utf8");
+  const assetText = fs.readFileSync(assetlinks, "utf8");
+  if (aasaText.includes("com.bancoboom.app") || assetText.includes("com.bancoboom.app")) {
+    fail("well-known identity", "forbidden sister package com.bancoboom.app present");
+    return;
+  }
+  if (!aasaText.includes("com.bancooom.app")) {
+    fail("well-known AASA", "must target com.bancooom.app");
+    return;
+  }
+  if (!assetText.includes("com.bancooom.app")) {
+    fail("well-known assetlinks", "must target com.bancooom.app");
+    return;
+  }
+  try {
+    const assetJson = JSON.parse(assetText);
+    const pkg = assetJson?.[0]?.target?.package_name;
+    if (pkg !== "com.bancooom.app") {
+      fail("well-known assetlinks JSON", `package_name must be com.bancooom.app (got ${pkg})`);
+      return;
+    }
+  } catch (e) {
+    fail("well-known assetlinks JSON", e instanceof Error ? e.message : String(e));
+    return;
+  }
+  try {
+    const aasaJson = JSON.parse(aasaText);
+    const appId = aasaJson?.applinks?.details?.[0]?.appID ?? "";
+    if (!String(appId).endsWith(".com.bancooom.app")) {
+      fail("well-known AASA JSON", `appID must end with .com.bancooom.app (got ${appId})`);
+      return;
+    }
+    if (String(appId).includes("bancoboom")) {
+      fail("well-known AASA JSON", "forbidden bancoboom in appID");
+      return;
+    }
+  } catch (e) {
+    fail("well-known AASA JSON", e instanceof Error ? e.message : String(e));
+    return;
+  }
+  const nginxText = fs.readFileSync(nginx, "utf8");
+  const dfText = fs.readFileSync(dockerfile, "utf8");
+  if (!nginxText.includes(".well-known") || !nginxText.includes("default_type application/json")) {
+    fail("well-known nginx", "nginx.conf must serve /.well-known/ with default_type application/json");
+    return;
+  }
+  if (!dfText.includes("well-known/apple-app-site-association")) {
+    fail("well-known Dockerfile.web", "must COPY AASA into the nginx image");
+    return;
+  }
+  if (!dfText.includes("well-known/assetlinks.json")) {
+    fail("well-known Dockerfile.web", "must COPY assetlinks.json into the nginx image");
+    return;
+  }
+  const placeholdersPresent =
+    aasaText.includes("REPLACE_APPLE_TEAM_ID") ||
+    assetText.includes("REPLACE_PLAY_APP_SIGNING_SHA256");
+  pass(
+    "well-known templates",
+    placeholdersPresent
+      ? "shipped (OPS must replace REPLACE_* before store verify)"
+      : "shipped with filled values",
+  );
+}
+
+function checkMobileRuntimeDeps() {
+  try {
+    const pkg = readJson("artifacts/banco-mobile/package.json");
+    const deps = pkg.dependencies ?? {};
+    const required = ["expo", "react", "react-native", "@clerk/expo", "expo-router"];
+    const missing = required.filter((name) => !deps[name]);
+    if (missing.length) {
+      fail(
+        "mobile runtime dependencies",
+        `must be in dependencies (not only devDependencies): ${missing.join(", ")}`,
+      );
+      return;
+    }
+    pass("mobile runtime dependencies", "expo/react-native/clerk in dependencies");
+  } catch (e) {
+    fail("mobile runtime dependencies", e instanceof Error ? e.message : String(e));
+  }
+}
 
 function checkMobileTests() {
   const r = run("pnpm", ["run", "test"], MOBILE);
-  const countMatch = (r.stdout || "").match(/ℹ pass (\d+)/);
-  const label = countMatch ? `${countMatch[1]} tests` : "mobile test suite";
-  if (r.ok) pass("mobile regression tests", label);
+  if (r.ok) pass("mobile regression tests", "full pack exit 0");
   else fail("mobile regression tests", r.stderr || r.stdout || `exit ${r.status}`);
 }
 
@@ -271,6 +375,8 @@ function main() {
   checkWorkspaceRefs();
   checkOpenApi();
   checkReplitWipePollution();
+  checkWellKnownTemplates();
+  checkMobileRuntimeDeps();
   checkGcpDockerConfig();
 
   if (!skipTypecheck) {
