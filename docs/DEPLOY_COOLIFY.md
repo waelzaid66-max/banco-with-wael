@@ -32,7 +32,7 @@ The Expo mobile app (`artifacts/banco-mobile`) runs on iOS/Android via EAS — i
 
 1. In Coolify dashboard → **New Resource** → **Docker Compose**
 2. Connect your GitHub/GitLab account
-3. Select the `waelzaid66-max/bancoo` repository
+3. Select the `waelzaid66-max/banco-with-wael` repository (SoT monorepo)
 4. Set the **Compose file path** to: `docker-compose.coolify.yml`
 5. Click **Save**
 

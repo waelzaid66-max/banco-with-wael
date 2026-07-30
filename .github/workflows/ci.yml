@@ -135,3 +135,19 @@ jobs:
         run: pnpm --filter @workspace/banco-mobile run test
       - name: Demo seed production guard (static)
         run: pnpm --filter @workspace/api-server run test:seed-guard
+
+  production-gates:
+    name: Production gates (static)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Chain integrity gate
+        run: node scripts/chain-integrity-gate.mjs
+      - name: Production confidence (static, no secrets)
+        run: node scripts/production-confidence-check.mjs --skip-typecheck
