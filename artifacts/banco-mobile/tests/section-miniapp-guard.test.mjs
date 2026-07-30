@@ -73,14 +73,64 @@ test("SearchDiscover keeps SECTION_ROUTE for every catalogue section", () => {
   }
 });
 
+test("Discover never maps category all to /section/car (cars-force)", () => {
+  const src = fs.readFileSync(DISCOVER, "utf8");
+  // Owner «بيفتح قسم السيارات»: all is a Search chip, not a Discover portal.
+  assert.doesNotMatch(
+    src,
+    /all:\s*["']\/section\/car["']/,
+    "SECTION_ROUTE must not map all → /section/car",
+  );
+  assert.match(
+    src,
+    /Exclude<\s*Category\s*,\s*["']all["']\s*>|type BrowseSection/,
+    "SECTION_ROUTE must be typed without Category all",
+  );
+  // SECTIONS list must not include the all chip.
+  const sectionsDecl = src.match(
+    /const SECTIONS[^=]*=\s*\[([\s\S]*?)\];/,
+  )?.[1];
+  assert.ok(sectionsDecl, "SECTIONS declaration must exist");
+  assert.doesNotMatch(
+    sectionsDecl,
+    /["']all["']/,
+    "SECTIONS must list only concrete catalogues",
+  );
+});
+
 test("Discover section press pushes SECTION_ROUTE (not shared Search criteria)", () => {
   const src = fs.readFileSync(DISCOVER, "utf8");
   assert.match(src, /router\.push\(SECTION_ROUTE\[cat\]\)/);
   // Car import CTA may append ?engine=import via template string.
   assert.match(
     src,
-    /SECTION_ROUTE\.car/,
+    /SECTION_ROUTE\.car|car:\s*"\/section\/car"/,
     "Discover must still reference SECTION_ROUTE.car for Cars ENTER",
+  );
+});
+
+test("Discover map FAB enters RE map — never forces category car", () => {
+  const searchTab = fs.readFileSync(SEARCH_TAB, "utf8");
+  // The old FAB committed shared Search with category:"car" when criteria was
+  // "all". That path is gone; FAB must reuse exploreOnMap (RE + ?map=1).
+  assert.doesNotMatch(
+    searchTab,
+    /category:\s*criteria\.category\s*===\s*["']all["']\s*\?\s*["']car["']/,
+    "search.tsx must not coerce Discover all → car",
+  );
+  const fabAt = searchTab.indexOf('testID="discover-map-toggle"');
+  assert.ok(fabAt > 0, "discover-map-toggle FAB must remain");
+  // onPress sits above testID on the same Pressable — look back for exploreOnMap.
+  const fabWindow = searchTab.slice(Math.max(0, fabAt - 500), fabAt);
+  assert.match(
+    fabWindow,
+    /exploreOnMap\s*\(/,
+    "discover-map-toggle must call exploreOnMap (same as discover-explore-map)",
+  );
+  assert.doesNotMatch(
+    fabWindow,
+    /\bcommit\s*\(/,
+    "discover-map-toggle must not commit shared Search criteria",
   );
 });
 
