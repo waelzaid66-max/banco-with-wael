@@ -1,7 +1,7 @@
 // Car-import request form — creates an import_order via the API, then returns to
 // the tracking screen (which refetches). Minimal fields mapped to CreateImportOrderBody.
 import { Feather } from "@/components/icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -32,9 +32,11 @@ export default function ImportRequestScreen() {
   const rowDir = isRTL ? "row-reverse" : "row";
   const textAlign: "left" | "right" = isRTL ? "right" : "left";
   const queryClient = useQueryClient();
+  // Auctions screen pre-fills the source it was tapped from (e.g. "Copart").
+  const { source } = useLocalSearchParams<{ source?: string }>();
 
   const [vehicle, setVehicle] = useState("");
-  const [origin, setOrigin] = useState("");
+  const [origin, setOrigin] = useState(typeof source === "string" ? source : "");
   const [budget, setBudget] = useState("");
   const [note, setNote] = useState("");
 
