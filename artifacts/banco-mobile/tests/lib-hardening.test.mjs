@@ -257,6 +257,20 @@ test("European market countries have flags for compressed picker", () => {
   }
 });
 
+test("expanded MENA launch markets have flags for compressed picker", () => {
+  const src = fs.readFileSync(
+    path.join(APP_ROOT, "constants", "countryCodes.ts"),
+    "utf8",
+  );
+  for (const iso of ["DZ", "PS", "SY", "YE"]) {
+    assert.match(
+      src,
+      new RegExp(`iso:\\s*"${iso}"[\\s\\S]*?flag:\\s*"`),
+      `${iso} must have a flag emoji for MarketCountryButton`,
+    );
+  }
+});
+
 test("billing, wallet, and invoices are registered stack routes", () => {
   const src = fs.readFileSync(LAYOUT, "utf8");
   const routes = ["billing", "wallet", "invoices", "invoices/[id]"];
