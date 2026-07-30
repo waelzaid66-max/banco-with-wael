@@ -74,8 +74,24 @@ From `sectionChrome.ts` measurement: 16 property-type chips overflow a phone wid
 - Rent terms → `FilterPillSelect` (`section-rental-pill`) — same `rentalTerm` axis  
 - Removable active-filter chips (`re-active-filters`) — clear real criteria only  
 
+## Wave 3 — مكاتب (service desks)
+
+Compact horizontal `ReServiceDesks` inside `/section/real-estate` (not a new hub route):
+
+| Desk | Real action |
+|------|-------------|
+| Buy / Rent | `selectEngine(sale\|rent)` |
+| Apartments / Villas / Lands | `update({ propertyType })` |
+| Commercial | modal → office / shop / warehouse / commercial_land |
+| Map | map latch (`wantMap` / `mapMode`) |
+| Stays | `/section/booking` |
+| Request | `/listings/create?request=1` |
+| More | open `FilterSheet` |
+
+Also: seed `?property_type=` (composes with `?engine=sale|rent`).
+
 ## Explicit deferrals
 
-- Full CAR-IMPORT-style nested `/real-estate/*` hub  
-- New financing/booking/contract screens  
+- Nested `/real-estate/*` hub tree like CAR IMPORT  
+- New Projects / Developer / Project / Contract / Closing payment / Compare desks (no routes yet)  
 - Stay header / BOOM STAY wordmark

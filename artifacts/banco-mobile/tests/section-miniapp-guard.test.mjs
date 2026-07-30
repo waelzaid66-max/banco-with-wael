@@ -792,6 +792,16 @@ test("Real-estate section uses offer strip + type strip (no listingMode clash)",
     /testID="section-rental-pill"/,
     "RE rent terms must collapse to a pill (not a permanent chip wall)",
   );
+  assert.match(
+    section,
+    /ReServiceDesks|testID="re-service-desks"/,
+    "RE must mount real service desks (مكاتب) — Import-hub rule: no dead taps",
+  );
+  assert.match(
+    section,
+    /property_type/,
+    "RE must accept ?property_type= deep-link for desk / Discover composition",
+  );
   // Owner 2026-07-27: RE joins Stay/cars/facilities — country + currency collapse
   // into the ONE compact MarketCountryButton. The spread 21-cell matrix (~6
   // screens of horizontal scroll) is gone; its "…" button opened the very same
@@ -826,6 +836,32 @@ test("Real-estate section uses offer strip + type strip (no listingMode clash)",
     /propertyType:\s*null/,
     "CLEAR_SECTION_ATTRS / clear path must reset propertyType",
   );
+});
+
+test("B-PROPERTY ReServiceDesks are real destinations only (no dead taps)", () => {
+  const desksPath = path.join(
+    APP_ROOT,
+    "components",
+    "search",
+    "ReServiceDesks.tsx",
+  );
+  assert.ok(fs.existsSync(desksPath), "ReServiceDesks.tsx must exist");
+  const desks = fs.readFileSync(desksPath, "utf8");
+  // In-section desks mutate criteria / open sheet / map — not fake screens.
+  assert.match(desks, /kind:\s*"offer"/);
+  assert.match(desks, /kind:\s*"type"/);
+  assert.match(desks, /kind:\s*"map"/);
+  assert.match(desks, /kind:\s*"more"/);
+  // Sibling routes that already exist in the app stack.
+  assert.match(desks, /\/section\/booking/);
+  assert.match(desks, /\/listings\/create\?request=1/);
+  // Commercial is a picker over real property types — never a single fake umbrella page.
+  assert.match(desks, /office/);
+  assert.match(desks, /shop/);
+  assert.match(desks, /warehouse/);
+  assert.match(desks, /commercial_land/);
+  // Forbidden fake desks from the owner mock that have no route today.
+  assert.doesNotMatch(desks, /New Projects|new_projects|\/contract|\/compare/i);
 });
 
 test("Car section expands brand + origin strips; import deep-links engine", () => {

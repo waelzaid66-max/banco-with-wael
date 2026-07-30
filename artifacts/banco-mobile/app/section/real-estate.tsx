@@ -1,17 +1,13 @@
 import { SectionSearchApp } from "@/components/search/SectionSearchApp";
 
 /**
- * Real estate (B-PROPERTY) — segments on sale-vs-rent first, then property type.
+ * Real estate (B-PROPERTY) — layered mini-app chrome inside SectionSearchApp.
  *
- * Offer axis stays CHIPS on purpose: تمليك / إيجار is the decision a browsing
- * user flips constantly, and it is short enough to fit. Charging a tap to open a
- * list for it would tax the most-used control on the page — the opposite of what
- * the pill is for.
- *
- * Property type is a PILL: measured 16-type chip rows either overflow a phone
- * width or stack into ~163px of chrome before the first listing. The pill keeps
- * every type reachable via FilterPillSelect + FilterSheet, and gives the screen
- * back to inventory. Cars differ on purpose — their axes are not alike.
+ * Offer axis stays CHIPS: تمليك / إيجار is flicked constantly. Property type is
+ * a PILL (16 values overflow as chips). Service desks (مكاتب) are a compact
+ * horizontal strip of REAL actions only — criteria seeds or existing routes
+ * (Booking, custom request, FilterSheet). No fake New-Projects / Contract /
+ * Payment desks until those surfaces exist.
  */
 export default function RealEstateSectionScreen() {
   return (

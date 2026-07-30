@@ -35,6 +35,7 @@ import { SearchResultsSurface } from "@/components/search/SearchResultsSurface";
 import { SearchResultsMap } from "@/components/search/SearchResultsMap";
 import { FilterSheet } from "@/components/search/FilterSheet";
 import { FilterPillSelect } from "@/components/search/FilterPillSelect";
+import { ReServiceDesks } from "@/components/search/ReServiceDesks";
 import { axisShape, type SectionChrome } from "@/components/search/sectionChrome";
 import { MiniAppBottomNav } from "@/components/MiniAppBottomNav";
 import {
@@ -292,14 +293,19 @@ export function SectionSearchApp({
   const params = useLocalSearchParams<{
     map?: string | string[];
     engine?: string | string[];
+    property_type?: string | string[];
   }>();
   const mapParam = Array.isArray(params.map) ? params.map[0] : params.map;
   const engineParam = Array.isArray(params.engine)
     ? params.engine[0]
     : params.engine;
+  const propertyTypeParam = Array.isArray(params.property_type)
+    ? params.property_type[0]
+    : params.property_type;
 
   // Seed the engine once on mount → entering the page immediately loads this
   // section's results with no category chooser in sight.
+  // RE desks may also deep-link ?property_type=apartment (composes with ?engine=sale|rent).
   const seeded = useRef(false);
   useEffect(() => {
     if (seeded.current) return;
@@ -311,9 +317,19 @@ export function SectionSearchApp({
       allowed?.some((e) => e.key === engineParam)
         ? engineParam
         : null;
+    const deepPropertyType =
+      category === "real_estate" &&
+      propertyTypeParam &&
+      (RE_TYPE_PRIMARY as readonly string[]).includes(propertyTypeParam)
+        ? propertyTypeParam
+        : null;
+    // Type-only engines (apartment/villa/…) migrate to propertyType below in
+    // the normalize effect; if both engine=sale and property_type=… are set,
+    // keep the offer engine and apply the type from the dedicated param.
     const seed: SearchCriteria = {
       ...buildSeed(criteria.marketCountry),
       ...(deepEngine ? { engineKey: deepEngine } : {}),
+      ...(deepPropertyType ? { propertyType: deepPropertyType } : {}),
     };
     baselineRef.current = seed;
     commit(seed);
@@ -1351,6 +1367,27 @@ export function SectionSearchApp({
           ))}
         </View>
       )}
+
+      {/* ── B-PROPERTY service desks — REAL actions only (criteria or routes).
+          Compact horizontal strip so inventory stays the hero. Mounted only for
+          real_estate; other sections keep their own chrome. ── */}
+      {isRealEstateSection && !searchOpen ? (
+        <ReServiceDesks
+          playSound={playSound}
+          onSelectOffer={(engineKey) => {
+            selectEngine(engineKey);
+          }}
+          onSelectType={(propertyType) => {
+            // Force-set (do not toggle off) — a desk tap means "open this مكتب".
+            update({ propertyType });
+          }}
+          onOpenMap={() => {
+            setWantMap(true);
+            if (inResultsView && hasPagePins) setMapMode(true);
+          }}
+          onOpenMore={() => setShowFilters(true)}
+        />
+      ) : null}
 
       {/* ── Primary chip strip: country/currency · sort · mode/engines.
           The country button leads EVERY section — one compact control, one
