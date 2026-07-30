@@ -90,8 +90,21 @@ Compact horizontal `ReServiceDesks` inside `/section/real-estate` (not a new hub
 
 Also: seed `?property_type=` (composes with `?engine=sale|rent`).
 
+## Wave 4 — production audit fixes (publish gate)
+
+| Fix | Why |
+|-----|-----|
+| Typecheck: desk icons via Ionicons registry names | CI Typecheck was FAILING on Feather `"business"` |
+| Keep user-selected `propertyType` (no facet wipe) | Desk/sheet taps were silently cleared at count=0 |
+| `propertyTypeOptions={RE_TYPE_PRIMARY}` on RE FilterSheet | Stop twinhouse/clinic drift vs pill/desks |
+| Map latch opens on `inResultsView` (not only page pins) | `?map=1` / desk-map served more users via server clusters |
+| Web map locate_error → Alert + Settings | Parity with native; no dead locate |
+| Map pin `?focus=booking` only when bookable/unknown | Honest booking chrome |
+| Notification routing tests for booking/listing/message | Gate coverage |
+
 ## Explicit deferrals
 
 - Nested `/real-estate/*` hub tree like CAR IMPORT  
 - New Projects / Developer / Project / Contract / Closing payment / Compare desks (no routes yet)  
+- Off-page map pin price/`is_bookable` without API cluster fields (backend follow-up)  
 - Stay header / BOOM STAY wordmark
