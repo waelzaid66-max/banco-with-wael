@@ -1176,12 +1176,14 @@ export default function ProfileScreen() {
         },
       },
       {
+        // Front door of the CAR IMPORT mini-app hub; tracking is one card away
+        // inside it (and each order opens its own live detail screen).
         key: "import-track",
         icon: "package" as const,
-        label: t("search.discover.importTrackCta"),
+        label: t("importHub.title"),
         onPress: () => {
           setShowMenu(false);
-          router.push("/import-tracking" as any);
+          router.push("/import" as any);
         },
       },
       {

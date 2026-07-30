@@ -505,7 +505,7 @@ const en = {
       banksHub: "Banks & Financiers",
       banksHubSub: "Explore financing product types — institutions set their own terms",
       carImport: "Car import",
-      carImportSub: "Browse imported vehicles",
+      carImportSub: "Auctions, shipping, customs & tracking",
       rentalTermAny: "All types",
       importTrackCta: "Track imports",
       section: {
@@ -2707,7 +2707,7 @@ const ar: typeof en = {
       banksHub: "بنوك وممولين",
       banksHubSub: "استكشف أنواع منتجات التمويل — الشروط تحددها المؤسسة",
       carImport: "استيراد سيارات",
-      carImportSub: "تصفّح السيارات المستوردة",
+      carImportSub: "مزادات وشحن وجمارك وتتبع",
       rentalTermAny: "كل الأنواع",
       importTrackCta: "متابعة الاستيراد",
       section: {

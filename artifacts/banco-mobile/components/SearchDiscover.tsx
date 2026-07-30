@@ -308,12 +308,13 @@ export function SearchDiscover({
           </LinearGradient>
         </Pressable>
 
-      {/* Car import — ENTER Cars mini-app with import engine seeded (never melts
-          into shared Search). Strips/filters live inside SectionSearchApp. */}
+      {/* Car import — ENTER the CAR IMPORT mini-app hub (/import). Browsing
+          imported cars stays one tap away: the hub's "Search Cars" card pushes
+          SECTION_ROUTE.car with ?engine=import seeded, so the anti-melt
+          contract (dedicated mini-app entry, never shared-Search filters)
+          holds end to end. */}
       <Pressable
-        onPress={() =>
-          router.push(`${SECTION_ROUTE.car}?engine=import` as Href)
-        }
+        onPress={() => router.push("/import" as Href)}
         style={styles.hubCtaWrap}
         accessibilityRole="button"
         accessibilityLabel={t("search.discover.carImport")}
