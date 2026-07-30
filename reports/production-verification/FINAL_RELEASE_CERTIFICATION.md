@@ -13,11 +13,13 @@
 
 ## 1. Executive Summary
 
-The monorepo **is ready as a Coolify/EAS deploy artifact set**: typecheck, ESLint, chain integrity (167/167), production-confidence, API health tests, SPA builds, and Docker image builds for `Dockerfile.api` / `Dockerfile.web` all pass on this certification pass.
+The monorepo **is ready as a Coolify/EAS deploy artifact set**: typecheck, ESLint, chain integrity (167/167), production-confidence (16/16), mobile regression pack (150/150), deploy-artifacts (37/37), and Docker image builds for `Dockerfile.api` / `Dockerfile.web` all pass on the **2026-07-30 re-verification** pass (local SoT tip `95c87af`).
 
 **Live production is not certified.** Public DNS still points apex `banco.today` at a Replit placeholder and `www.banco.today` at Hostinger Horizons. Coolify secrets, migrate, EAS env bake, real AASA/assetlinks values, and device smoke remain external.
 
-**Verdict:** ✅ **Repository Ready** — ❌ **Live Production Not Certified**.
+**GitHub write blocker (agent):** Cursor GitHub App installation currently includes **only** `waelzaid66-max/bancoo` (1 repo). `cursor[bot]` gets **403** on `banco-with-wael` push/create-ref. Until SoT is added to that installation (or an owner PAT with `repo` write is available to the agent), the certification branch cannot be published to GitHub SoT from this environment. Work + tests below were executed on the authoritative local clone of SoT.
+
+**Verdict:** ✅ **Repository Ready** — ❌ **Live Production Not Certified** — ⛔ **SoT GitHub Push Blocked (App install scope)**.
 
 ---
 
@@ -26,10 +28,13 @@ The monorepo **is ready as a Coolify/EAS deploy artifact set**: typecheck, ESLin
 | Check | Result |
 |-------|--------|
 | Workspace install (`pnpm --frozen-lockfile`) | PASS |
-| Typecheck (all artifacts + libs + scripts) | PASS |
+| Typecheck (libs + mobile via confidence) | PASS |
 | ESLint (`scripts --max-warnings 0`) | PASS |
 | Chain integrity gate | **167/167 PASS** |
-| Production confidence (static) | **14/14 PASS** |
+| Production confidence | **16/16 PASS** |
+| Mobile `node --test tests/*.mjs` | **150/150 PASS** |
+| Deploy artifacts verify | **37/37 PASS** |
+| Identity | **`com.bancooom.app` / `bancooom` / `BANCO`** |
 | OpenAPI (`lib/api-spec/openapi.yaml`, server `/api`) | PASS structure |
 | Layout (`artifacts/*`, `deploy/coolify/*`, `lib/*`) | Intact |
 | In-repo gaps remaining open | **0** |
@@ -139,14 +144,15 @@ The monorepo **is ready as a Coolify/EAS deploy artifact set**: typecheck, ESLin
 
 ## 11. Remaining DNS Tasks
 
-| Host | Current (2026-07-30 probe) | Required |
-|------|----------------------------|----------|
-| `banco.today` | 404 Replit placeholder | Coolify |
-| `www.banco.today` | 200 Hostinger Horizons | Coolify (or redirect to apex Coolify) |
-| `banco.today/api/readyz` | 404 | 200 JSON from API |
-| `banco.today/.well-known/*` | 404 HTML | 200 JSON from nginx |
-| `banco.autos` | 503 | Healthy Coolify (or drop from associated domains) |
-| `banco.deals` | 404 | Coolify or drop from associated domains |
+| Host | Current (2026-07-30 **12:10 UTC** re-probe) | Required |
+|------|-----------------------------------------------|----------|
+| `banco.today` | 404 Replit «isn't live yet» | Coolify |
+| `www.banco.today` | 200 Hostinger Horizons (Vite) | Coolify (or redirect to apex Coolify) |
+| `api.banco.today` | DNS NXDOMAIN (resolve fail) | Coolify API host |
+| `banco.today/.well-known/*` | 404 HTML (Replit) | 200 JSON from nginx |
+| `www.banco.today/.well-known/*` | 200 **HTML** (Horizons SPA — not AASA/assetlinks) | 200 application/json |
+| `banco.autos` | TLS self-signed / broken | Healthy Coolify (or drop) |
+| `banco.deals` | 404 Replit placeholder | Coolify or drop |
 
 ---
 

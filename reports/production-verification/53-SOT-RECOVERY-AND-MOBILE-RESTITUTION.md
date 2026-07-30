@@ -78,25 +78,51 @@ Base: `origin/main` (`b7212bf`)
 
 ---
 
-## 5. Verification executed on SoT (this restitution)
+## 5. Verification executed on SoT (re-run 2026-07-30 12:10–12:15 UTC)
 
 | Gate | Result |
 |------|--------|
 | Chain integrity | **167/167 PASS** |
-| Production confidence | **14/14 PASS** |
-| Universal-links tests | **5/5 PASS** (identity `com.bancooom.app`) |
-| Mobile package id | **`com.bancooom.app`** |
-| Well-known package | **`com.bancooom.app`** |
+| Production confidence | **16/16 PASS** |
+| Mobile `tests/*.mjs` | **150/150 PASS** |
+| Universal-links subset | **5/5 PASS** (identity `com.bancooom.app`) |
+| Deploy artifacts | **37/37 PASS** |
+| `pnpm typecheck:libs` + `pnpm lint` | **PASS** |
+| Docker `Dockerfile.api` → `banco-api-cert:rerun` | **PASS** |
+| Docker `Dockerfile.web` → `banco-web-static-cert:rerun` | **PASS** (well-known = `com.bancooom.app`, no `bancoboom`) |
+| Live DNS/HTTP | Apex Replit 404; www Horizons; well-known not JSON; `api.banco.today` NXDOMAIN; `banco.autos` TLS fail |
+
+Local tip: **`95c87af`** (+ cert doc refresh commit after this re-run).
 
 ---
 
-## 6. Push / PR status
+## 6. Push / PR status — root cause (measured, not guessed)
+
+| Probe | Result |
+|-------|--------|
+| Token type in this agent | Cursor GitHub App `ghs_` as `cursor[bot]` |
+| `GET /installation/repositories` | **total_count = 1** → only `waelzaid66-max/bancoo` |
+| Create ref on `bancoo` | **201** (write works) |
+| Create ref / `git push` on `banco-with-wael` | **403** `Permission denied to cursor[bot]` / `Resource not accessible by integration` |
+| Fork SoT | **403** |
+
+**Conclusion:** Granting “full permissions” on a token that is scoped to the **bancoo** App installation does **not** unlock SoT. The Cursor GitHub App must include **`waelzaid66-max/banco-with-wael`** in Repository access.
+
+### Owner unblock (one action — then agent can push)
+
+1. Open: https://github.com/settings/installations  
+2. Select **Cursor** (GitHub App).  
+3. Repository access → **Only select repositories** → add **`banco-with-wael`** (keep `bancoo` if desired).  
+4. Save. Reply in the agent chat: «أضفت الريبو».  
+5. Agent will immediately `git push` branch `cursor/production-gap-certification-5cf0` and open the SoT PR.
+
+Until then: patches live in `bancoo` PR **#11** mailbox only — **not** for Coolify deploy.
 
 | Target | Status |
 |--------|--------|
-| Local SoT branch | Restored + extended |
-| `git push` to `banco-with-wael` | Requires write token (prior `cursor[bot]` 403) |
-| Owner action if agent cannot push | Apply format-patch / open PR with owner PAT — see §7 |
+| Local SoT branch | Complete + re-verified |
+| `git push` to `banco-with-wael` | **BLOCKED** — App install missing SoT |
+| Coolify SoT | Still **`banco-with-wael`** only |
 
 ---
 
