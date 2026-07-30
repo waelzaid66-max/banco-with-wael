@@ -123,7 +123,7 @@ Click **Deploy** in Coolify. Coolify will:
 | `PAYMOB_SECRET_KEY` | — | Paymob secret key |
 | `PAYMOB_HMAC_SECRET` | — | Paymob HMAC secret |
 | `PAYMOB_INTEGRATION_IDS` | — | Paymob integration IDs (JSON) |
-| `OBJECT_STORAGE_PROVIDER` | `replit` | `s3` or `replit` — **NOT `gcs`** (the API rejects `gcs`: "Unsupported OBJECT_STORAGE_PROVIDER … Supported: s3, replit"). For a VPS/Coolify deploy use `s3` (any S3-compatible endpoint). |
+| `OBJECT_STORAGE_PROVIDER` | — (must set explicitly) | `s3` or `replit` — **NOT `gcs`** (the API rejects `gcs`: "Unsupported OBJECT_STORAGE_PROVIDER … Supported: s3, replit"). For Coolify/Hostinger VPS set **`s3`** with static AWS keys. Do **not** leave unset and do **not** use `replit` when `COOLIFY_URL`/`COOLIFY_FQDN` are present (API refuses start). |
 | `S3_BUCKET` | — | S3 bucket name |
 | `AWS_REGION` | — | AWS region |
 | `AWS_ACCESS_KEY_ID` | — | **Required on Coolify/Hostinger VPS** (no IAM role). Optional on EC2/ECS when an instance role is attached. |
@@ -214,7 +214,7 @@ DNS on the `banco_net` network.
 Coolify respects Docker Compose `depends_on` semantics:
 
 1. `postgres` starts first (health-checked: `pg_isready`)
-2. `api` starts after Postgres is healthy (health-checked: `/api/healthz`)
+2. `api` starts after Postgres is healthy (health-checked: `/api/readyz`)
 3. `banco-web`, `banco-website`, `web` start after API is healthy
 
 This order is enforced by `depends_on: condition: service_healthy` in
