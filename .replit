@@ -26,6 +26,10 @@ args = "Web App"
 task = "workflow.run"
 args = "API Server"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Setup"
+
 [[workflows.workflow]]
 name = "Web App"
 author = "agent"
@@ -49,6 +53,17 @@ waitForPort = 8080
 
 [workflows.workflow.metadata]
 outputType = "console"
+
+[[workflows.workflow]]
+name = "Setup"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/db run push-force 2>&1 | tee /tmp/db-push.log && echo 'DB_PUSH_DONE' >> /tmp/db-push.log && pnpm --filter @workspace/api-server run seed 2>&1 | tee /tmp/seed.log && pnpm --filter @workspace/api-server run seed:reference 2>&1 | tee -a /tmp/seed.log && pnpm --filter @workspace/api-server run seed:admin 2>&1 | tee -a /tmp/seed.log && echo 'SEED_DONE' >> /tmp/seed.log"
 
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
