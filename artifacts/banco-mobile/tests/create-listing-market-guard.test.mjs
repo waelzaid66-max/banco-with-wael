@@ -80,3 +80,36 @@ test("MarketCountryPicker launchMarketsOnly is additive (search default unchange
   // Default search testID preserved.
   assert.match(pickerSrc, /testID = "search-market-country-btn"/);
 });
+
+// ── Track D: map pin picker co-located with GPS ─────────────────────────────
+
+test("create listing exposes map pin picker beside GPS (same pin state)", () => {
+  assert.match(createSrc, /MapPinPicker/);
+  assert.match(createSrc, /create-pick-on-map/);
+  assert.match(createSrc, /create-use-location/);
+  assert.match(createSrc, /create-pin-tools/);
+  assert.match(createSrc, /setPin\(/);
+  const mapPicker = fs.readFileSync(
+    path.join(root, "components/MapPinPicker.tsx"),
+    "utf8",
+  );
+  assert.match(mapPicker, /leaflet/i);
+  assert.match(mapPicker, /marketCountryMapCenter/);
+  assert.match(mapPicker, /create-map-pin-confirm/);
+});
+
+test("expanded launch markets keep currency + map center (DZ/PS/SY/YE)", () => {
+  const taxonomy = fs.readFileSync(
+    path.join(root, "constants/listingCreateTaxonomy.ts"),
+    "utf8",
+  );
+  const centers = fs.readFileSync(
+    path.join(root, "lib/searchTaxonomy.ts"),
+    "utf8",
+  );
+  for (const iso of ["DZ", "PS", "SY", "YE"]) {
+    assert.match(taxonomy, new RegExp(`value:\\s*"${iso}"`));
+    assert.match(taxonomy, new RegExp(`${iso}:\\s*"`));
+    assert.match(centers, new RegExp(`${iso}:\\s*\\{\\s*lat:`));
+  }
+});

@@ -63,6 +63,7 @@ import {
   MarketCountryButton,
   MarketCountryPicker,
 } from "@/components/MarketCountryPicker";
+import { MapPinPicker } from "@/components/MapPinPicker";
 import { PermissionRationaleModal } from "@/components/PermissionRationaleModal";
 import { SmartAssetCard } from "@/components/SmartAssetCard";
 import { type CarBrand, brandLabel, CAR_BRANDS } from "@/constants/cars";
@@ -206,9 +207,10 @@ export default function CreateListingScreen() {
   const [locationValue, setLocationValue] = useState<string | null>(null);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const [marketPickerOpen, setMarketPickerOpen] = useState(false);
-  // Optional precise GPS pin for the listing (#4). null until the seller taps
-  // "use my location"; sent as latitude/longitude so near-me uses the exact
-  // point instead of the area centroid. Never blocks publishing.
+  const [mapPinPickerOpen, setMapPinPickerOpen] = useState(false);
+  // Optional precise map/GPS pin for the listing. null until the seller picks
+  // on the map or taps GPS; sent as latitude/longitude so near-me uses the
+  // exact point instead of the area centroid. Never blocks publishing.
   const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
   const [pinBusy, setPinBusy] = useState(false);
   const [cashPrice, setCashPrice] = useState("");
@@ -1693,35 +1695,71 @@ export default function CreateListingScreen() {
         <Feather name="chevron-down" size={18} color={colors.mutedForeground} />
       </Pressable>
 
-      {/* Optional precise GPS pin (#4) — never required to publish. */}
-      <Pressable
-        onPress={captureLocation}
-        disabled={pinBusy}
-        style={[...inputStyle, styles.pickerBtn, { flexDirection: rowDir, marginTop: 8 }]}
-        testID="create-use-location"
+      {/* Optional precise pin tools — co-located compact row (map + GPS).
+          Never required to publish; both write the same `pin` state. */}
+      <View
+        style={[styles.pinToolsRow, { flexDirection: rowDir, marginTop: 8 }]}
+        testID="create-pin-tools"
       >
-        <Feather
-          name={pin ? "check-circle" : "map-pin"}
-          size={18}
-          color={pin ? "#16a34a" : colors.mutedForeground}
-        />
-        <AppText
-          style={{
-            color: pin ? colors.foreground : colors.mutedForeground,
-            textAlign,
-            flex: 1,
-            fontFamily: "Inter_400Regular",
-            fontSize: 14,
-            marginHorizontal: 8,
+        <Pressable
+          onPress={() => {
+            Haptics.selectionAsync();
+            setMapPinPickerOpen(true);
           }}
+          style={[
+            styles.pinToolBtn,
+            {
+              backgroundColor: colors.card,
+              borderColor: pin ? "#16a34a" : colors.border,
+              borderRadius: colors.radius,
+              flexDirection: rowDir,
+            },
+          ]}
+          testID="create-pick-on-map"
         >
-          {pinBusy
-            ? t("create.locationCapturing")
-            : pin
-              ? t("create.locationCaptured")
-              : t("create.useMyLocation")}
-        </AppText>
-      </Pressable>
+          <Feather
+            name="map"
+            size={16}
+            color={pin ? "#16a34a" : colors.foreground}
+          />
+          <AppText
+            style={[
+              styles.pinToolText,
+              { color: pin ? colors.foreground : colors.mutedForeground },
+            ]}
+            numberOfLines={1}
+          >
+            {pin ? t("create.locationCaptured") : t("create.pickOnMap")}
+          </AppText>
+        </Pressable>
+        <Pressable
+          onPress={captureLocation}
+          disabled={pinBusy}
+          style={[
+            styles.pinToolBtn,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              borderRadius: colors.radius,
+              flexDirection: rowDir,
+              opacity: pinBusy ? 0.6 : 1,
+            },
+          ]}
+          testID="create-use-location"
+        >
+          {pinBusy ? (
+            <ActivityIndicator color={colors.foreground} size="small" />
+          ) : (
+            <Feather name="map-pin" size={16} color={colors.foreground} />
+          )}
+          <AppText
+            style={[styles.pinToolText, { color: colors.mutedForeground }]}
+            numberOfLines={1}
+          >
+            {pinBusy ? t("create.locationCapturing") : t("create.useMyLocation")}
+          </AppText>
+        </Pressable>
+      </View>
 
       {category && !isRequest && (
         <>
@@ -2846,6 +2884,18 @@ export default function CreateListingScreen() {
         }}
       />
 
+      <MapPinPicker
+        visible={mapPinPickerOpen}
+        marketCountry={marketCountry}
+        initial={pin}
+        onClose={() => setMapPinPickerOpen(false)}
+        onConfirm={(next) => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          setPin(next);
+          setMapPinPickerOpen(false);
+        }}
+      />
+
       <LocationPicker
         visible={locationPickerOpen}
         selectedValue={locationValue ?? undefined}
@@ -3145,6 +3195,20 @@ const styles = StyleSheet.create({
   },
   textArea: { height: 110, paddingTop: 12 },
   pickerBtn: { alignItems: "center", justifyContent: "space-between" },
+  pinToolsRow: { gap: 8 },
+  pinToolBtn: {
+    flex: 1,
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  pinToolText: {
+    flexShrink: 1,
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+  },
   optionRow: { flexWrap: "wrap", gap: 8 },
   optionChip: {
     paddingHorizontal: 16,

@@ -198,6 +198,10 @@ export const MARKET_COUNTRIES: {
   { value: "MA", en: "Morocco", ar: "المغرب", rentalTerms: ["furnished_daily", "annual_contract"] },
   { value: "TN", en: "Tunisia", ar: "تونس", rentalTerms: ["furnished_daily", "annual_contract"] },
   { value: "SD", en: "Sudan", ar: "السودان", rentalTerms: ["furnished_daily", "annual_contract"] },
+  { value: "DZ", en: "Algeria", ar: "الجزائر", rentalTerms: ["furnished_daily", "annual_contract"] },
+  { value: "PS", en: "Palestine", ar: "فلسطين", rentalTerms: ["furnished_daily", "annual_contract"] },
+  { value: "SY", en: "Syria", ar: "سوريا", rentalTerms: ["furnished_daily", "annual_contract"] },
+  { value: "YE", en: "Yemen", ar: "اليمن", rentalTerms: ["furnished_daily", "annual_contract"] },
   { value: "TR", en: "Turkey", ar: "تركيا", rentalTerms: ["furnished_daily", "annual_contract"] },
   { value: "GB", en: "United Kingdom", ar: "المملكة المتحدة", rentalTerms: ["furnished_daily", "annual_contract"] },
   { value: "US", en: "United States", ar: "الولايات المتحدة", rentalTerms: ["furnished_daily", "annual_contract"] },
@@ -236,6 +240,10 @@ export const CURRENCY_BY_MARKET: Record<string, string> = {
   JO: "JOD",
   OM: "OMR",
   LY: "LYD",
+  DZ: "DZD",
+  PS: "ILS",
+  SY: "SYP",
+  YE: "YER",
 };
 
 export const EXTRA_CURRENCIES = ["USD", "EUR"] as const;
