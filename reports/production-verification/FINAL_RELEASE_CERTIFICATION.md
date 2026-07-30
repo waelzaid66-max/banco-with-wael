@@ -1,8 +1,8 @@
 # FINAL RELEASE CERTIFICATION
 
 **Repository:** `waelzaid66-max/banco-with-wael` (**ONLY SoT**)
-**Base tip on main:** `64894c6` (PR #6 merged)
-**Certification:** merged via PR #6 → `main` @ `64894c6` (+ follow-up OPS checklist commit)
+**Base tip on main:** `250d655` (PR #6 + PR #7 merged)
+**Certification:** merged via PR #6 → `main` @ `64894c6`; OPS checklist PR #7 → `250d655`; live cutover gate on follow-up PR
 **Mobile identity:** `com.bancooom.app`
 **Date:** 2026-07-30
 **Authority:** Lead Release Engineer / Production Architect
@@ -15,11 +15,9 @@
 
 The monorepo **is ready as a Coolify/EAS deploy artifact set**: typecheck, ESLint, chain integrity (167/167), production-confidence (16/16), mobile regression pack (incl. executable H2 merge tests), deploy-artifacts (37/37), Expo config resolve, and Docker image builds for `Dockerfile.api` / `Dockerfile.web` all pass on the **2026-07-30 precision-hardening** pass (clean SoT branch — no nested patch blobs).
 
-**Live production is not certified.** Public DNS still points apex `banco.today` at a Replit placeholder and `www.banco.today` at Hostinger Horizons. Coolify secrets, migrate, EAS env bake, real AASA/assetlinks values, and device smoke remain external.
+**Live production is not certified.** Public DNS still points apex `banco.today` at a Replit placeholder and `www.banco.today` at Hostinger Horizons. Coolify secrets, migrate, EAS env bake, real AASA/assetlinks values, and device smoke remain external. Machine proof after OPS: `pnpm ops:live-cutover` (baseline: `56-LIVE-CUTOVER-BASELINE.md`).
 
-**GitHub write blocker (agent):** Cursor GitHub App installation currently includes **only** `waelzaid66-max/bancoo` (1 repo). `cursor[bot]` gets **403** on `banco-with-wael` push/create-ref. Until SoT is added to that installation (or an owner PAT with `repo` write is available to the agent), the certification branch cannot be published to GitHub SoT from this environment. Work + tests below were executed on the authoritative local clone of SoT.
-
-**Verdict:** ✅ **Repository Ready** — ❌ **Live Production Not Certified** — ⛔ **SoT GitHub Push Blocked (App install scope)**.
+**Verdict:** ✅ **Repository Ready** — ❌ **Live Production Not Certified** (await Coolify + DNS + EAS OPS).
 
 ---
 
