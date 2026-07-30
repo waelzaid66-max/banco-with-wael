@@ -820,10 +820,28 @@ test("Car section expands brand + origin strips; import deep-links engine", () =
     /engineParam|enginesForCategory/,
     "Section must seed ?engine= deep-link on mount",
   );
+  // Owner 2026-07-30 (CAR IMPORT wave 2): the Discover import CTA now ENTERs
+  // the dedicated CAR IMPORT hub (/import). The anti-melt contract moves with
+  // it — browsing imported cars must remain reachable from the HUB via the
+  // Cars mini-app with ?engine=import seeded (never shared-Search filters).
   assert.match(
     discover,
-    /SECTION_ROUTE\.car.*engine=import|engine=import.*SECTION_ROUTE\.car/,
-    "Discover car-import CTA must ENTER car with engine=import",
+    /testID="discover-car-import"/,
+    "Discover must keep the car-import CTA card",
+  );
+  assert.match(
+    discover,
+    /discover-car-import"[\s\S]{0,400}?router\.push\("\/import"|router\.push\("\/import"[\s\S]{0,400}?discover-car-import"/,
+    "Discover car-import CTA must ENTER the CAR IMPORT hub (/import)",
+  );
+  const importHub = fs.readFileSync(
+    path.join(APP_ROOT, "app", "import", "index.tsx"),
+    "utf8",
+  );
+  assert.match(
+    importHub,
+    /\/section\/car\?engine=import/,
+    "CAR IMPORT hub must keep the browse path into Cars with engine=import",
   );
   assert.match(
     discover,

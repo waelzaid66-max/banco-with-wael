@@ -73,6 +73,8 @@ export async function createImportOrder(
     type: "car_import",
     title: "Import request received",
     body: "We received your car-import request and started reviewing it.",
+    // Deep-link target: the mobile app opens /import/order/<id> directly.
+    data: { import_order_id: created.id },
   });
 
   return { id: created.id };
@@ -178,6 +180,7 @@ export async function updateImportOrderStage(
     type: "car_import",
     title: "Import order update",
     body: stageMessages[newStage] ?? `Order moved to ${newStage}.`,
+    data: { import_order_id: updated.id },
   });
 
   return toDto(updated);

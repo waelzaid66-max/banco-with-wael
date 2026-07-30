@@ -71,8 +71,13 @@ export function routeForNotification(
     return "/billing" as Href;
   }
 
-  // A car-import lifecycle ping → the buyer's import-tracking screen (live stages).
+  // A car-import lifecycle ping → the order's own detail screen when the server
+  // stamped the id (all new notifications do); older rows without it fall back
+  // to the tracking overview.
   if (type === "car_import") {
+    if (typeof d.import_order_id === "string") {
+      return { pathname: "/import/order/[id]", params: { id: d.import_order_id } };
+    }
     return "/import-tracking" as Href;
   }
 
