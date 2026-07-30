@@ -308,6 +308,33 @@ function RootLayoutNav() {
         name="import-tracking"
         options={{ headerShown: false, animation: "slide_from_right" }}
       />
+      {/* CAR IMPORT mini-app — hub + tools pushed above (tabs), same pattern as
+          the section mini-apps. The request form was already file-routed; it is
+          registered here so the whole import stack shares one animation set. */}
+      <Stack.Screen
+        name="import/index"
+        options={{ headerShown: false, animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="import/request"
+        options={{ headerShown: false, animation: "slide_from_bottom" }}
+      />
+      <Stack.Screen
+        name="import/calculator"
+        options={{ headerShown: false, animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="import/auctions"
+        options={{ headerShown: false, animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="import/documents"
+        options={{ headerShown: false, animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="import/order/[id]"
+        options={{ headerShown: false, animation: "slide_from_right" }}
+      />
       <Stack.Screen
         name="rfq/index"
         options={{ headerShown: false, animation: "slide_from_right" }}
