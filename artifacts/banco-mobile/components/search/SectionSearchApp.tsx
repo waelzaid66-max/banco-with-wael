@@ -857,6 +857,116 @@ export function SectionSearchApp({
       (baselineRef.current?.marketCountry ?? DEFAULT_MARKET_COUNTRY),
   ].filter(Boolean).length;
 
+  /** Removable summary chips for B-PROPERTY — only real applied criteria. */
+  const reActiveChips = useMemo(() => {
+    if (!isRealEstateSection) return [] as { id: string; label: string; onClear: () => void }[];
+    const chips: { id: string; label: string; onClear: () => void }[] = [];
+    const q = draftQuery.trim() || criteria.q.trim();
+    if (q) {
+      chips.push({
+        id: "q",
+        label: q,
+        onClear: () => {
+          setDraftQuery("");
+          commitQueryNow("");
+        },
+      });
+    }
+    if (activeOfferKey === "sale" || activeOfferKey === "rent") {
+      const eng = engineByKey(criteria.category, activeOfferKey);
+      chips.push({
+        id: "offer",
+        label: eng ? t(eng.i18nKey) : activeOfferKey,
+        onClear: () => selectEngine("all"),
+      });
+    }
+    if (criteria.propertyType) {
+      const def = PROPERTY_TYPES.find((p) => p.value === criteria.propertyType);
+      chips.push({
+        id: "propertyType",
+        label: def ? (isRTL ? def.ar : def.en) : criteria.propertyType,
+        onClear: () => update({ propertyType: null }),
+      });
+    }
+    if (criteria.listingMode === "buy") {
+      chips.push({
+        id: "wanted",
+        label: t("search.listingModeBuy"),
+        onClear: () => selectListingMode("all"),
+      });
+    }
+    if (criteria.rentalTerm) {
+      const term = rentalTermsForSearch(criteria.marketCountry).find(
+        (r) => r.value === criteria.rentalTerm,
+      );
+      chips.push({
+        id: "rentalTerm",
+        label: term ? (isRTL ? term.ar : term.en) : criteria.rentalTerm,
+        onClear: () => update({ rentalTerm: null }),
+      });
+    }
+    if (criteria.location) {
+      chips.push({
+        id: "location",
+        label: criteria.location,
+        onClear: () => update({ location: "" }),
+      });
+    }
+    if (criteria.nearMeEnabled) {
+      chips.push({
+        id: "nearMe",
+        label: t("search.nearMe"),
+        onClear: () => update({ nearMeEnabled: false, nearLat: null, nearLng: null }),
+      });
+    }
+    if (criteria.minPrice || criteria.maxPrice) {
+      const lo = criteria.minPrice || "…";
+      const hi = criteria.maxPrice || "…";
+      chips.push({
+        id: "price",
+        label: `${lo}–${hi}`,
+        onClear: () => update({ minPrice: "", maxPrice: "" }),
+      });
+    }
+    if (criteria.paymentType === "installment") {
+      chips.push({
+        id: "payment",
+        label: t("search.installmentOnly"),
+        onClear: () => update({ paymentType: "any" }),
+      });
+    }
+    if (criteria.sort !== "recommended") {
+      chips.push({
+        id: "sort",
+        label: t(`search.sortOptions.${criteria.sort}`),
+        onClear: () => update({ sort: "recommended" }),
+      });
+    }
+    return chips;
+  }, [
+    isRealEstateSection,
+    draftQuery,
+    criteria.q,
+    criteria.category,
+    criteria.propertyType,
+    criteria.listingMode,
+    criteria.rentalTerm,
+    criteria.marketCountry,
+    criteria.location,
+    criteria.nearMeEnabled,
+    criteria.minPrice,
+    criteria.maxPrice,
+    criteria.paymentType,
+    criteria.sort,
+    activeOfferKey,
+    isRTL,
+    t,
+    selectEngine,
+    selectListingMode,
+    update,
+    commitQueryNow,
+  ]);
+
   // "Dirty" for exit-confirm = the criteria (or query text) diverges from the
   // per-entry baseline. Delta-based so a freshly-landed page with a persisted
   // non-default market is NOT dirty, yet ANY user change (including listing
@@ -1724,41 +1834,100 @@ export function SectionSearchApp({
         </View>
       ) : null}
 
-      {/* ── Rental term chips (RE rent / Booking) ── */}
+      {/* ── Rental term (RE rent) — pill, not a full chip row.
+          Same axis as before (criteria.rentalTerm); only the chrome shape
+          changes so rent browse keeps vertical space for listings. ── */}
       {showRentalTerms ? (
+        <View
+          style={[styles.rentalChrome, { flexDirection: rowDir }]}
+          testID="section-rental-chrome"
+        >
+          <FilterPillSelect
+            icon="calendar"
+            title={t("create.fields.rentalTerm")}
+            options={rentalTerms.map((r) => ({
+              value: r.value,
+              label: isRTL ? r.ar : r.en,
+            }))}
+            selected={criteria.rentalTerm ?? "any"}
+            allValue="any"
+            allLabel={t("search.discover.rentalTermAny")}
+            onSelect={(v) => {
+              playSound("tap");
+              Haptics.selectionAsync();
+              if (v === "any") {
+                update({ rentalTerm: null });
+                return;
+              }
+              selectRentalTerm(v);
+            }}
+            accentColor={accent}
+            testID="section-rental-pill"
+          />
+        </View>
+      ) : null}
+
+      {/* ── B-PROPERTY active filters — removable chips for applied refinements.
+          Only mounts when something is actually applied; each chip clears ONE
+          real criteria field (no fake filters). ── */}
+      {isRealEstateSection && reActiveChips.length > 0 ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.hScroll}
-          contentContainerStyle={[styles.rentalChrome, { flexDirection: rowDir }]}
+          contentContainerStyle={[styles.activeChipStrip, { flexDirection: rowDir }]}
+          testID="re-active-filters"
         >
-          {rentalTerms.map((r) => {
-            const active = criteria.rentalTerm === r.value;
-            return (
-              <Pressable
-                key={r.value}
-                onPress={() => {
-                  playSound("tap");
-                  Haptics.selectionAsync();
-                  selectRentalTerm(r.value);
-                }}
-                style={[
-                  styles.chip,
-                  { backgroundColor: active ? accent : colors.secondary },
-                ]}
-                testID={`section-rental-${r.value}`}
+          {reActiveChips.map((chip) => (
+            <Pressable
+              key={chip.id}
+              onPress={() => {
+                playSound("tap");
+                Haptics.selectionAsync();
+                chip.onClear();
+              }}
+              style={[
+                styles.activeChip,
+                {
+                  backgroundColor: `${accent}22`,
+                  borderColor: accent,
+                  flexDirection: rowDir,
+                },
+              ]}
+              testID={`re-active-${chip.id}`}
+              accessibilityRole="button"
+              accessibilityLabel={`${chip.label}. ${t("common.close")}`}
+            >
+              <AppText style={[styles.activeChipText, { color: accent }]} numberOfLines={1}>
+                {chip.label}
+              </AppText>
+              <Feather name="x" size={12} color={accent} />
+            </Pressable>
+          ))}
+          {reActiveChips.length > 1 ? (
+            <Pressable
+              onPress={() => {
+                playSound("tap");
+                clearAllFilters();
+              }}
+              style={[
+                styles.activeChip,
+                {
+                  backgroundColor: colors.secondary,
+                  borderColor: colors.border,
+                  flexDirection: rowDir,
+                },
+              ]}
+              testID="re-active-clear-all"
+            >
+              <AppText
+                style={[styles.activeChipText, { color: colors.mutedForeground }]}
+                numberOfLines={1}
               >
-                <AppText
-                  style={[
-                    styles.chipText,
-                    { color: active ? "#FFFFFF" : colors.mutedForeground },
-                  ]}
-                >
-                  {isRTL ? r.ar : r.en}
-                </AppText>
-              </Pressable>
-            );
-          })}
+                {t("search.clearAll")}
+              </AppText>
+            </Pressable>
+          ) : null}
         </ScrollView>
       ) : null}
 
@@ -2095,6 +2264,27 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   resultsCount: { fontSize: 12.5, paddingHorizontal: 16, paddingTop: 8 },
+  activeChipStrip: {
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingTop: 6,
+    paddingBottom: 2,
+  },
+  activeChip: {
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    borderWidth: 1,
+    maxWidth: 180,
+  },
+  activeChipText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    flexShrink: 1,
+  },
   suggestions: {
     marginHorizontal: 16,
     marginTop: 2,

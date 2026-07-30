@@ -373,6 +373,11 @@ test("SmartAssetCard badges/actions use logical start/end (RTL-safe)", () => {
   );
   assert.match(
     card,
+    /sectionAccent\("real_estate"\)|category === "real_estate"/,
+    "SmartAssetCard must keep a real-estate identity path (B-PROPERTY price/request)",
+  );
+  assert.match(
+    card,
     /topBadges:[\s\S]*?start:\s*10/,
     "SmartAssetCard topBadges must use logical start (section results RTL)",
   );
@@ -776,6 +781,16 @@ test("Real-estate section uses offer strip + type strip (no listingMode clash)",
     section,
     /testID="re-property-brand"/,
     "RE header must expose the compact B-PROPERTY mark",
+  );
+  assert.match(
+    section,
+    /testID="re-active-filters"/,
+    "RE must expose removable active-filter chips (real criteria only)",
+  );
+  assert.match(
+    section,
+    /testID="section-rental-pill"/,
+    "RE rent terms must collapse to a pill (not a permanent chip wall)",
   );
   // Owner 2026-07-27: RE joins Stay/cars/facilities — country + currency collapse
   // into the ONE compact MarketCountryButton. The spread 21-cell matrix (~6

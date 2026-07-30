@@ -19,6 +19,7 @@ import { useColors } from "@/hooks/useColors";
 import { useI18n } from "@/context/LanguageContext";
 import { useSession } from "@/context/SessionContext";
 import { pulseSpark } from "@/lib/brandSpark";
+import { sectionAccent } from "@/lib/sectionTheme";
 import { shareListing } from "@/lib/share";
 
 // The save glyph adapts to the section — a car for cars, a key for real estate,
@@ -122,12 +123,23 @@ function SmartAssetCardComponent({
     });
   };
 
-  const imageHeight = compact ? 140 : 200;
+  const isRealEstate = item.category === "real_estate";
+  // B-PROPERTY browse prefers a slightly shorter photo so more inventory fits
+  // above the fold; other sections keep the taller default unless compact.
+  const imageHeight = compact || isRealEstate ? 140 : 200;
   const isVerified = isVerifiedSignal(item.trust_signal);
+  const priceColor = isRealEstate
+    ? sectionAccent("real_estate")
+    : colors.foreground;
 
   return (
     <Animated.View
-      style={[styles.outerContainer, { borderRadius: colors.radius }, outerAnimatedStyle]}
+      style={[
+        styles.outerContainer,
+        isRealEstate ? styles.outerContainerRe : null,
+        { borderRadius: colors.radius },
+        outerAnimatedStyle,
+      ]}
     >
       <View
         style={[
@@ -205,6 +217,18 @@ function SmartAssetCardComponent({
                   <Ionicons name="calendar" size={12} color="#FFFFFF" />
                 </View>
               ) : null}
+              {item.is_request ? (
+                <View
+                  style={[
+                    styles.requestBadge,
+                    { backgroundColor: sectionAccent("real_estate") },
+                  ]}
+                >
+                  <Text style={styles.requestBadgeText}>
+                    {t("search.listingModeBuy")}
+                  </Text>
+                </View>
+              ) : null}
             </View>
 
             {item.has_video && (
@@ -238,9 +262,9 @@ function SmartAssetCardComponent({
             </View>
           </View>
 
-          <View style={styles.content}>
+          <View style={[styles.content, isRealEstate ? styles.contentRe : null]}>
             <Text
-              style={[styles.price, { color: colors.foreground }]}
+              style={[styles.price, { color: priceColor }]}
               numberOfLines={1}
             >
               {item.price_display}
@@ -348,6 +372,10 @@ const styles = StyleSheet.create({
   outerContainer: {
     marginBottom: 12,
   },
+  /** Tighter stack in B-PROPERTY results — more cards per viewport. */
+  outerContainerRe: {
+    marginBottom: 10,
+  },
   innerContainer: {
     borderWidth: 1,
     overflow: "hidden",
@@ -392,6 +420,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  requestBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  requestBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+  },
   importedBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -430,6 +468,11 @@ const styles = StyleSheet.create({
   content: {
     padding: 12,
     gap: 4,
+  },
+  contentRe: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 3,
   },
   price: {
     fontSize: 21,
