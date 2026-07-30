@@ -1,9 +1,9 @@
 # 54 — Full effort report: Coolify confusion, mobile/accounts, SoT recovery
 
-**Date:** 2026-07-30  
-**SoT:** `waelzaid66-max/banco-with-wael` only  
-**Mobile:** `BANCO` / `bancooom` / `com.bancooom.app`  
-**PR:** https://github.com/waelzaid66-max/banco-with-wael/pull/6  
+**Date:** 2026-07-30
+**SoT:** `waelzaid66-max/banco-with-wael` only
+**Mobile:** `BANCO` / `bancooom` / `com.bancooom.app`
+**PR:** https://github.com/waelzaid66-max/banco-with-wael/pull/6
 
 ---
 
@@ -26,11 +26,11 @@
 
 Exact:
 
-1. Coolify → Docker Compose  
-2. Repo **`banco-with-wael`**  
-3. File **`docker-compose.coolify.yml`**  
-4. Map apex → service **`web:80`**  
-5. Fill required env **before** Deploy  
+1. Coolify → Docker Compose
+2. Repo **`banco-with-wael`**
+3. File **`docker-compose.coolify.yml`**
+4. Map apex → service **`web:80`**
+5. Fill required env **before** Deploy
 6. After healthy: `docker compose --profile migrate run --rm migrate`
 
 Do **not** rename compose services (would break Coolify links). Docs + name map fixed instead.
@@ -45,14 +45,14 @@ Verified in `app.json` + gates: **`com.bancooom.app`**, scheme **`bancooom`**, n
 
 ### Account journeys gated by static tests
 
-- Email / MFA / reset / delete-account password check / social fail-closed  
-- ClerkLoadGate / tokenCache / biometric hydration / AuthGate order  
-- Account-type Skip / FI `intent=fi` / profile role prefers `/me`  
-- Universal links H2 merge (executable)  
+- Email / MFA / reset / delete-account password check / social fail-closed
+- ClerkLoadGate / tokenCache / biometric hydration / AuthGate order
+- Account-type Skip / FI `intent=fi` / profile role prefers `/me`
+- Universal links H2 merge (executable)
 
 ### Real in-repo bug fixed this pass
 
-**Delete-account KYC purge** ignored mobile `documents: string[]` and only walked object maps → KYC blobs could remain in object storage after delete.  
+**Delete-account KYC purge** ignored mobile `documents: string[]` and only walked object maps → KYC blobs could remain in object storage after delete.
 Fixed in `UserService.ts` + regression test.
 
 ### Still OPS (not inventable in-repo)
@@ -95,10 +95,10 @@ Fixed in `UserService.ts` + regression test.
 
 ## 6. What success looks like for the owner
 
-1. Merge PR #6 into `main` on **banco-with-wael**.  
-2. Coolify points **only** at that repo + `docker-compose.coolify.yml`.  
-3. Follow `COOLIFY_DEPLOY_NOW.md` env + apex→`web:80`.  
-4. Migrate once; smoke `/nginx-health` + `/api/readyz`.  
+1. Merge PR #6 into `main` on **banco-with-wael**.
+2. Coolify points **only** at that repo + `docker-compose.coolify.yml`.
+3. Follow `COOLIFY_DEPLOY_NOW.md` env + apex→`web:80`.
+4. Migrate once; smoke `/nginx-health` + `/api/readyz`.
 5. EAS bake env for `com.bancooom.app`; device smoke.
 
 Until steps 2–5 are done by humans with real secrets/DNS, no honest engineer can stamp **Live Production Ready**.

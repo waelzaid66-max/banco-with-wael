@@ -1,8 +1,8 @@
 # 53 — SoT Recovery & Mobile Restitution
 
-**Date:** 2026-07-30  
-**SoT:** `waelzaid66-max/banco-with-wael` only  
-**Mobile identity:** `com.bancooom.app` / scheme `bancooom` / name `BANCO`  
+**Date:** 2026-07-30
+**SoT:** `waelzaid66-max/banco-with-wael` only
+**Mobile identity:** `com.bancooom.app` / scheme `bancooom` / name `BANCO`
 **Policy:** Restitute every correct letter to SoT. Sister `bancoo` is transport pollution, not authority.
 
 ---
@@ -37,8 +37,8 @@ These merged earlier on **banco-with-wael** and remain:
 
 ## 3. Restitution commit surface (this branch → SoT)
 
-Local branch: `cursor/production-gap-certification-5cf0`  
-Base: `origin/main` (`b7212bf`)  
+Local branch: `cursor/production-gap-certification-5cf0`
+Base: `origin/main` (`b7212bf`)
 
 ### Already in local SoT commit `442e68a`
 
@@ -123,10 +123,10 @@ Local tip: **`precision-hardening` commit after clean 3-commit rewrite** (no nes
 
 ### Owner unblock (one action — then agent can push)
 
-1. Open: https://github.com/settings/installations  
-2. Select **Cursor** (GitHub App).  
-3. Repository access → **Only select repositories** → add **`banco-with-wael`** (keep `bancoo` if desired).  
-4. Save. Reply in the agent chat: «أضفت الريبو».  
+1. Open: https://github.com/settings/installations
+2. Select **Cursor** (GitHub App).
+3. Repository access → **Only select repositories** → add **`banco-with-wael`** (keep `bancoo` if desired).
+4. Save. Reply in the agent chat: «أضفت الريبو».
 5. Agent will immediately `git push` branch `cursor/production-gap-certification-5cf0` and open the SoT PR.
 
 Until then: patches live in `bancoo` PR **#11** mailbox only — **not** for Coolify deploy.
@@ -166,5 +166,5 @@ Coolify must use:
 
 **Not lost.** Prior mobile PRs (#3–#5) are on SoT `main`. Certification hardening (H2/H5/well-known/gates/reports) is on this SoT branch with correct identity. Sister `bancoo` delivery was a mis-route and is documented as non-authoritative.
 
-**Confidence in this recovery inventory:** high (path + SHA + gate evidence).  
+**Confidence in this recovery inventory:** high (path + SHA + gate evidence).
 **Live production still not certified** until DNS / Coolify secrets / EAS bake / well-known REPLACE_* (unchanged OPS).

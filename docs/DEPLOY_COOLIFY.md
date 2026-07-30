@@ -1,6 +1,6 @@
 # Banco — Coolify on Hostinger VPS Deployment Guide
 
-> **Start here for a no-guess deploy:** root file [`COOLIFY_DEPLOY_NOW.md`](../COOLIFY_DEPLOY_NOW.md)  
+> **Start here for a no-guess deploy:** root file [`COOLIFY_DEPLOY_NOW.md`](../COOLIFY_DEPLOY_NOW.md)
 > **SoT repo only:** `waelzaid66-max/banco-with-wael` · compose `docker-compose.coolify.yml` · mobile `com.bancooom.app`
 
 ## Overview
@@ -77,7 +77,7 @@ This avoids putting the marketing Next app on the apex by accident.
 | `banco-website` | 3001 | marketing host | Next.js — **not** the same as Nginx `web` |
 | `banco-web` | 3000 | app host | Next.js consumer twin |
 
-**Name trap:** compose service `web` ≠ compose service `banco-web`.  
+**Name trap:** compose service `web` ≠ compose service `banco-web`.
 `web` = Nginx image `banco-web-static`. `banco-web` = Next.js image `banco-web`.
 
 Coolify's built-in Traefik reverse proxy handles HTTPS/TLS automatically via

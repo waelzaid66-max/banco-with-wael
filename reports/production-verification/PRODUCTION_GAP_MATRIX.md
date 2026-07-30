@@ -1,8 +1,8 @@
 # PRODUCTION GAP MATRIX
 
-**SoT:** `waelzaid66-max/banco-with-wael`  
-**Tip audited:** `b7212bf` (origin/main) + this certification branch  
-**Date:** 2026-07-30  
+**SoT:** `waelzaid66-max/banco-with-wael`
+**Tip audited:** `b7212bf` (origin/main) + this certification branch
+**Date:** 2026-07-30
 **Method:** Independent re-verification of repository state, CI, live probes, Docker builds, typecheck, ESLint, gates, OpenAPI, mobile config. Previous reports treated as claims only.
 
 **Status legend:** `FIXED_IN_REPO` | `REQUIRES_EXTERNAL_OPS` | `OPEN_IN_REPO` (none allowed at end)

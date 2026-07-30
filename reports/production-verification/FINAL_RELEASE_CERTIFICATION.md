@@ -1,11 +1,11 @@
 # FINAL RELEASE CERTIFICATION
 
-**Repository:** `waelzaid66-max/banco-with-wael` (**ONLY SoT**)  
-**Base tip audited:** `b7212bf` (`origin/main`)  
-**Certification branch:** `cursor/production-gap-certification-5cf0`  
-**Mobile identity:** `com.bancooom.app`  
-**Date:** 2026-07-30  
-**Authority:** Lead Release Engineer / Production Architect  
+**Repository:** `waelzaid66-max/banco-with-wael` (**ONLY SoT**)
+**Base tip audited:** `b7212bf` (`origin/main`)
+**Certification branch:** `cursor/production-gap-certification-5cf0`
+**Mobile identity:** `com.bancooom.app`
+**Date:** 2026-07-30
+**Authority:** Lead Release Engineer / Production Architect
 
 > **Restitution note:** A contaminated delivery briefly targeted sister repo `bancoo`. That delivery is **not authoritative**. This certification and `docs/DEPLOYMENT_SOURCE_OF_TRUTH.md` apply **only** to `banco-with-wael`. See `53-SOT-RECOVERY-AND-MOBILE-RESTITUTION.md`.
 
@@ -170,7 +170,7 @@ The monorepo **is ready as a Coolify/EAS deploy artifact set**: typecheck, ESLin
 
 ## 13. Production Risk Level
 
-**HIGH** for end-user live traffic.  
+**HIGH** for end-user live traffic.
 **LOW** for repository compile/CI/deploy-artifact integrity.
 
 Primary risks: wrong DNS (including false-healthy Horizons `/api/readyz` HTML), missing Coolify secrets, unmigrated DB, unbaked EAS env, placeholder well-known values.

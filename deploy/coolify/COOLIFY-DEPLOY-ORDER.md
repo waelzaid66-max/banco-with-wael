@@ -6,7 +6,7 @@ This monorepo is designed for Coolify + Docker Compose. Deploy in this order so 
 
 Required:
 
-- Compose Postgres vars: `POSTGRES_PASSWORD` (required), optional `POSTGRES_USER` / `POSTGRES_DB`  
+- Compose Postgres vars: `POSTGRES_PASSWORD` (required), optional `POSTGRES_USER` / `POSTGRES_DB`
   (`DATABASE_URL` is **constructed by compose** from those — you do not need a separate `DATABASE_URL` for this Coolify file)
 - `CLERK_SECRET_KEY`
 - `CLERK_PUBLISHABLE_KEY` / `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`

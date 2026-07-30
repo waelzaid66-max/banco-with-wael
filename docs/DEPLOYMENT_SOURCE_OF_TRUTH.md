@@ -1,7 +1,7 @@
 # BANCO — Deployment Source of Truth (SoT)
 
-**Generated:** 2026-07-30 (restituted)  
-**Authority:** Lead DevOps + Monorepo Architect  
+**Generated:** 2026-07-30 (restituted)
+**Authority:** Lead DevOps + Monorepo Architect
 **Rule:** Verified paths only. No invented services.
 
 ## Locked identity
@@ -17,7 +17,7 @@
 | **Package manager** | `pnpm@11.9.0` |
 | **Node (Docker)** | **24** |
 
-> **Sister repos (`bancoo`, `bancoboom`, …) are NOT Coolify SoT.**  
+> **Sister repos (`bancoo`, `bancoboom`, …) are NOT Coolify SoT.**
 > Do not enter them in Coolify. Do not ship store builds from their package ids.
 
 ---
@@ -39,14 +39,14 @@ See also: `reports/production-verification/53-SOT-RECOVERY-AND-MOBILE-RESTITUTIO
 
 ### Present
 
-- `artifacts/*` — applications  
-- `lib/*` — shared libraries  
-- `scripts/` — tooling  
-- `deploy/coolify/` — Coolify Dockerfiles + nginx + well-known  
-- `deploy/aws/`, `deploy/gcp/` — alternate clouds (not Coolify SoT)  
-- `docker-compose.coolify.yml` — **Coolify definitive**  
-- `docker-compose.prod.yml` — generic prod  
-- `docker-compose.test.yml` — test Postgres only  
+- `artifacts/*` — applications
+- `lib/*` — shared libraries
+- `scripts/` — tooling
+- `deploy/coolify/` — Coolify Dockerfiles + nginx + well-known
+- `deploy/aws/`, `deploy/gcp/` — alternate clouds (not Coolify SoT)
+- `docker-compose.coolify.yml` — **Coolify definitive**
+- `docker-compose.prod.yml` — generic prod
+- `docker-compose.test.yml` — test Postgres only
 - Root `Dockerfile` — AWS EB / GCP path (not Coolify compose)
 
 ### Absent
@@ -87,11 +87,11 @@ Nginx map (`deploy/coolify/nginx.conf`): `/` landing · `/market/` dealer-os · 
 
 ## 3. Coolify deployment order
 
-1. `postgres`  
-2. `migrate` — **manual**: `docker compose --profile migrate run --rm migrate`  
-3. `api`  
-4. `banco-web` + `banco-website` + `web` (parallel after API healthy)  
-5. Mobile — EAS after API is publicly reachable  
+1. `postgres`
+2. `migrate` — **manual**: `docker compose --profile migrate run --rm migrate`
+3. `api`
+4. `banco-web` + `banco-website` + `web` (parallel after API healthy)
+5. Mobile — EAS after API is publicly reachable
 
 ---
 
@@ -112,10 +112,10 @@ Documented example domains (`docs/DEPLOY_COOLIFY.md`): `api.yourdomain.com`, `ap
 
 ## 5. Dockerfiles used by Coolify (only these)
 
-1. `deploy/coolify/Dockerfile.api`  
-2. `deploy/coolify/Dockerfile.banco-web`  
-3. `deploy/coolify/Dockerfile.banco-website`  
-4. `deploy/coolify/Dockerfile.web`  
+1. `deploy/coolify/Dockerfile.api`
+2. `deploy/coolify/Dockerfile.banco-web`
+3. `deploy/coolify/Dockerfile.banco-website`
+4. `deploy/coolify/Dockerfile.web`
 
 Ignore for Coolify: root `Dockerfile`, `deploy/aws/*`, `deploy/gcp/Dockerfile.api`.
 
@@ -137,12 +137,12 @@ Ignore for Coolify: root `Dockerfile`, `deploy/aws/*`, `deploy/gcp/Dockerfile.ap
 
 ### banco-web build / runtime
 
-Build: `BANCO_WEB_URL` · `BANCO_WEB_MARKET_URL` · `BANCO_WEB_ADMIN_URL` · `NEXT_PUBLIC_*` (Clerk, maps, store URLs, feature flags) · hardcoded `NEXT_PUBLIC_API_URL=http://api:8080`  
+Build: `BANCO_WEB_URL` · `BANCO_WEB_MARKET_URL` · `BANCO_WEB_ADMIN_URL` · `NEXT_PUBLIC_*` (Clerk, maps, store URLs, feature flags) · hardcoded `NEXT_PUBLIC_API_URL=http://api:8080`
 Runtime: `PORT` · `NODE_ENV` · `CLERK_SECRET_KEY` · `BANCO_WEB_HOST_PORT`
 
 ### banco-website
 
-Build: `BANCO_WEBSITE_URL` · `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` · `NEXT_PUBLIC_CLERK_PROXY_URL`  
+Build: `BANCO_WEBSITE_URL` · `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` · `NEXT_PUBLIC_CLERK_PROXY_URL`
 Runtime: `PORT` · `NODE_ENV` · `CLERK_SECRET_KEY` · `BANCO_WEBSITE_HOST_PORT`
 
 ### web (Vite)
@@ -169,27 +169,27 @@ Runtime: `PORT` · `NODE_ENV` · `CLERK_SECRET_KEY` · `BANCO_WEBSITE_HOST_PORT`
 
 ## 8. Mobile notes (international app)
 
-- Identity: **`com.bancooom.app`** only on this SoT  
-- Deep-link merge: `app.config.ts` unions env host with `app.json` multi-host set  
-- Runtime deps live in `dependencies` (not only `devDependencies`)  
-- Well-known templates: `deploy/coolify/well-known/*` with `REPLACE_*` placeholders  
+- Identity: **`com.bancooom.app`** only on this SoT
+- Deep-link merge: `app.config.ts` unions env host with `app.json` multi-host set
+- Runtime deps live in `dependencies` (not only `devDependencies`)
+- Well-known templates: `deploy/coolify/well-known/*` with `REPLACE_*` placeholders
 - EAS: `artifacts/banco-mobile/eas.json` + `release/EAS_BUILD.md`
 
 ---
 
 ## FIRST DEPLOYMENT CHECKLIST
 
-□ Coolify → Docker Compose → repo **`waelzaid66-max/banco-with-wael`** → file **`docker-compose.coolify.yml`**  
-□ Set `POSTGRES_PASSWORD` `CLERK_SECRET_KEY` `SESSION_SECRET` `PAYMENT_CONFIG_ENCRYPTION_KEY`  
-□ Set S3: `OBJECT_STORAGE_PROVIDER=s3` + `AWS_*` / `S3_BUCKET` / object paths  
-□ Set build-time `NEXT_PUBLIC_*` / `VITE_*` / public URLs  
-□ Deploy → wait **postgres** healthy  
-□ Run **migrate** profile once  
-□ Wait **api** `/api/readyz` = 200  
-□ Wait **banco-web** / **banco-website** / **web** healthy  
-□ Configure domains on Traefik  
-□ Fill well-known `REPLACE_*` · redeploy `web`  
-□ EAS bake `EXPO_PUBLIC_*` for `com.bancooom.app`  
-□ Final smoke  
+□ Coolify → Docker Compose → repo **`waelzaid66-max/banco-with-wael`** → file **`docker-compose.coolify.yml`**
+□ Set `POSTGRES_PASSWORD` `CLERK_SECRET_KEY` `SESSION_SECRET` `PAYMENT_CONFIG_ENCRYPTION_KEY`
+□ Set S3: `OBJECT_STORAGE_PROVIDER=s3` + `AWS_*` / `S3_BUCKET` / object paths
+□ Set build-time `NEXT_PUBLIC_*` / `VITE_*` / public URLs
+□ Deploy → wait **postgres** healthy
+□ Run **migrate** profile once
+□ Wait **api** `/api/readyz` = 200
+□ Wait **banco-web** / **banco-website** / **web** healthy
+□ Configure domains on Traefik
+□ Fill well-known `REPLACE_*` · redeploy `web`
+□ EAS bake `EXPO_PUBLIC_*` for `com.bancooom.app`
+□ Final smoke
 
 **End of SoT.** Deploy only from this file + `docker-compose.coolify.yml` on **`banco-with-wael`**.

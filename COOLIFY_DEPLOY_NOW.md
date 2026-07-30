@@ -34,7 +34,7 @@
 | `banco-website` | `banco-website:latest` | Next.js marketing/consumer twin | **3001** host |
 | `web` | `banco-web-static:latest` | **Nginx** = landing + `/market/` + `/admin/` + `/.well-known/` + `/api/` proxy | **80** |
 
-**Critical:** service `web` ≠ image name containing “web” in a vague sense.  
+**Critical:** service `web` ≠ image name containing “web” in a vague sense.
 `web` = nginx static front. `banco-web` = Next.js. Different things.
 
 Ignore for Coolify: root `Dockerfile`, `deploy/aws/*`, `deploy/gcp/*`.
