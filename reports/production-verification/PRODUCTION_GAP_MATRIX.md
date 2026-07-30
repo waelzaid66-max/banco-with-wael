@@ -1,7 +1,7 @@
 # PRODUCTION GAP MATRIX
 
 **SoT:** `waelzaid66-max/banco-with-wael`
-**Tip audited:** `250d655` (`main` after merge of PR #7); this branch adds live cutover gate
+**Tip audited:** inventory branch on `0109c2f` base — see `57-PRODUCTION-INVENTORY-HARMONY.md`
 **Date:** 2026-07-30
 **Method:** Independent re-verification of repository state, CI, live probes, Docker builds, typecheck, ESLint, gates, OpenAPI, mobile config. Previous reports treated as claims only.
 
@@ -72,6 +72,13 @@
 | G61 | Certification merged to `main` (PR #6) | RELEASE | INFO | `64894c6` on `main`; CI 11/11 green | N/A | NO | YES (deploy from `main`) | NO | NO | FIXED_IN_REPO |
 | G62 | No machine-checkable public cutover gate | OPS | HIGH | Operators used ad-hoc curls; Replit/Horizons HTML easy to misread as “up” | YES (`scripts/ops-live-cutover-check.mjs` + `pnpm ops:live-cutover`) | NO | YES (re-run after DNS) | YES | YES | FIXED_IN_REPO |
 | G63 | Live cutover baseline evidence recorded | OPS | INFO | Apex Replit 404; www Horizons; see `56-LIVE-CUTOVER-BASELINE.md` | YES (report only) | NO | YES | YES | YES | REQUIRES_EXTERNAL_OPS |
+| G64 | Landing `banco.autos` hopped to missing `/banco-mobile/` | WEB | HIGH | Coolify `web` nginx has no mobile artifact; hop fell to landing SPA | YES (DomainRouter → VITE_WEB_URL\|apex) | NO | YES (redeploy web) | NO | NO | FIXED_IN_REPO |
+| G65 | Landing `banco.deals` used legacy `/dealer-os/` hop | WEB | MEDIUM | Works via 301 but not canonical Coolify map | YES (`/market/` direct) | NO | YES (redeploy web) | NO | NO | FIXED_IN_REPO |
+| G66 | OpenAPI missing upload objects + import-order stage/cancel | SPEC | MEDIUM | Express routes live; spec lagged | YES | NO | NO | NO | NO | FIXED_IN_REPO |
+| G67 | Unused mobile `react-native-maps` / google.maps types | MOBILE | LOW | Leaflet WebView is the map path | YES (removed) | NO | NO | NO | NO | FIXED_IN_REPO |
+| G68 | `@expo/vector-icons` in runtime dependencies | MOBILE | LOW | icons.test requires devDependency-only | YES (moved to devDependencies) | NO | NO | NO | NO | FIXED_IN_REPO |
+| G69 | UTF-8 BOM on `production-confidence-check.mjs` | CI | MEDIUM | Broke `node --check` / shebang tooling | YES (BOM stripped) | NO | NO | NO | NO | FIXED_IN_REPO |
+| G70 | Cloudflare stub named as if `bancoo` were SoT | DOCS | LOW | Historical Workers project id; comments clarified | YES | NO | NO | NO | NO | FIXED_IN_REPO |
 
 ---
 
@@ -79,7 +86,7 @@
 
 | Bucket | Count |
 |--------|-------|
-| FIXED_IN_REPO (this branch or prior verified main fixes) | 26 |
+| FIXED_IN_REPO (this branch or prior verified main fixes) | 33 |
 | REQUIRES_EXTERNAL_OPS | 37 |
 | OPEN_IN_REPO | **0** |
 

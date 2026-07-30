@@ -47,13 +47,14 @@ function useScrollY() {
 
 /**
  * Domain-aware redirect (Clerk live keys bound to banco.today only):
- *   banco.deals  → https://banco.today/dealer-os/   (Market on Clerk origin)
- *   banco.autos  → https://banco.today/banco-mobile/ (consumer on Clerk origin)
+ *   banco.deals  → https://banco.today/market/  (dealer-os SPA on Coolify map)
+ *   banco.autos  → VITE_WEB_URL if absolute HTTPS, else https://banco.today/
  *   banco.today  → show main landing
  *
- * Absolute hops MUST stay on the banco.today path scheme (dealer-os /
- * banco-mobile) — that is the Clerk-authorized origin layout. Same-origin
- * PATHS above use Coolify /market|/admin (or VITE_*) for the Coolify nginx map.
+ * Absolute hops MUST land on banco.today (or an explicit baked consumer HTTPS
+ * origin). Coolify nginx serves `/market/` + `/admin/` only — there is no
+ * `/banco-mobile/` artifact on `web` (Expo is EAS; Next twins are separate
+ * services). See reports/production-verification/42-P2-M7-LANDING-DOMAIN-HOPS.md.
  */
 function DomainRouter({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -61,9 +62,12 @@ function DomainRouter({ children }: { children: React.ReactNode }) {
     // Relative redirects on banco.deals / banco.autos keep the user on a
     // non-authorized origin → white-screen / broken SSO.
     if (h === "banco.deals") {
-      window.location.replace("https://banco.today/dealer-os/");
+      window.location.replace("https://banco.today/market/");
     } else if (h === "banco.autos") {
-      window.location.replace("https://banco.today/banco-mobile/");
+      const web = envUrl("VITE_WEB_URL");
+      window.location.replace(
+        /^https:\/\//i.test(web) ? web : "https://banco.today/",
+      );
     }
   }, []);
   return <>{children}</>;
