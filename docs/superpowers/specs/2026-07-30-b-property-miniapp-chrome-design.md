@@ -68,9 +68,14 @@ From `sectionChrome.ts` measurement: 16 property-type chips overflow a phone wid
 - Cars + Booking/STAY byte-identical in behavior  
 - No API or search-contract changes
 
-## Explicit deferrals (not this change)
+## Wave 2 (implemented)
+
+- `SmartAssetCard` RE path: accent price, wanted badge, shorter photo, denser stack  
+- Rent terms → `FilterPillSelect` (`section-rental-pill`) — same `rentalTerm` axis  
+- Removable active-filter chips (`re-active-filters`) — clear real criteria only  
+
+## Explicit deferrals
 
 - Full CAR-IMPORT-style nested `/real-estate/*` hub  
 - New financing/booking/contract screens  
-- Redesigning `SmartAssetCard` beyond spacing if not required  
 - Stay header / BOOM STAY wordmark
