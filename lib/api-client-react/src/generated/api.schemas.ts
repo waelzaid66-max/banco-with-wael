@@ -3148,6 +3148,23 @@ export type GetImportOrder200 = {
   meta?: Meta;
 };
 
+export type UpdateImportOrderStageBody = {
+  stage: ImportOrderStage;
+  quote_amount?: number | null;
+};
+
+export type UpdateImportOrderStage200 = {
+  data?: ImportOrder;
+  error?: ApiError | null;
+  meta?: Meta;
+};
+
+export type CancelImportOrder200 = {
+  data?: ImportOrder;
+  error?: ApiError | null;
+  meta?: Meta;
+};
+
 export type BumpListing200Data = {
   id?: string;
   /** ISO 8601 timestamp the listing was recycled to. */

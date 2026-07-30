@@ -254,13 +254,17 @@ Internet
     ▼
 Coolify Traefik (HTTPS/TLS)
     │
-    ├──── app.yourdomain.com  →  banco-web:3000   (Next.js consumer app)
-    ├──── yourdomain.com       →  banco-website:3000 (Next.js marketing site)
-    ├──── api.yourdomain.com   →  api:8080          (REST API)
-    └──── static.yourdomain.com →  web:80            (Nginx: SPAs)
-                                      ├── /         landing
-                                      ├── /market/  dealer-os
-                                      └── /admin/   admin-os
+    ├──── yourdomain.com (apex)  →  web:80   (Nginx = banco-web-static)  ← RECOMMENDED FIRST
+    │                                 ├── /              landing
+    │                                 ├── /market/       dealer-os
+    │                                 ├── /admin/        admin-os
+    │                                 ├── /api/          → api:8080
+    │                                 └── /.well-known/  AASA + assetlinks
+    │
+    │  Optional split origins (advanced — do NOT put apex on Next by accident):
+    ├──── app.yourdomain.com       →  banco-web:3000      (Next.js consumer)
+    ├──── marketing.yourdomain.com →  banco-website:3000  (Next.js twin)
+    └──── api.yourdomain.com       →  api:8080            (only if separate API host)
 
 Internal Docker network (banco_net):
     api:8080  ←──── banco-web (SSR data fetches)
@@ -268,6 +272,9 @@ Internal Docker network (banco_net):
     api:8080  ←──── web/nginx (/api/ reverse proxy)
     postgres:5432 ←──── api
 ```
+
+**Name trap reminder:** compose service `web` (Nginx) ≠ `banco-web` (Next) ≠ `banco-website` (Next).
+First deploy maps apex → **`web:80`**. See `COOLIFY_DEPLOY_NOW.md`.
 
 ### Key networking facts
 

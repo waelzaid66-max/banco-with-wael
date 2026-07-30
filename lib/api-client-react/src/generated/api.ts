@@ -31,6 +31,7 @@ import type {
   BoostListingBody,
   BulkImportListings200,
   BumpListing200,
+  CancelImportOrder200,
   CancelSubscription200,
   CommentBody,
   ConfirmSubscription200,
@@ -263,6 +264,8 @@ import type {
   UpdateFinancingIntermediaryBody,
   UpdateFinancingRequest200,
   UpdateFinancingRequestBody,
+  UpdateImportOrderStage200,
+  UpdateImportOrderStageBody,
   UpdateInstitutionRequest200,
   UpdateInstitutionRequestBody,
   UpdateInvestment200,
@@ -446,6 +449,84 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getHealthCheckQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getApiRootLivenessUrl = () => {
+
+
+
+
+  return `/api/`
+}
+
+/**
+ * Express mounts health router at `/api`, so this is `GET /api`. Process up only — does not touch the database. Includes optional deploy pin.
+ * @summary API root liveness (platform probe)
+ */
+export const apiRootLiveness = async ( options?: RequestInit): Promise<LiveStatus> => {
+
+  return customFetch<LiveStatus>(getApiRootLivenessUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getApiRootLivenessQueryKey = () => {
+    return [
+    `/api/`
+    ] as const;
+    }
+
+
+export const getApiRootLivenessQueryOptions = <TData = Awaited<ReturnType<typeof apiRootLiveness>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof apiRootLiveness>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getApiRootLivenessQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof apiRootLiveness>>> = ({ signal }) => apiRootLiveness({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof apiRootLiveness>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ApiRootLivenessQueryResult = NonNullable<Awaited<ReturnType<typeof apiRootLiveness>>>
+export type ApiRootLivenessQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary API root liveness (platform probe)
+ */
+
+export function useApiRootLiveness<TData = Awaited<ReturnType<typeof apiRootLiveness>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof apiRootLiveness>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getApiRootLivenessQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -1211,6 +1292,84 @@ export const useVerifyUpload = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getVerifyUploadMutationOptions(options));
     }
+
+export const getServeUploadObjectUrl = (path: string,) => {
+
+
+
+
+  return `/api/v1/uploads/objects/${path}`
+}
+
+/**
+ * Streams an object by storage path. Mounted in Express as `GET /api/v1/uploads/objects/*path` (wildcard). Optional Clerk auth — private objects require the owning session; public objects may be served anonymously after promote.
+ * @summary Serve an uploaded object from private/public storage
+ */
+export const serveUploadObject = async (path: string, options?: RequestInit): Promise<Blob> => {
+
+  return customFetch<Blob>(getServeUploadObjectUrl(path),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getServeUploadObjectQueryKey = (path: string,) => {
+    return [
+    `/api/v1/uploads/objects/${path}`
+    ] as const;
+    }
+
+
+export const getServeUploadObjectQueryOptions = <TData = Awaited<ReturnType<typeof serveUploadObject>>, TError = ErrorType<void>>(path: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof serveUploadObject>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getServeUploadObjectQueryKey(path);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof serveUploadObject>>> = ({ signal }) => serveUploadObject(path, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: path !== null && path !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof serveUploadObject>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ServeUploadObjectQueryResult = NonNullable<Awaited<ReturnType<typeof serveUploadObject>>>
+export type ServeUploadObjectQueryError = ErrorType<void>
+
+
+/**
+ * @summary Serve an uploaded object from private/public storage
+ */
+
+export function useServeUploadObject<TData = Awaited<ReturnType<typeof serveUploadObject>>, TError = ErrorType<void>>(
+ path: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof serveUploadObject>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getServeUploadObjectQueryOptions(path,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetListingsUrl = (params?: GetListingsParams,) => {
   const normalizedParams = new URLSearchParams();
@@ -2273,6 +2432,149 @@ export function useGetImportOrder<TData = Awaited<ReturnType<typeof getImportOrd
 
 
 
+
+export const getUpdateImportOrderStageUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/import-orders/${id}/stage`
+}
+
+/**
+ * Admin/ops only (`manage_financing`). Updates stage and optional quote. Matches Express `PATCH /api/v1/import-orders/:id/stage`.
+ * @summary Advance or update a car-import order stage (ops)
+ */
+export const updateImportOrderStage = async (id: string,
+    updateImportOrderStageBody: UpdateImportOrderStageBody, options?: RequestInit): Promise<UpdateImportOrderStage200> => {
+
+  return customFetch<UpdateImportOrderStage200>(getUpdateImportOrderStageUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateImportOrderStageBody)
+  }
+);}
+
+
+
+
+export const getUpdateImportOrderStageMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateImportOrderStage>>, TError,{id: string;data: BodyType<UpdateImportOrderStageBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateImportOrderStage>>, TError,{id: string;data: BodyType<UpdateImportOrderStageBody>}, TContext> => {
+
+const mutationKey = ['updateImportOrderStage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateImportOrderStage>>, {id: string;data: BodyType<UpdateImportOrderStageBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateImportOrderStage(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateImportOrderStageMutationResult = NonNullable<Awaited<ReturnType<typeof updateImportOrderStage>>>
+    export type UpdateImportOrderStageMutationBody = BodyType<UpdateImportOrderStageBody>
+    export type UpdateImportOrderStageMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Advance or update a car-import order stage (ops)
+ */
+export const useUpdateImportOrderStage = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateImportOrderStage>>, TError,{id: string;data: BodyType<UpdateImportOrderStageBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateImportOrderStage>>,
+        TError,
+        {id: string;data: BodyType<UpdateImportOrderStageBody>},
+        TContext
+      > => {
+      return useMutation(getUpdateImportOrderStageMutationOptions(options));
+    }
+
+export const getCancelImportOrderUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/import-orders/${id}/cancel`
+}
+
+/**
+ * Signed-in buyer cancels their own import order. Matches Express `POST /api/v1/import-orders/:id/cancel`.
+ * @summary Cancel a car-import order (buyer)
+ */
+export const cancelImportOrder = async (id: string, options?: RequestInit): Promise<CancelImportOrder200> => {
+
+  return customFetch<CancelImportOrder200>(getCancelImportOrderUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getCancelImportOrderMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelImportOrder>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelImportOrder>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['cancelImportOrder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelImportOrder>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  cancelImportOrder(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelImportOrderMutationResult = NonNullable<Awaited<ReturnType<typeof cancelImportOrder>>>
+
+    export type CancelImportOrderMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Cancel a car-import order (buyer)
+ */
+export const useCancelImportOrder = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelImportOrder>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cancelImportOrder>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getCancelImportOrderMutationOptions(options));
+    }
 
 export const getBumpListingUrl = (id: string,) => {
 

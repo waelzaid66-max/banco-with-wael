@@ -196,13 +196,74 @@ function checkOpenApi() {
     "/v1/uploads/objects/{path}",
     "/v1/import-orders/{id}/stage",
     "/v1/import-orders/{id}/cancel",
+    "operationId: apiRootLiveness",
   ];
   const missing = requiredPaths.filter((p) => !text.includes(p));
   if (missing.length) {
     fail("openapi.yaml route parity", `missing Express-live paths: ${missing.join(", ")}`);
     return;
   }
-  pass("openapi.yaml structure", "includes upload objects + import-order stage/cancel");
+  pass("openapi.yaml structure", "includes upload objects + import-order stage/cancel + GET /api");
+}
+
+function checkOpenApiCodegenFreshness() {
+  const openapi = path.join(ROOT, "lib/api-spec/openapi.yaml");
+  const clientApi = path.join(ROOT, "lib/api-client-react/src/generated/api.ts");
+  const zodApi = path.join(ROOT, "lib/api-zod/src/generated/api.ts");
+  if (!fs.existsSync(openapi) || !fs.existsSync(clientApi) || !fs.existsSync(zodApi)) {
+    fail("openapi codegen freshness", "openapi or generated client/zod missing");
+    return;
+  }
+  const spec = fs.readFileSync(openapi, "utf8");
+  const client = fs.readFileSync(clientApi, "utf8");
+  const zod = fs.readFileSync(zodApi, "utf8");
+  const ids = [...spec.matchAll(/^\s*operationId:\s*([A-Za-z0-9_]+)\s*$/gm)].map((m) => m[1]);
+  if (ids.length < 50) {
+    fail("openapi codegen freshness", `too few operationIds parsed (${ids.length})`);
+    return;
+  }
+  const missingClient = ids.filter((id) => !client.includes(id));
+  // Orval zod schemas are PascalCase(operationId) + Response/Params/Body…
+  const toPascal = (id) => id.charAt(0).toUpperCase() + id.slice(1);
+  const missingZod = ids.filter((id) => !zod.includes(toPascal(id)));
+  if (missingClient.length || missingZod.length) {
+    fail(
+      "openapi codegen freshness",
+      `stale generated packages — run: pnpm --filter @workspace/api-spec run codegen` +
+        (missingClient.length ? `; client missing: ${missingClient.slice(0, 8).join(", ")}` : "") +
+        (missingZod.length ? `; zod missing: ${missingZod.slice(0, 8).join(", ")}` : ""),
+    );
+    return;
+  }
+  pass("openapi codegen freshness", `${ids.length} operationIds present in api-client-react + api-zod`);
+}
+
+function checkCoolifyDocsApex() {
+  const deploy = path.join(ROOT, "docs/DEPLOY_COOLIFY.md");
+  const now = path.join(ROOT, "COOLIFY_DEPLOY_NOW.md");
+  if (!fs.existsSync(deploy) || !fs.existsSync(now)) {
+    fail("coolify apex docs", "DEPLOY_COOLIFY.md or COOLIFY_DEPLOY_NOW.md missing");
+    return;
+  }
+  const deployText = fs.readFileSync(deploy, "utf8");
+  const nowText = fs.readFileSync(now, "utf8");
+  // Forbid apex (bare yourdomain.com) → banco-website. marketing.yourdomain.com is OK.
+  if (/(?:^|[^.\w])yourdomain\.com\s+→\s+banco-website/.test(deployText)) {
+    fail(
+      "coolify apex docs",
+      "DEPLOY_COOLIFY.md must not map apex yourdomain.com → banco-website (use web:80)",
+    );
+    return;
+  }
+  if (!/→\s+web:80/.test(deployText) && !/service \*\*`web`\*\* port \*\*`80`\*\*/.test(deployText)) {
+    fail("coolify apex docs", "DEPLOY_COOLIFY.md must recommend apex → web:80");
+    return;
+  }
+  if (!/`web`/.test(nowText) || !(/port \*\*`?80`?\*\*/.test(nowText) || /:80/.test(nowText))) {
+    fail("coolify apex docs", "COOLIFY_DEPLOY_NOW.md must keep apex → web:80 guidance");
+    return;
+  }
+  pass("coolify apex docs", "apex → web:80; no apex→banco-website diagram");
 }
 
 function checkLandingDomainHops() {
@@ -434,6 +495,8 @@ function main() {
   checkExpoSdkAlignment();
   checkWorkspaceRefs();
   checkOpenApi();
+  checkOpenApiCodegenFreshness();
+  checkCoolifyDocsApex();
   checkLandingDomainHops();
   checkReplitWipePollution();
   checkWellKnownTemplates();
