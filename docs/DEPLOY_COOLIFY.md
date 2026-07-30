@@ -264,6 +264,24 @@ via Expo Application Services (EAS), not as a Docker container.
 - The mobile app communicates with the API over HTTPS — it is unaffected by
   Docker deployment topology
 
+### Universal Links / App Links (well-known)
+
+The `web` nginx image ships templates from `deploy/coolify/well-known/`:
+
+| URL | File |
+|-----|------|
+| `/.well-known/apple-app-site-association` | iOS Universal Links |
+| `/.well-known/assetlinks.json` | Android App Links |
+
+Before store deep-link verification:
+
+1. Replace `REPLACE_APPLE_TEAM_ID` with your Apple Team ID
+2. Replace `REPLACE_PLAY_APP_SIGNING_SHA256` with Play App Signing SHA-256
+3. Redeploy the `web` service
+4. Confirm DNS for `banco.today` (and any other associated hosts) points at Coolify — not Replit / Hostinger Horizons
+
+See `deploy/coolify/well-known/README.md`.
+
 ---
 
 ## Troubleshooting

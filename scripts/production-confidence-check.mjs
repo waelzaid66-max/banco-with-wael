@@ -222,12 +222,68 @@ function checkReplitWipePollution() {
   pass("anti-wipe pollution guards", "menus touch-safe + upload 503 restored");
 }
 
+function checkWellKnownTemplates() {
+  const aasa = path.join(ROOT, "deploy/coolify/well-known/apple-app-site-association");
+  const assetlinks = path.join(ROOT, "deploy/coolify/well-known/assetlinks.json");
+  const nginx = path.join(ROOT, "deploy/coolify/nginx.conf");
+  const dockerfile = path.join(ROOT, "deploy/coolify/Dockerfile.web");
+  if (!fs.existsSync(aasa) || !fs.existsSync(assetlinks)) {
+    fail("well-known templates", "AASA or assetlinks.json missing under deploy/coolify/well-known/");
+    return;
+  }
+  const aasaText = fs.readFileSync(aasa, "utf8");
+  const assetText = fs.readFileSync(assetlinks, "utf8");
+  if (!aasaText.includes("com.bancooom.app")) {
+    fail("well-known AASA", "must target com.bancooom.app");
+    return;
+  }
+  if (!assetText.includes("com.bancooom.app")) {
+    fail("well-known assetlinks", "must target com.bancooom.app");
+    return;
+  }
+  const nginxText = fs.readFileSync(nginx, "utf8");
+  const dfText = fs.readFileSync(dockerfile, "utf8");
+  if (!nginxText.includes(".well-known")) {
+    fail("well-known nginx", "nginx.conf must serve /.well-known/");
+    return;
+  }
+  if (!dfText.includes("well-known/apple-app-site-association")) {
+    fail("well-known Dockerfile.web", "must COPY AASA into the nginx image");
+    return;
+  }
+  const placeholdersPresent =
+    aasaText.includes("REPLACE_APPLE_TEAM_ID") ||
+    assetText.includes("REPLACE_PLAY_APP_SIGNING_SHA256");
+  pass(
+    "well-known templates",
+    placeholdersPresent
+      ? "shipped (OPS must replace REPLACE_* before store verify)"
+      : "shipped with filled values",
+  );
+}
+
+function checkMobileRuntimeDeps() {
+  try {
+    const pkg = readJson("artifacts/banco-mobile/package.json");
+    const deps = pkg.dependencies ?? {};
+    const required = ["expo", "react", "react-native", "@clerk/expo", "expo-router"];
+    const missing = required.filter((name) => !deps[name]);
+    if (missing.length) {
+      fail(
+        "mobile runtime dependencies",
+        `must be in dependencies (not only devDependencies): ${missing.join(", ")}`,
+      );
+      return;
+    }
+    pass("mobile runtime dependencies", "expo/react-native/clerk in dependencies");
+  } catch (e) {
+    fail("mobile runtime dependencies", e instanceof Error ? e.message : String(e));
+  }
+}
 
 function checkMobileTests() {
   const r = run("pnpm", ["run", "test"], MOBILE);
-  const countMatch = (r.stdout || "").match(/ℹ pass (\d+)/);
-  const label = countMatch ? `${countMatch[1]} tests` : "mobile test suite";
-  if (r.ok) pass("mobile regression tests", label);
+  if (r.ok) pass("mobile regression tests", "full pack exit 0");
   else fail("mobile regression tests", r.stderr || r.stdout || `exit ${r.status}`);
 }
 
@@ -271,6 +327,8 @@ function main() {
   checkWorkspaceRefs();
   checkOpenApi();
   checkReplitWipePollution();
+  checkWellKnownTemplates();
+  checkMobileRuntimeDeps();
   checkGcpDockerConfig();
 
   if (!skipTypecheck) {
