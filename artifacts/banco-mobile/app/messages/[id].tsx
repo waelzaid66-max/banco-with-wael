@@ -101,8 +101,9 @@ export default function ThreadScreen() {
   const qc = useQueryClient();
   const { bumpListings } = useSession();
 
-  // Mark-sold is a seller-only action and only when the inbox handed us the
-  // listing id + viewer role (it does). Buyers and deep-links won't see it.
+  // Mark-sold is seller-only when route params include listingId + role=seller
+  // (inbox always does; listing/company createConversation now pass buyer role
+  // + listingId so share/offer work — buyers still won't see mark-sold).
   const canMarkSold = params.role === "seller" && !!params.listingId;
 
   const [draft, setDraft] = useState("");

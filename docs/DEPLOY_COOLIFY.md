@@ -13,7 +13,7 @@ This guide explains how to deploy the entire Banco monorepo on
 | Service | Image name | Type | Container Port | Description |
 |---------|------------|------|---------------|-------------|
 | `postgres` | `postgres:16` | Postgres 16 | 5432 (internal) | Persistent database |
-| `api` | `banco-api` | Node.js Express | 8080 | REST + WebSocket — health **`/api/readyz`** |
+| `api` | `banco-api` | Node.js Express | 8080 | REST (chat is poll-only — G47; no WebSocket) — health **`/api/readyz`** |
 | `banco-web` | `banco-web` | Next.js standalone | 3000 | Consumer Next app |
 | `banco-website` | `banco-website` | Next.js standalone | 3000 (→ 3001 host) | Marketing / consumer twin |
 | `web` | **`banco-web-static`** | Nginx + Vite SPAs | 80 | Landing + dealer-os + admin-os + well-known + `/api/` proxy |

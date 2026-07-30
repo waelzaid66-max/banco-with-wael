@@ -1,0 +1,100 @@
+// Messenger Wave 1 — listing chrome param handoff (no WebSocket).
+//
+// Owner «محدّث وغير مربوط»: share/offer lived in the thread but listing→chat
+// and company→chat dropped listingId/role. Inbox already passed them.
+// G47: chat stays poll-only — this suite must never require a WS client.
+//
+// Run: pnpm --filter @workspace/banco-mobile run test:messenger-wiring
+
+import assert from "node:assert/strict";
+import test from "node:test";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const listing = fs.readFileSync(path.join(root, "app/listing/[id].tsx"), "utf8");
+const company = fs.readFileSync(
+  path.join(root, "app/business/company/[id].tsx"),
+  "utf8",
+);
+const inbox = fs.readFileSync(path.join(root, "app/(tabs)/messages.tsx"), "utf8");
+const thread = fs.readFileSync(path.join(root, "app/messages/[id].tsx"), "utf8");
+const assistant = fs.readFileSync(path.join(root, "app/assistant.tsx"), "utf8");
+
+function pushParamsWindow(src, marker) {
+  const at = src.indexOf(marker);
+  assert.ok(at > 0, `missing marker: ${marker}`);
+  // params object typically sits within a few hundred chars after pathname.
+  return src.slice(at, at + 900);
+}
+
+test("inbox → thread still passes listingId + role (reference path)", () => {
+  const w = pushParamsWindow(inbox, 'pathname: "/messages/[id]"');
+  assert.match(w, /listingId:\s*item\.listing_id/);
+  assert.match(w, /role:\s*item\.viewer_role/);
+});
+
+test("listing → chat passes listingId + role from createConversation", () => {
+  const w = pushParamsWindow(listing, "createConversation({ listing_id: id })");
+  assert.match(
+    w,
+    /listingId:\s*res\.data\?\.listing_id/,
+    "listing openInAppChat must pass listingId (unlocks share/offer)",
+  );
+  assert.match(
+    w,
+    /role:\s*res\.data\?\.viewer_role/,
+    "listing openInAppChat must pass viewer_role",
+  );
+});
+
+test("company → chat passes listingId + role from createConversation", () => {
+  const w = pushParamsWindow(
+    company,
+    "createConversation({ listing_id: profile.latest_listing_id })",
+  );
+  assert.match(w, /listingId:\s*res\.data\?\.listing_id/);
+  assert.match(w, /role:\s*res\.data\?\.viewer_role/);
+});
+
+test("thread gates share/offer on listingId (chrome that was unwired)", () => {
+  assert.match(thread, /testID="message-share-listing"/);
+  assert.match(thread, /testID="message-offer"/);
+  assert.match(
+    thread,
+    /params\.listingId\s*\?[\s\S]*?message-share-listing/,
+  );
+});
+
+test("assistant conversation action may forward listingId but never invents role", () => {
+  const w = pushParamsWindow(assistant, 'pathname: "/messages/[id]"');
+  assert.match(w, /a\.conversation_id/);
+  // Optional listingId from action only.
+  assert.match(w, /a\.listing_id\s*\?\s*\{\s*listingId:\s*a\.listing_id/);
+  assert.doesNotMatch(w, /role:\s*/);
+});
+
+test("mobile chat stays poll-only (G47 — no WebSocket client)", () => {
+  // Scan messenger surfaces for accidental WS introduction.
+  for (const [label, src] of [
+    ["thread", thread],
+    ["inbox", inbox],
+  ]) {
+    assert.doesNotMatch(
+      src,
+      /WebSocket|new\s+WebSocket|socket\.io|useWebSocket/,
+      `${label} must remain poll-only (G47)`,
+    );
+  }
+  assert.match(
+    thread,
+    /refetchInterval:\s*3000/,
+    "thread poll interval contract",
+  );
+  assert.match(
+    inbox,
+    /refetchInterval:\s*8000/,
+    "inbox poll interval contract",
+  );
+});
