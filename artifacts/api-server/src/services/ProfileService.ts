@@ -24,26 +24,6 @@ export interface SocialLinkDTO {
   value: string;
 }
 
-export interface NotificationPreferenceDTO {
-  type:
-    | "message"
-    | "lead"
-    | "system"
-    | "rfq"
-    | "new_match"
-    | "price_drop"
-    | "comment"
-    | "review"
-    | "investment"
-    | "global_supply"
-    | "booking"
-    | "payment_success"
-    | "payment_failed"
-    | "subscription_expiring";
-  in_app: boolean;
-  email: boolean;
-}
-
 export interface SavedSearchDTO {
   id: string;
   name: string;
@@ -58,6 +38,7 @@ export interface SavedSearchDTO {
 
 // Canonical notification categories — the full set the settings UI renders.
 // Absence of a stored row means the category is enabled (defaults are implicit).
+// Keep in sync with OpenAPI NotificationPreference.type + NotificationTypeEnum.
 const NOTIFICATION_TYPES = [
   "message",
   "lead",
@@ -78,6 +59,12 @@ const NOTIFICATION_TYPES = [
   "subscription_expiring",
   "car_import",
 ] as const;
+
+export interface NotificationPreferenceDTO {
+  type: (typeof NOTIFICATION_TYPES)[number];
+  in_app: boolean;
+  email: boolean;
+}
 
 const badRequest = (message: string) =>
   Object.assign(new Error(message), { code: "INVALID_DATA" as const });
