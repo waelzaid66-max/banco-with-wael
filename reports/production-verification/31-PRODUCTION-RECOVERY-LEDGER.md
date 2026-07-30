@@ -7,7 +7,8 @@
 **Merge to `main`:** **DONE** — PR #1 + #2 + docs `6c6dec4` (`44-*`).  
 **Tag `w.4.1`:** **PUSHED** → `6c6dec4` (`45-W41-FULL-DELIVERY-STATUS.md`).  
 **Coolify live:** **public BLOCKED**; **local ultra-precision PASS** — `46-*` + `47-W41-ULTRA-PRECISION-LOCAL-CERT.md` (facets EG≠SA, webhook 401, pin, money_schema). Residuals: P2-H1 `41-*`, P2-M7b `42-*`.  
-**Deploy readiness audit:** `48-PRODUCTION-DEPLOY-READINESS-AUDIT.md` — repo artifacts **READY**; CI gaps closed (api/web docker + production gates).
+**Deploy readiness audit:** `48-PRODUCTION-DEPLOY-READINESS-AUDIT.md` — repo artifacts **READY**; CI gaps closed (api/web docker + production gates).  
+**Final merge:** `49-FINAL-PRODUCTION-MERGE-VERDICT.md` — `cursor/production-deploy-readiness-5cf0` → `main` @ `7a95496` (fast-forward).
 
 ---
 
