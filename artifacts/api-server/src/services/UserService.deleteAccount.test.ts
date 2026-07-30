@@ -431,10 +431,14 @@ describe("deleteAccount", () => {
     await deleteAccount(f.clerkId);
 
     expect(deleteServingUrlsMock).toHaveBeenCalled();
-    const allUrls = deleteServingUrlsMock.mock.calls.flatMap((call) => {
-      const arg = call[0];
-      return Array.isArray(arg) ? (arg as string[]) : [];
-    });
+    const allUrls: string[] = [];
+    for (const call of deleteServingUrlsMock.mock.calls) {
+      const arg = (call as unknown as unknown[])[0];
+      if (!Array.isArray(arg)) continue;
+      for (const u of arg) {
+        if (typeof u === "string") allUrls.push(u);
+      }
+    }
     expect(allUrls).toEqual(expect.arrayContaining([DOC_A, DOC_B, PHOTO]));
   });
 });
