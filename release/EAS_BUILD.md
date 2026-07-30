@@ -12,15 +12,21 @@ to the **production API**, with no Replit/Metro dependency.
 - `production` — Play Store **app‑bundle** (final release).
 
 ## One‑time: set the build‑time env vars (baked into the app)
-The app reads these `EXPO_PUBLIC_*` vars at build time (see `app/_layout.tsx`):
+The app reads these `EXPO_PUBLIC_*` vars at build time (see `app/_layout.tsx`
+and `app.config.ts`). `eas.json` has **no** `env` block — values must live in
+the EAS **production** environment (dashboard) or be passed at build time.
 
 | Var | What | Required |
 |---|---|---|
-| `EXPO_PUBLIC_DOMAIN` | production API host, e.g. `api.banco.app` (the app calls `https://<domain>/api/...`) | ✅ |
-| `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk publishable key | ✅ |
+| `EXPO_PUBLIC_DOMAIN` **or** `EXPO_PUBLIC_API_BASE_URL` | API host (`https://<domain>/api/...`) or full API base URL | ✅ one of them |
+| `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk publishable key (`pk_live_...`) | ✅ |
 | `EXPO_PUBLIC_CLERK_PROXY_URL` | Clerk proxy (only if used) | optional |
-| `EXPO_PUBLIC_PUBLIC_APP_URL` | canonical web URL for share links | optional |
-| `EXPO_PUBLIC_ROUTER_ORIGIN` | deep-link origin for expo-router (production store builds only) | prod store |
+| `EXPO_PUBLIC_PUBLIC_APP_URL` | canonical web URL for share + App/Universal Links host | ✅ for store |
+| `EXPO_PUBLIC_ROUTER_ORIGIN` | deep-link origin for expo-router (production store builds) | ✅ for store |
+
+**If API env unset in a production binary:** `_layout.tsx` logs FATAL and
+relative `/api` calls fail. **If Clerk key unset:** app renders signed-out after
+Clerk load timeout.
 
 Set them in the EAS **production** environment (dashboard → Project → Environment
 variables, scope = production), or via CLI:
@@ -28,7 +34,22 @@ variables, scope = production), or via CLI:
 cd artifacts/banco-mobile
 eas env:create --environment production --name EXPO_PUBLIC_DOMAIN --value api.YOURDOMAIN
 eas env:create --environment production --name EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY --value pk_live_...
+eas env:create --environment production --name EXPO_PUBLIC_PUBLIC_APP_URL --value https://banco.today
+eas env:create --environment production --name EXPO_PUBLIC_ROUTER_ORIGIN --value https://banco.today
 ```
+
+### Store blockers outside the binary (OPS — not fixed by EAS build alone)
+
+| Item | Why it blocks store / deep links |
+|------|----------------------------------|
+| Hosted `/.well-known/apple-app-site-association` | Missing today (404 on `banco.today`) — Universal Links cannot verify |
+| Hosted `/.well-known/assetlinks.json` | Missing today (404) — Android App Links `autoVerify` cannot succeed |
+| DNS `banco.today` → Coolify | Currently Replit placeholder — App Links verification fails |
+| EAS credentials (Apple + Google Play) | Required for signed iOS/Android store builds |
+| `NSFaceIDUsageDescription` | Present in `app.json` (biometric unlock + delete-account confirm) |
+
+Do **not** ship store builds until AASA/assetlinks are served on the production
+host and DNS points at Coolify. Bundle/package id: `com.bancooom.app`.
 
 `eas.json` profiles:
 - `preview` — internal APK (Android) + iOS device build; uses production env vars.
