@@ -125,11 +125,13 @@ OPENAI_MAX_COMPLETION_TOKENS = "4096"
 CLERK_TELEMETRY_DISABLED = "true"
 EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuYmFuY28udG9kYXkk"
 EXPO_PUBLIC_DOMAIN = "banco.today"
-
-[userenv.development]
-AI_INTEGRATIONS_OPENAI_BASE_URL = "http://localhost:1106/modelfarm/openai"
-
-[userenv.production]
 CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuYmFuY28udG9kYXkk"
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuYmFuY28udG9kYXkk"
 VITE_CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuYmFuY28udG9kYXkk"
+
+[userenv.development]
+AI_INTEGRATIONS_OPENAI_BASE_URL = "http://localhost:1106/modelfarm/openai"
+CLERK_SECRET_KEY = "sk_test_banco_dev_placeholder_replace_with_real"
+PAYMENT_CONFIG_ENCRYPTION_KEY = "E33MRfnq6bCW2U+VzYXluRhP/6iGnJtQjnW3oCU4vu4="
+
+[userenv.production]
