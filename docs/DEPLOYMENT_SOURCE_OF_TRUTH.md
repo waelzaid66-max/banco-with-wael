@@ -14,6 +14,7 @@
 | **App display name** | `BANCO` |
 | **Coolify compose file** | `docker-compose.coolify.yml` |
 | **Coolify click checklist** | **`COOLIFY_DEPLOY_NOW.md`** (start here) |
+| **OPS go-live checklist** | **`OPS_GO_LIVE_CHECKLIST.md`** (tick boxes after merge) |
 | **Package manager** | `pnpm@11.9.0` |
 | **Node (Docker)** | **24** |
 

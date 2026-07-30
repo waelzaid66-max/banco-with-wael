@@ -1,8 +1,8 @@
 # FINAL RELEASE CERTIFICATION
 
 **Repository:** `waelzaid66-max/banco-with-wael` (**ONLY SoT**)
-**Base tip audited:** `b7212bf` (`origin/main`)
-**Certification branch:** `cursor/production-gap-certification-5cf0`
+**Base tip on main:** `64894c6` (PR #6 merged)
+**Certification:** merged via PR #6 → `main` @ `64894c6` (+ follow-up OPS checklist commit)
 **Mobile identity:** `com.bancooom.app`
 **Date:** 2026-07-30
 **Authority:** Lead Release Engineer / Production Architect

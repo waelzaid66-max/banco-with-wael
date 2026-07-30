@@ -1,7 +1,7 @@
 # PRODUCTION GAP MATRIX
 
 **SoT:** `waelzaid66-max/banco-with-wael`
-**Tip audited:** `b7212bf` (origin/main) + this certification branch
+**Tip audited:** `64894c6` (`main` after merge of PR #6)
 **Date:** 2026-07-30
 **Method:** Independent re-verification of repository state, CI, live probes, Docker builds, typecheck, ESLint, gates, OpenAPI, mobile config. Previous reports treated as claims only.
 
@@ -67,6 +67,9 @@
 | G56 | Session + payment encryption key strength / rotation | SECURITY | CRITICAL | Operator-generated secrets | NO | NO | YES | NO | YES | REQUIRES_EXTERNAL_OPS |
 | G57 | Postgres password + volume persistence on VPS | DATABASE | CRITICAL | Coolify volume + secret | NO | NO | YES | NO | YES | REQUIRES_EXTERNAL_OPS |
 | G58 | Production confidence mobile test count label undercounts suites | CI | LOW | Parser read last suite pass line; now reports full-pack exit 0 | YES | NO | NO | NO | NO | FIXED_IN_REPO |
+| G59 | Delete-account skipped mobile KYC `documents: string[]` blob purge | PRIVACY | HIGH | Only object-map docs were walked; mobile onboarding stores URL arrays | YES | NO | NO | NO | NO | FIXED_IN_REPO |
+| G60 | Coolify operator confusion (service `web` vs `banco-web` / apex mapping) | DOCS | CRITICAL | Docs mixed Nginx static with Next twins | YES (`COOLIFY_DEPLOY_NOW.md` + `OPS_GO_LIVE_CHECKLIST.md`) | NO | YES (follow checklist) | NO | YES | FIXED_IN_REPO |
+| G61 | Certification merged to `main` (PR #6) | RELEASE | INFO | `64894c6` on `main`; CI 11/11 green | N/A | NO | YES (deploy from `main`) | NO | NO | FIXED_IN_REPO |
 
 ---
 
@@ -74,7 +77,7 @@
 
 | Bucket | Count |
 |--------|-------|
-| FIXED_IN_REPO (this branch or prior verified main fixes) | 22 |
+| FIXED_IN_REPO (this branch or prior verified main fixes) | 25 |
 | REQUIRES_EXTERNAL_OPS | 36 |
 | OPEN_IN_REPO | **0** |
 
