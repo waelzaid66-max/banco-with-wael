@@ -837,13 +837,16 @@ export function SectionSearchApp({
   // fails open when scopedFacets are undefined. Hiding on facetsLoading made
   // every section entry flash an empty strip then repaint.
   // RE: only offer-axis chips (تمليك/إيجار) — types move to their own strip.
-  // Materials hub catalog: industrial chips live in FilterSheet when collapsed.
+  // Materials hub catalog: industrial chips move to FilterSheet when collapsed.
+  // Gate engines off `showIndustrialChips` (not Effective) so collapsing strips
+  // does NOT accidentally resurrect listing engines on materials.
   const showIndustrialChipsEffective =
     !collapseInlineStrips && showIndustrialChips;
   const showEngineChips =
+    !collapseInlineStrips &&
     !lockedEngine &&
     stripEngineList.length > 1 &&
-    !showIndustrialChipsEffective;
+    !showIndustrialChips;
   // listingMode "For sale / Wanted" collides with RE offer sale/rent labels —
   // keep it for cars; RE uses offer engines + type strip (+ FilterSheet for مطلوب).
   // Materials catalog hides the whole primary strip via collapseInlineStrips
@@ -1291,9 +1294,8 @@ export function SectionSearchApp({
           at the bottom (owner screenshot regression). A wrapping View is taller
           than a single row, so that constraint matters more here, not less.
 
-          Materials Mini-App catalog may collapse this strip (collapseInlineStrips)
-          so filters live in FilterSheet — Home is the dashboard, not chips. ── */}
-      {!collapseInlineStrips ? (
+          Materials catalog may hide FILTER axes (listingMode / industrial chips)
+          via collapseInlineStrips — market + sort always stay (never break chrome). ── */}
       <View
         style={[styles.chipStrip, { flexDirection: rowDir }]}
         testID="section-primary-strip"
@@ -1342,7 +1344,11 @@ export function SectionSearchApp({
             color={criteria.sort !== "recommended" ? "#FFFFFF" : colors.mutedForeground}
           />
         </Pressable>
-        {(showListingMode || showEngineChips || showIndustrialChipsEffective || isRealEstateSection) ? (
+        {(!collapseInlineStrips &&
+          (showListingMode ||
+            showEngineChips ||
+            showIndustrialChipsEffective ||
+            isRealEstateSection)) ? (
           <View style={[styles.chipStripDivider, { backgroundColor: colors.border }]} />
         ) : null}
         {/* Offer + engine axes: the SECTION decides the shape, this only renders
@@ -1350,7 +1356,7 @@ export function SectionSearchApp({
             (new / used / imported / bank / islamic instalment) which measured
             999px inside a 375px window as chips. A section whose axis is short
             and constantly flicked asks for chips instead and keeps its taps. */}
-        {showListingMode ? (
+        {showListingMode && !collapseInlineStrips ? (
           axisShape(chrome, "listingMode") === "pill" ? (
             <FilterPillSelect
               icon="tag"
@@ -1477,7 +1483,6 @@ export function SectionSearchApp({
           );
         }) : null}
       </View>
-      ) : null}
 
       {/* ── RE property-type strip (Stay-parallel) — never mixed into offer row ── */}
       {showReTypeStrip ? (

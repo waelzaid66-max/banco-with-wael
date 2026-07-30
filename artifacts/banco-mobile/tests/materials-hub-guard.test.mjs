@@ -75,6 +75,18 @@ test("SectionSearchApp supports materials catalog close + strip collapse", () =>
     section,
     /showListingMode\s*=\s*!lockedEngine\s*&&\s*!isRealEstateSection/,
   );
+  // Market + sort stay on catalog even when filter axes collapse.
+  assert.match(section, /testID="section-primary-strip"/);
+  assert.match(section, /testID="section-sort-cycle"/);
+});
+
+test("FilterSheet exposes industrial subtype for materials catalog", () => {
+  const sheet = fs.readFileSync(
+    path.join(root, "components/search/FilterSheet.tsx"),
+    "utf8",
+  );
+  assert.match(sheet, /filter-industrial-type/);
+  assert.match(sheet, /MATERIALS_TYPES/);
 });
 
 test("materialsHub i18n exists en+ar", () => {

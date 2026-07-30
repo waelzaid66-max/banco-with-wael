@@ -45,6 +45,11 @@ import type {
   SearchCriteria,
   SearchSort,
 } from "@/lib/searchParams";
+import {
+  FACILITIES_TYPES,
+  MATERIALS_TYPES,
+  type IndustrialSubtype,
+} from "@workspace/taxonomy/categories";
 
 const SORTS: SearchSort[] = [
   "recommended",
@@ -217,6 +222,15 @@ export function FilterSheet({
     criteria.category === "materials" &&
     (criteria.industrialType === "all" ||
       criteria.industrialType === "raw_material");
+  // Industrial subtype (materials / facilities). Needed when Materials hub
+  // collapses the inline industrial strip into this sheet.
+  const industrialSubtypeOptions: IndustrialSubtype[] =
+    criteria.category === "materials"
+      ? MATERIALS_TYPES
+      : criteria.category === "facilities"
+        ? FACILITIES_TYPES
+        : [];
+  const showIndustrialSubtype = industrialSubtypeOptions.length > 0;
   // Installment is a car / real-estate SALE-financing axis — never facilities/
   // materials, and never rent: a rental is paid per period, not financed, so
   // offering "تقسيط" while the rent engine is active is a wrong field.
@@ -633,8 +647,47 @@ export function FilterSheet({
                 origin (materials only). Flags already computed — do not collapse
                 to raw isIndustrial or origin leaks into factories and material
                 chips stay dead (prior wipe). */}
-            {(showIndustry || showOrigin || showMaterial) && (
+            {(showIndustrialSubtype || showIndustry || showOrigin || showMaterial) && (
               <>
+                {showIndustrialSubtype ? (
+                  <>
+                    <SectionLabel
+                      text={t("search.type")}
+                      align={textAlign}
+                      colors={colors}
+                    />
+                    <ToggleChipRow
+                      options={["all", ...industrialSubtypeOptions]}
+                      selected={criteria.industrialType}
+                      labelFor={(v) => t(`home.industrialTypes.${v}`)}
+                      onToggle={(v) => {
+                        // Null = cleared chip → browse whole group ("all").
+                        const type = (v ?? "all") as SearchCriteria["industrialType"];
+                        const patch: Partial<SearchCriteria> = {
+                          industrialType: type,
+                        };
+                        if (
+                          criteria.category === "materials" &&
+                          (type === "all" || type === "raw_material")
+                        ) {
+                          patch.industry = null;
+                        }
+                        if (
+                          criteria.category === "materials" &&
+                          type !== "all" &&
+                          type !== "raw_material"
+                        ) {
+                          patch.material = null;
+                        }
+                        onUpdate(patch);
+                      }}
+                      rowDir={rowDir}
+                      colors={colors}
+                      testPrefix="filter-industrial-type"
+                    />
+                  </>
+                ) : null}
+
                 {showIndustry ? (
                   <>
                     <SectionLabel
