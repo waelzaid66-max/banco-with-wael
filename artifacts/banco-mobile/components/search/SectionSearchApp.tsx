@@ -393,13 +393,16 @@ export function SectionSearchApp({
 
   useEffect(() => {
     if (!wantMap) return;
-    if (inResultsView && hasPagePins) {
+    // Open map as soon as results exist — server clusters work even when the
+    // current page has no pin coords. Waiting for hasPagePins left ?map=1 /
+    // desk-map latched forever on inventory without client-side coordinates.
+    if (inResultsView) {
       setMapMode(true);
       setWantMap(false);
     } else if (viewState === "empty" || viewState === "error") {
       setWantMap(false);
     }
-  }, [wantMap, inResultsView, hasPagePins, viewState]);
+  }, [wantMap, inResultsView, viewState]);
 
   const mapSectionKey = mapAnchorKey(criteria);
   const prevMapSectionKey = useRef(mapSectionKey);
@@ -434,13 +437,17 @@ export function SectionSearchApp({
   const reTypeTabs = useMemo(() => {
     if (!isRealEstateSection) return [] as string[];
     const counts = scopedFacets?.property_type;
-    return RE_TYPE_PRIMARY.filter((ty) => {
+    const tabs = RE_TYPE_PRIMARY.filter((ty) => {
       // Core residential/land always visible (fail-open identity of the section).
       if (ty === "apartment" || ty === "villa" || ty === "land") return true;
+      // Keep the shopper's current selection visible even when facet count is 0
+      // so desk/FilterSheet taps are never silently wiped after normalize.
+      if (criteria.propertyType === ty) return true;
       if (!counts) return true;
       return (counts[ty] ?? 0) > 0;
     });
-  }, [isRealEstateSection, scopedFacets]);
+    return tabs as string[];
+  }, [isRealEstateSection, scopedFacets, criteria.propertyType]);
   /** When a sheet refinement owns engineKey, offer strip still highlights all. */
   const activeOfferKey = useMemo(() => {
     if (!isRealEstateSection) return criteria.engineKey;
@@ -503,14 +510,11 @@ export function SectionSearchApp({
     if (
       criteria.category === "real_estate" &&
       criteria.propertyType &&
-      reTypeTabs.length > 0 &&
-      !reTypeTabs.includes(criteria.propertyType)
+      !(RE_TYPE_PRIMARY as readonly string[]).includes(criteria.propertyType)
     ) {
-      // Don't wipe a type that is merely facet-hidden mid-load; only when the
-      // tab list is populated and excludes it.
-      if (scopedFacets?.property_type) {
-        patch.propertyType = null;
-      }
+      // Only wipe values outside the RE primary taxonomy (e.g. stale junk).
+      // Never wipe a desk/FilterSheet type just because facets say count=0.
+      patch.propertyType = null;
     }
     if (Object.keys(patch).length === 0) return;
     applyPatch(patch);
@@ -1383,7 +1387,7 @@ export function SectionSearchApp({
           }}
           onOpenMap={() => {
             setWantMap(true);
-            if (inResultsView && hasPagePins) setMapMode(true);
+            if (inResultsView) setMapMode(true);
           }}
           onOpenMore={() => setShowFilters(true)}
         />
@@ -1990,6 +1994,11 @@ export function SectionSearchApp({
         brandValue={brandValue}
         locationLabel={locationLabel}
         lockCategory
+        // Stay-parallel: scope RE sheet types to the primary taxonomy so
+        // twinhouse/clinic cannot drift away from the pill / desks.
+        propertyTypeOptions={
+          isRealEstateSection ? [...RE_TYPE_PRIMARY] : undefined
+        }
         onSelectCategory={() => {}}
         onSelectEngine={selectEngine}
         onBrowseBrand={browseBrandChip}
@@ -2035,13 +2044,19 @@ export function SectionSearchApp({
             items={mappableItems}
             criteria={criteria}
             onOpenListing={handleCardPress}
-            onOpenListingId={(id) =>
+            onOpenListingId={(id) => {
+              // Only focus booking chrome when the pin is actually bookable
+              // (or unknown off-page). Non-bookable RE pins open the listing.
+              const hit = items.find((i) => i.id === id);
+              const focusBooking =
+                criteria.category === "real_estate" &&
+                (hit == null || hit.is_bookable === true);
               router.push(
-                criteria.category === "real_estate"
+                focusBooking
                   ? `/listing/${id}?focus=booking`
                   : `/listing/${id}`,
-              )
-            }
+              );
+            }}
             onSave={toggleSave}
             isSaved={isSaved}
           />

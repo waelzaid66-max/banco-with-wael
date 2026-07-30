@@ -802,6 +802,16 @@ test("Real-estate section uses offer strip + type strip (no listingMode clash)",
     /property_type/,
     "RE must accept ?property_type= deep-link for desk / Discover composition",
   );
+  assert.match(
+    section,
+    /propertyTypeOptions=\{\s*isRealEstateSection\s*\?/,
+    "RE FilterSheet must scope propertyTypeOptions (Stay-parallel, no twinhouse drift)",
+  );
+  assert.match(
+    section,
+    /if \(inResultsView\) \{\s*setMapMode\(true\)/,
+    "RE map latch must open on results (not wait for page pins only)",
+  );
   // Owner 2026-07-27: RE joins Stay/cars/facilities — country + currency collapse
   // into the ONE compact MarketCountryButton. The spread 21-cell matrix (~6
   // screens of horizontal scroll) is gone; its "…" button opened the very same

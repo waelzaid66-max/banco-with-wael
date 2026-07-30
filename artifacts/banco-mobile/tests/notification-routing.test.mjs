@@ -21,3 +21,23 @@ test("listing_id still wins over follower fallback", () => {
   const followerIdx = routing.indexOf('d.follower_id || d.open_notifications');
   assert.ok(listingIdx >= 0 && followerIdx > listingIdx);
 });
+
+test("booking notifications open /bookings (guest/host role)", () => {
+  assert.match(routing, /type === "booking"/);
+  assert.match(routing, /pathname:\s*"\/bookings"/);
+  assert.match(routing, /role === "guest"/);
+});
+
+test("listing-scoped pings deep-link to /listing/[id]", () => {
+  assert.match(
+    routing,
+    /pathname:\s*"\/listing\/\[id\]"/,
+    "listing_id must open listing detail (RE match/comment/lead path)",
+  );
+});
+
+test("message notifications keep conversation + optional listingId", () => {
+  assert.match(routing, /type === "message"/);
+  assert.match(routing, /conversation_id/);
+  assert.match(routing, /listingId/);
+});

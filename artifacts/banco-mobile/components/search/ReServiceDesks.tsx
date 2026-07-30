@@ -8,7 +8,7 @@
  * state so the shopper stays on one layered surface. Sibling desks push existing
  * routes (Booking & Stays, custom request).
  */
-import { Feather } from "@/components/icons";
+import { Feather, Ionicons } from "@/components/icons";
 import { AppText } from "@/components/AppText";
 import { useColors } from "@/hooks/useColors";
 import { useI18n } from "@/context/LanguageContext";
@@ -19,7 +19,8 @@ import { router, type Href } from "expo-router";
 import React, { useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
-type FeatherName = React.ComponentProps<typeof Feather>["name"];
+/** Registry-mapped Ionicons names only (see components/icons.tsx + test:icons). */
+type DeskIcon = React.ComponentProps<typeof Ionicons>["name"];
 
 const COMMERCIAL_TYPES = ["office", "shop", "warehouse", "commercial_land"] as const;
 
@@ -33,7 +34,7 @@ type DeskKind =
 
 type DeskDef = {
   id: string;
-  icon: FeatherName;
+  icon: DeskIcon;
   labelKey: string;
   testID: string;
   action: DeskKind;
@@ -70,14 +71,14 @@ const DESKS: DeskDef[] = [
   },
   {
     id: "land",
-    icon: "map",
+    icon: "map-outline",
     labelKey: "search.discover.section.deskLand",
     testID: "re-desk-land",
     action: { kind: "type", propertyType: "land" },
   },
   {
     id: "commercial",
-    icon: "grid",
+    icon: "grid-outline",
     labelKey: "search.discover.section.deskCommercial",
     testID: "re-desk-commercial",
     action: { kind: "commercial" },
@@ -98,14 +99,14 @@ const DESKS: DeskDef[] = [
   },
   {
     id: "request",
-    icon: "file-text",
+    icon: "document-text-outline",
     labelKey: "search.discover.section.deskRequest",
     testID: "re-desk-request",
     action: { kind: "href", href: "/listings/create?request=1" as Href },
   },
   {
     id: "more",
-    icon: "sliders",
+    icon: "settings",
     labelKey: "search.discover.section.deskMore",
     testID: "re-desk-more",
     action: { kind: "more" },
@@ -176,7 +177,7 @@ export function ReServiceDesks({
             accessibilityLabel={t(desk.labelKey)}
           >
             <View style={[styles.iconWrap, { backgroundColor: `${accent}22` }]}>
-              <Feather name={desk.icon} size={16} color={accent} />
+              <Ionicons name={desk.icon} size={16} color={accent} />
             </View>
             <AppText
               style={[styles.label, { color: colors.foreground }]}
