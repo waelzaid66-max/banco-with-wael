@@ -164,6 +164,23 @@ export interface SectionSearchAppProps {
    * executes it. Omitted axes keep the shipped chip behaviour (see sectionChrome).
    */
   chrome?: SectionChrome;
+  /**
+   * Materials Mini-App: seed industrial subtype when opening the catalog layer
+   * from a Quick Service tile. Defaults to "all".
+   */
+  initialIndustrialType?: IndustrialType;
+  /** Optional commodity seed (materials catalog layer). */
+  initialMaterial?: string | null;
+  /**
+   * Materials Mini-App: hide always-visible filter chip strips — criteria stay
+   * available in FilterSheet. Other sections must leave this unset.
+   */
+  collapseInlineStrips?: boolean;
+  /**
+   * When set, back/exit returns to the parent Mini-App home instead of
+   * router.back() (two-layer materials hub). Still runs filter reset.
+   */
+  onRequestClose?: () => void;
 }
 
 /**
@@ -183,6 +200,10 @@ export function SectionSearchApp({
   subtitleKey,
   headerIcon,
   chrome,
+  initialIndustrialType = "all",
+  initialMaterial = null,
+  collapseInlineStrips = false,
+  onRequestClose,
 }: SectionSearchAppProps) {
   const colors = useColors();
   const { t, isRTL } = useI18n();
@@ -273,12 +294,23 @@ export function SectionSearchApp({
       marketCountry: market,
       category,
       engineKey: baseEngine,
+      industrialType:
+        category === "materials" || category === "facilities"
+          ? initialIndustrialType
+          : "all",
+      material: category === "materials" ? initialMaterial : null,
       rentalTerm:
         lockedEngine === "rent"
           ? sanitizeRentalTermForMarket(null, market)
           : null,
     }),
-    [category, baseEngine, lockedEngine],
+    [
+      category,
+      baseEngine,
+      lockedEngine,
+      initialIndustrialType,
+      initialMaterial,
+    ],
   );
 
   // The clean, per-entry baseline. Captured when the page seeds (and updated
@@ -785,10 +817,12 @@ export function SectionSearchApp({
       ? criteria.originType
       : "all";
   const isMaterialsSection = criteria.category === "materials";
-  const showOriginChrome = isMaterialsSection;
+  // Materials Mini-App catalog layer collapses inline strips into FilterSheet.
+  const showOriginChrome = isMaterialsSection && !collapseInlineStrips;
   // Commodity material strip: materials + (all | raw_material) — same gate as
   // FilterSheet showMaterial. Machine/production_line clear material upstream.
   const showMaterialChrome =
+    !collapseInlineStrips &&
     isMaterialsSection &&
     (criteria.industrialType === "all" ||
       criteria.industrialType === "raw_material");
@@ -803,12 +837,18 @@ export function SectionSearchApp({
   // fails open when scopedFacets are undefined. Hiding on facetsLoading made
   // every section entry flash an empty strip then repaint.
   // RE: only offer-axis chips (تمليك/إيجار) — types move to their own strip.
+  // Materials hub catalog: industrial chips live in FilterSheet when collapsed.
+  const showIndustrialChipsEffective =
+    !collapseInlineStrips && showIndustrialChips;
   const showEngineChips =
     !lockedEngine &&
     stripEngineList.length > 1 &&
-    !showIndustrialChips;
+    !showIndustrialChipsEffective;
   // listingMode "For sale / Wanted" collides with RE offer sale/rent labels —
   // keep it for cars; RE uses offer engines + type strip (+ FilterSheet for مطلوب).
+  // Materials catalog hides the whole primary strip via collapseInlineStrips
+  // (render gate below) — do not fold that flag into this expression; section
+  // guards pin the RE exclusion contract exactly.
   const showListingMode = !lockedEngine && !isRealEstateSection;
   const showReTypeStrip = isRealEstateSection && reTypeTabs.length > 0;
   // Country + currency live in ONE compact MarketCountryButton on the primary
@@ -910,11 +950,15 @@ export function SectionSearchApp({
 
   const goBack = () => {
     playSound("tap");
+    const leave = () => {
+      if (onRequestClose) onRequestClose();
+      else router.back();
+    };
     if (isDirty) {
-      resetAndLeave(() => router.back());
+      resetAndLeave(leave);
       return;
     }
-    router.back();
+    leave();
   };
 
   const rowDir = isRTL ? "row-reverse" : "row";
@@ -1245,7 +1289,11 @@ export function SectionSearchApp({
           ScrollView needed it because without it RN let the strip eat the
           column and crushed the results into a black void with one card pinned
           at the bottom (owner screenshot regression). A wrapping View is taller
-          than a single row, so that constraint matters more here, not less. ── */}
+          than a single row, so that constraint matters more here, not less.
+
+          Materials Mini-App catalog may collapse this strip (collapseInlineStrips)
+          so filters live in FilterSheet — Home is the dashboard, not chips. ── */}
+      {!collapseInlineStrips ? (
       <View
         style={[styles.chipStrip, { flexDirection: rowDir }]}
         testID="section-primary-strip"
@@ -1294,7 +1342,7 @@ export function SectionSearchApp({
             color={criteria.sort !== "recommended" ? "#FFFFFF" : colors.mutedForeground}
           />
         </Pressable>
-        {(showListingMode || showEngineChips || showIndustrialChips || isRealEstateSection) ? (
+        {(showListingMode || showEngineChips || showIndustrialChipsEffective || isRealEstateSection) ? (
           <View style={[styles.chipStripDivider, { backgroundColor: colors.border }]} />
         ) : null}
         {/* Offer + engine axes: the SECTION decides the shape, this only renders
@@ -1410,7 +1458,7 @@ export function SectionSearchApp({
             </AppText>
           </Pressable>
         ) : null}
-        {showIndustrialChips ? [
+        {showIndustrialChipsEffective ? [
           { key: "all" as IndustrialType, i18nKey: "home.industrialTypes.all" },
           ...((visibleIndTypes ?? []).map((ty) => ({ key: ty, i18nKey: `home.industrialTypes.${ty}` }))),
         ].map((item) => {
@@ -1429,6 +1477,7 @@ export function SectionSearchApp({
           );
         }) : null}
       </View>
+      ) : null}
 
       {/* ── RE property-type strip (Stay-parallel) — never mixed into offer row ── */}
       {showReTypeStrip ? (
