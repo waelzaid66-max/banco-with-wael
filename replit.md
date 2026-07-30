@@ -7,6 +7,22 @@ overview, STATUS_REPORT.md for verification evidence, threat_model.md for securi
 
 ## Run & Operate (Replit / Linux)
 
+> **Replit setup (already done):** Dependencies are installed, schema pushed, and data seeded.
+> Active workflows: `Web App` (Next.js on :5000), `artifacts/api-server: API Server` (:8080),
+> `artifacts/landing: web`, `artifacts/admin-os: web`, `artifacts/dealer-os: web`,
+> `artifacts/mockup-sandbox: Component Preview Server`.
+>
+> **One missing secret before the app is fully functional:**
+> Add `CLERK_SECRET_KEY` (from dashboard.clerk.com → API Keys) to Replit Secrets.
+> Without it every API call returns 500 — auth middleware requires it.
+> Also add `PAYMENT_CONFIG_ENCRYPTION_KEY` (run: `openssl rand -base64 32`) for payment config.
+>
+> **Re-running setup after a reset:** `pnpm install --verify-store-integrity=false` then
+> `pnpm --filter @workspace/db run push-force` then `pnpm --filter @workspace/api-server run seed`.
+>
+> **pnpm version note:** Replit ships pnpm 10.26.1; `manage-package-manager-versions=false`
+> in `.npmrc` prevents the runner from trying (and failing) to upgrade to pnpm 11.9.0.
+
 > **Fresh import?** Run `./scripts/replit-dev-setup.sh` once — it installs pnpm
 > (not pre-installed on a fresh repl), installs workspace deps, ensures the
 > `pg_trgm` extension, pushes the Drizzle schema, and seeds all data. After that
