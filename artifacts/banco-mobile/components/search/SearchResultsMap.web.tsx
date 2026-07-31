@@ -234,6 +234,7 @@ export function SearchResultsMap({
         title="search-map"
         srcDoc={html}
         sandbox="allow-scripts allow-same-origin"
+        allow="geolocation"
         style={{ border: "none", width: "100%", height: "100%" }}
       />
       <MapOverlayChrome

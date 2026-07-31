@@ -535,11 +535,15 @@ export default function ListingDetailScreen() {
       const res = await createConversation({ listing_id: id });
       const conversationId = res.data?.id;
       if (!conversationId) throw new Error("missing conversation");
+      // Mirror inbox → thread chrome: listingId unlocks share/offer; role gates
+      // seller mark-sold. createConversation always returns both (buyer path).
       router.push({
         pathname: "/messages/[id]",
         params: {
           id: conversationId,
           name: res.data?.counterparty_name ?? listing?.seller?.name ?? "",
+          listingId: res.data?.listing_id ?? id,
+          role: res.data?.viewer_role ?? "buyer",
         },
       });
     } catch {

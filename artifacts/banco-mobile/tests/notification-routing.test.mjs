@@ -21,3 +21,12 @@ test("listing_id still wins over follower fallback", () => {
   const followerIdx = routing.indexOf('d.follower_id || d.open_notifications');
   assert.ok(listingIdx >= 0 && followerIdx > listingIdx);
 });
+
+test("message notifications forward stamped role (mark-sold chrome)", () => {
+  assert.match(
+    routing,
+    /d\.role === "buyer" \|\| d\.role === "seller"/,
+    "message route must forward server-stamped buyer|seller role",
+  );
+  assert.match(routing, /role:\s*d\.role/);
+});

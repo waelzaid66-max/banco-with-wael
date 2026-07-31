@@ -377,13 +377,16 @@ export function SectionSearchApp({
 
   useEffect(() => {
     if (!wantMap) return;
-    if (inResultsView && hasPagePins) {
+    // Open as soon as results exist — server clusters work even when the
+    // current page has no pin coords. Waiting for hasPagePins left ?map=1 /
+    // Discover "Explore on map" stuck in list mode.
+    if (inResultsView) {
       setMapMode(true);
       setWantMap(false);
     } else if (viewState === "empty" || viewState === "error") {
       setWantMap(false);
     }
-  }, [wantMap, inResultsView, hasPagePins, viewState]);
+  }, [wantMap, inResultsView, viewState]);
 
   const mapSectionKey = mapAnchorKey(criteria);
   const prevMapSectionKey = useRef(mapSectionKey);
