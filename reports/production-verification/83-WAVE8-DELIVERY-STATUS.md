@@ -1,6 +1,6 @@
 # Wave 8 — Delivery status (Owner)
 
-**SoT:** tip after Tranche D land  
+**SoT:** `main` @ `a05190e`  
 **Date:** 2026-07-31  
 
 ## Done
