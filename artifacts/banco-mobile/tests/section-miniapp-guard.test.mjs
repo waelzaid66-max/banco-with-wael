@@ -373,6 +373,11 @@ test("SmartAssetCard badges/actions use logical start/end (RTL-safe)", () => {
   );
   assert.match(
     card,
+    /sectionAccent\("real_estate"\)|category === "real_estate"/,
+    "SmartAssetCard must keep a real-estate identity path (B-PROPERTY price/request)",
+  );
+  assert.match(
+    card,
     /topBadges:[\s\S]*?start:\s*10/,
     "SmartAssetCard topBadges must use logical start (section results RTL)",
   );
@@ -467,7 +472,8 @@ test("Each section declares its OWN chrome — the shared mini-app never decides
   // shape by accident.
   for (const [file, expected] of [
     ["car", /listingMode:\s*"pill"[\s\S]*engines:\s*"pill"/],
-    ["real-estate", /engines:\s*"chips"/],
+    // RE: offer chips (flicked) + property-type pill (16 values — measured overflow).
+    ["real-estate", /engines:\s*"chips"[\s\S]*propertyType:\s*"pill"/],
     ["factories", /engines:\s*"chips"/],
     ["materials", /engines:\s*"chips"/],
   ]) {
@@ -759,12 +765,71 @@ test("Country + currency is ONE compact button in every section (no per-section 
   }
 });
 
-test("Real-estate section uses offer strip + type strip (no listingMode clash)", () => {
+test("Real-estate section mounts B-PROPERTIES PropertyHomeHeader (Stay-parity)", () => {
   const section = fs.readFileSync(SECTION_APP, "utf8");
   assert.match(
     section,
+    /<PropertyHomeHeader\b/,
+    "RE must mount PropertyHomeHeader (JSX), not only import it",
+  );
+  assert.match(
+    section,
+    /from "@\/components\/search\/property\/PropertyHomeHeader"/,
+    "RE PropertyHomeHeader must come from the property/ folder",
+  );
+  assert.match(
+    section,
+    /axisShape\(chrome,\s*"propertyType"\)/,
+    "RE property-type shape must come from the section chrome (pill vs chips)",
+  );
+  const header = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "property", "PropertyHomeHeader.tsx"),
+    "utf8",
+  );
+  assert.match(
+    header,
+    /testID="re-property-brand"/,
+    "RE header must expose the B-PROPERTIES brand block",
+  );
+  assert.match(
+    header,
     /testID="re-type-strip"/,
-    "RE must expose a dedicated property-type strip",
+    "RE header Band D must expose re-type-strip",
+  );
+  assert.match(
+    header,
+    /b-mark\.png/,
+    "RE header must use the cropped lightning-B mark",
+  );
+  assert.match(
+    header,
+    /property-mark\.png/,
+    "RE header must use the house+keys property seal",
+  );
+  assert.match(
+    section,
+    /testID="re-active-filters"/,
+    "RE must expose removable active-filter chips (real criteria only)",
+  );
+  assert.match(
+    section,
+    /testID="section-rental-pill"/,
+    "RE rent terms must collapse to a pill (not a permanent chip wall)",
+  );
+  assert.match(
+    section,
+    /property_type/,
+    "RE must accept ?property_type= deep-link for desk / Discover composition",
+  );
+  assert.match(
+    section,
+    /propertyTypeOptions=\{\s*isRealEstateSection\s*\?/,
+    "RE FilterSheet must scope propertyTypeOptions (Stay-parallel, no twinhouse drift)",
+  );
+  assert.match(
+    section,
+    /if \(inResultsView\) \{\s*setMapMode\(true\)/,
+    "RE map latch must open on results (not wait for page pins only)",
   );
   // Owner 2026-07-27: RE joins Stay/cars/facilities — country + currency collapse
   // into the ONE compact MarketCountryButton. The spread 21-cell matrix (~6
@@ -799,6 +864,313 @@ test("Real-estate section uses offer strip + type strip (no listingMode clash)",
     section,
     /propertyType:\s*null/,
     "CLEAR_SECTION_ATTRS / clear path must reset propertyType",
+  );
+});
+
+test("B-PROPERTIES header filter lives inside search pill (Stay-parity)", () => {
+  const header = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "property", "PropertyHomeHeader.tsx"),
+    "utf8",
+  );
+  // Filter control must sit inside the search pill — not a crushed header icon row.
+  assert.match(header, /filterInSearch/);
+  assert.match(header, /testID="section-filter-toggle"/);
+  assert.match(header, /testID="section-search-open"|testID="section-search-input"/);
+  // No fake half-screen pad — RE trims ~2mm (web pad 10) vs Stay's 12.
+  assert.match(header, /Platform\.OS === "web" \? 1[02]/);
+  assert.doesNotMatch(header, /\? 67/);
+  assert.match(header, /MarketCountryButton/);
+  assert.match(header, /density="micro"/);
+  assert.match(header, /sortNearBanco|section-sort-cycle/);
+  assert.match(
+    header,
+    /testID="re-offer-strip"/,
+    "RE header must expose compact offer strip (sale/rent P0)",
+  );
+  assert.match(header, /onSelectOffer/);
+  // Market must NOT live in the type strip anymore (owner: above search, by BANCO).
+  assert.doesNotMatch(
+    header,
+    /marketInTabs/,
+    "RE market control must not sit in the type tabs row",
+  );
+});
+
+test("RE offer strip wires sale/rent to selectEngine (P0 reachable)", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  const header = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "property", "PropertyHomeHeader.tsx"),
+    "utf8",
+  );
+  const headerCode = header
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  assert.match(headerCode, /value:\s*"sale"/);
+  assert.match(headerCode, /value:\s*"rent"/);
+  assert.match(headerCode, /onPress=\{\(\) => onSelectOffer\(tab\.value\)\}/);
+  assert.match(
+    section,
+    /<PropertyHomeHeader[\s\S]*?onSelectOffer=\{[\s\S]*?selectEngine/,
+    "PropertyHomeHeader.onSelectOffer must call selectEngine",
+  );
+  assert.match(
+    section,
+    /activeOfferKey=\{activeOfferKey/,
+    "offer strip highlight must use activeOfferKey",
+  );
+  // Offer strip must not sit behind a hide gate (was how sale/rent became unreachable).
+  const stripAt = headerCode.indexOf('testID="re-offer-strip"');
+  assert.ok(stripAt > 0, "re-offer-strip must exist in header JSX");
+  assert.doesNotMatch(
+    headerCode.slice(Math.max(0, stripAt - 200), stripAt),
+    /showOffer|isRealEstateSection\s*\?/,
+    "offer strip must remain unconditionally mounted in PropertyHomeHeader",
+  );
+});
+
+test("RE strip/sheet engine predicates keep offer vs refinements split", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  const codeOnly = section
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  const offerFn = codeOnly.match(/function isReOfferEngine\([\s\S]*?\n\}/)?.[0];
+  const sheetFn = codeOnly.match(/function isReSheetEngine\([\s\S]*?\n\}/)?.[0];
+  assert.ok(offerFn, "isReOfferEngine must exist");
+  assert.ok(sheetFn, "isReSheetEngine must exist");
+  assert.match(offerFn, /offer_type === "sale"/);
+  assert.match(offerFn, /offer_type === "rent"/);
+  assert.doesNotMatch(
+    offerFn,
+    /property_type/,
+    "offer predicate must not admit property_type engines",
+  );
+  assert.match(
+    sheetFn,
+    /offer_type === "sale"/,
+    "sheet predicate must explicitly reject sale offer engines",
+  );
+  assert.match(
+    sheetFn,
+    /offer_type === "rent"/,
+    "sheet predicate must explicitly reject rent offer engines",
+  );
+  assert.match(
+    sheetFn,
+    /property_type/,
+    "sheet predicate must also reject property_type engines",
+  );
+  assert.match(
+    codeOnly,
+    /engines=\{filterSheetEngines\}/,
+    "FilterSheet must receive filterSheetEngines, not full engineList",
+  );
+  assert.doesNotMatch(
+    codeOnly,
+    /engines=\{(?:engineList|visibleEngines|stripEngineList)\}/,
+    "RE FilterSheet must not receive the unfiltered engine list",
+  );
+});
+
+test("RE rentalTerm latch: rent unlocks chrome; leaving rent clears term", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  const selectRental = section.match(
+    /const selectRentalTerm\s*=\s*\([\s\S]*?\n  \};/,
+  )?.[0];
+  assert.ok(selectRental, "selectRentalTerm must exist");
+  assert.match(
+    selectRental,
+    /engineKey:\s*"rent"/,
+    "picking a rental term must force rent engine (breaks chicken-egg)",
+  );
+  const selectEngine = section.match(
+    /const selectEngine\s*=\s*\([\s\S]*?\n  \};/,
+  )?.[0];
+  assert.ok(selectEngine, "selectEngine must exist");
+  assert.match(
+    selectEngine,
+    /offer_type === "rent" \? criteria\.rentalTerm : null/,
+    "leaving rent must clear rentalTerm",
+  );
+  assert.match(
+    section,
+    /showRentalTerms\s*=\s*[\s\S]*?activeOfferKey === "rent"/,
+    "rental chrome must only show under rent offer",
+  );
+  assert.match(section, /testID="section-rental-pill"/);
+});
+
+test("RE Commercial Band D opens subtype picker (honest API enums)", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  const header = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "property", "PropertyHomeHeader.tsx"),
+    "utf8",
+  );
+  assert.match(
+    header,
+    /export const RE_COMMERCIAL_TAB = "__commercial__"/,
+    "Commercial Band D must use a non-API sentinel",
+  );
+  assert.match(
+    header,
+    /RE_COMMERCIAL_TYPES[\s\S]*?"office"[\s\S]*?"shop"[\s\S]*?"warehouse"[\s\S]*?"commercial_land"/,
+    "Commercial picker must list real API property_type values",
+  );
+  assert.match(
+    header,
+    /typePicker === "commercial" \? "re-commercial"/,
+    "Commercial rows must keep re-commercial-* testIDs",
+  );
+  assert.match(
+    section,
+    /value:\s*RE_COMMERCIAL_TAB/,
+    "Band D Commercial tab must use RE_COMMERCIAL_TAB sentinel",
+  );
+  assert.match(
+    section,
+    /RE_COMMERCIAL_TYPES[\s\S]*?RE_COMMERCIAL_TAB/,
+    "Any commercial subtype must light the Commercial Band D tab",
+  );
+  assert.doesNotMatch(
+    section,
+    /propertyType:\s*"commercial"/,
+    "must never send propertyType=commercial (not an API enum)",
+  );
+});
+
+test("RE Wanted + Stays + Request + Map are reachable from PropertyHomeHeader", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  const header = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "property", "PropertyHomeHeader.tsx"),
+    "utf8",
+  );
+  assert.match(header, /testID="re-offer-wanted"/);
+  assert.match(header, /onToggleWanted/);
+  assert.match(header, /testID="re-header-stays"/);
+  assert.match(header, /onOpenStays/);
+  assert.match(header, /testID="re-header-request"/);
+  assert.match(header, /onOpenRequest/);
+  assert.match(header, /testID="re-header-map"/);
+  assert.match(header, /onOpenMap/);
+  assert.match(
+    section,
+    /onToggleWanted=\{[\s\S]*?selectListingMode/,
+    "Wanted must toggle listingMode buy/all",
+  );
+  assert.match(
+    section,
+    /onOpenStays=\{[\s\S]*?\/section\/booking/,
+    "Stays header hit must push /section/booking",
+  );
+  assert.match(
+    section,
+    /onOpenRequest=\{[\s\S]*?\/listings\/create\?request=1&category=real_estate/,
+    "Request header hit must push create RFQ route locked to real_estate",
+  );
+  assert.match(
+    section,
+    /onOpenMap=\{[\s\S]*?setWantMap|onOpenMap=\{[\s\S]*?setMapMode/,
+    "Map header hit must latch or open mapMode",
+  );
+  assert.doesNotMatch(
+    section,
+    /false && isRealEstateSection[\s\S]*?section-listing-mode-buy/,
+    "dead Wanted chip gate must not remain",
+  );
+});
+
+test("RE More Band D opens deep-type picker (honest API enums)", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  const header = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "property", "PropertyHomeHeader.tsx"),
+    "utf8",
+  );
+  assert.match(header, /export const RE_MORE_TAB = "__more__"/);
+  assert.match(
+    header,
+    /RE_MORE_TYPES[\s\S]*?"studio"[\s\S]*?"chalet"[\s\S]*?"townhouse"[\s\S]*?"duplex"[\s\S]*?"penthouse"[\s\S]*?"hotel"/,
+  );
+  assert.match(header, /testID=\{`\$\{pickerTestPrefix\}-\$\{value\}`\}|testID=\{`\$\{pickerTestPrefix\}-/);
+  assert.match(section, /value:\s*RE_MORE_TAB/);
+  assert.match(
+    section,
+    /RE_MORE_TYPES[\s\S]*?RE_MORE_TAB/,
+    "Deep residential/hotel types must light the More Band D tab",
+  );
+  assert.match(
+    section,
+    /RE_COMMERCIAL_TAB \|\| value === RE_MORE_TAB|RE_MORE_TAB \|\| value === RE_COMMERCIAL_TAB|value === RE_COMMERCIAL_TAB \|\| value === RE_MORE_TAB/,
+    "selectRePropertyType must reject both picker sentinels",
+  );
+});
+
+test("RE chrome does not remount retired ReServiceDesks; bottom tabs untouched", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  assert.doesNotMatch(
+    section,
+    /ReServiceDesks/,
+    "SectionSearchApp must not remount ReServiceDesks (header owns map/offer/types)",
+  );
+  const desksPath = path.join(
+    APP_ROOT,
+    "components",
+    "search",
+    "ReServiceDesks.tsx",
+  );
+  // File kept on disk (no delete) — must remain unmounted from first paint.
+  assert.equal(
+    fs.existsSync(desksPath),
+    true,
+    "ReServiceDesks.tsx must remain in repo (owner: no silent deletes)",
+  );
+  const tabsLayout = fs.readFileSync(
+    path.join(APP_ROOT, "app", "(tabs)", "_layout.tsx"),
+    "utf8",
+  );
+  for (const name of ["index", "search", "messages", "saved", "profile"]) {
+    assert.match(
+      tabsLayout,
+      new RegExp(`name="${name}"`),
+      `bottom tab ${name} must remain registered`,
+    );
+  }
+  assert.doesNotMatch(
+    tabsLayout,
+    /PropertyHomeHeader|re-offer-strip|SectionSearchApp/,
+    "RE mini-app chrome must not leak into (tabs)/_layout",
+  );
+  const bottomNav = fs.readFileSync(
+    path.join(APP_ROOT, "components", "MiniAppBottomNav.tsx"),
+    "utf8",
+  );
+  assert.match(
+    bottomNav,
+    /export (?:default )?function MiniAppBottomNav|export function MiniAppBottomNav/,
+    "MiniAppBottomNav export must remain (RE work must not delete bottom chrome)",
+  );
+  assert.doesNotMatch(
+    bottomNav,
+    /re-offer-strip|PropertyHomeHeader|B-PROPERTIES/,
+    "MiniAppBottomNav must not absorb RE header chrome",
+  );
+});
+
+test("mobile buildSearchParams gates rental_term to rent offer only", () => {
+  const src = fs.readFileSync(
+    path.join(APP_ROOT, "lib", "searchParams.ts"),
+    "utf8",
+  );
+  const codeOnly = src
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  assert.doesNotMatch(
+    codeOnly,
+    /if \(c\.rentalTerm\)\s*sp\.rental_term/,
+    "mobile must not emit rental_term without rent offer gate",
+  );
+  assert.match(
+    codeOnly,
+    /offer_type === "rent"[\s\S]{0,120}?rental_term|rental_term[\s\S]{0,120}?offer_type === "rent"/,
+    "rental_term emission must consult rent/offer engine",
   );
 });
 

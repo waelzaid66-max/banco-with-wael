@@ -127,14 +127,27 @@ function buildSmartBadge(row: RawListingRow): string | null {
 
 /**
  * BFF transformation: converts raw DB row → UI-ready FeedItem.
- * Drops listings missing critical fields (id, media_preview, price).
+ * Drops incomplete SALES (need media + price). Buyer requests may publish
+ * without photos — surface a stable placeholder so they still hit the wall.
  */
+const REQUEST_MEDIA_PLACEHOLDER =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600'%3E%3Crect fill='%231c1c1e' width='100%25' height='100%25'/%3E%3C/svg%3E";
+
 export function transformToFeedItem(row: RawListingRow): FeedItem | null {
-  if (!row.id || !row.thumbnail_url || !row.base_price_cash) return null;
+  if (!row.id) return null;
+  const isRequest = row.is_request === true;
+  // Sales need a real thumbnail; requests may use the placeholder (create
+  // allows photo-less Wanted — otherwise they never appear on the wall).
+  const media =
+    row.thumbnail_url ||
+    (isRequest ? REQUEST_MEDIA_PLACEHOLDER : null);
+  if (!media) return null;
+  // Requests store base_price_cash as "0"; sales need a real price.
+  if (!isRequest && !row.base_price_cash) return null;
 
   return {
     id: row.id,
-    media_preview: row.thumbnail_url,
+    media_preview: media,
     // Buyer requests carry no asking price (base_price_cash is a 0 placeholder);
     // surface an honest "price requested" label instead of "0 EGP".
     price_display: row.is_request

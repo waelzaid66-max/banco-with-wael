@@ -9,23 +9,74 @@ import { validateAttributes } from "./ListingService";
  */
 describe("validateAttributes — real-estate rooms floor is sub-type aware", () => {
   it("requires rooms for a built unit (apartment)", () => {
-    const ok = validateAttributes("real_estate", { area: 120, property_type: "apartment", rooms: 3 });
+    const ok = validateAttributes("real_estate", {
+      area: 120,
+      property_type: "apartment",
+      rooms: 3,
+      offer_type: "sale",
+    });
     expect(ok.valid).toBe(true);
 
-    const missing = validateAttributes("real_estate", { area: 120, property_type: "apartment" });
+    const missing = validateAttributes("real_estate", {
+      area: 120,
+      property_type: "apartment",
+      offer_type: "sale",
+    });
     expect(missing.valid).toBe(false);
     expect(missing.errors.join(" ")).toMatch(/rooms/);
   });
 
-  it("does NOT require rooms for land / shop / office / clinic", () => {
-    for (const property_type of ["land", "shop", "office", "clinic"]) {
-      const res = validateAttributes("real_estate", { area: 500, property_type });
+  it("does NOT require rooms for land / shop / office / clinic / warehouse / commercial_land", () => {
+    for (const property_type of [
+      "land",
+      "shop",
+      "office",
+      "clinic",
+      "warehouse",
+      "commercial_land",
+    ]) {
+      const res = validateAttributes("real_estate", {
+        area: 500,
+        property_type,
+        offer_type: "sale",
+      });
       expect(res.valid, `${property_type} should publish without rooms`).toBe(true);
     }
   });
 
+  it("requires offer_type + property_type so wall filters can see the listing", () => {
+    const missingOffer = validateAttributes("real_estate", {
+      area: 120,
+      property_type: "apartment",
+      rooms: 3,
+    });
+    expect(missingOffer.valid).toBe(false);
+    expect(missingOffer.errors.join(" ")).toMatch(/offer_type/);
+
+    const rentNeedsTerm = validateAttributes("real_estate", {
+      area: 120,
+      property_type: "apartment",
+      rooms: 3,
+      offer_type: "rent",
+    });
+    expect(rentNeedsTerm.valid).toBe(false);
+    expect(rentNeedsTerm.errors.join(" ")).toMatch(/rental_term/);
+
+    const rentOk = validateAttributes("real_estate", {
+      area: 120,
+      property_type: "apartment",
+      rooms: 3,
+      offer_type: "rent",
+      rental_term: "new_law",
+    });
+    expect(rentOk.valid).toBe(true);
+  });
+
   it("still requires area for real-estate regardless of sub-type", () => {
-    const res = validateAttributes("real_estate", { property_type: "land" });
+    const res = validateAttributes("real_estate", {
+      property_type: "land",
+      offer_type: "sale",
+    });
     expect(res.valid).toBe(false);
     expect(res.errors.join(" ")).toMatch(/area/);
   });

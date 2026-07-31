@@ -253,7 +253,15 @@ export function buildSearchParams(
 
   if (c.location.trim()) sp.location = c.location.trim();
   if (c.paymentType === "installment") sp.has_installment = true;
-  if (c.rentalTerm) sp.rental_term = c.rentalTerm;
+  // Rent-regime only with explicit rent engine — mirrors @workspace/search-contract.
+  // Server sanitize also drops orphan rental_term; gate client-side for parity.
+  if (
+    c.category === "real_estate" &&
+    c.rentalTerm &&
+    engine?.params.offer_type === "rent"
+  ) {
+    sp.rental_term = c.rentalTerm;
+  }
 
   if (c.brand) sp.brand = c.brand;
   if (c.model) sp.model = c.model;

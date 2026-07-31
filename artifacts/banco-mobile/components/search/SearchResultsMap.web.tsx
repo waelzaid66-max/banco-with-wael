@@ -1,9 +1,10 @@
 import { FeedItem, getMapClusters } from "@workspace/api-client-react";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Alert, Linking, StyleSheet, View } from "react-native";
 
 import { apiCategoryFor } from "@/components/CategoryTabs";
 import { useColors } from "@/hooks/useColors";
+import { useI18n } from "@/context/LanguageContext";
 import {
   buildMapClusterParams,
   type MapViewport,
@@ -59,6 +60,7 @@ export function SearchResultsMap({
   isSaved,
 }: SearchResultsMapProps) {
   const colors = useColors();
+  const { t } = useI18n();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [serverTotal, setServerTotal] = useState<number | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -211,7 +213,26 @@ export function SearchResultsMap({
           if (hit) setSelectedId(msg.id);
           else onOpenListingId?.(msg.id);
         } else if (msg.type === "locate_error") {
-          console.warn("[map] locate_error", msg.reason);
+          // Parity with native SearchResultsMap — never leave locate as a dead tap.
+          Alert.alert(
+            t("search.locateFailedTitle"),
+            msg.reason === "denied"
+              ? t("search.locateDeniedBody")
+              : t("search.locateFailedBody"),
+            [
+              { text: t("common.cancel"), style: "cancel" },
+              ...(msg.reason === "denied"
+                ? [
+                    {
+                      text: t("profile.photoPermissionSettings"),
+                      onPress: () => {
+                        void Linking.openSettings();
+                      },
+                    },
+                  ]
+                : []),
+            ],
+          );
         }
       } catch {
         // Ignore non-map messages on the shared web message channel.
@@ -219,7 +240,7 @@ export function SearchResultsMap({
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, [scheduleFetchClusters, onOpenListingId]);
+  }, [scheduleFetchClusters, onOpenListingId, t]);
 
   const selected = useMemo(
     () => items.find((item) => item.id === selectedId) ?? null,
@@ -234,6 +255,7 @@ export function SearchResultsMap({
         title="search-map"
         srcDoc={html}
         sandbox="allow-scripts allow-same-origin"
+        allow="geolocation"
         style={{ border: "none", width: "100%", height: "100%" }}
       />
       <MapOverlayChrome

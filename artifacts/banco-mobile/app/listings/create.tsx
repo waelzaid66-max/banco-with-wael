@@ -188,8 +188,25 @@ export default function CreateListingScreen() {
       ? Math.max(0, usage.listing_quota - usage.listings_this_month)
       : null;
 
+  // Deep links may open the form in request mode and/or lock a category
+  // (?request=1&category=real_estate from B-PROPERTIES). Explicit intent
+  // outranks a stale draft for these axes.
+  const { request: requestParam, category: categoryParam } = useLocalSearchParams<{
+    request?: string;
+    category?: string;
+  }>();
+  const startAsRequest = requestParam === "1";
+  const deepCategory =
+    categoryParam === "real_estate" ||
+    categoryParam === "car" ||
+    categoryParam === "facilities" ||
+    categoryParam === "materials" ||
+    categoryParam === "raw_materials"
+      ? (categoryParam as UiListingCategory)
+      : null;
+
   const [step, setStep] = useState(0);
-  const [category, setCategory] = useState<UiListingCategory | null>(null);
+  const [category, setCategory] = useState<UiListingCategory | null>(deepCategory);
   const [photos, setPhotos] = useState<ImagePicker.ImagePickerAsset[]>([]);
   const [captions, setCaptions] = useState<Record<string, string>>({});
   const [specs, setSpecs] = useState<Record<string, string>>({});
@@ -218,11 +235,6 @@ export default function CreateListingScreen() {
   // price becomes optional, payment plans are hidden, and a description is
   // required. Mirrors the server contract (base_price_cash optional + the
   // bilingual "طلب سعر / Price requested" line).
-  // Deep links may open the form directly in request mode (?request=1 — the
-  // empty-search "post what you're looking for" bridge); that explicit intent
-  // outranks whatever a stale draft says.
-  const { request: requestParam } = useLocalSearchParams<{ request?: string }>();
-  const startAsRequest = requestParam === "1";
   const [isRequest, setIsRequest] = useState(startAsRequest);
 
   // Multi-market: the listing's market country (stamped into
@@ -365,6 +377,7 @@ export default function CreateListingScreen() {
         // the (now shorter) step list.
         setStep(Math.min(d.step, TOTAL_STEPS - 1));
         if (d.category) setCategory(d.category as UiListingCategory);
+        else if (deepCategory) setCategory(deepCategory);
         setTitle(d.title);
         setDescription(d.description);
         setLocation(d.location);

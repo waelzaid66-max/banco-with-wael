@@ -347,10 +347,10 @@ export function BookingStaysApp() {
   useEffect(() => {
     if (prevMapSectionKey.current === mapSectionKey) return;
     prevMapSectionKey.current = mapSectionKey;
-    // Keep map open across filter tweaks only when user is already in map;
-    // section-key change from market/type still drops to list for clarity.
-    setMapMode(false);
-  }, [mapSectionKey]);
+    // Preserve Discover/?map=1 latch across market hydrate (MOB-07 parity with
+    // SectionSearchApp). Drop map only when the shopper was not mid-latch.
+    if (!wantMap) setMapMode(false);
+  }, [mapSectionKey, wantMap]);
 
   // ── Text query + autocomplete (real_estate-scoped) ──
   const [draftQuery, setDraftQuery] = useState("");
@@ -661,7 +661,7 @@ export function BookingStaysApp() {
         <Pressable
           onPress={() => {
             playSound("tap");
-            router.push("/listings/create?request=1" as Href);
+            router.push("/listings/create?request=1&category=real_estate" as Href);
           }}
           style={[
             styles.emptyCta,
@@ -699,6 +699,16 @@ export function BookingStaysApp() {
         inputRef={inputRef}
         onBack={goBack}
         onSaveSearch={handleSaveSearch}
+        onOpenMap={() => {
+          playSound("tap");
+          Haptics.selectionAsync();
+          if (inResultsView) {
+            setMapMode(true);
+            setWantMap(false);
+          } else {
+            setWantMap(true);
+          }
+        }}
         onOpenFilters={() => {
           playSound("tap");
           setShowFilters((v) => !v);

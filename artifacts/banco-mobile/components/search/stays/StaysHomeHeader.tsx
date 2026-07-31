@@ -46,6 +46,7 @@ type StaysHomeHeaderProps = {
   inputRef: React.RefObject<RNTextInput | null>;
   onBack: () => void;
   onSaveSearch: () => void;
+  onOpenMap: () => void;
   onOpenFilters: () => void;
   onOpenSearch: () => void;
   onCloseSearch: () => void;
@@ -83,6 +84,7 @@ export function StaysHomeHeader({
   inputRef,
   onBack,
   onSaveSearch,
+  onOpenMap,
   onOpenFilters,
   onOpenSearch,
   onCloseSearch,
@@ -118,6 +120,16 @@ export function StaysHomeHeader({
           />
         </Pressable>
         <View style={styles.topSpacer} />
+        <Pressable
+          onPress={onOpenMap}
+          style={styles.iconHit}
+          hitSlop={12}
+          testID="stays-header-map"
+          accessibilityRole="button"
+          accessibilityLabel={t("search.discover.section.deskMap")}
+        >
+          <Ionicons name="map" size={20} color={SNOW} />
+        </Pressable>
         <Pressable
           onPress={onSaveSearch}
           disabled={searchSaved}

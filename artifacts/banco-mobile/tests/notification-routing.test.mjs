@@ -21,3 +21,73 @@ test("listing_id still wins over follower fallback", () => {
   const followerIdx = routing.indexOf('d.follower_id || d.open_notifications');
   assert.ok(listingIdx >= 0 && followerIdx > listingIdx);
 });
+
+test("booking notifications open /bookings (guest/host role)", () => {
+  assert.match(routing, /type === "booking"/);
+  assert.match(routing, /pathname:\s*"\/bookings"/);
+  assert.match(routing, /role === "guest"/);
+});
+
+test("listing-scoped pings deep-link to /listing/[id]", () => {
+  assert.match(
+    routing,
+    /pathname:\s*"\/listing\/\[id\]"/,
+    "listing_id must open listing detail (RE match/comment/lead path)",
+  );
+});
+
+test("message notifications keep conversation + optional listingId", () => {
+  assert.match(routing, /type === "message"/);
+  assert.match(routing, /conversation_id/);
+  assert.match(routing, /listingId/);
+});
+
+test("message notifications forward stamped role (mark-sold chrome)", () => {
+  assert.match(
+    routing,
+    /d\.role === "buyer" \|\| d\.role === "seller"/,
+    "message route must forward server-stamped buyer|seller role",
+  );
+  assert.match(routing, /role:\s*d\.role/);
+});
+
+test("listing-scoped pings must NOT melt into /section/real-estate", () => {
+  assert.doesNotMatch(
+    routing,
+    /\/section\/real-estate/,
+    "property alerts open listing detail, not the RE mini-app browse host",
+  );
+});
+
+test("listing openInAppChat forwards listingId + viewer_role to messenger", () => {
+  const listing = fs.readFileSync(
+    path.join(root, "app/listing/[id].tsx"),
+    "utf8",
+  );
+  const openChat = listing.match(
+    /const openInAppChat = async \(\) => \{[\s\S]*?\n  \};/,
+  )?.[0];
+  assert.ok(openChat, "openInAppChat must exist");
+  assert.match(
+    openChat,
+    /listingId:\s*res\.data\?\.listing_id/,
+    "chat from listing must pass listingId (offer/share chrome)",
+  );
+  assert.match(
+    openChat,
+    /role:\s*res\.data\?\.viewer_role/,
+    "chat from listing must pass viewer_role (mark-sold when seller)",
+  );
+});
+
+test("web SearchResultsMap enables iframe geolocation for locate", () => {
+  const webMap = fs.readFileSync(
+    path.join(root, "components/search/SearchResultsMap.web.tsx"),
+    "utf8",
+  );
+  assert.match(
+    webMap,
+    /allow="geolocation"/,
+    "web map iframe must allow geolocation (LocateControl parity)",
+  );
+});
