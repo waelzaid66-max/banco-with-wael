@@ -880,7 +880,14 @@ test("B-PROPERTIES header filter lives inside search pill (Stay-parity)", () => 
   assert.match(header, /Platform\.OS === "web" \? 1[02]/);
   assert.doesNotMatch(header, /\? 67/);
   assert.match(header, /MarketCountryButton/);
+  assert.match(header, /density="micro"/);
   assert.match(header, /sortNearBanco|section-sort-cycle/);
+  // Market must NOT live in the type strip anymore (owner: above search, by BANCO).
+  assert.doesNotMatch(
+    header,
+    /marketInTabs/,
+    "RE market control must not sit in the type tabs row",
+  );
 });
 
 test("Car section expands brand + origin strips; import deep-links engine", () => {

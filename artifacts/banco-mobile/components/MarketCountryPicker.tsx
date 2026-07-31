@@ -227,11 +227,17 @@ export function MarketCountryButton({
   selected,
   onPress,
   compact = false,
+  density = "default",
 }: {
   selected: string;
   onPress: () => void;
   /** Dense hit for B-PROPERTIES header — slightly smaller, same content. */
   compact?: boolean;
+  /**
+   * `micro` — flag + currency (+ chevron) for welding next to BANCO.
+   * Keeps a second signal (currency) so it is not the banned flag-only look.
+   */
+  density?: "default" | "micro";
 }) {
   const colors = useColors();
   const { t, isRTL } = useI18n();
@@ -245,13 +251,16 @@ export function MarketCountryButton({
   // Currency rides in the same icon (owner: currency is display/valuation in the
   // market's money, NOT a search filter). Follows the market — never chosen alone.
   const currency = CURRENCY_BY_MARKET[selected] ?? "";
+  const micro = density === "micro" || compact;
+  const showLabel = density !== "micro";
 
   return (
     <Pressable
       onPress={onPress}
       style={[
         styles.trigger,
-        compact ? styles.triggerCompact : null,
+        micro ? styles.triggerCompact : null,
+        density === "micro" ? styles.triggerMicro : null,
         {
           flexDirection: rowDir,
           backgroundColor: colors.secondary,
@@ -260,39 +269,49 @@ export function MarketCountryButton({
         },
       ]}
       testID="search-market-country-btn"
-      accessibilityLabel={t("search.marketCountryTitle")}
+      accessibilityLabel={`${t("search.marketCountryTitle")}: ${label}${currency ? ` ${currency}` : ""}`}
     >
       {/* Flag + short country label + chevron — owner visual contract. Do not
-          strip the label again (compact flag-only looked "destroyed"). */}
+          strip the label again (compact flag-only looked "destroyed").
+          Micro keeps flag+currency so it is not flag-only. */}
       {opt?.flag ? (
-        <AppText style={[styles.triggerFlag, compact ? styles.triggerFlagCompact : null]}>
+        <AppText style={[styles.triggerFlag, micro ? styles.triggerFlagCompact : null]}>
           {opt.flag}
         </AppText>
       ) : (
-        <Feather name="globe" size={compact ? 14 : 16} color={colors.foreground} />
+        <Feather name="globe" size={micro ? 13 : 16} color={colors.foreground} />
       )}
-      <AppText
-        style={[
-          styles.triggerLabel,
-          compact ? styles.triggerLabelCompact : null,
-          { color: colors.foreground },
-        ]}
-        numberOfLines={1}
-      >
-        {label}
-      </AppText>
+      {showLabel ? (
+        <AppText
+          style={[
+            styles.triggerLabel,
+            micro ? styles.triggerLabelCompact : null,
+            { color: colors.foreground },
+          ]}
+          numberOfLines={1}
+        >
+          {label}
+        </AppText>
+      ) : null}
       {currency ? (
         <AppText
           style={[
             styles.triggerCurrency,
-            compact ? styles.triggerCurrencyCompact : null,
+            micro ? styles.triggerCurrencyCompact : null,
             { color: colors.primary },
           ]}
         >
           {currency}
         </AppText>
+      ) : !showLabel ? (
+        <AppText
+          style={[styles.triggerLabel, styles.triggerLabelCompact, { color: colors.foreground }]}
+          numberOfLines={1}
+        >
+          {selected}
+        </AppText>
       ) : null}
-      <Feather name="chevron-down" size={compact ? 12 : 14} color={colors.mutedForeground} />
+      <Feather name="chevron-down" size={micro ? 11 : 14} color={colors.mutedForeground} />
     </Pressable>
   );
 }
@@ -366,6 +385,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     maxWidth: 148,
+  },
+  triggerMicro: {
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    maxWidth: 88,
+    borderRadius: 999,
   },
   triggerFlag: { fontSize: 16 },
   triggerFlagCompact: { fontSize: 13 },

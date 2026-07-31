@@ -2,8 +2,8 @@
  * B-PROPERTIES — premium black header (visual shell).
  *
  * Stay-parity bands (A–D): back/save · wordmark · search+filter pill · type tabs.
- * Country/currency welds into the type row (above All); sort sits next to BANCO —
- * no wasted primary-strip row under the header.
+ * Country/currency (micro) + sort sit next to BANCO above the search pill.
+ * Type tabs stay clean (All / Apartments / …). No wasted primary-strip row.
  * Presentational only — parent owns criteria and sheets. RE-only.
  */
 import { Feather, Ionicons } from "@/components/icons";
@@ -199,7 +199,12 @@ export function PropertyHomeHeader({
             contentFit="contain"
             tintColor={ACCENT}
           />
-          {/* Small sort control welded next to BANCO — kills the wasted strip row. */}
+          {/* Market + sort sit above the search pill, next to BANCO — no orphan strip. */}
+          <MarketCountryButton
+            selected={marketCountry}
+            onPress={onOpenMarket}
+            density="micro"
+          />
           <Pressable
             onPress={onCycleSort}
             style={[
@@ -300,7 +305,7 @@ export function PropertyHomeHeader({
         </View>
       )}
 
-      {/* Band D — compact market welded before All + primary types */}
+      {/* Band D — primary types only (market lives next to BANCO above search). */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -308,14 +313,6 @@ export function PropertyHomeHeader({
         style={styles.tabsScroll}
         testID="re-type-strip"
       >
-        <View style={styles.marketInTabs}>
-          <MarketCountryButton
-            selected={marketCountry}
-            onPress={onOpenMarket}
-            compact
-          />
-        </View>
-        <View style={styles.tabDivider} />
         {typeTabs.map((tab, index) => {
           const active = activePropertyType === tab.value;
           const tint = active ? ACCENT : ASH;
@@ -417,16 +414,20 @@ const styles = StyleSheet.create({
   },
   poweredRow: {
     alignItems: "center",
-    gap: 8,
+    gap: 6,
+    flexWrap: "wrap",
+    justifyContent: "center",
+    maxWidth: "100%",
+    paddingHorizontal: 4,
   },
   poweredLogo: {
     width: 68,
     height: 16,
   },
   sortNearBanco: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: StyleSheet.hairlineWidth,
@@ -495,10 +496,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     gap: 0,
     minHeight: 44,
-  },
-  marketInTabs: {
-    paddingHorizontal: 4,
-    justifyContent: "center",
   },
   tabItem: {
     alignItems: "center",
