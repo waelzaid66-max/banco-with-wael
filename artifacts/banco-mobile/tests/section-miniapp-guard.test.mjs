@@ -1400,6 +1400,9 @@ test("Maps mini-app §7 mounts MapsHubApp and reuses SearchResultsMap", () => {
   // Owner law, not RE hardcode of the Discover primary CTA.
   assert.match(hub, /\/section\/car\?map=1/);
   assert.match(hub, /\/section\/real-estate\?map=1/);
+  assert.match(hub, /\/section\/materials\?map=1/);
+  assert.match(hub, /\/section\/factories\?map=1/);
+  assert.match(hub, /\/section\/booking\?map=1/);
 });
 
 test("B-oom Car mounts CarsHomeHeader Stay-parity shell", () => {
@@ -1955,4 +1958,148 @@ test("Ads-first: FI verification uses /me role and does not unlock dealer storef
   const i18n = fs.readFileSync(I18N, "utf8");
   assert.match(i18n, /vFiVerifiedBody:\s*[\s\S]*?ads marketplace/i);
   assert.match(i18n, /joinDesc:\s*[\s\S]*?ads marketplace/i);
+});
+
+// ── Wave8 Tranche D — per-World map + identity protection locks ────────────
+// Owner: strengthen every completed page with its maps and characteristics.
+// Guards only — no UI rewrite · no Banks directory · no REL-21 · no Leaflet delete.
+
+test("W8-D: Discover Props lock — onExploreMap only (no melt props)", () => {
+  const discover = fs.readFileSync(DISCOVER, "utf8");
+  assert.match(
+    discover,
+    /interface Props \{[\s\S]*?onExploreMap:\s*\(\)\s*=>\s*void;[\s\S]*?\}/,
+    "SearchDiscover must declare onExploreMap",
+  );
+  assert.doesNotMatch(
+    discover,
+    /^\s*onBrowseBrand\s*:/m,
+    "Discover must not redeclare onBrowseBrand prop",
+  );
+  assert.doesNotMatch(
+    discover,
+    /^\s*onApplySaved\s*:/m,
+    "Discover must not redeclare onApplySaved prop",
+  );
+  assert.doesNotMatch(
+    discover,
+    /^\s*onOpenListing\s*:/m,
+    "Discover must not redeclare onOpenListing prop",
+  );
+  assert.doesNotMatch(
+    discover,
+    /^\s*onSearchQuery\s*:/m,
+    "Discover must not redeclare onSearchQuery prop",
+  );
+});
+
+test("W8-D: Discover Banks hub portal stays wired", () => {
+  const discover = fs.readFileSync(DISCOVER, "utf8");
+  assert.match(discover, /testID="discover-banks-hub"/);
+  const at = discover.indexOf('testID="discover-banks-hub"');
+  const win = discover.slice(Math.max(0, at - 400), at);
+  assert.match(
+    win,
+    /router\.push\(\s*["']\/business\/banks["']/,
+    "discover-banks-hub must push /business/banks",
+  );
+});
+
+test("W8-D: SectionSearchApp keeps shared section-map-toggle FAB (Factories load-bearing)", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  assert.match(
+    section,
+    /testID="section-map-toggle"/,
+    "section-map-toggle FAB must remain for Car/RE/Materials/Factories",
+  );
+});
+
+test("W8-D: B-oom Car header map wires openOrLatchMap", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  const header = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "car", "CarsHomeHeader.tsx"),
+    "utf8",
+  );
+  assert.match(header, /testID="cars-header-map"/);
+  const mountAt = section.indexOf("<CarsHomeHeader");
+  assert.ok(mountAt > 0, "CarsHomeHeader must mount");
+  const mountWin = section.slice(mountAt, mountAt + 900);
+  assert.match(
+    mountWin,
+    /openOrLatchMap/,
+    "CarsHomeHeader onOpenMap must call openOrLatchMap",
+  );
+  assert.doesNotMatch(
+    header,
+    /["']\/import["']/,
+    "CarsHomeHeader must never link Car Import hub (Car ≠ Import)",
+  );
+});
+
+test("W8-D: BOOM STAY header + FAB map chrome protected", () => {
+  const booking = fs.readFileSync(BOOKING_APP, "utf8");
+  const header = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "stays", "StaysHomeHeader.tsx"),
+    "utf8",
+  );
+  assert.match(header, /testID="stays-header-map"/);
+  assert.match(booking, /testID="stays-map-toggle"/);
+  const mountAt = booking.indexOf("<StaysHomeHeader");
+  assert.ok(mountAt > 0);
+  const mountWin = booking.slice(mountAt, mountAt + 900);
+  assert.match(
+    mountWin,
+    /openOrLatchMap/,
+    "StaysHomeHeader onOpenMap must call openOrLatchMap",
+  );
+});
+
+test("W8-D: Factories screen locks facilities + chips chrome (no invented premium header)", () => {
+  const factories = fs.readFileSync(
+    path.join(APP_ROOT, "app", "section", "factories.tsx"),
+    "utf8",
+  );
+  assert.match(factories, /category="facilities"/);
+  assert.match(
+    factories,
+    /chrome=\{\{\s*listingMode:\s*"pill",\s*engines:\s*"chips"\s*\}\}/,
+  );
+  assert.doesNotMatch(
+    factories,
+    /FactoriesHomeHeader/,
+    "Factories premium header remains Owner HOLD — do not invent",
+  );
+});
+
+test("W8-D: Car Import hub chrome + engine deep-link protected", () => {
+  const hub = fs.readFileSync(
+    path.join(APP_ROOT, "app", "import", "index.tsx"),
+    "utf8",
+  );
+  const discover = fs.readFileSync(DISCOVER, "utf8");
+  assert.match(hub, /testID="import-hub-header"/);
+  // Service card testIDs live on the SERVICES table (testID: "…"), then
+  // spread onto Pressables — lock the table entry, not a JSX attribute form.
+  assert.match(hub, /testID:\s*["']import-hub-search["']/);
+  assert.match(hub, /\/section\/car\?engine=import/);
+  assert.match(
+    discover,
+    /router\.push\(\s*["']\/import["']/,
+    "Discover must keep Car Import portal → /import",
+  );
+});
+
+test("W8-D: Accounts Stack screens stay registered beside profile", () => {
+  const layout = fs.readFileSync(LAYOUT, "utf8");
+  for (const name of [
+    "listings/mine",
+    "listings/create",
+    "listings/edit/[id]",
+  ]) {
+    assert.match(
+      layout,
+      new RegExp(`name="${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`),
+      `Stack.Screen missing for ${name}`,
+    );
+  }
 });
