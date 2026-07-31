@@ -110,10 +110,10 @@ test("Discover section press pushes SECTION_ROUTE (not shared Search criteria)",
   );
 });
 
-test("Discover map FAB enters RE map — never forces category car", () => {
+test("Discover map FAB enters Maps §7 — never forces category car", () => {
   const searchTab = fs.readFileSync(SEARCH_TAB, "utf8");
   // The old FAB committed shared Search with category:"car" when criteria was
-  // "all". That path is gone; FAB must reuse exploreOnMap (RE + ?map=1).
+  // "all". That path is gone; FAB must reuse exploreOnMap → /section/maps.
   assert.doesNotMatch(
     searchTab,
     /category:\s*criteria\.category\s*===\s*["']all["']\s*\?\s*["']car["']/,
@@ -226,12 +226,12 @@ test("Discover keeps photo section cards that push SECTION_ROUTE (no melt)", () 
   );
 });
 
-test("MOB-07: Explore on map enters Maps mini-app #11 (no Search melt, no RE hardcode)", () => {
+test("MOB-07: Explore on map enters Maps mini-app §7 (no Search melt, no RE hardcode)", () => {
   const searchTab = fs.readFileSync(SEARCH_TAB, "utf8");
   assert.match(
     searchTab,
     /router\.push\(\s*["']\/section\/maps["']\s*\)/,
-    "exploreOnMap must push /section/maps (Maps mini-app #11)",
+    "exploreOnMap must push /section/maps (Maps mini-app §7)",
   );
   assert.doesNotMatch(
     searchTab,
@@ -1366,10 +1366,10 @@ test("Banks hub honesty — not a live partner directory (i18n + screen)", () =>
   );
 });
 
-test("Discover map CTA is always present (owner) — Maps mini-app #11 destination", () => {
+test("Discover map CTA is always present (owner) — Maps mini-app §7 destination", () => {
   const src = fs.readFileSync(DISCOVER, "utf8");
   // Owner 2026-07-20: the explore-on-map card must ALWAYS show on the Discover
-  // home. Wave 6: destination is Maps mini-app #11 (/section/maps), not RE.
+  // home. Wave 8: destination is Maps mini-app §7 (/section/maps), not RE.
   assert.match(
     src,
     /testID="discover-explore-map"/,
@@ -1382,7 +1382,7 @@ test("Discover map CTA is always present (owner) — Maps mini-app #11 destinati
   );
 });
 
-test("Maps mini-app #11 mounts MapsHubApp and reuses SearchResultsMap", () => {
+test("Maps mini-app §7 mounts MapsHubApp and reuses SearchResultsMap", () => {
   const mapsRoute = fs.readFileSync(
     path.join(APP_ROOT, "app", "section", "maps.tsx"),
     "utf8",

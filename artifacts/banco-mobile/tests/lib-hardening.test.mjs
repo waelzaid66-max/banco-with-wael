@@ -481,7 +481,7 @@ test("saved search tap emits searchCriteriaToNavParams when criteria present", (
   );
 });
 
-test("search tab consumes parseMobileSearchNavParams + applySaved criteria", () => {
+test("search tab consumes parseMobileSearchNavParams (Saved applies via nav)", () => {
   const search = fs.readFileSync(
     path.join(APP_ROOT, "app", "(tabs)", "search.tsx"),
     "utf8",
@@ -496,10 +496,12 @@ test("search tab consumes parseMobileSearchNavParams + applySaved criteria", () 
     /hasIncomingSearchNavParams/,
     "Search tab must detect incoming search nav params",
   );
-  assert.match(
+  // Wave8 Tranche C: Discover melt applySaved removed; Saved tab pushes
+  // searchCriteriaToNavParams into this host instead.
+  assert.doesNotMatch(
     search,
-    /s\.criteria/,
-    "applySaved must prefer SavedSearch.criteria when present",
+    /const applySaved\s*=/,
+    "search.tsx must not keep dead Discover applySaved helper",
   );
   assert.doesNotMatch(
     search,
