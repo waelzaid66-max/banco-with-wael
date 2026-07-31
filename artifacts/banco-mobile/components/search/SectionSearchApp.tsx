@@ -160,6 +160,18 @@ function serializeCriteria(c: SearchCriteria): string {
     .join("|");
 }
 
+/**
+ * Empty-state "post request" must stay inside the locked section (REL-07 / AUD-SEC-01).
+ * UI categories map to create-listing API categories: facilities/materials → industrial.
+ */
+function emptyPostRequestCreateCategory(
+  section: Category,
+): "car" | "real_estate" | "industrial" {
+  if (section === "car") return "car";
+  if (section === "real_estate") return "real_estate";
+  return "industrial";
+}
+
 export interface SectionSearchAppProps {
   /** The locked browse category — this page only ever shows this section. */
   category: Category;
@@ -1205,13 +1217,16 @@ export function SectionSearchApp({
           </Pressable>
         ) : null}
         {/* Demand bridges — an empty result must never dead-end. Every section
-            offers "post what you're looking for" (buyer request); the supply
-            sections additionally bridge into the B2B RFQ flow (Alibaba model:
-            unmet demand becomes a quote request to suppliers). */}
+            offers "post what you're looking for" (buyer request) locked to THIS
+            section's create category (REL-07); supply sections additionally
+            bridge into the B2B RFQ flow. */}
         <Pressable
           onPress={() => {
             playSound("tap");
-            router.push("/listings/create?request=1&category=real_estate" as Href);
+            const createCategory = emptyPostRequestCreateCategory(category);
+            router.push(
+              `/listings/create?request=1&category=${createCategory}` as Href,
+            );
           }}
           style={[
             styles.emptyCta,

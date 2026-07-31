@@ -1486,6 +1486,31 @@ test("Section + Stays empty CTAs set flexDirection from rowDir (RTL)", () => {
   );
 });
 
+test("REL-07: SectionSearchApp empty post-request derives create category (AUD-SEC-01)", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  assert.match(
+    section,
+    /function emptyPostRequestCreateCategory/,
+    "must define emptyPostRequestCreateCategory helper",
+  );
+  assert.match(
+    section,
+    /emptyPostRequestCreateCategory\(category\)/,
+    "empty CTA must call helper with locked category prop",
+  );
+  assert.doesNotMatch(
+    section,
+    /testID="section-empty-post-request"[\s\S]{0,200}category=real_estate/,
+    "empty post-request must not hardcode real_estate for all sections",
+  );
+  // RE header request remains intentionally real_estate-locked
+  assert.match(
+    section,
+    /onOpenRequest=\{[\s\S]*?\/listings\/create\?request=1&category=real_estate/,
+    "RE header onOpenRequest may stay real_estate",
+  );
+});
+
 test("Section horizontal chip ScrollViews use flexGrow:0 (no black void)", () => {
   const section = fs.readFileSync(SECTION_APP, "utf8");
   assert.match(

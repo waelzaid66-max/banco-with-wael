@@ -116,6 +116,28 @@
 
 ---
 
+## D-2026-07-31-11 — FI public hub = brochure (AUD-FI-01)
+
+| | |
+|--|--|
+| **Decision** | `/business/banks` remains an **honest brochure + gated FI inbox**, not a live partner directory. |
+| **Adopted** | Keep honesty copy; no fake public directory API on this tip. |
+| **Rejected** | Treating missing directory as production defect; claiming L1 is broken marketplace. |
+| **Future** | Directory epic requires Owner product brief + public read API — out of CONDITIONAL GO scope. |
+
+---
+
+## D-2026-07-31-12 — REL-07 section empty CTA category (AUD-SEC-01)
+
+| | |
+|--|--|
+| **Decision** | Empty “post request” in `SectionSearchApp` derives create `category` from locked section prop. |
+| **Adopted** | `emptyPostRequestCreateCategory`: car→car, real_estate→real_estate, facilities/materials→industrial; section guard REL-07. |
+| **Rejected** | Hardcoded `category=real_estate` for all sections (layer melt). |
+| **Note** | RE header `onOpenRequest` may stay real_estate — only empty CTA was wrong. |
+
+---
+
 ## Template for future disputes
 
 ```markdown
