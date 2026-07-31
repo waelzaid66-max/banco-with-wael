@@ -408,6 +408,16 @@
 
 ---
 
+## D-2026-07-31-39 — Wake 90 REL-00 + SEC/DEP senior VERIFY
+
+| | |
+|--|--|
+| **Decision** | Owner: Director requests tasks · senior engineer complete at highest expertise. Tip `7e3b40a` landed SEC-01/02 scrub · DEP-01a · DIR-02 · wake 90. |
+| **Adopted** | REL-00 90/8/4/47 · CI SUCCESS 30654946946 · SEC-01/02/DEP-01a VCS PASS · SEC-02b WATCH noted · Owner Secrets residual honest · STANDBY RED_LOGS. |
+| **Rejected** | Freestyle SEC-02b change · 5cf0 · Live Certified · product World invent. |
+
+---
+
 ## Template for future disputes
 
 ```markdown
