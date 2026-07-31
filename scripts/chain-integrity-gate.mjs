@@ -1025,11 +1025,14 @@ const CHECKS = [
   {
     id: "P-saved-search-nav-consume",
     file: "artifacts/banco-mobile/app/(tabs)/search.tsx",
+    // Wave8 Tranche C (D-W8-04/06): dead Discover melt `applySaved` removed.
+    // Saved→Search dual-end is nav params only (parse + hasIncoming + commit).
     test: (s) =>
       /parseMobileSearchNavParams/.test(s) &&
       /hasIncomingSearchNavParams/.test(s) &&
-      /s\.criteria/.test(s),
-    why: "Search tab must restore rich criteria from nav params and applySaved",
+      /commit\(next\)/.test(s) &&
+      !/const applySaved\s*=/.test(s),
+    why: "Search tab must restore rich criteria from nav params (no applySaved melt)",
   },
   {
     id: "P-b2b-tombstone-investments",

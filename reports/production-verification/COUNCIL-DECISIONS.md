@@ -328,6 +328,16 @@
 
 ---
 
+## D-2026-07-31-31 — Tranche C REL-00 + chain hygiene incomplete closeout
+
+| | |
+|--|--|
+| **Decision** | Owner ordered complete incomplete tasks + go to Chair. Tranche C landed; Reliability re-ack + closed Chair-missed chain gate drift (D-W8-06 intent). |
+| **Adopted** | `W8-REL-00-tranche-c-reack.md` · `W8-REL-INCOMPLETE-CLOSEOUT-TO-CHAIR.md` · `scripts/chain-integrity-gate.mjs` P-saved-search-nav-consume update. Gates 77…167/18 @ `ddb9371`. |
+| **Rejected** | Product UI freestyle · Stay/RE rewrite · invent HOLD epics · claim Live Certified. |
+
+---
+
 ## Template for future disputes
 
 ```markdown
