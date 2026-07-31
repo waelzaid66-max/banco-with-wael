@@ -1488,15 +1488,24 @@ test("Section + Stays empty CTAs set flexDirection from rowDir (RTL)", () => {
 
 test("REL-07: SectionSearchApp empty post-request derives create category (AUD-SEC-01)", () => {
   const section = fs.readFileSync(SECTION_APP, "utf8");
+  const taxonomy = fs.readFileSync(
+    path.join(APP_ROOT, "constants", "listingCreateTaxonomy.ts"),
+    "utf8",
+  );
   assert.match(
-    section,
-    /function emptyPostRequestCreateCategory/,
-    "must define emptyPostRequestCreateCategory helper",
+    taxonomy,
+    /function sectionEmptyPostRequestCategory/,
+    "SoT helper must live in listingCreateTaxonomy",
+  );
+  assert.match(
+    taxonomy,
+    /function resolveCreateDeepLinkCategory/,
+    "create consumer must share deep-link remap SoT",
   );
   assert.match(
     section,
-    /emptyPostRequestCreateCategory\(category\)/,
-    "empty CTA must call helper with locked category prop",
+    /sectionEmptyPostRequestCategory/,
+    "empty CTA must call shared SoT helper",
   );
   assert.doesNotMatch(
     section,
@@ -1508,6 +1517,37 @@ test("REL-07: SectionSearchApp empty post-request derives create category (AUD-S
     section,
     /onOpenRequest=\{[\s\S]*?\/listings\/create\?request=1&category=real_estate/,
     "RE header onOpenRequest may stay real_estate",
+  );
+  // Materials → raw_materials (seller UI), facilities → industrial
+  assert.match(
+    taxonomy,
+    /section === "materials"\) return "raw_materials"/,
+  );
+  assert.match(
+    taxonomy,
+    /case "industrial":[\s\S]*?case "facilities":[\s\S]*?return "industrial"/,
+  );
+});
+
+test("MOB-C: create deep-link accepts industrial + remaps browse slugs", () => {
+  const create = fs.readFileSync(
+    path.join(APP_ROOT, "app", "listings", "create.tsx"),
+    "utf8",
+  );
+  assert.match(
+    create,
+    /resolveCreateDeepLinkCategory/,
+    "create must consume shared deep-link remap (not cast browse slugs)",
+  );
+  assert.doesNotMatch(
+    create,
+    /categoryParam === "facilities"[\s\S]{0,80}as UiListingCategory/,
+    "must not cast facilities/materials as UiListingCategory",
+  );
+  assert.match(
+    create,
+    /deepCategory && startAsRequest/,
+    "request deep-link category must outrank stale draft (MOB-C-03)",
   );
 });
 

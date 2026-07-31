@@ -171,6 +171,18 @@
 
 ---
 
+## D-2026-07-31-16 — Distrust protocol + REL-10 create↔section deep-link
+
+| | |
+|--|--|
+| **Decision** | Do not trust half-path HEALTHY. `68-CHAIR-DISTRUST-INTERCONNECT-PROTOCOL.md` is binding. Chair **Approves and executes REL-10** answering Reliability ask. |
+| **Finding** | REL-07 emit `category=industrial` was ignored by create `deepCategory` (MOB-C-01); facilities/materials cast was a type landmine (MOB-C-02); draft overwrote request deep category (MOB-C-03). |
+| **Adopted** | Shared `resolveCreateDeepLinkCategory` + `sectionEmptyPostRequestCategory` in `listingCreateTaxonomy`; materials→`raw_materials`; request=1 forces deep category over draft (**REL-10**). |
+| **Rejected** | Changing API category enum; touching currency/markets SoT; claiming Zone C fully HEALTHY without further skeptic on edit/mine. |
+
+
+---
+
 ## Template for future disputes
 
 ```markdown

@@ -68,6 +68,7 @@ import {
   DEFAULT_MARKET_COUNTRY,
   MATERIAL_TYPES,
   PROPERTY_TYPES,
+  sectionEmptyPostRequestCategory,
 } from "@/constants/listingCreateTaxonomy";
 import {
   loadPreferredMarketCountry,
@@ -158,18 +159,6 @@ function serializeCriteria(c: SearchCriteria): string {
     .sort()
     .map((k) => `${String(k)}=${JSON.stringify(c[k])}`)
     .join("|");
-}
-
-/**
- * Empty-state "post request" must stay inside the locked section (REL-07 / AUD-SEC-01).
- * UI categories map to create-listing API categories: facilities/materials → industrial.
- */
-function emptyPostRequestCreateCategory(
-  section: Category,
-): "car" | "real_estate" | "industrial" {
-  if (section === "car") return "car";
-  if (section === "real_estate") return "real_estate";
-  return "industrial";
 }
 
 export interface SectionSearchAppProps {
@@ -1223,7 +1212,9 @@ export function SectionSearchApp({
         <Pressable
           onPress={() => {
             playSound("tap");
-            const createCategory = emptyPostRequestCreateCategory(category);
+            const createCategory = sectionEmptyPostRequestCategory(
+              category as "car" | "real_estate" | "facilities" | "materials",
+            );
             router.push(
               `/listings/create?request=1&category=${createCategory}` as Href,
             );

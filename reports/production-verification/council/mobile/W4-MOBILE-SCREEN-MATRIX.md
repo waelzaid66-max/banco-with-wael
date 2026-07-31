@@ -16,10 +16,10 @@
 | B | /section/factories | HEALTHY | W4-CHAIR-ZONE-B-SECTIONS |
 | B | /section/materials | HEALTHY | W4-CHAIR-ZONE-B-SECTIONS |
 | B | /section/booking | HEALTHY | W4-CHAIR-ZONE-B-SECTIONS |
-| C | listing/[id] | PENDING Auditor | |
-| C | listings/create | PENDING Auditor | |
-| C | listings/edit | PENDING Auditor | |
-| C | listings/mine | PENDING Auditor | |
+| C | listing/[id] | SKEPTIC — see Zone C packet | W4-CHAIR-ZONE-C-LISTINGS-SKEPTIC |
+| C | listings/create | **REL-10 FIXED** deep-link (C-01…04) | W4-REL-10-CHAIR-EXECUTE |
+| C | listings/edit | PENDING (C-09/10 open) | W4-CHAIR-ZONE-C-LISTINGS-SKEPTIC |
+| C | listings/mine | PENDING (C-10/12) | W4-CHAIR-ZONE-C-LISTINGS-SKEPTIC |
 | D | messages/[id] | PENDING Reliability | |
 | D | notifications | PENDING Reliability | |
 | E | business/banks | PENDING Auditor | |

@@ -535,7 +535,11 @@ test("listingDraftStorageKey isolates drafts per identity", () => {
   assert.match(draft, /listingDraftStorageKey/);
   assert.match(draft, /:u:\$\{userId\}|:u:/);
   assert.match(create, /listingDraftStorageKey\(user\?\.id\)/);
-  assert.match(create, /\[draftKey, user\?\.id, startAsRequest\]/);
+  assert.match(
+    create,
+    /\[draftKey, user\?\.id, startAsRequest, deepCategory\]/,
+    "draft restore must re-run when deep-link category/request intent changes (MOB-C-03)",
+  );
 });
 
 test("home feed passes market_country from preferred market", () => {

@@ -71,6 +71,43 @@ export function apiCategoryForUi(ui: UiListingCategory): ApiListingCategory {
   return ui === "raw_materials" ? "industrial" : ui;
 }
 
+/**
+ * Map create deep-link / section empty-CTA category slugs onto seller UI cats.
+ * Browse uses facilities|materials; create UI uses industrial|raw_materials.
+ * Accepting API slug `industrial` is required for REL-07 end-to-end (MOB-C-01).
+ */
+export function resolveCreateDeepLinkCategory(
+  raw: string | null | undefined,
+): UiListingCategory | null {
+  switch (String(raw ?? "").trim()) {
+    case "car":
+      return "car";
+    case "real_estate":
+      return "real_estate";
+    case "industrial":
+    case "facilities":
+      return "industrial";
+    case "materials":
+    case "raw_materials":
+      return "raw_materials";
+    default:
+      return null;
+  }
+}
+
+/**
+ * Locked section browse category → create `?category=` for empty post-request.
+ * Materials maps to seller `raw_materials` (not generic industrial) — MOB-C-04.
+ */
+export function sectionEmptyPostRequestCategory(
+  section: "car" | "real_estate" | "facilities" | "materials",
+): UiListingCategory {
+  if (section === "car") return "car";
+  if (section === "real_estate") return "real_estate";
+  if (section === "materials") return "raw_materials";
+  return "industrial";
+}
+
 /** Industrial sub-types offered in the picker. raw_material is intentionally
  * excluded — it is its own seller-facing category. */
 export const INDUSTRIAL_TYPES: { value: string; labelKey: string }[] = [
