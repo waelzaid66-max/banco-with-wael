@@ -25,12 +25,12 @@
 |------|------|
 | Remote | `origin` = `github.com/waelzaid66-max/banco-with-wael` |
 | Branch | **`main` فقط** |
-| **CANONICAL_SHA** | `162ff5630c863604f0318f7cc6465b9e036ad801` |
-| Short | `162ff56` |
-| رسالة | `docs(handoff): lock Replit role to Wave8 main SoT paste` |
-| Product floor (سلف إلزامي) | `a05190e` (Tranche D) · CI-green stamp `6999915` ⊂ tip |
+| **أمر النسخة** | `git reset --hard origin/main` بعد `fetch` |
+| **Product floor (إلزامي)** | `a05190e` = Tranche D CLOSED |
+| **CI-green floor (إلزامي)** | `6999915` = Mobile+Gates+API+Typecheck success stamp |
+| Tip وقت الكتابة | `162ff56` (قد يتحرك فوقه docs — بلّغ `SYNC_SHA` دائمًا) |
 
-**ممنوع تمامًا** دمج أو reset على فروع قديمة `cursor/*-5cf0` (accounts-clerk-harden / production-hardening / phase-x / …) — حتى لو ظهرت في تقرير Replit §7. SoT = **`main` بعد Wave8 A–D**.
+**تعريف MATCH:** بعد `reset --hard origin/main`، كلا الـ floors سلف لـ `HEAD`. لا فرع غير `main`.
 
 ---
 
@@ -48,14 +48,13 @@ SYNC_SHA="$(git rev-parse HEAD)"
 echo "SYNC_SHA=$SYNC_SHA"
 git log -1 --oneline
 
-# يجب أن يطابق الكانونيكال (أو يكون سلفًا أحدث فوقه بنفس main — بلّغ إن اختلف)
-test "$SYNC_SHA" = "162ff5630c863604f0318f7cc6465b9e036ad801" \
-  || echo "WARN: tip moved — paste new SHA to Chair; do NOT invent fixes"
-
-# floor: Tranche D + CI-green stamp يجب أن يكونا سلفًا
-git merge-base --is-ancestor a05190eefb42a5869c482bc802bcaae72cdcef6b HEAD
-git merge-base --is-ancestor 6999915c7dccaed69735ff2f6284656e226738c5 HEAD
-echo "TRANCHE_D_AND_CI_GREEN_FLOOR_OK=yes"
+# floors إلزامية (لا تفاوض) — tip قد يكون أحدث من 162ff56 بـ docs فقط
+git merge-base --is-ancestor a05190eefb42a5869c482bc802bcaae72cdcef6b HEAD \
+  || { echo "TRANCHE_D_FLOOR_OK=NO — STOP"; exit 1; }
+git merge-base --is-ancestor 6999915c7dccaed69735ff2f6284656e226738c5 HEAD \
+  || { echo "CI_GREEN_FLOOR_OK=NO — STOP"; exit 1; }
+echo "FLOORS_OK=yes"
+# الصق SYNC_SHA لـ Chair دائمًا
 
 pnpm install --no-frozen-lockfile
 # إن وُجد DATABASE_URL:
