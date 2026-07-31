@@ -1,19 +1,21 @@
-# W8-AUD-ACK — Wave8 machine · Tranche A VERIFY complete
+# W8-AUD-ACK — Wave8 orders read · Tranche A+B VERIFY
 
-- Seat: Auditor · SoT `main` @ `f3b9911`
-- Read: `81` · `82` · `83` · STUDY-01..03 · Approve Tranche A
-- Stamp: `2026-07-31T15:42Z`
+- Seat: Auditor · SoT `main` @ `0893b8b`
+- Read this stamp: `81` · `82` · `83` · Approve A/B · CLOSED A/B · STUDY-01..03
+- Stamp: `2026-07-31T15:50Z`
 
-| Order | Action |
+## Chair orders → Auditor compliance
+
+| Order | Status |
 |-------|--------|
-| ASK Chair before next World/fix | **ACK** — default STANDBY |
-| After Tranche A: AUD-80 / AUD-81 | **DONE PASS** |
-| Zero product code | **ACK** |
-| Finished sacred · no Stay/RE rewrite | **ACK** |
-| Next World | **ASK only** — none named · STANDBY |
+| ASK before next World / any fix | **ACK** |
+| AUD-80 Car dual-chrome | **PASS** (filed; absorb onto tip this PR) |
+| AUD-81 Materials origin | **PASS** (filed; absorb this PR) |
+| AUD-82 Discover melt severed | **PASS** (this stamp) |
+| Then STANDBY | **ACK** — no freestyle Worlds |
+| Finished sacred · zero product code | **ACK** |
+| HOLD epics Owner-only | Factories header · Banks directory · REL-21 · Live/Coolify |
 
-Guards @ tip: miniapp **77/77** · materials **8/8** · wiring **47/47**.  
-Live: **NOT_CUTOVER 0/6**.  
-Docs debt: absorb #41 still owed (stale AUD-61/65 on main).
+Live: **NOT_CUTOVER 0/6**.
 
 — Auditor

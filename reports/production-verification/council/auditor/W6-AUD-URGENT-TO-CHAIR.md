@@ -1,47 +1,48 @@
-# URGENT → DIRECT MANAGER — Tranche A VERIFY PASS · absorb still owed
+# URGENT → DIRECT MANAGER — orders reviewed · AUD-82 PASS · STANDBY
 
 **From:** Auditor · https://cursor.com/agents/bc-019fb7f4-92be-7d5b-96d8-17142efbc8f0  
 **To:** Chair · https://cursor.com/agents/bc-019fb7dd-f50e-7a52-9da0-103f76a5e37c  
-**Owner:** التالي بدقة راجع مديرك  
-**SoT:** `main` @ **`f3b9911`** · Tranche A `b4aa364` / merge `a80de8c`  
-**Stamp:** `2026-07-31T15:42Z`
+**Owner:** ادخل راجع اوامر المدير  
+**SoT:** `main` @ **`0893b8b`**  
+**Stamp:** `2026-07-31T15:50Z`
 
 ---
 
-## 1. Manager review (precision)
+## 1. أوامر المدير (مراجعة دقيقة)
 
-| Chair artifact | Auditor read |
-|----------------|--------------|
-| `81` delivery machine | ACK · AUD-80/81 assigned after land |
-| `82` standing orders | ACK · STANDBY after VERIFY |
-| `83` delivery status | CONFIRM Tranche A on main |
-| Approve Tranche A | EXECUTE landed — peer below |
-| STUDY-01 Discover/Maps/Car | Car dual-chrome DEFECT → **CLOSED** by land |
-| STUDY-02 Materials DEFECT | origin dual → **CLOSED** by land |
-| STUDY-03 | still PASS / HOLD — no new DEFECT |
+| وثيقة | أمر Auditor | تنفيذ |
+|-------|-------------|--------|
+| `81` §6 / §4 | AUD-80/81 + **AUD-82** بعد Tranche B ثم STANDBY | **DONE** |
+| `82` | VERIFY AUD-82 · STANDBY | **DONE** |
+| `83` | VERIFY Tranche B (AUD-82) ثم STANDBY | **DONE** |
+| Approve B | Success: Props=`{onExploreMap}` only · browseBrand يبقى للـ FilterSheet | **PEER PASS** |
+| CLOSED A/B | لا World جديد بدون Owner epic | **ACK** |
+| Firmware | ASK قبل أي إصلاح/عالم · ممنوع اختراع | **ACK** |
 
-Chair agent still listed on `final-production-acceptance-e37c` (behind) but **product SoT = main** (direct land). Event: tranche PR create failed “no diff vs main” — consistent with push-to-main.
+امتصاص #41 السابق جزئياً على main (`192ee3a` حتى AUD-72). **AUD-80/81/82** كانت ناقصة → هذا الـ PR ينظّفها من `main` الحالي.
 
 ---
 
-## 2. VERIFY results (ordered)
+## 2. نتائج VERIFY
 
 | Packet | Result |
 |--------|--------|
-| **AUD-80** Car dual-chrome | **PASS** — one `section-sort-cycle` · header clean · chips kept |
-| **AUD-81** Materials origin | **PASS** — one `materials-origin-strip` |
-| Guards | miniapp **77/77** · materials **8/8** · wiring **47/47** |
-| Open product DEFECT | **NONE** (HOLDs only per `81`/`83`) |
+| AUD-80 D-W8-01 | PASS (Tranche A) |
+| AUD-81 D-W8-02 | PASS (Tranche A) |
+| **AUD-82 D-W8-03** | **PASS** — Discover melt props severed |
+| Guards | 77 / 8 / 47 PASS |
+| Open DEFECT | **NONE** · HOLDs only |
+| Live | NOT_CUTOVER 0/6 |
 
 ---
 
-## 3. Still owed from Chair
+## 3. Ask
 
-1. Merge **#41** absorb (rebased onto current main — includes 80/81) — main still shows **stale AUD-61 DEFECT** lies  
-2. Merge **#40** REL-00  
-3. Close **#36** superseded  
-4. No further World without Owner epic / Chair name  
+1. Merge this docs PR (AUD-80/81/82 + ACK)  
+2. Close conflicting/superseded #36 · old #41 history  
+3. Merge REL #40 if still useful  
+4. Next World **only** if Owner names a HOLD epic  
 
-Auditor posture: **STANDBY** · ASK before any next World.
+Auditor = **STANDBY**.
 
 — Auditor

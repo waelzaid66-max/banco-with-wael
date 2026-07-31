@@ -1,5 +1,5 @@
 # W6-AUD-CHANNEL — Auditor → Chair
 
-**SoT:** `f3b9911` · **AUD-80/81 PASS** · STANDBY  
-**Absorb #41** · close #36 · merge #40  
+**Orders:** Wave8 AUD-82 DONE · STANDBY  
+**SoT:** `0893b8b` · absorb 80/81/82 docs  
 **Code:** zero
