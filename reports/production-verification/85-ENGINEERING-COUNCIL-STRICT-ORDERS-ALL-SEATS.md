@@ -2,11 +2,11 @@
 
 **Issued by:** Chief Production Architect (Chair)  
 **Date:** 2026-07-31  
-**SoT tip:** `main` @ `9cb903c` (docs wake atop CI-green `aa62473`)  
-**Floors إلزامية:** `a05190e` (Tranche D) · `6999915` (CI green stamp)  
-**قانون المالك:** 10 أقسام · ميني-آب ميني-آب · ممنوع تهور/اختراع/كسر · ads E2E · finished sacred  
+**SoT tip:** `main` (Wave9 Tranche E atop Wave8 floors)  
+**Floors إلزامية:** `a05190e` (Tranche D) · `6999915` (CI green stamp) · Wave9 E (Maps/Factories/Materials/Stay)  
+**قانون المالك:** 10 أقسام · ميني-آب ميني-آب · ممنوع تهور/اختراع/كسر · ads E2E · finished sacred · **ممنوع مسح Leaflet/FilterSheet/mapLatch** · **ممنوع كسر هوية الأحمر**  
 
-اقرأ قبل أي حركة: `81` · `84` · `PASTE-REPLIT-WAVE8-UNIFY-MAIN-AR.md` · `ROLES-CURSOR-VS-REPLIT-AR.md`
+اقرأ قبل أي حركة: `87` · `85` · `81` · `84` · `PASTE-REPLIT-WAVE8-UNIFY-MAIN-AR.md` · `ROLES-CURSOR-VS-REPLIT-AR.md`
 
 ---
 
@@ -37,9 +37,11 @@
 | توحيد Replit | **PACKET READY** | PASTE + `84` — بانتظار تنفيذ الريبلت للشوتات |
 | Live / Coolify cutover | **NOT DONE** | Owner ops · `ops:live-cutover` NOT_CUTOVER |
 | Arabic seed content | **WEAK** | محتوى · ليس عطل API بعد إصلاح env |
-| HOLD epics | **OPEN** | Factories header · Banks directory · REL-21 |
+| Wave9 جرد صفحة×صفحة | **DONE** | `87` matrix · NO-DELETE proof |
+| Wave9 Tranche E polish | **CLOSED** | Maps red · Factories header-map · Materials hideOriginAxis · Stay rose CSS · tabs pin · section **90/90** |
+| HOLD epics / dual filters | **OPEN** | Car engines · RE/Stay type+Wanted · Factories header · Banks directory · REL-21 |
 
-**خلاصة Chair:** المنتج على `main` موحّد ومحمي بالحراس وخضراء الموبايل/CI. التشغيل على Replit يحتاج سحب+شوتات. لا تفتح HOLD بدون تسمية Owner لعالم واحد.
+**خلاصة Chair:** المنتج على `main` موحّد + Wave9 جرد وهوية الخرائط/الفلاتر الضيقة مقفولة. الباقي Approve Plan لعالم واحد. Replit يحتاج سحب+شوتات. لا تفتح HOLD بدون تسمية Owner.
 
 ---
 
@@ -47,25 +49,25 @@
 
 ### 2.1 Auditor
 ```
-WAVE8+ STRICT. SoT=origin/main floors a05190e+6999915 tip≥aa62473.
-Read 85 + 84 + PASTE-REPLIT-WAVE8-UNIFY-MAIN-AR.md.
-Job NOW: AUD-86 — VERIFY (1) tip CI green ancestor (2) PASTE floors correct (3) no 5cf0 merge advice (4) Discover Props={onExploreMap} still (5) section-guard still locks W8-D map/identity.
+WAVE9 STRICT. SoT=origin/main floors a05190e+6999915 + Wave9 E.
+Read 87 + 85 + W9-APPROVE-PLAN-TRANCHE-E.md.
+Job NOW: AUD-90 — VERIFY (1) MapsHub no #C4A35A · sectionAccent(all) (2) section-header-map + openOrLatchMap (3) hideOriginAxis={isMaterialsSection} (4) no #650E36 in BookingStaysApp (5) Leaflet files on disk (6) section-guard 90/90.
 Output: one VERIFY packet PASS/FAIL with greps. Zero product code. Then STANDBY.
 ASK Chair before any World fix.
 ```
 
 ### 2.2 Reliability
 ```
-WAVE8+ STRICT. SoT=origin/main. Read 85 + 77 inventory + W8-D guards.
-Job NOW: REL-00 re-ack on tip — run section-guard + materials-core + production-wiring + chain-integrity locally if env allows; paste counts.
-Queue ONLY: if Replit sends RED_LOGS / failed R0x shots → classify CORS|Clerk|DataContent|ProductBug → ASK Chair. Do not fix on Replit. Do not merge 5cf0.
+WAVE9 STRICT. SoT=origin/main. Read 87 + 85.
+Job NOW: REL-00 — section-guard (90) + materials-core + ui-density + production-wiring; paste counts.
+Queue ONLY: Replit RED_LOGS / failed R0x → classify CORS|Clerk|DataContent|ProductBug → ASK Chair. Do not fix on Replit. Do not merge 5cf0.
 Forbidden: invent taxonomy · Banks directory · tip fight. Then STANDBY.
 ```
 
 ### 2.3 Idle / Support
 ```
-WAVE8+ STRICT. SUP-50 only.
-Sync World board to 85 §1 Done/HOLD table. Zero product code.
+WAVE9 STRICT. SUP-50 only.
+Sync World board to 87 §2 matrix + 86 HOLD table. Zero product code.
 Do not pick a World. Ask Chair what is next. Keep paste channel list updated (Auditor/REL/Replit).
 ```
 
@@ -73,8 +75,8 @@ Do not pick a World. Ask Chair what is next. Keep paste channel list updated (Au
 ```
 ROLE LOCK: runtime eyes ONLY. Read audit/handoff/PASTE-REPLIT-WAVE8-UNIFY-MAIN-AR.md and EXECUTE it.
 git fetch + checkout main + reset --hard origin/main.
-Prove FLOORS_OK (a05190e + 6999915 ancestors). Run section-guard expect 85/85.
-Expo clear · shots R01–R12 · reply with SYNC_SHA + template. NO code · NO commit · NO 5cf0 · NO env pollution (no shared banco.today / no pk_live in shared / no placeholder sk).
+Prove FLOORS_OK (a05190e + 6999915 ancestors). Run section-guard expect 90/90.
+Expo clear · shots R01–R12 · confirm Maps accent RED not gold · Factories header has map button. NO code · NO commit · NO 5cf0 · NO env pollution.
 ```
 
 ### 2.5 Chair (هذا المقعد)
