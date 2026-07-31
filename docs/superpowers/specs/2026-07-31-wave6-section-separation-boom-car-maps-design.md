@@ -20,7 +20,7 @@
 
 ---
 
-## 1. The ~10 worlds (SoT map)
+## 1. The ~11 mini-apps / worlds (SoT map)
 
 | # | World | Route / surface | Identity | Do not touch from other worlds |
 |---|-------|-----------------|----------|--------------------------------|
@@ -30,10 +30,12 @@
 | 4 | BOOM STAY | `/section/booking` | BOOM STAY | Car, RE sale, Import |
 | 5 | Materials (B-CORE) | `/section/materials` | Materials header | Car/RE/Stay |
 | 6 | Factories | `/section/factories` | Industrial browse | Car/RE |
-| 7 | **Maps** | Discover Maps entry + per-section `?map=1` + Leaflet stack | Maps identity | Must **feed** 2–6 without owning their filters |
+| 7 | **Maps (mini-app)** | `/section/maps` + Discover Maps CTA | **Dedicated Maps layer** | Must **feed** 2–6 via intentional `?map=1` duplication |
 | 8 | Banks / FI | `/business/banks` | Trust-blue brochure + inbox | Not a public directory (D-11) unless Owner epic |
 | 9 | Car Import | `/import/*` | Import hub | **Never** Car section chrome |
 | 10 | Accounts / publish E2E | profile · create · edit · mine · chat · notif | Clerk + listings | Section visual chrome |
+
+**Owner count = 11 mini-apps** with Maps as its own special section inside main Search (not a chooser-only shortcut). Feeding maps into other sections — even with repetition — is **intentional**: Maps is high-tech infrastructure for every catalogue.
 
 Supporting: Feed, Messages, Wallet/Plans — do not open unless named in Approve Plan.
 
@@ -78,15 +80,15 @@ Supporting: Feed, Messages, Wallet/Plans — do not open unless named in Approve
 
 ## 3. Approaches
 
-### Maps entry (Owner must pick)
+### Maps entry (Owner locked **B**)
 
-| Opt | Behavior | Pros | Cons |
-|-----|----------|------|------|
-| **A — Chooser (recommended)** | Primary CTA opens Maps chooser: equal portals Car / Properties / Materials / Factories / Stays → each `?map=1`. Copy generic. **Keeps all Leaflet work.** | Zero new route; restores Maps identity; no deletes | Not a single “all pins” map |
-| **B — Maps hub route** | New `/section/maps` using **same** `SearchResultsMap` + category tabs that latch into worlds 2–6 | Clear Maps world | New route; careful anti-melt |
-| **C — All-catalogue map first** | One map of mixed categories then drill-in | Impressive | Highest melt risk; filter SoT hard |
+| Opt | Behavior | Status |
+|-----|----------|--------|
+| A — Chooser only | Primary CTA opens chooser sheets | **Rejected** — Owner: Maps is its own mini-app (#11) |
+| **B — Maps hub route (LOCKED)** | `/section/maps` using **same** `SearchResultsMap` + world tabs; Discover CTA → Maps hub; per-section `?map=1` **kept** (intentional duplication) | **EXECUTE** |
+| C — All-catalogue only | One mixed map without hub identity | Not chosen |
 
-**Chair recommendation:** **A now** (stable, no deletes), optional **B** later if Owner wants a named Maps hub using the same stack.
+**Owner law:** Maps = special section inside Search. Duplication of map feeds across sections is intentional. Never delete Leaflet/vendor stack.
 
 ### B-oom Car Stay-parity
 
@@ -104,7 +106,7 @@ Supporting: Feed, Messages, Wallet/Plans — do not open unless named in Approve
 
 | Phase | ID | Scope | Forbidden |
 |-------|-----|-------|-----------|
-| **P0** | REL-16 | Maps primary ≠ RE; generic copy; keep secondary portals + all Leaflet | Touch Import · delete map vendor · melt Search criteria |
+| **P0** | REL-16 | Maps mini-app `/section/maps`; Discover CTA → Maps (≠ RE); keep secondary `?map=1` feeds + all Leaflet | Touch Import · delete map vendor · melt Search criteria |
 | **P1** | REL-17 | Cars engines/brands **visible chips** (un-bury tertiary) | Import melt · API enum invent |
 | **P2** | REL-20 | `CarsHomeHeader` B-oom Car Stay-parity identity | Rewrite Stay/RE headers · Import |
 | **P3** | REL-21 | Vehicle-type tabs (car/boat/…) when taxonomy/API ready | Fake empty chips |

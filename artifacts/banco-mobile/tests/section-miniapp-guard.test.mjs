@@ -59,6 +59,7 @@ const SECTION_SCREENS = [
   "section/factories",
   "section/materials",
   "section/booking",
+  "section/maps",
 ];
 
 test("SearchDiscover keeps SECTION_ROUTE for every catalogue section", () => {
@@ -173,6 +174,7 @@ test("section route files exist on disk", () => {
     "factories",
     "materials",
     "booking",
+    "maps",
   ]) {
     const file = path.join(APP_ROOT, "app", "section", `${name}.tsx`);
     assert.ok(fs.existsSync(file), `missing ${file}`);
@@ -224,12 +226,17 @@ test("Discover keeps photo section cards that push SECTION_ROUTE (no melt)", () 
   );
 });
 
-test("MOB-07: Explore on map enters real-estate section (no Search melt)", () => {
+test("MOB-07: Explore on map enters Maps mini-app #11 (no Search melt, no RE hardcode)", () => {
   const searchTab = fs.readFileSync(SEARCH_TAB, "utf8");
   assert.match(
     searchTab,
-    /router\.push\(\s*["']\/section\/real-estate\?map=1["']\s*\)/,
-    "exploreOnMap must push /section/real-estate?map=1",
+    /router\.push\(\s*["']\/section\/maps["']\s*\)/,
+    "exploreOnMap must push /section/maps (Maps mini-app #11)",
+  );
+  assert.doesNotMatch(
+    searchTab,
+    /exploreOnMap[\s\S]{0,400}router\.push\(\s*["']\/section\/real-estate\?map=1["']/,
+    "exploreOnMap must not hardcode /section/real-estate?map=1",
   );
   assert.doesNotMatch(
     searchTab,
@@ -521,7 +528,7 @@ test("Each section declares its OWN chrome — the shared mini-app never decides
   // …and every section screen must actually state its own, so none inherits a
   // shape by accident.
   for (const [file, expected] of [
-    ["car", /listingMode:\s*"pill"[\s\S]*engines:\s*"pill"/],
+    ["car", /listingMode:\s*"pill"[\s\S]*engines:\s*"chips"/],
     // RE: offer chips (flicked) + property-type pill (16 values — measured overflow).
     ["real-estate", /engines:\s*"chips"[\s\S]*propertyType:\s*"pill"/],
     ["factories", /engines:\s*"chips"/],
@@ -1359,12 +1366,10 @@ test("Banks hub honesty — not a live partner directory (i18n + screen)", () =>
   );
 });
 
-test("Discover map CTA is always present (owner) with honest RE-map destination", () => {
+test("Discover map CTA is always present (owner) — Maps mini-app #11 destination", () => {
   const src = fs.readFileSync(DISCOVER, "utf8");
   // Owner 2026-07-20: the explore-on-map card must ALWAYS show on the Discover
-  // home. Honesty is preserved by the DESTINATION — the MOB-07 test asserts
-  // onExploreMap → /section/real-estate?map=1, whose host falls back to the list
-  // when a browse has no coordinates (never an empty map).
+  // home. Wave 6: destination is Maps mini-app #11 (/section/maps), not RE.
   assert.match(
     src,
     /testID="discover-explore-map"/,
@@ -1377,14 +1382,55 @@ test("Discover map CTA is always present (owner) with honest RE-map destination"
   );
 });
 
-test("Discover map producers cover car/materials/factories/stays", () => {
+test("Maps mini-app #11 mounts MapsHubApp and reuses SearchResultsMap", () => {
+  const mapsRoute = fs.readFileSync(
+    path.join(APP_ROOT, "app", "section", "maps.tsx"),
+    "utf8",
+  );
+  const hub = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "maps", "MapsHubApp.tsx"),
+    "utf8",
+  );
+  assert.match(mapsRoute, /MapsHubApp/);
+  assert.match(hub, /SearchResultsMap/);
+  assert.match(hub, /testID="maps-hub"/);
+  assert.match(hub, /maps-hub-world-tabs/);
+  assert.match(hub, /maps-world-\$\{tab\.id\}/);
+  // Intentional duplication: hub may deep-link section ?map=1 feeds — that is
+  // Owner law, not RE hardcode of the Discover primary CTA.
+  assert.match(hub, /\/section\/car\?map=1/);
+  assert.match(hub, /\/section\/real-estate\?map=1/);
+});
+
+test("B-oom Car mounts CarsHomeHeader Stay-parity shell", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  assert.match(
+    section,
+    /<CarsHomeHeader\b/,
+    "Car section must mount CarsHomeHeader",
+  );
+  assert.match(
+    section,
+    /from "@\/components\/search\/car\/CarsHomeHeader"/,
+  );
+  const header = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "car", "CarsHomeHeader.tsx"),
+    "utf8",
+  );
+  assert.match(header, /testID="cars-home-header"/);
+  assert.match(header, /carBrand|BOOM_LOGO/);
+});
+
+test("Discover map producers cover all catalogues (intentional duplication)", () => {
   const src = fs.readFileSync(DISCOVER, "utf8");
   assert.match(src, /testID="discover-map-portals"/);
   assert.match(src, /\/section\/car\?map=1/);
+  assert.match(src, /\/section\/real-estate\?map=1/);
   assert.match(src, /\/section\/materials\?map=1/);
   assert.match(src, /\/section\/factories\?map=1/);
   assert.match(src, /\/section\/booking\?map=1/);
   assert.match(src, /discover-map-car/);
+  assert.match(src, /discover-map-properties/);
   assert.match(src, /discover-map-materials/);
   assert.match(src, /discover-map-factories/);
   assert.match(src, /discover-map-stays/);

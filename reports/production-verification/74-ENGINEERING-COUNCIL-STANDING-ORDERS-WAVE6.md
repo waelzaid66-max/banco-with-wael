@@ -6,7 +6,7 @@
 **Audit:** `reports/production-verification/73-SECTION-WIRING-TRUTH-AUDIT.md`  
 **Binding:** `68` distrust · **no deletes** · ads E2E · Car ≠ Import · Maps ≠ RE  
 
-**STATUS:** ORDERS ARMED — **code execution waits Owner Maps pick (A/B/C) + design Approve.** Seats may evidence-only until then.
+**STATUS:** Owner locked **Maps = mini-app #11 / Opt B** (`/section/maps`). EXECUTE REL-16/17/20 on tip. Intentional map-feed duplication is law.
 
 ---
 
@@ -47,7 +47,7 @@
 
 | ID | Scope |
 |----|-------|
-| **REL-16** | **WAIT Approve** — Maps primary ≠ RE (design Opt A default) |
+| **REL-16** | **EXECUTE** — Maps mini-app `/section/maps` (Opt B); Discover ≠ RE |
 | **REL-17** | **WAIT Approve** — Cars tertiary chips visible |
 | **REL-20** | **WAIT Approve** — CarsHomeHeader B-oom Car (Stay parity) |
 | **REL-00** | Gates after any landing |

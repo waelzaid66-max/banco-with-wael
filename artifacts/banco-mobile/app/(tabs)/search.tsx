@@ -482,13 +482,13 @@ export default function SearchScreen() {
   // catalogues into shared Search criteria). They router.push SECTION_ROUTE
   // inside SearchDiscover — do not reintroduce a Discover→host category bridge.
 
-  // Discover "Explore on map" → ENTER the real-estate section mini-app with a
-  // map latch (?map=1). Never melt Discover into shared Search criteria
-  // (MOB-07): that forced category=real_estate on the Search tab in place.
+  // Discover "Explore on map" → ENTER Maps mini-app #11 (/section/maps).
+  // Never hardcode RE. Never melt Discover into shared Search criteria (MOB-07).
+  // Per-section ?map=1 portals remain intentional duplication (Owner law).
   const exploreOnMap = () => {
     if (brandValue) setDraftQuery("");
     setBrandValue(null);
-    router.push("/section/real-estate?map=1");
+    router.push("/section/maps");
   };
 
   // Engine chip → committed criteria; sale (تمليك) clears rent-only filters.
@@ -1072,10 +1072,10 @@ export default function SearchScreen() {
           </View>
         ) : null}
 
-        {/* Discover-state map FAB: same honest destination as exploreOnMap /
-            discover-explore-map (RE mini-app + map latch). Must NEVER commit
-            shared Search with category:"car" when criteria is "all" — that was
-            the «بيفتح قسم السيارات» force path (Phase Zero §9 / #59 P1). */}
+        {/* Discover-state map FAB: same Maps mini-app #11 as exploreOnMap /
+            discover-explore-map. Must NEVER commit shared Search with
+            category:"car" when criteria is "all" — that was the
+            «بيفتح قسم السيارات» force path (Phase Zero §9 / #59 P1). */}
         {viewState === "discover" && (
           <View
             style={[styles.mapToggleWrap, { bottom: insets.bottom + 80 }]}

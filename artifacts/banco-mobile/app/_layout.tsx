@@ -196,6 +196,10 @@ function RootLayoutNav() {
         options={{ headerShown: false, animation: "slide_from_right" }}
       />
       <Stack.Screen
+        name="section/maps"
+        options={{ headerShown: false, animation: "slide_from_right" }}
+      />
+      <Stack.Screen
         name="legal/privacy"
         options={{ headerShown: false, animation: "slide_from_right" }}
       />
