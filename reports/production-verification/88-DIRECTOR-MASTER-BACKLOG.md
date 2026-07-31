@@ -60,7 +60,7 @@ Status: OPEN · VERIFY · HOLD · CLOSED · UNVERIFIED
 
 | ID | Sev | Title | Evidence | Owner | Deps | Risk | Verify | Pri |
 |----|-----|-------|----------|-------|------|------|--------|-----|
-| **DIR-01** | P0 | Re-run CI green on tip `e4d36b6`+ | run 30653414400 cancelled | Reliability | — | Blind tip | All CI jobs success on tip SHA | **1** |
+| **DIR-01** | P0 | Re-run CI green on tip `e4d36b6`+ | **CLOSED** · tip `217628c` run [30654087293](https://github.com/waelzaid66-max/banco-with-wael/actions/runs/30654087293) SUCCESS (6/6 jobs) · prior cancels superseded | Reliability | — | Blind tip | All CI jobs success on tip SHA | **1 · CLOSED** |
 | **DIR-02** | P0 | AUD-90 peer Wave9 E | `87` · W9 plan | Intelligence (read) | DIR-01 | False green | Greps: no `#C4A35A` · `section-header-map` · `hideOriginAxis` · Leaflet on disk · 90/90 | **2** |
 | **DIR-03** | P0 | Replit unify shots R01–R12 on tip | PASTE-WAVE8 | UX/Visual + Replit | DIR-01 | Env≠product | SYNC_SHA + shot ids · Maps RED · Factories header map | **3** |
 

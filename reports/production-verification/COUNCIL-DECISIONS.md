@@ -388,6 +388,16 @@
 
 ---
 
+## D-2026-07-31-37 — DIR-01 CI green + Wave9 REL-00 (maintenance energy)
+
+| | |
+|--|--|
+| **Decision** | Owner ordered Reliability to help team maintenance with full energy. Director issued Master Backlog `88` / Standing `89`. Reliability owned DIR-01. |
+| **Adopted** | DIR-01 CLOSED evidence @ tip `217628c` CI SUCCESS 30654087293 · REL-00 90/8/4/47 · Wave9 E dual-end PASS · Track B SEC-01/02 still-OPEN triage · stamp row in `88`. |
+| **Rejected** | Product freestyle · 5cf0 · Live Certified · invent parallel backlog · Replit code fix. |
+
+---
+
 ## Template for future disputes
 
 ```markdown
