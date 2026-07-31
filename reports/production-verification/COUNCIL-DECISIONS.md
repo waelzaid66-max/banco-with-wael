@@ -268,6 +268,16 @@
 
 ---
 
+## D-2026-07-31-25 — Maps #11 land + Reliability VERIFY (World Maps)
+
+| | |
+|--|--|
+| **Decision** | Chair executed Maps mini-app #11 Opt B + Car chips/header on tip `85cfe7f`. Reliability **VERIFY-only** for World Maps (REL-16) + companion Cars REL-17/20. |
+| **Adopted** | `75-WAVE6-MAPS-MINIAPP-11-EXECUTE.md` · `W6-REL-16-VERIFY-MAPS` · `W6-REL-17/20-VERIFY-CARS` · `W6-REL-00` · channel. Gates 76/47/167/18. |
+| **Rejected** | Reliability re-coding Maps/Car · REL-21 without Approve · Live Certified. |
+
+---
+
 ## Template for future disputes
 
 ```markdown
