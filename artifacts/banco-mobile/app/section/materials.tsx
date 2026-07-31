@@ -1,11 +1,11 @@
 import { SectionSearchApp } from "@/components/search/SectionSearchApp";
 
 /**
- * Raw materials & production lines — the Alibaba-style supply section.
+ * B-CORE Industrial Hub — Raw materials & production lines.
  *
- * Offer axis is a pill so the strip has room for what actually matters here: the
- * commodity (13 values) and the origin. Origin stays chips — all / local /
- * imported is three values and is flipped constantly while sourcing.
+ * Identity + search/Filters + industrial type tabs live in MaterialsHomeHeader
+ * inside SectionSearchApp (Stay/B-PROPERTIES method). Commodity/origin/listing
+ * refinements stay in FilterSheet — not erased. MiniAppBottomNav untouched.
  */
 export default function MaterialsSectionScreen() {
   return (
