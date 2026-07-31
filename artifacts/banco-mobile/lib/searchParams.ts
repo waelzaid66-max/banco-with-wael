@@ -24,7 +24,8 @@ export type SearchSort =
   | "newest"
   | "price_asc"
   | "price_desc"
-  | "popular";
+  | "popular"
+  | "nearest";
 
 export type PaymentType = "any" | "installment";
 
@@ -252,7 +253,16 @@ export function buildSearchParams(
   if (c.maxPrice && !Number.isNaN(maxNum)) sp.max_price = maxNum;
 
   if (c.location.trim()) sp.location = c.location.trim();
-  if (c.paymentType === "installment") sp.has_installment = true;
+  // Installment is a car / real-estate financing axis — never emit for
+  // facilities/materials even if stale criteria still says installment.
+  if (
+    c.paymentType === "installment" &&
+    (c.category === "car" ||
+      c.category === "real_estate" ||
+      c.category === "all")
+  ) {
+    sp.has_installment = true;
+  }
   // Rent-regime only with explicit rent engine — mirrors @workspace/search-contract.
   // Server sanitize also drops orphan rental_term; gate client-side for parity.
   if (
@@ -263,18 +273,35 @@ export function buildSearchParams(
     sp.rental_term = c.rentalTerm;
   }
 
-  if (c.brand) sp.brand = c.brand;
-  if (c.model) sp.model = c.model;
-  if (c.fuelType) sp.fuel_type = c.fuelType;
-  if (c.transmission) sp.transmission = c.transmission;
+  // Section-gated attributes — never trust stale criteria from deep links.
+  if (c.category === "car") {
+    if (c.brand) sp.brand = c.brand;
+    if (c.model) sp.model = c.model;
+    if (c.fuelType) sp.fuel_type = c.fuelType;
+    if (c.transmission) sp.transmission = c.transmission;
+    const minY = Number(c.minYear);
+    if (c.minYear && !Number.isNaN(minY)) sp.min_year = minY;
+    const maxY = Number(c.maxYear);
+    if (c.maxYear && !Number.isNaN(maxY)) sp.max_year = maxY;
+  }
 
-  const minY = Number(c.minYear);
-  if (c.minYear && !Number.isNaN(minY)) sp.min_year = minY;
-  const maxY = Number(c.maxYear);
-  if (c.maxYear && !Number.isNaN(maxY)) sp.max_year = maxY;
+  const allowIndustry =
+    c.category === "facilities" ||
+    (c.category === "materials" &&
+      (c.industrialType === "machine" ||
+        c.industrialType === "production_line"));
+  if (allowIndustry && c.industry) sp.industry = c.industry;
 
-  if (c.industry) sp.industry = c.industry;
-  if (c.originType) sp.origin_type = c.originType;
+  // Origin axis: cars + materials only — never bare facilities assets.
+  if (
+    (c.category === "car" || c.category === "materials") &&
+    c.originType
+  ) {
+    sp.origin_type = c.originType;
+  }
+  if (c.category === "facilities") {
+    delete (sp as { origin_type?: string }).origin_type;
+  }
 
   // Commodity material — materials company only (never facilities / cars / RE).
   if (c.category === "materials" && c.material) {

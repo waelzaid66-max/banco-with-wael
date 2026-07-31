@@ -99,6 +99,11 @@ test("create listing exposes map pin picker beside GPS (same pin state)", () => 
 });
 
 test("expanded launch markets keep currency + map center (DZ/PS/SY/YE)", () => {
+  // Markets SoT lives in @workspace/taxonomy/markets; mobile re-exports it.
+  const markets = fs.readFileSync(
+    path.join(root, "../../lib/taxonomy/src/markets.ts"),
+    "utf8",
+  );
   const taxonomy = fs.readFileSync(
     path.join(root, "constants/listingCreateTaxonomy.ts"),
     "utf8",
@@ -107,9 +112,10 @@ test("expanded launch markets keep currency + map center (DZ/PS/SY/YE)", () => {
     path.join(root, "lib/searchTaxonomy.ts"),
     "utf8",
   );
+  assert.match(taxonomy, /@workspace\/taxonomy\/markets/);
   for (const iso of ["DZ", "PS", "SY", "YE"]) {
-    assert.match(taxonomy, new RegExp(`value:\\s*"${iso}"`));
-    assert.match(taxonomy, new RegExp(`${iso}:\\s*"`));
+    assert.match(markets, new RegExp(`value:\\s*"${iso}"`));
+    assert.match(markets, new RegExp(`${iso}:\\s*"`));
     assert.match(centers, new RegExp(`${iso}:\\s*\\{\\s*lat:`));
   }
 });

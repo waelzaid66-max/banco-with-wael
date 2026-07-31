@@ -21,9 +21,10 @@
  *   CLERK_BEARER_TOKEN_OTHER     Second user JWT for IDOR step 7 (optional)
  *
  * Exit codes:
- *   0 — all executed steps passed (health-only OK when token missing)
+ *   0 — all executed steps passed AND upload path was covered (token set)
  *   1 — one or more steps failed
- *   2 — BANCO_API_URL / API_URL not set
+ *   2 — incomplete config: missing BANCO_API_URL, or CLERK_BEARER_TOKEN
+ *       unset (upload/IDOR steps skipped — not a green smoke)
  */
 
 import { tryLoadLocalSecrets } from "./load-local-secrets.mjs";
@@ -206,6 +207,14 @@ function summarize() {
     console.log("(Upload steps skipped — set CLERK_BEARER_TOKEN for full smoke.)");
   }
   if (failed.length) process.exit(1);
+  // REL-03: incomplete auth coverage must not read as a green smoke.
+  // Exit 2 = incomplete (operator must supply token); 1 = assertion failures.
+  if (skippedAuth) {
+    console.error(
+      "INCOMPLETE: CLERK_BEARER_TOKEN unset — upload/IDOR steps not proven. Exit 2.",
+    );
+    process.exit(2);
+  }
 }
 
 main().catch((err) => {

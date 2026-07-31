@@ -25,6 +25,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { CurrencySelect } from "@/components/currency-select";
 import { Loader2, ShieldAlert } from "lucide-react";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -343,7 +344,7 @@ export function InvestmentFormSheet({
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Currency</Label>
-                  <Input value={currency} onChange={(e) => setCurrency(e.target.value)} className="bg-input border-border" data-testid="form-currency" />
+                  <CurrencySelect value={currency} onValueChange={setCurrency} testId="form-currency" />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Expected ROI (%)</Label>

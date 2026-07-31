@@ -62,11 +62,18 @@ On first boot the API also creates scale indexes concurrently (market_country, g
 
 ## 4. Consumer websites (Next.js)
 
+Canonical Coolify default already starts **`banco-website`** with `api` + `web`.
+The frozen twin **`banco-web`** is **profile-gated** (`legacy-banco-web`) — do **not**
+treat it as required for a default deploy.
+
 ```bash
-docker compose -f docker-compose.coolify.yml up -d --build banco-web
+# Default (matches Coolify compose without profiles):
 docker compose -f docker-compose.coolify.yml up -d --build banco-website
-curl -fsS http://127.0.0.1:${BANCO_WEB_HOST_PORT:-3000}/api/healthz
 curl -fsS http://127.0.0.1:${BANCO_WEBSITE_HOST_PORT:-3001}/api/healthz
+
+# Optional legacy twin only when explicitly needed:
+docker compose -f docker-compose.coolify.yml --profile legacy-banco-web up -d --build banco-web
+curl -fsS http://127.0.0.1:${BANCO_WEB_HOST_PORT:-3000}/api/healthz
 ```
 
 ## 5. Nginx SPA front (landing + dealer-os + admin-os)

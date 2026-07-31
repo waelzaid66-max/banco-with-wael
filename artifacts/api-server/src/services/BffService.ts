@@ -1,5 +1,6 @@
 import type { FeedItem } from "../validators/schemas";
 import type { NormalizedPayment } from "./PaymentService";
+import { normalizeListingCurrency } from "../lib/supportedCurrencies";
 
 interface RawListingRow {
   id: string;
@@ -56,27 +57,8 @@ function rentPeriodSuffix(row: RawListingRow): string {
   return " /شهر";
 }
 
-/**
- * Currencies a listing may be priced in: the 8 market countries' currencies
- * plus USD/EUR (importers and B2B suppliers quote in both). Anything else
- * falls back to EGP so a malformed spec can never render garbage.
- */
-const SUPPORTED_CURRENCIES = new Set([
-  "EGP",
-  "SAR",
-  "AED",
-  "KWD",
-  "QAR",
-  "JOD",
-  "OMR",
-  "LYD",
-  "USD",
-  "EUR",
-]);
-
 function normalizeCurrency(raw: string | null | undefined): string {
-  const code = (raw ?? "").trim().toUpperCase();
-  return SUPPORTED_CURRENCIES.has(code) ? code : "EGP";
+  return normalizeListingCurrency(raw);
 }
 
 /**

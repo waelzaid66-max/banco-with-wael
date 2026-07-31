@@ -415,6 +415,9 @@ importers:
       '@workspace/integrations-openai-ai-server':
         specifier: workspace:*
         version: link:../../lib/integrations-openai-ai-server
+      '@workspace/taxonomy':
+        specifier: workspace:*
+        version: link:../../lib/taxonomy
       compression:
         specifier: ^1.8.1
         version: 1.8.1

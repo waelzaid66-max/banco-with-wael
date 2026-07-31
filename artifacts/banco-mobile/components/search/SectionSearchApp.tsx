@@ -43,6 +43,7 @@ import {
   RE_MORE_TYPES,
 } from "@/components/search/property/PropertyHomeHeader";
 import { MaterialsHomeHeader } from "@/components/search/materials/MaterialsHomeHeader";
+import { CarsHomeHeader } from "@/components/search/car/CarsHomeHeader";
 import { axisShape, type SectionChrome } from "@/components/search/sectionChrome";
 import { MiniAppBottomNav } from "@/components/MiniAppBottomNav";
 import {
@@ -68,6 +69,7 @@ import {
   DEFAULT_MARKET_COUNTRY,
   MATERIAL_TYPES,
   PROPERTY_TYPES,
+  sectionEmptyPostRequestCategory,
 } from "@/constants/listingCreateTaxonomy";
 import {
   loadPreferredMarketCountry,
@@ -763,7 +765,12 @@ export function SectionSearchApp({
 
   const toggleNearMe = useCallback(async () => {
     if (criteria.nearMeEnabled) {
-      update({ nearMeEnabled: false, nearLat: null, nearLng: null });
+      update({
+        nearMeEnabled: false,
+        nearLat: null,
+        nearLng: null,
+        ...(criteria.sort === "nearest" ? { sort: "recommended" as const } : {}),
+      });
       return;
     }
     const coords = await requestNearMeCoords();
@@ -777,7 +784,7 @@ export function SectionSearchApp({
       nearLng: coords.lng,
       nearRadiusKm: DEFAULT_NEAR_RADIUS_KM,
     });
-  }, [criteria.nearMeEnabled, t, update]);
+  }, [criteria.nearMeEnabled, criteria.sort, t, update]);
 
   const openSearch = () => {
     playSound("tap");
@@ -817,6 +824,7 @@ export function SectionSearchApp({
       ? criteria.originType
       : "all";
   const isMaterialsSection = criteria.category === "materials";
+  const isCarSection = criteria.category === "car";
   // B-CORE upper header: identity + search/Filters + market beside BANCO.
   // Smart horizontal strip under header: industrial types + origin (wrap, flexGrow:0).
   // Commodity strip when raw/all. listingMode + refinements stay in FilterSheet
@@ -1200,13 +1208,18 @@ export function SectionSearchApp({
           </Pressable>
         ) : null}
         {/* Demand bridges — an empty result must never dead-end. Every section
-            offers "post what you're looking for" (buyer request); the supply
-            sections additionally bridge into the B2B RFQ flow (Alibaba model:
-            unmet demand becomes a quote request to suppliers). */}
+            offers "post what you're looking for" (buyer request) locked to THIS
+            section's create category (REL-07); supply sections additionally
+            bridge into the B2B RFQ flow. */}
         <Pressable
           onPress={() => {
             playSound("tap");
-            router.push("/listings/create?request=1&category=real_estate" as Href);
+            const createCategory = sectionEmptyPostRequestCategory(
+              category as "car" | "real_estate" | "facilities" | "materials",
+            );
+            router.push(
+              `/listings/create?request=1&category=${createCategory}` as Href,
+            );
           }}
           style={[
             styles.emptyCta,
@@ -1359,6 +1372,30 @@ export function SectionSearchApp({
             update({ sort: next });
           }}
         />
+      ) : isCarSection ? (
+        <CarsHomeHeader
+          searchOpen={searchOpen}
+          draftQuery={draftQuery}
+          searchSaved={searchSaved}
+          activeFilterCount={activeFilterCount}
+          inputRef={inputRef}
+          onBack={goBack}
+          onSaveSearch={handleSaveSearch}
+          onOpenMap={() => {
+            playSound("tap");
+            Haptics.selectionAsync();
+            openOrLatchMap({ inResultsView, setMapMode, setWantMap });
+          }}
+          onOpenFilters={() => {
+            playSound("tap");
+            setShowFilters(true);
+          }}
+          onOpenSearch={openSearch}
+          onCloseSearch={closeSearch}
+          onQueryChange={handleQueryChange}
+          onSubmitQuery={() => commitQueryNow(draftQuery)}
+          onClearQuery={clearQuery}
+        />
       ) : (
       <>
       {/* ── Section header: back + title/subtitle + section icon ── */}
@@ -1457,8 +1494,8 @@ export function SectionSearchApp({
       </>
       )}
 
-      {/* ── Collapsible search bar — non-RE/materials (those search live in home headers) ── */}
-      {!isRealEstateSection && !isMaterialsSection && searchOpen && (
+      {/* ── Collapsible search bar — non-RE/materials/car (those search live in home headers) ── */}
+      {!isRealEstateSection && !isMaterialsSection && !isCarSection && searchOpen && (
         <View
           style={[
             styles.searchBar,
@@ -1546,8 +1583,9 @@ export function SectionSearchApp({
           live in FilterSheet + Band D. Import-hub rule still holds: no dead taps. ── */}
 
       {/* ── Primary chip strip: country/currency · sort · mode/engines.
-          RE: country + sort live inside PropertyHomeHeader (no wasted strip row).
-          Other sections keep this strip unchanged. ── */}
+          RE/materials: country + sort live inside home headers.
+          B-oom Car: market/sort SoT = this strip only (W8 D-W8-01); listingMode
+          + engines chips stay visible (REL-17). ── */}
       {!isRealEstateSection && !isMaterialsSection ? (
       <View
         style={[styles.chipStrip, { flexDirection: rowDir }]}
@@ -1560,11 +1598,8 @@ export function SectionSearchApp({
             setMarketPickerOpen(true);
           }}
         />
-        {/* Quick sort — a small in-strip filter present in every section (was a
-            4th header icon that crowded the title). Cycles recommended → newest
-            → price low→high → high→low. Isolated: plain criteria state, never
-            persisted, resets on leave/reload, rides the ordinary `sort` param
-            without touching engines/facets. */}
+        {/* Quick sort — one seat only (strip). Cycles recommended → newest
+            → price low→high → high→low. */}
         <Pressable
           onPress={() => {
             playSound("tap");
@@ -1601,10 +1636,8 @@ export function SectionSearchApp({
           <View style={[styles.chipStripDivider, { backgroundColor: colors.border }]} />
         ) : null}
         {/* Offer + engine axes: the SECTION decides the shape, this only renders
-            it. Cars ask for pills because their engine axis carries five values
-            (new / used / imported / bank / islamic instalment) which measured
-            999px inside a 375px window as chips. A section whose axis is short
-            and constantly flicked asks for chips instead and keeps its taps. */}
+            it. Cars ask for chips (REL-17) so new/used/import/instalment stay
+            visible. A section whose axis is set once may ask for a pill. */}
         {showListingMode ? (
           axisShape(chrome, "listingMode") === "pill" ? (
             <FilterPillSelect
@@ -2039,42 +2072,6 @@ export function SectionSearchApp({
             );
           })}
         </ScrollView>
-      ) : null}
-
-      {/* ── Origin chips (materials only) ── */}
-      {showOriginChrome ? (
-        <View
-          style={[styles.chipRow, { flexDirection: rowDir }]}
-          testID="materials-origin-strip"
-        >
-          {(["all", "local", "imported"] as const).map((o) => {
-            const active = originKey === o;
-            return (
-              <Pressable
-                key={o}
-                onPress={() => {
-                  playSound("tap");
-                  Haptics.selectionAsync();
-                  selectOrigin(o);
-                }}
-                style={[
-                  styles.chip,
-                  { backgroundColor: active ? accent : colors.secondary },
-                ]}
-                testID={`section-origin-${o}`}
-              >
-                <AppText
-                  style={[
-                    styles.chipText,
-                    { color: active ? "#FFFFFF" : colors.mutedForeground },
-                  ]}
-                >
-                  {o === "all" ? t("home.engines.all") : t(`create.opts.${o}`)}
-                </AppText>
-              </Pressable>
-            );
-          })}
-        </View>
       ) : null}
 
       {/* ── Rental term (RE rent) — pill, not a full chip row.

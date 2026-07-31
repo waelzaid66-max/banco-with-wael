@@ -118,7 +118,9 @@ async function pruneTokens(tokens: string[]): Promise<void> {
 }
 
 function isDeadDeviceError(error?: string): boolean {
-  return error === "DeviceNotRegistered" || error === "InvalidCredentials";
+  // Only DeviceNotRegistered means THIS token is dead. InvalidCredentials is a
+  // project-level APNs/FCM config failure — pruning would wipe healthy devices.
+  return error === "DeviceNotRegistered";
 }
 
 /**

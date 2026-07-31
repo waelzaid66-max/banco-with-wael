@@ -17,6 +17,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import type { WebViewMessageEvent } from "react-native-webview";
+import { LEAFLET_CSS, LEAFLET_JS } from "@/components/search/mapVendorInline";
 
 type Pin = { lat: number; lng: number };
 
@@ -31,8 +32,8 @@ function buildPinPickerHtml(center: Pin & { zoom: number }): string {
 <html><head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- MAP-07: Leaflet inlined (no unpkg). -->
+<style>${LEAFLET_CSS}</style>
 <style>
   html,body,#map{margin:0;height:100%;background:#0b0b0b}
   .crosshair{
@@ -55,6 +56,7 @@ function buildPinPickerHtml(center: Pin & { zoom: number }): string {
   </svg>
 </div>
 <div class="hint" id="hint"></div>
+<script>${LEAFLET_JS}</script>
 <script>
   function post(msg){
     if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify(msg));

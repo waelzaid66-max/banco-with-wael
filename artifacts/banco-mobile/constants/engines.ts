@@ -13,9 +13,9 @@ import type { Category } from "@/components/CategoryTabs";
  * SearchService.buildAttributeConditions); an empty object is the "all" engine.
  *
  * We intentionally model ONLY filters backed by real data. There are no
- * Import / Rent / Ownership / Exclusive engines here because that data does not
- * exist yet — surfacing them would create permanently-empty sections, which we
- * never do.
+ * Ownership / Exclusive engines here because that data does not exist yet —
+ * surfacing them would create permanently-empty sections, which we never do.
+ * Car Import IS real (origin_type=imported) and is included for Discover CTAs.
  *
  * Each engine chip carries EXACTLY ONE meaningful param (besides "all"): facet
  * counts are marginal (per-value), not intersections, so a multi-param chip
@@ -62,10 +62,9 @@ const ALL_ENGINE: EngineDef = {
   params: {},
 };
 
-// Cars: condition (new/used) + the two financing modes that actually exist in
-// the data (bank_finance, sharia-compliant) + facet-gated transmission and fuel
-// quick chips. "Import" is omitted (no data). Transmission/fuel chips are
-// requiresFacet so they only surface when inventory backs them.
+// Cars: condition (new/used) + import + financing + facet-gated transmission
+// and fuel quick chips. Transmission/fuel chips are requiresFacet so they only
+// surface when inventory backs them.
 const CAR_ENGINES: EngineDef[] = [
   ALL_ENGINE,
   { key: "new", i18nKey: "home.engines.new", params: { condition: "new" } },

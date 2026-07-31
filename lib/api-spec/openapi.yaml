@@ -5373,12 +5373,14 @@ paths:
           name: sort
           description: >-
             Result ordering. recommended (default) and newest use the created_at
-            keyset cursor; price_asc, price_desc and popular switch to offset
-            pagination (their cursor is an opaque numeric offset). popular ranks
-            by lifetime interactions (views + clicks).
+            keyset cursor; price_asc, price_desc, popular and nearest switch to
+            offset pagination (their cursor is an opaque numeric offset). popular
+            ranks by lifetime interactions (views + clicks). nearest ranks by
+            Haversine distance when near_lat/near_lng are present; otherwise
+            behaves like recommended.
           schema:
             type: string
-            enum: [recommended, newest, price_asc, price_desc, popular]
+            enum: [recommended, newest, price_asc, price_desc, popular, nearest]
             default: recommended
         - in: query
           name: cursor

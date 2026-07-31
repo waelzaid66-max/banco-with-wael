@@ -59,6 +59,7 @@ const SECTION_SCREENS = [
   "section/factories",
   "section/materials",
   "section/booking",
+  "section/maps",
 ];
 
 test("SearchDiscover keeps SECTION_ROUTE for every catalogue section", () => {
@@ -173,6 +174,7 @@ test("section route files exist on disk", () => {
     "factories",
     "materials",
     "booking",
+    "maps",
   ]) {
     const file = path.join(APP_ROOT, "app", "section", `${name}.tsx`);
     assert.ok(fs.existsSync(file), `missing ${file}`);
@@ -224,12 +226,17 @@ test("Discover keeps photo section cards that push SECTION_ROUTE (no melt)", () 
   );
 });
 
-test("MOB-07: Explore on map enters real-estate section (no Search melt)", () => {
+test("MOB-07: Explore on map enters Maps mini-app #11 (no Search melt, no RE hardcode)", () => {
   const searchTab = fs.readFileSync(SEARCH_TAB, "utf8");
   assert.match(
     searchTab,
-    /router\.push\(\s*["']\/section\/real-estate\?map=1["']\s*\)/,
-    "exploreOnMap must push /section/real-estate?map=1",
+    /router\.push\(\s*["']\/section\/maps["']\s*\)/,
+    "exploreOnMap must push /section/maps (Maps mini-app #11)",
+  );
+  assert.doesNotMatch(
+    searchTab,
+    /exploreOnMap[\s\S]{0,400}router\.push\(\s*["']\/section\/real-estate\?map=1["']/,
+    "exploreOnMap must not hardcode /section/real-estate?map=1",
   );
   assert.doesNotMatch(
     searchTab,
@@ -521,7 +528,7 @@ test("Each section declares its OWN chrome — the shared mini-app never decides
   // …and every section screen must actually state its own, so none inherits a
   // shape by accident.
   for (const [file, expected] of [
-    ["car", /listingMode:\s*"pill"[\s\S]*engines:\s*"pill"/],
+    ["car", /listingMode:\s*"pill"[\s\S]*engines:\s*"chips"/],
     // RE: offer chips (flicked) + property-type pill (16 values — measured overflow).
     ["real-estate", /engines:\s*"chips"[\s\S]*propertyType:\s*"pill"/],
     ["factories", /engines:\s*"chips"/],
@@ -1359,12 +1366,10 @@ test("Banks hub honesty — not a live partner directory (i18n + screen)", () =>
   );
 });
 
-test("Discover map CTA is always present (owner) with honest RE-map destination", () => {
+test("Discover map CTA is always present (owner) — Maps mini-app #11 destination", () => {
   const src = fs.readFileSync(DISCOVER, "utf8");
   // Owner 2026-07-20: the explore-on-map card must ALWAYS show on the Discover
-  // home. Honesty is preserved by the DESTINATION — the MOB-07 test asserts
-  // onExploreMap → /section/real-estate?map=1, whose host falls back to the list
-  // when a browse has no coordinates (never an empty map).
+  // home. Wave 6: destination is Maps mini-app #11 (/section/maps), not RE.
   assert.match(
     src,
     /testID="discover-explore-map"/,
@@ -1377,14 +1382,77 @@ test("Discover map CTA is always present (owner) with honest RE-map destination"
   );
 });
 
-test("Discover map producers cover car/materials/factories/stays", () => {
+test("Maps mini-app #11 mounts MapsHubApp and reuses SearchResultsMap", () => {
+  const mapsRoute = fs.readFileSync(
+    path.join(APP_ROOT, "app", "section", "maps.tsx"),
+    "utf8",
+  );
+  const hub = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "maps", "MapsHubApp.tsx"),
+    "utf8",
+  );
+  assert.match(mapsRoute, /MapsHubApp/);
+  assert.match(hub, /SearchResultsMap/);
+  assert.match(hub, /testID="maps-hub"/);
+  assert.match(hub, /maps-hub-world-tabs/);
+  assert.match(hub, /maps-world-\$\{tab\.id\}/);
+  // Intentional duplication: hub may deep-link section ?map=1 feeds — that is
+  // Owner law, not RE hardcode of the Discover primary CTA.
+  assert.match(hub, /\/section\/car\?map=1/);
+  assert.match(hub, /\/section\/real-estate\?map=1/);
+});
+
+test("B-oom Car mounts CarsHomeHeader Stay-parity shell", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  assert.match(
+    section,
+    /<CarsHomeHeader\b/,
+    "Car section must mount CarsHomeHeader",
+  );
+  assert.match(
+    section,
+    /from "@\/components\/search\/car\/CarsHomeHeader"/,
+  );
+  const header = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "car", "CarsHomeHeader.tsx"),
+    "utf8",
+  );
+  assert.match(header, /testID="cars-home-header"/);
+  assert.match(header, /carBrand|BOOM_LOGO/);
+  // W8 D-W8-01: market/sort SoT is primary strip — header must not duplicate
+  // section-sort-cycle (duplicate testID / dual-seat).
+  assert.doesNotMatch(
+    header,
+    /testID="section-sort-cycle"/,
+    "CarsHomeHeader must not own section-sort-cycle (strip SoT)",
+  );
+  assert.doesNotMatch(
+    header,
+    /cars-market-beside-banco/,
+    "CarsHomeHeader must not weld market beside BANCO (strip MarketCountryButton SoT)",
+  );
+});
+
+test("Materials origin axis seats once (W8 D-W8-02)", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  const matches = section.match(/testID="materials-origin-strip"/g) || [];
+  assert.equal(
+    matches.length,
+    1,
+    "materials-origin-strip must appear exactly once (no legacy duplicate row)",
+  );
+});
+
+test("Discover map producers cover all catalogues (intentional duplication)", () => {
   const src = fs.readFileSync(DISCOVER, "utf8");
   assert.match(src, /testID="discover-map-portals"/);
   assert.match(src, /\/section\/car\?map=1/);
+  assert.match(src, /\/section\/real-estate\?map=1/);
   assert.match(src, /\/section\/materials\?map=1/);
   assert.match(src, /\/section\/factories\?map=1/);
   assert.match(src, /\/section\/booking\?map=1/);
   assert.match(src, /discover-map-car/);
+  assert.match(src, /discover-map-properties/);
   assert.match(src, /discover-map-materials/);
   assert.match(src, /discover-map-factories/);
   assert.match(src, /discover-map-stays/);
@@ -1484,6 +1552,123 @@ test("Section + Stays empty CTAs set flexDirection from rowDir (RTL)", () => {
     /emptyCta[\s\S]{0,80}flexDirection:\s*rowDir/,
     "BookingStaysApp empty CTAs must honor rowDir",
   );
+});
+
+test("REL-07: SectionSearchApp empty post-request derives create category (AUD-SEC-01)", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  const taxonomy = fs.readFileSync(
+    path.join(APP_ROOT, "constants", "listingCreateTaxonomy.ts"),
+    "utf8",
+  );
+  assert.match(
+    taxonomy,
+    /function sectionEmptyPostRequestCategory/,
+    "SoT helper must live in listingCreateTaxonomy",
+  );
+  assert.match(
+    taxonomy,
+    /function resolveCreateDeepLinkCategory/,
+    "create consumer must share deep-link remap SoT",
+  );
+  assert.match(
+    section,
+    /sectionEmptyPostRequestCategory/,
+    "empty CTA must call shared SoT helper",
+  );
+  assert.doesNotMatch(
+    section,
+    /testID="section-empty-post-request"[\s\S]{0,200}category=real_estate/,
+    "empty post-request must not hardcode real_estate for all sections",
+  );
+  // RE header request remains intentionally real_estate-locked
+  assert.match(
+    section,
+    /onOpenRequest=\{[\s\S]*?\/listings\/create\?request=1&category=real_estate/,
+    "RE header onOpenRequest may stay real_estate",
+  );
+  // Materials → raw_materials (seller UI), facilities → industrial
+  assert.match(
+    taxonomy,
+    /section === "materials"\) return "raw_materials"/,
+  );
+  assert.match(
+    taxonomy,
+    /case "industrial":[\s\S]*?case "facilities":[\s\S]*?return "industrial"/,
+  );
+});
+
+test("MOB-C: create deep-link accepts industrial + remaps browse slugs", () => {
+  const create = fs.readFileSync(
+    path.join(APP_ROOT, "app", "listings", "create.tsx"),
+    "utf8",
+  );
+  assert.match(
+    create,
+    /resolveCreateDeepLinkCategory/,
+    "create must consume shared deep-link remap (not cast browse slugs)",
+  );
+  assert.doesNotMatch(
+    create,
+    /categoryParam === "facilities"[\s\S]{0,80}as UiListingCategory/,
+    "must not cast facilities/materials as UiListingCategory",
+  );
+  assert.match(
+    create,
+    /deepCategory && startAsRequest/,
+    "request deep-link category must outrank stale draft (MOB-C-03)",
+  );
+});
+
+test("MOB-C-09 / REL-11: edit skips price gate for buyer requests", () => {
+  const edit = fs.readFileSync(
+    path.join(APP_ROOT, "app", "listings", "edit", "[id].tsx"),
+    "utf8",
+  );
+  assert.match(
+    edit,
+    /const isRequest = !!listing\.is_request/,
+    "edit onSave must branch on listing.is_request",
+  );
+  assert.match(
+    edit,
+    /base_price_cash !== undefined \? \{ base_price_cash \}/,
+    "requests must omit base_price_cash from PATCH (no zero price-drop)",
+  );
+  assert.match(
+    edit,
+    /!listing\.is_request \?[\s\S]*?edit-listing-price/,
+    "price field hidden for is_request listings",
+  );
+  assert.doesNotMatch(
+    edit,
+    /const base_price_cash = digitsToNumber\(price\);\s*if \(base_price_cash <= 0\)/,
+    "must not unconditionally require price > 0",
+  );
+});
+
+test("MOB-C-10 / REL-12: mine + edit gate unsigned (no managed-list call)", () => {
+  const mine = fs.readFileSync(
+    path.join(APP_ROOT, "app", "listings", "mine.tsx"),
+    "utf8",
+  );
+  const edit = fs.readFileSync(
+    path.join(APP_ROOT, "app", "listings", "edit", "[id].tsx"),
+    "utf8",
+  );
+  assert.match(mine, /useAuth/, "mine must use Clerk auth");
+  assert.match(
+    mine,
+    /if \(!isSignedIn\)/,
+    "mine load must refuse unsigned managed-list fetch",
+  );
+  assert.match(mine, /my-listings-signin/, "mine must expose sign-in CTA");
+  assert.match(edit, /useAuth/, "edit must use Clerk auth");
+  assert.match(
+    edit,
+    /enabled: !!id && !!isSignedIn/,
+    "edit must not hydrate listing for guests",
+  );
+  assert.match(edit, /edit-listing-signin/, "edit must expose sign-in CTA");
 });
 
 test("Section horizontal chip ScrollViews use flexGrow:0 (no black void)", () => {
