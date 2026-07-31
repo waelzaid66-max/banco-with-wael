@@ -517,9 +517,13 @@ const en = {
         reset: "Reset",
         carSub: "New, used, imported & installment cars",
         realEstateSub: "Apartments, villas & land — for sale & rent",
-        /** Compact RE mini-app mark — not a separate brand wall. */
-        propertyBrand: "B-PROPERTY",
+        /** Word next to lightning-B mark — reads as B-PROPERTIES. */
+        propertyBrand: "PROPERTIES",
+        propertyTagline: "Your smart gateway to the perfect property",
+        propertyWhere: "Search city, compound, or property…",
         propertyTypeAny: "All types",
+        propertyTabAll: "All",
+        propertyTabCommercial: "Commercial",
         deskSale: "Buy",
         deskRent: "Rent",
         deskApartment: "Apartments",
@@ -2731,9 +2735,13 @@ const ar: typeof en = {
         reset: "تصفير",
         carSub: "سيارات جديدة، مستعملة، مستوردة وبالتقسيط",
         realEstateSub: "شقق، فيلات وأراضي — للبيع والإيجار",
-        /** علامة الميني-أب المضغوطة — ليست براند مستقل. */
-        propertyBrand: "B-PROPERTY",
+        /** كلمة بجانب علامة B — تظهر B-PROPERTIES. */
+        propertyBrand: "PROPERTIES",
+        propertyTagline: "بوابتك الذكية للعقار المناسب",
+        propertyWhere: "ابحث عن مدينة أو كمبوند أو عقار…",
         propertyTypeAny: "كل الأنواع",
+        propertyTabAll: "الكل",
+        propertyTabCommercial: "تجاري",
         deskSale: "تمليك",
         deskRent: "إيجار",
         deskApartment: "شقق",

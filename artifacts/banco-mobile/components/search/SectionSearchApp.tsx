@@ -35,7 +35,7 @@ import { SearchResultsSurface } from "@/components/search/SearchResultsSurface";
 import { SearchResultsMap } from "@/components/search/SearchResultsMap";
 import { FilterSheet } from "@/components/search/FilterSheet";
 import { FilterPillSelect } from "@/components/search/FilterPillSelect";
-import { ReServiceDesks } from "@/components/search/ReServiceDesks";
+import { PropertyHomeHeader } from "@/components/search/property/PropertyHomeHeader";
 import { axisShape, type SectionChrome } from "@/components/search/sectionChrome";
 import { MiniAppBottomNav } from "@/components/MiniAppBottomNav";
 import {
@@ -826,11 +826,40 @@ export function SectionSearchApp({
   const showEngineChips =
     !lockedEngine &&
     stripEngineList.length > 1 &&
-    !showIndustrialChips;
+    !showIndustrialChips &&
+    // RE offer chips move into FilterSheet — PropertyHomeHeader owns first-paint chrome.
+    !isRealEstateSection;
   // listingMode "For sale / Wanted" collides with RE offer sale/rent labels —
   // keep it for cars; RE uses offer engines + type strip (+ FilterSheet for مطلوب).
   const showListingMode = !lockedEngine && !isRealEstateSection;
-  const showReTypeStrip = isRealEstateSection && reTypeTabs.length > 0;
+  // Types live in PropertyHomeHeader Band D (mock-aligned primary set).
+  const showReTypeStrip = false;
+  /** Band D tabs — All / Apartments / Villas / Commercial / Land. */
+  const reHeaderTypeTabs = useMemo(() => {
+    if (!isRealEstateSection) return [] as { value: string; label: string }[];
+    return [
+      { value: RE_TYPE_ALL, label: t("search.discover.section.propertyTabAll") },
+      { value: "apartment", label: t("search.discover.section.deskApartment") },
+      { value: "villa", label: t("search.discover.section.deskVilla") },
+      {
+        value: "office",
+        label: t("search.discover.section.propertyTabCommercial"),
+      },
+      { value: "land", label: t("search.discover.section.deskLand") },
+    ];
+  }, [isRealEstateSection, t]);
+  const reHeaderActiveType = useMemo(() => {
+    if (!criteria.propertyType) return RE_TYPE_ALL;
+    if (
+      criteria.propertyType === "office" ||
+      criteria.propertyType === "shop" ||
+      criteria.propertyType === "warehouse" ||
+      criteria.propertyType === "commercial_land"
+    ) {
+      return "office";
+    }
+    return criteria.propertyType;
+  }, [criteria.propertyType]);
   // Country + currency live in ONE compact MarketCountryButton on the primary
   // strip — every section, no exception (owner 2026-07-20, completed for RE +
   // materials 2026-07-27). The old spread matrix laid 21 country cells in a
@@ -1182,6 +1211,34 @@ export function SectionSearchApp({
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {isRealEstateSection ? (
+        <PropertyHomeHeader
+          searchOpen={searchOpen}
+          draftQuery={draftQuery}
+          searchSaved={searchSaved}
+          activeFilterCount={activeFilterCount}
+          activePropertyType={reHeaderActiveType}
+          typeTabs={reHeaderTypeTabs}
+          inputRef={inputRef}
+          onBack={goBack}
+          onSaveSearch={handleSaveSearch}
+          onOpenFilters={() => {
+            playSound("tap");
+            setShowFilters(true);
+          }}
+          onOpenSearch={openSearch}
+          onCloseSearch={closeSearch}
+          onQueryChange={handleQueryChange}
+          onSubmitQuery={() => commitQueryNow(draftQuery)}
+          onClearQuery={clearQuery}
+          onSelectType={(value) => {
+            playSound("tap");
+            Haptics.selectionAsync();
+            selectRePropertyType(value);
+          }}
+        />
+      ) : (
+      <>
       {/* ── Section header: back + title/subtitle + section icon ── */}
       <View
         style={[
@@ -1222,18 +1279,6 @@ export function SectionSearchApp({
               {t(titleKey)}
             </AppText>
           </View>
-          {isRealEstateSection ? (
-            <AppText
-              style={[
-                styles.headerBrand,
-                { color: accent, textAlign },
-              ]}
-              numberOfLines={1}
-              testID="re-property-brand"
-            >
-              {t("search.discover.section.propertyBrand")}
-            </AppText>
-          ) : null}
           {subtitleKey ? (
             <AppText
               style={[
@@ -1287,9 +1332,11 @@ export function SectionSearchApp({
           )}
         </Pressable>
       </View>
+      </>
+      )}
 
-      {/* ── Collapsible search bar — shown when the search icon in the header is tapped ── */}
-      {searchOpen && (
+      {/* ── Collapsible search bar — non-RE only (RE search lives in PropertyHomeHeader) ── */}
+      {!isRealEstateSection && searchOpen && (
         <View
           style={[
             styles.searchBar,
@@ -1332,7 +1379,7 @@ export function SectionSearchApp({
           </Pressable>
         </View>
       )}
-      {/* Inline autocomplete — renders just below the search bar */}
+      {/* Inline autocomplete — renders just below the search bar / PropertyHomeHeader */}
       {searchOpen && showSuggestions && suggestions.length > 0 && (
         <View
           style={[
@@ -1372,26 +1419,8 @@ export function SectionSearchApp({
         </View>
       )}
 
-      {/* ── B-PROPERTY service desks — REAL actions only (criteria or routes).
-          Compact horizontal strip so inventory stays the hero. Mounted only for
-          real_estate; other sections keep their own chrome. ── */}
-      {isRealEstateSection && !searchOpen ? (
-        <ReServiceDesks
-          playSound={playSound}
-          onSelectOffer={(engineKey) => {
-            selectEngine(engineKey);
-          }}
-          onSelectType={(propertyType) => {
-            // Force-set (do not toggle off) — a desk tap means "open this مكتب".
-            update({ propertyType });
-          }}
-          onOpenMap={() => {
-            setWantMap(true);
-            if (inResultsView) setMapMode(true);
-          }}
-          onOpenMore={() => setShowFilters(true)}
-        />
-      ) : null}
+      {/* ── B-PROPERTIES service desks retired from first paint — offer/map/request
+          live in FilterSheet + Band D. Import-hub rule still holds: no dead taps. ── */}
 
       {/* ── Primary chip strip: country/currency · sort · mode/engines.
           The country button leads EVERY section — one compact control, one
@@ -1457,7 +1486,7 @@ export function SectionSearchApp({
             color={criteria.sort !== "recommended" ? "#FFFFFF" : colors.mutedForeground}
           />
         </Pressable>
-        {(showListingMode || showEngineChips || showIndustrialChips || isRealEstateSection) ? (
+        {(showListingMode || showEngineChips || showIndustrialChips) ? (
           <View style={[styles.chipStripDivider, { backgroundColor: colors.border }]} />
         ) : null}
         {/* Offer + engine axes: the SECTION decides the shape, this only renders
@@ -1540,9 +1569,9 @@ export function SectionSearchApp({
             })
           )
         ) : null}
-        {/* RE: single Wanted chip (is_request) — not the full listingMode trio
-            that duplicated "For sale" next to offer "Sale/تمليك". */}
-        {isRealEstateSection && !lockedEngine ? (
+        {/* RE Wanted chip moved into FilterSheet with offer engines — keeps
+            PropertyHomeHeader first paint balanced (Stay-parity). */}
+        {false && isRealEstateSection && !lockedEngine ? (
           <Pressable
             onPress={() => {
               playSound("tap");

@@ -765,22 +765,46 @@ test("Country + currency is ONE compact button in every section (no per-section 
   }
 });
 
-test("Real-estate section uses offer strip + type strip (no listingMode clash)", () => {
+test("Real-estate section mounts B-PROPERTIES PropertyHomeHeader (Stay-parity)", () => {
   const section = fs.readFileSync(SECTION_APP, "utf8");
+  assert.match(
+    section,
+    /<PropertyHomeHeader\b/,
+    "RE must mount PropertyHomeHeader (JSX), not only import it",
+  );
+  assert.match(
+    section,
+    /from "@\/components\/search\/property\/PropertyHomeHeader"/,
+    "RE PropertyHomeHeader must come from the property/ folder",
+  );
   assert.match(
     section,
     /axisShape\(chrome,\s*"propertyType"\)/,
     "RE property-type shape must come from the section chrome (pill vs chips)",
   );
-  assert.match(
-    section,
-    /testID="re-type-strip"/,
-    "RE must expose a dedicated property-type strip",
+  const header = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "property", "PropertyHomeHeader.tsx"),
+    "utf8",
   );
   assert.match(
-    section,
+    header,
     /testID="re-property-brand"/,
-    "RE header must expose the compact B-PROPERTY mark",
+    "RE header must expose the B-PROPERTIES brand block",
+  );
+  assert.match(
+    header,
+    /testID="re-type-strip"/,
+    "RE header Band D must expose re-type-strip",
+  );
+  assert.match(
+    header,
+    /b-mark\.png/,
+    "RE header must use the cropped lightning-B mark",
+  );
+  assert.match(
+    header,
+    /property-mark\.png/,
+    "RE header must use the house+keys property seal",
   );
   assert.match(
     section,
@@ -791,11 +815,6 @@ test("Real-estate section uses offer strip + type strip (no listingMode clash)",
     section,
     /testID="section-rental-pill"/,
     "RE rent terms must collapse to a pill (not a permanent chip wall)",
-  );
-  assert.match(
-    section,
-    /ReServiceDesks|testID="re-service-desks"/,
-    "RE must mount real service desks (مكاتب) — Import-hub rule: no dead taps",
   );
   assert.match(
     section,
@@ -848,30 +867,18 @@ test("Real-estate section uses offer strip + type strip (no listingMode clash)",
   );
 });
 
-test("B-PROPERTY ReServiceDesks are real destinations only (no dead taps)", () => {
-  const desksPath = path.join(
-    APP_ROOT,
-    "components",
-    "search",
-    "ReServiceDesks.tsx",
+test("B-PROPERTIES header filter lives inside search pill (Stay-parity)", () => {
+  const header = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "property", "PropertyHomeHeader.tsx"),
+    "utf8",
   );
-  assert.ok(fs.existsSync(desksPath), "ReServiceDesks.tsx must exist");
-  const desks = fs.readFileSync(desksPath, "utf8");
-  // In-section desks mutate criteria / open sheet / map — not fake screens.
-  assert.match(desks, /kind:\s*"offer"/);
-  assert.match(desks, /kind:\s*"type"/);
-  assert.match(desks, /kind:\s*"map"/);
-  assert.match(desks, /kind:\s*"more"/);
-  // Sibling routes that already exist in the app stack.
-  assert.match(desks, /\/section\/booking/);
-  assert.match(desks, /\/listings\/create\?request=1/);
-  // Commercial is a picker over real property types — never a single fake umbrella page.
-  assert.match(desks, /office/);
-  assert.match(desks, /shop/);
-  assert.match(desks, /warehouse/);
-  assert.match(desks, /commercial_land/);
-  // Forbidden fake desks from the owner mock that have no route today.
-  assert.doesNotMatch(desks, /New Projects|new_projects|\/contract|\/compare/i);
+  // Filter control must sit inside the search pill — not a crushed header icon row.
+  assert.match(header, /filterInSearch/);
+  assert.match(header, /testID="section-filter-toggle"/);
+  assert.match(header, /testID="section-search-open"|testID="section-search-input"/);
+  // No fake half-screen pad.
+  assert.match(header, /Platform\.OS === "web" \? 12/);
+  assert.doesNotMatch(header, /\? 67/);
 });
 
 test("Car section expands brand + origin strips; import deep-links engine", () => {
