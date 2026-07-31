@@ -244,6 +244,7 @@ const ICONS: Record<string, LucideIcon> = {
   "file-sign": FilePen,
   "gavel": Gavel,
   "headset": Headset,
+  "headphones": Headset,
   "map-marker-path": Route,
   "map-marker-radius-outline": MapPinned,
   "passport": BookUser,

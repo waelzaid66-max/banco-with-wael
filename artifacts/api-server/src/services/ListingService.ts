@@ -1128,13 +1128,11 @@ export async function updateListing(
     base_price_cash?: number;
     location?: string;
     // Optional precise pin (MAP-09). Both axes required to store; omit to leave.
+    // Schema enforces both-or-neither.
     latitude?: number;
     longitude?: number;
     // Lifecycle status patch (Task #71): seller marks the deal closed/hidden.
     status?: "active" | "sold" | "archived";
-    // MAP-09: optional precise pin (both or neither — schema-enforced).
-    latitude?: number;
-    longitude?: number;
     specs?: Record<string, unknown>;
     // Additive (Task #40): optional logistics & delivery patch, all nullable.
     logistics?: {
