@@ -123,11 +123,18 @@ function isReOfferEngine(engine: EngineDef): boolean {
   return engine.params.offer_type === "sale" || engine.params.offer_type === "rent";
 }
 
-/** FilterSheet engines for RE: offer (sale/rent) + refinements.
- *  Property-type engines stay out — Band D / propertyType owns those. */
+/** FilterSheet engines for RE: refinements only (compound/furnished/…).
+ *  Offer sale/rent lives on PropertyHomeHeader strip; property-type engines
+ *  stay out — Band D / propertyType owns those. */
 function isReSheetEngine(engine: EngineDef): boolean {
   if (engine.key === "all") return true;
   if (engine.params.property_type) return false;
+  if (
+    engine.params.offer_type === "sale" ||
+    engine.params.offer_type === "rent"
+  ) {
+    return false;
+  }
   return true;
 }
 
@@ -823,12 +830,11 @@ export function SectionSearchApp({
   // Keep engine chips visible during facet load — visibleEngines already
   // fails open when scopedFacets are undefined. Hiding on facetsLoading made
   // every section entry flash an empty strip then repaint.
-  // RE: only offer-axis chips (تمليك/إيجار) — types move to their own strip.
+  // RE: offer strip + type tabs live in PropertyHomeHeader (not primary chips).
   const showEngineChips =
     !lockedEngine &&
     stripEngineList.length > 1 &&
     !showIndustrialChips &&
-    // RE offer chips move into FilterSheet — PropertyHomeHeader owns first-paint chrome.
     !isRealEstateSection;
   // listingMode "For sale / Wanted" collides with RE offer sale/rent labels —
   // keep it for cars; RE uses offer engines + type strip (+ FilterSheet for مطلوب).
@@ -849,17 +855,19 @@ export function SectionSearchApp({
       { value: "land", label: t("search.discover.section.deskLand") },
     ];
   }, [isRealEstateSection, t]);
+  // Commercial Band D tab maps to API property_type=office only. Do not fake
+  // highlight for shop/warehouse/commercial_land (those stay FilterSheet-only).
   const reHeaderActiveType = useMemo(() => {
     if (!criteria.propertyType) return RE_TYPE_ALL;
     if (
+      criteria.propertyType === "apartment" ||
+      criteria.propertyType === "villa" ||
       criteria.propertyType === "office" ||
-      criteria.propertyType === "shop" ||
-      criteria.propertyType === "warehouse" ||
-      criteria.propertyType === "commercial_land"
+      criteria.propertyType === "land"
     ) {
-      return "office";
+      return criteria.propertyType;
     }
-    return criteria.propertyType;
+    return RE_TYPE_ALL;
   }, [criteria.propertyType]);
   // Country + currency live in ONE compact MarketCountryButton on the primary
   // strip — every section, no exception (owner 2026-07-20, completed for RE +

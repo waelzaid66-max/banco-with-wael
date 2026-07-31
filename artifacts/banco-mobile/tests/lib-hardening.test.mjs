@@ -304,6 +304,23 @@ test("search params wire near-me geo to API client", () => {
   assert.match(src, /sp\.radius_km/, "buildSearchParams must send radius_km");
 });
 
+test("mobile RE rental_term mirrors search-contract rent-only gate", () => {
+  const src = fs.readFileSync(path.join(APP_ROOT, "lib", "searchParams.ts"), "utf8");
+  const codeOnly = src
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  assert.doesNotMatch(
+    codeOnly,
+    /if \(c\.rentalTerm\)\s*sp\.rental_term/,
+    "ungated rental_term emit would drift from search-contract + server sanitize",
+  );
+  assert.match(
+    codeOnly,
+    /category === "real_estate"[\s\S]{0,160}?offer_type === "rent"[\s\S]{0,80}?rental_term/,
+    "mobile buildSearchParams must gate rental_term on real_estate + rent offer",
+  );
+});
+
 test("search tab uses market-scoped rental taxonomy adapter", () => {
   const search = fs.readFileSync(path.join(APP_ROOT, "app", "(tabs)", "search.tsx"), "utf8");
   const sheet = fs.readFileSync(

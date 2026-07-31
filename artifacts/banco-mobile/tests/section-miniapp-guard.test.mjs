@@ -896,6 +896,206 @@ test("B-PROPERTIES header filter lives inside search pill (Stay-parity)", () => 
   );
 });
 
+test("RE offer strip wires sale/rent to selectEngine (P0 reachable)", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  const header = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "property", "PropertyHomeHeader.tsx"),
+    "utf8",
+  );
+  const headerCode = header
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  assert.match(headerCode, /value:\s*"sale"/);
+  assert.match(headerCode, /value:\s*"rent"/);
+  assert.match(headerCode, /onPress=\{\(\) => onSelectOffer\(tab\.value\)\}/);
+  assert.match(
+    section,
+    /<PropertyHomeHeader[\s\S]*?onSelectOffer=\{[\s\S]*?selectEngine/,
+    "PropertyHomeHeader.onSelectOffer must call selectEngine",
+  );
+  assert.match(
+    section,
+    /activeOfferKey=\{activeOfferKey/,
+    "offer strip highlight must use activeOfferKey",
+  );
+  // Offer strip must not sit behind a hide gate (was how sale/rent became unreachable).
+  const stripAt = headerCode.indexOf('testID="re-offer-strip"');
+  assert.ok(stripAt > 0, "re-offer-strip must exist in header JSX");
+  assert.doesNotMatch(
+    headerCode.slice(Math.max(0, stripAt - 200), stripAt),
+    /showOffer|isRealEstateSection\s*\?/,
+    "offer strip must remain unconditionally mounted in PropertyHomeHeader",
+  );
+});
+
+test("RE strip/sheet engine predicates keep offer vs refinements split", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  const codeOnly = section
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  const offerFn = codeOnly.match(/function isReOfferEngine\([\s\S]*?\n\}/)?.[0];
+  const sheetFn = codeOnly.match(/function isReSheetEngine\([\s\S]*?\n\}/)?.[0];
+  assert.ok(offerFn, "isReOfferEngine must exist");
+  assert.ok(sheetFn, "isReSheetEngine must exist");
+  assert.match(offerFn, /offer_type === "sale"/);
+  assert.match(offerFn, /offer_type === "rent"/);
+  assert.doesNotMatch(
+    offerFn,
+    /property_type/,
+    "offer predicate must not admit property_type engines",
+  );
+  assert.match(
+    sheetFn,
+    /offer_type === "sale"/,
+    "sheet predicate must explicitly reject sale offer engines",
+  );
+  assert.match(
+    sheetFn,
+    /offer_type === "rent"/,
+    "sheet predicate must explicitly reject rent offer engines",
+  );
+  assert.match(
+    sheetFn,
+    /property_type/,
+    "sheet predicate must also reject property_type engines",
+  );
+  assert.match(
+    codeOnly,
+    /engines=\{filterSheetEngines\}/,
+    "FilterSheet must receive filterSheetEngines, not full engineList",
+  );
+  assert.doesNotMatch(
+    codeOnly,
+    /engines=\{(?:engineList|visibleEngines|stripEngineList)\}/,
+    "RE FilterSheet must not receive the unfiltered engine list",
+  );
+});
+
+test("RE rentalTerm latch: rent unlocks chrome; leaving rent clears term", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  const selectRental = section.match(
+    /const selectRentalTerm\s*=\s*\([\s\S]*?\n  \};/,
+  )?.[0];
+  assert.ok(selectRental, "selectRentalTerm must exist");
+  assert.match(
+    selectRental,
+    /engineKey:\s*"rent"/,
+    "picking a rental term must force rent engine (breaks chicken-egg)",
+  );
+  const selectEngine = section.match(
+    /const selectEngine\s*=\s*\([\s\S]*?\n  \};/,
+  )?.[0];
+  assert.ok(selectEngine, "selectEngine must exist");
+  assert.match(
+    selectEngine,
+    /offer_type === "rent" \? criteria\.rentalTerm : null/,
+    "leaving rent must clear rentalTerm",
+  );
+  assert.match(
+    section,
+    /showRentalTerms\s*=\s*[\s\S]*?activeOfferKey === "rent"/,
+    "rental chrome must only show under rent offer",
+  );
+  assert.match(section, /testID="section-rental-pill"/);
+});
+
+test("RE Commercial Band D tab is honest office API (no fake commercial enum)", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  const tabs = section.match(
+    /const reHeaderTypeTabs\s*=\s*useMemo\([\s\S]*?\}, \[isRealEstateSection, t\]\);/,
+  )?.[0];
+  assert.ok(tabs, "reHeaderTypeTabs must exist");
+  assert.match(
+    tabs,
+    /value:\s*"office"[\s\S]*?propertyTabCommercial/,
+    "Commercial tab value must stay explicit office so API property_type is honest",
+  );
+  assert.doesNotMatch(
+    section,
+    /propertyType:\s*"commercial"/,
+    "must never send propertyType=commercial (not an API enum)",
+  );
+  // Highlight must not pretend shop/warehouse are the office tab.
+  const active = section.match(
+    /const reHeaderActiveType\s*=\s*useMemo\([\s\S]*?\}, \[criteria\.propertyType\]\);/,
+  )?.[0];
+  assert.ok(active, "reHeaderActiveType must exist");
+  assert.doesNotMatch(
+    active,
+    /shop|warehouse|commercial_land/,
+    "Commercial tab must not light for non-office commercial subtypes",
+  );
+});
+
+test("RE chrome does not remount retired ReServiceDesks; bottom tabs untouched", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  assert.doesNotMatch(
+    section,
+    /ReServiceDesks/,
+    "SectionSearchApp must not remount retired ReServiceDesks (header owns offer/types)",
+  );
+  const desksPath = path.join(
+    APP_ROOT,
+    "components",
+    "search",
+    "ReServiceDesks.tsx",
+  );
+  assert.ok(
+    fs.existsSync(desksPath),
+    "ReServiceDesks file may remain as orphan; do not silently delete without owner call",
+  );
+  const tabsLayout = fs.readFileSync(
+    path.join(APP_ROOT, "app", "(tabs)", "_layout.tsx"),
+    "utf8",
+  );
+  for (const name of ["index", "search", "messages", "saved", "profile"]) {
+    assert.match(
+      tabsLayout,
+      new RegExp(`name="${name}"`),
+      `bottom tab ${name} must remain registered`,
+    );
+  }
+  assert.doesNotMatch(
+    tabsLayout,
+    /PropertyHomeHeader|re-offer-strip|SectionSearchApp/,
+    "RE mini-app chrome must not leak into (tabs)/_layout",
+  );
+  const bottomNav = fs.readFileSync(
+    path.join(APP_ROOT, "components", "MiniAppBottomNav.tsx"),
+    "utf8",
+  );
+  assert.match(
+    bottomNav,
+    /export (?:default )?function MiniAppBottomNav|export function MiniAppBottomNav/,
+    "MiniAppBottomNav export must remain (RE work must not delete bottom chrome)",
+  );
+  assert.doesNotMatch(
+    bottomNav,
+    /re-offer-strip|PropertyHomeHeader|B-PROPERTIES/,
+    "MiniAppBottomNav must not absorb RE header chrome",
+  );
+});
+
+test("mobile buildSearchParams gates rental_term to rent offer only", () => {
+  const src = fs.readFileSync(
+    path.join(APP_ROOT, "lib", "searchParams.ts"),
+    "utf8",
+  );
+  const codeOnly = src
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  assert.doesNotMatch(
+    codeOnly,
+    /if \(c\.rentalTerm\)\s*sp\.rental_term/,
+    "mobile must not emit rental_term without rent offer gate",
+  );
+  assert.match(
+    codeOnly,
+    /offer_type === "rent"[\s\S]{0,120}?rental_term|rental_term[\s\S]{0,120}?offer_type === "rent"/,
+    "rental_term emission must consult rent/offer engine",
+  );
+});
+
 test("Car section expands brand + origin strips; import deep-links engine", () => {
   const section = fs.readFileSync(SECTION_APP, "utf8");
   const discover = fs.readFileSync(DISCOVER, "utf8");
