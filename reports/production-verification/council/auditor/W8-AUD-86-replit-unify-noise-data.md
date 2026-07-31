@@ -93,25 +93,22 @@ Factories header · Banks directory · REL-21 · REL-15 · Live/Coolify
 
 ---
 
-## 4. لصق Replit (للمالك الآن)
+## 4. لصق Replit (SoT بعد استكمال Chair)
 
-انسخ كاملاً:
+**اللصق الوحيد:** `audit/handoff/PASTE-REPLIT-WAVE8-UNIFY-MAIN-AR.md` (floor-based · R01–R12)
 
-**`audit/handoff/PASTE-REPLIT-UNIFY-MAIN-TIP-WAVE8-AR.md`**
+ملف Auditor القديم `PASTE-REPLIT-UNIFY-MAIN-TIP-WAVE8-AR.md` = **SUPERSEDED** (انظر محتواه).
 
-يفرض: `reset --hard` → assert `3420aec` → floor `a05190e` → install → guards **85/8/47/32/4/11 + 167 + 20** → Expo → W8-S01…S11 → قالب RUNTIME ONLY.
-
-ملاحظة: تقرير Replit قال إنه سحب حتى Tranche A (~142 commits) وقتها — **يجب إعادة unify الآن** لالتقاط C+D + env report على tip.
+Peer لاحق: **`W8-AUD-88` PASS** على tip `5229c89`. استكمال المدير: **`W8-AUD-89`**.
 
 ---
 
 ## 5. Ask Chair
 
-1. الصق UNIFY المحدَّث إلى Replit الشغّال.  
-2. ارفض بلاغ SHA ≠ `3420aec` (أو أصدر لصق tip جديد إن تحرك main).  
-3. اقبل AUD-86: Tranche D peer **PASS** + unify packet.  
-4. ادمج هذا الـPR docs-only.  
-5. STANDBY مقاعد · Owner Coolify إن أريد Live.
+1. أرسل **Chair PASTE فقط** إلى Replit.  
+2. اقبل AUD-86 D-PASS + **AUD-88** PASTE VERIFY.  
+3. Merge #45 · close #36.  
+4. STANDBY · Coolify فقط إن طلب Live.
 
 ---
 
