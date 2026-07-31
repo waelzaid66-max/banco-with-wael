@@ -1086,7 +1086,7 @@ const en = {
       title: "Furnished rentals",
       subtitle: "Short-stay hosting — daily, weekly & monthly",
       philosophy:
-        "Show furnished units, prices and availability, and receive stay requests directly. Separate from sale and long-term rent listings.",
+        "Show furnished units and prices, and receive stay requests directly. Guests pick dates on the listing — hosts confirm or reject requests (no host block calendar yet). Separate from sale and long-term rent listings.",
       pendingRequests: "Pending requests",
       activeUnits: "Bookable units",
       viewRequests: "Booking requests",
@@ -2194,7 +2194,7 @@ const en = {
     above: "Above market",
   },
   booking: {
-    title: "Book your stay",
+    title: "Request your stay",
     poweredBy: "powered by",
     night: "night",
     currency: "EGP",
@@ -2203,7 +2203,8 @@ const en = {
     nights: "Nights",
     guests: "Guests",
     estTotal: "Estimated total",
-    reserve: "Reserve",
+    // Request model — not instant paid checkout (payment brick deferred).
+    reserve: "Send request",
     requestNote: "You send a booking request — the host confirms. No charge now.",
     errorTaken: "Those dates were just taken. Please pick again.",
     confirmedTitle: "Booking requested",
@@ -2213,7 +2214,8 @@ const en = {
     title: "Bookings",
     tabTrips: "My trips",
     tabRequests: "Requests",
-    emptyTrips: "No bookings yet. Find a furnished daily rental to book your first stay.",
+    emptyTrips:
+      "No bookings yet. Find a furnished daily rental and send your first stay request.",
     emptyRequests: "No booking requests on your listings yet.",
     errorBody: "Couldn't load your bookings.",
     confirm: "Confirm",
@@ -3309,7 +3311,7 @@ const ar: typeof en = {
       title: "الإيجار المفروش",
       subtitle: "استضافة الإقامات القصيرة — يومي وأسبوعي وشهري",
       philosophy:
-        "اعرض وحداتك المفروشة والأسعار والتوافر واستقبل طلبات الإقامة مباشرة. منفصل عن البيع والإيجار طويل الأمد.",
+        "اعرض وحداتك المفروشة والأسعار واستقبل طلبات الإقامة مباشرة. الضيف يختار التواريخ من الإعلان — وأنت تؤكد أو ترفض الطلب (مافيش تقويم حظر للمضيف لسه). منفصل عن البيع والإيجار طويل الأمد.",
       pendingRequests: "طلبات قيد الانتظار",
       activeUnits: "وحدات قابلة للحجز",
       viewRequests: "طلبات الحجز",
@@ -4414,7 +4416,7 @@ const ar: typeof en = {
     above: "أعلى من السوق",
   },
   booking: {
-    title: "احجز إقامتك",
+    title: "اطلب إقامتك",
     poweredBy: "powered by",
     night: "ليلة",
     currency: "ج.م",
@@ -4423,17 +4425,19 @@ const ar: typeof en = {
     nights: "الليالي",
     guests: "الضيوف",
     estTotal: "الإجمالي التقديري",
-    reserve: "احجز الآن",
+    // طلب حجز — مش دفع فوري (دفعة Stay مؤجّلة بالتصميم).
+    reserve: "أرسل الطلب",
     requestNote: "ترسل طلب حجز والمالك يؤكده. لا خصم الآن.",
     errorTaken: "هذه التواريخ حُجزت للتو. برجاء الاختيار من جديد.",
-    confirmedTitle: "تم إرسال الحجز",
+    confirmedTitle: "تم إرسال طلب الحجز",
     confirmedBody: "سيؤكد المالك إقامتك قريبًا. يمكنك مراسلته من هذا الإعلان.",
   },
   bookings: {
     title: "الحجوزات",
     tabTrips: "رحلاتي",
     tabRequests: "الطلبات",
-    emptyTrips: "لا حجوزات بعد. ابحث عن إيجار يومي مفروش واحجز أول إقامة.",
+    emptyTrips:
+      "لا حجوزات بعد. ابحث عن إيجار يومي مفروش وأرسل أول طلب إقامة.",
     emptyRequests: "لا توجد طلبات حجز على إعلاناتك بعد.",
     errorBody: "تعذّر تحميل حجوزاتك.",
     confirm: "تأكيد",
