@@ -93,8 +93,10 @@ test("edit listing wires MapPinPicker + update lat/lng (MAP-09)", () => {
   );
   assert.match(edit, /MapPinPicker/);
   assert.match(edit, /testID="edit-pick-on-map"/);
+  assert.match(edit, /testID="edit-pin-tools"/);
   assert.match(edit, /latitude:\s*pin\.lat/);
   assert.match(edit, /longitude:\s*pin\.lng/);
+  assert.match(edit, /pinTouched/);
 });
 
 test("message notifications forward stamped role (mark-sold chrome)", () => {
