@@ -53,6 +53,20 @@ jobs:
             --build-arg NEXT_PUBLIC_SITE_URL=http://localhost:3000 \
             -t banco-consumer-web:ci .
 
+  docker-banco-web-coolify:
+    name: Docker build (banco-web Coolify SoT)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Coolify banco-web image (legacy profile twin)
+        run: |
+          docker build -f deploy/coolify/Dockerfile.banco-web \
+            --build-arg NEXT_PUBLIC_API_URL=http://api:8080 \
+            --build-arg NEXT_PUBLIC_SITE_URL=http://localhost:3000 \
+            --build-arg NEXT_PUBLIC_MARKET_URL=/market/ \
+            --build-arg NEXT_PUBLIC_ADMIN_URL=/admin/ \
+            -t banco-web:ci .
+
   docker-banco-website-coolify:
     name: Docker build (banco-website Coolify SoT)
     runs-on: ubuntu-latest
@@ -90,4 +104,5 @@ jobs:
             --build-arg VITE_API_BASE_URL=/api \
             --build-arg VITE_MARKET_URL=/market/ \
             --build-arg VITE_ADMIN_URL=/admin/ \
+            --build-arg VITE_WEB_URL=https://banco.today \
             -t banco-web-static:ci .
