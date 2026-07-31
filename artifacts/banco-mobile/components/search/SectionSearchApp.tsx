@@ -786,16 +786,17 @@ export function SectionSearchApp({
       ? criteria.originType
       : "all";
   const isMaterialsSection = criteria.category === "materials";
-  // B-CORE upper header owns market/sort/types/origin/search+Filters (layer 1).
-  // Origin lives IN the type strip (Band D). Layer 2 = commodities only when
-  // raw/all — never a wasted origin-only row. listingMode stays in FilterSheet.
+  // B-CORE upper header: identity + search/Filters + market beside BANCO.
+  // Smart horizontal strip under header: industrial types + origin (wrap, flexGrow:0).
+  // Commodity strip when raw/all. listingMode + refinements stay in FilterSheet
+  // (sliders in search). Never erase strips.
   const showOriginChrome = isMaterialsSection;
   const showMaterialChrome =
     isMaterialsSection &&
     (criteria.industrialType === "all" ||
       criteria.industrialType === "raw_material");
-  // Commodity strip only (origin welded into header type strip).
-  const showMaterialsLayer2 = showMaterialChrome && showOriginChrome;
+  const showMaterialsAxisStrip = showOriginChrome;
+  const showMaterialsLayer2 = showMaterialChrome;
   const showCarOriginChrome = criteria.category === "car" && !lockedEngine;
   const showCarBrandStrip = criteria.category === "car" && !lockedEngine;
   const showRentalTerms =
@@ -832,6 +833,8 @@ export function SectionSearchApp({
       },
     ];
   }, [isMaterialsSection, t]);
+  // Smart materials axis strip uses the same tab list (horizontal wrap chips).
+  const materialsAxisTabs = materialsHeaderTypeTabs;
   // Country + currency live in ONE compact MarketCountryButton on the primary
   // strip — every section, no exception (owner 2026-07-20, completed for RE +
   // materials 2026-07-27). The old spread matrix laid 21 country cells in a
@@ -1079,10 +1082,7 @@ export function SectionSearchApp({
           draftQuery={draftQuery}
           searchSaved={searchSaved}
           activeFilterCount={activeFilterCount}
-          activeIndustrialType={criteria.industrialType}
-          typeTabs={materialsHeaderTypeTabs}
           marketCountry={criteria.marketCountry}
-          originKey={originKey}
           sort={criteria.sort}
           inputRef={inputRef}
           onBack={goBack}
@@ -1096,16 +1096,6 @@ export function SectionSearchApp({
           onQueryChange={handleQueryChange}
           onSubmitQuery={() => commitQueryNow(draftQuery)}
           onClearQuery={clearQuery}
-          onSelectType={(value) => {
-            playSound("tap");
-            Haptics.selectionAsync();
-            selectIndustrialType(value);
-          }}
-          onSelectOrigin={(value) => {
-            playSound("tap");
-            Haptics.selectionAsync();
-            selectOrigin(value);
-          }}
           onOpenMarket={() => {
             playSound("tap");
             setMarketPickerOpen(true);
@@ -1646,7 +1636,90 @@ export function SectionSearchApp({
         </ScrollView>
       ) : null}
 
-      {/* ── Materials layer 2: commodities only (origin lives in header Band D) ── */}
+      {/* ── Materials smart axis strip: types + origin WRAP horizontally.
+          Same contract as section primary strip (flexGrow:0) — never eat results.
+          FilterSheet (sliders) keeps listingMode + refinements. ── */}
+      {showMaterialsAxisStrip ? (
+        <View
+          style={[styles.materialsAxisStrip, { flexDirection: rowDir }]}
+          testID="materials-type-strip"
+        >
+          {materialsAxisTabs.map((tab) => {
+            const active = criteria.industrialType === tab.value;
+            return (
+              <Pressable
+                key={tab.value}
+                onPress={() => {
+                  playSound("tap");
+                  Haptics.selectionAsync();
+                  selectIndustrialType(tab.value);
+                }}
+                style={[
+                  styles.materialsAxisChip,
+                  {
+                    backgroundColor: active ? accent : colors.secondary,
+                    borderColor: active ? accent : colors.border,
+                  },
+                ]}
+                testID={`industrial-type-${tab.value}`}
+              >
+                <AppText
+                  style={[
+                    styles.materialsAxisChipText,
+                    { color: active ? "#FFFFFF" : colors.mutedForeground },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {tab.label}
+                </AppText>
+              </Pressable>
+            );
+          })}
+          <View
+            style={[styles.materialsAxisDivider, { backgroundColor: colors.border }]}
+          />
+          <View
+            style={[styles.materialsOriginCluster, { flexDirection: rowDir }]}
+            testID="materials-origin-strip"
+          >
+            {(["all", "local", "imported"] as const).map((o) => {
+              const active = originKey === o;
+              return (
+                <Pressable
+                  key={o}
+                  onPress={() => {
+                    playSound("tap");
+                    Haptics.selectionAsync();
+                    selectOrigin(o);
+                  }}
+                  style={[
+                    styles.materialsAxisChip,
+                    {
+                      backgroundColor: active ? accent : colors.secondary,
+                      borderColor: active ? accent : colors.border,
+                    },
+                  ]}
+                  testID={`section-origin-${o}`}
+                >
+                  <AppText
+                    style={[
+                      styles.materialsAxisChipText,
+                      { color: active ? "#FFFFFF" : colors.mutedForeground },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {o === "all"
+                      ? t("home.engines.all")
+                      : t(`create.opts.${o}`)}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      ) : null}
+
+      {/* ── Materials commodities (Steel / Aluminum / …) — horizontal scroll ── */}
       {showMaterialsLayer2 ? (
         <ScrollView
           horizontal
@@ -2051,7 +2124,38 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 18,
   },
-  // Materials layer 2 — commodities only (origin lives in header type strip).
+  // Materials smart axis — types + origin wrap (flexGrow:0 like primary strip).
+  materialsAxisStrip: {
+    alignItems: "center",
+    flexWrap: "wrap",
+    flexGrow: 0,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 2,
+  },
+  materialsAxisChip: {
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  materialsAxisChipText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+  },
+  materialsAxisDivider: {
+    width: StyleSheet.hairlineWidth,
+    height: 18,
+    opacity: 0.7,
+    marginHorizontal: 2,
+  },
+  materialsOriginCluster: {
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  // Materials commodities strip rhythm
   materialsLayer2Strip: {
     alignItems: "center",
     gap: 6,

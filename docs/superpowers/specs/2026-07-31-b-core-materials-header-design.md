@@ -1,32 +1,21 @@
-# B-CORE materials — upper header only (final approach)
+# B-CORE materials — upper header (locked)
 
 **Date:** 2026-07-31  
-**Status:** Implemented on branch — owner to verify on device  
-**Method:** Same as B-PROPERTIES colleague — chrome **inside** `SectionSearchApp`
+**Status:** Locked — see also `2026-07-31-materials-b-core-audit-lock.md`  
+**Method:** Chrome inside `SectionSearchApp` (same as B-PROPERTIES / Stay)
 
-## Scope (locked)
+## Scope
 
 | Do | Do not |
 |----|--------|
-| Upper header bands A–D only | Fake hub home with services grid as entry |
-| Compress search + Filters into pill | Erase FilterSheet / commodity / origin |
-| Large industrial type tabs → real `industrialType` | `collapseInlineStrips` |
-| Market + sort in header | Touch `MiniAppBottomNav` |
-| Listings under header | Fake stats 2450/18400/930 |
-| Lightning-B + CORE + Industrial Hub | Mock Marketplace / + bottom tabs |
-
-## Filter layers (compressed, not erased)
-
-1. **Header Band C:** search + Filters → opens `FilterSheet`  
-2. **Header Band D:** All / Machine / Raw material / Production line (+ market/sort)  
-3. **Under header (layer 2):** material commodity strip + origin strip (when relevant)  
-4. **FilterSheet:** listingMode + material + origin + price + industry + …  
-
-Band B includes a **cropped** industrial seal (`materials.jpg` + B mark) — not a half-screen hero.
+| B-CORE identity + search + Filters → FilterSheet | Fake hub / services grid entry |
+| Micro market beside BANCO | Fat mid-brand market pill / type-circle |
+| Smart horizontal wrap strip: types + origin | `collapseInlineStrips` / erase filters |
+| Commodity strip when raw/all | Touch `MiniAppBottomNav` |
+| ListingMode in FilterSheet | Fake stats / Marketplace bottom tabs |
 
 ## Files
 
-- `components/search/materials/MaterialsHomeHeader.tsx`  
-- `SectionSearchApp.tsx` — materials-only mount  
-- `FilterSheet.tsx` — materials listingMode chips  
-- `MiniAppBottomNav` — unchanged  
+- `components/search/materials/MaterialsHomeHeader.tsx` — identity + search only  
+- `SectionSearchApp.tsx` — materials axis + commodity strips  
+- `FilterSheet.tsx` — listingMode + material + origin refinements  

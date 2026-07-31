@@ -1,20 +1,16 @@
 /**
  * B-CORE Industrial Hub — upper header only (materials).
  *
- * Stay method: brand stays clean; chrome does not fight the wordmark.
- * - Market: micro 🇪🇬 EGP caption welded beside BANCO
- * - Industrial type: ONE compressed circle in the black space ABOVE search
- *   (removed from the under-search strip — it wrecked the row)
- * - Origin (All/Local/Imported): clean strip under search only
- * - Commodities stay under header when raw/all
+ * Identity + search + Filters (opens FilterSheet) + market welded beside BANCO.
+ * Browse axes (type / origin / commodity) live as smart horizontal strips under
+ * the header in SectionSearchApp — not duplicated as strip-wrecking chrome here.
  * Does NOT touch MiniAppBottomNav. No vanity counts. No fake hub.
  */
-import { Feather, Ionicons, MaterialCommunityIcons } from "@/components/icons";
+import { Feather, Ionicons } from "@/components/icons";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { AppTextInput as TextInput } from "@/components/AppTextInput";
 import type { TextInput as RNTextInput } from "react-native";
-import type { IndustrialType } from "@workspace/taxonomy/categories";
 import React, { useMemo } from "react";
 import {
   Platform,
@@ -35,28 +31,18 @@ const BANCO_LOGO = require("../../../assets/images/banco-logo.png");
 const B_MARK = require("../../../assets/images/b-mark.png");
 const HERO_PHOTO = require("../../../assets/images/categories/materials.jpg");
 
-const ACCENT = sectionAccent("materials"); // #A82A1C
+const ACCENT = sectionAccent("materials");
 const VOID = "#000000";
 const SNOW = "#FFFFFF";
 const ASH = "#8E8E93";
 const HAIRLINE = "rgba(255,255,255,0.16)";
-
-export type MaterialsTypeTab = {
-  value: IndustrialType;
-  label: string;
-};
-
-export type MaterialsOriginKey = "all" | "local" | "imported";
 
 type Props = {
   searchOpen: boolean;
   draftQuery: string;
   searchSaved: boolean;
   activeFilterCount: number;
-  activeIndustrialType: IndustrialType;
-  typeTabs: MaterialsTypeTab[];
   marketCountry: string;
-  originKey: MaterialsOriginKey;
   sort: string;
   inputRef: React.RefObject<RNTextInput | null>;
   onBack: () => void;
@@ -67,32 +53,11 @@ type Props = {
   onQueryChange: (text: string) => void;
   onSubmitQuery: () => void;
   onClearQuery: () => void;
-  onSelectType: (value: IndustrialType) => void;
-  onSelectOrigin: (value: MaterialsOriginKey) => void;
   onOpenMarket: () => void;
   onCycleSort: () => void;
 };
 
 type FeatherName = React.ComponentProps<typeof Feather>["name"];
-type MCIName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
-type TabIcon =
-  | { set: "feather"; name: FeatherName }
-  | { set: "mci"; name: MCIName };
-
-function tabIcon(value: IndustrialType): TabIcon {
-  switch (value) {
-    case "all":
-      return { set: "feather", name: "grid" };
-    case "machine":
-      return { set: "mci", name: "cog" };
-    case "raw_material":
-      return { set: "mci", name: "package-variant-closed" };
-    case "production_line":
-      return { set: "mci", name: "cog-outline" };
-    default:
-      return { set: "feather", name: "grid" };
-  }
-}
 
 function sortIcon(sort: string): FeatherName {
   if (sort === "price_asc") return "trending-up";
@@ -106,10 +71,7 @@ export function MaterialsHomeHeader({
   draftQuery,
   searchSaved,
   activeFilterCount,
-  activeIndustrialType,
-  typeTabs,
   marketCountry,
-  originKey,
   sort,
   inputRef,
   onBack,
@@ -120,8 +82,6 @@ export function MaterialsHomeHeader({
   onQueryChange,
   onSubmitQuery,
   onClearQuery,
-  onSelectType,
-  onSelectOrigin,
   onOpenMarket,
   onCycleSort,
 }: Props) {
@@ -138,36 +98,16 @@ export function MaterialsHomeHeader({
     const label = marketCountryLabel(marketCountry, isRTL);
     return {
       flag: phone?.flag ?? "",
-      currency,
       caption: currency || label,
       a11y: `${label}${currency ? ` ${currency}` : ""}`,
     };
   }, [marketCountry, isRTL]);
-
-  const originTabs: { value: MaterialsOriginKey; label: string }[] = [
-    { value: "all", label: t("home.engines.all") },
-    { value: "local", label: t("create.opts.local") },
-    { value: "imported", label: t("create.opts.imported") },
-  ];
-
-  const activeTypeTab =
-    typeTabs.find((tab) => tab.value === activeIndustrialType) ?? typeTabs[0];
-  const activeIcon = tabIcon(activeIndustrialType);
-  const typeActive = activeIndustrialType !== "all";
-
-  const cycleIndustrialType = () => {
-    if (typeTabs.length === 0) return;
-    const idx = typeTabs.findIndex((tab) => tab.value === activeIndustrialType);
-    const next = typeTabs[(idx < 0 ? 0 : idx + 1) % typeTabs.length];
-    onSelectType(next.value);
-  };
 
   return (
     <View
       style={[styles.root, { paddingTop: Math.max(0, topPad - 2) }]}
       testID="materials-core-header"
     >
-      {/* Band A */}
       <View style={[styles.topBar, { flexDirection: rowDir }]}>
         <Pressable
           onPress={onBack}
@@ -210,7 +150,6 @@ export function MaterialsHomeHeader({
         </Pressable>
       </View>
 
-      {/* Band B — brand + type circle in black space above search (trailing) */}
       <View style={styles.brandBlock} testID="materials-core-brand">
         <View
           style={[
@@ -247,90 +186,43 @@ export function MaterialsHomeHeader({
           <View style={styles.taglineRule} />
         </View>
 
-        {/* BANCO + market (center) · industrial type circle (black space, trailing) */}
         <View
           style={[
-            styles.aboveSearchRow,
+            styles.bancoMarketWeld,
             { flexDirection: isRTL ? "row-reverse" : "row" },
           ]}
+          testID="materials-powered-market-row"
         >
-          <View style={styles.aboveSearchSpacer} />
-          <View
-            style={[
-              styles.bancoMarketWeld,
-              { flexDirection: isRTL ? "row-reverse" : "row" },
-            ]}
-            testID="materials-powered-market-row"
+          <AppText style={styles.poweredLabelInline} numberOfLines={1}>
+            {t("booking.poweredBy")}
+          </AppText>
+          <Image
+            source={BANCO_LOGO}
+            style={styles.poweredLogo}
+            contentFit="contain"
+            tintColor={ACCENT}
+          />
+          <Pressable
+            onPress={onOpenMarket}
+            style={[styles.marketWeld, { flexDirection: rowDir }]}
+            accessibilityLabel={marketMeta.a11y}
+            testID="materials-market-beside-banco"
+            hitSlop={8}
           >
-            <AppText style={styles.poweredLabelInline} numberOfLines={1}>
-              {t("booking.poweredBy")}
+            {marketMeta.flag ? (
+              <AppText style={styles.marketFlag}>{marketMeta.flag}</AppText>
+            ) : (
+              <Feather name="globe" size={11} color={ASH} />
+            )}
+            <AppText style={styles.marketCaption} numberOfLines={1}>
+              {marketMeta.caption}
             </AppText>
-            <Image
-              source={BANCO_LOGO}
-              style={styles.poweredLogo}
-              contentFit="contain"
-              tintColor={ACCENT}
-            />
-            <Pressable
-              onPress={onOpenMarket}
-              style={[styles.marketWeld, { flexDirection: rowDir }]}
-              accessibilityLabel={marketMeta.a11y}
-              testID="materials-market-beside-banco"
-              hitSlop={8}
-            >
-              {marketMeta.flag ? (
-                <AppText style={styles.marketFlag}>{marketMeta.flag}</AppText>
-              ) : (
-                <Feather name="globe" size={11} color={ASH} />
-              )}
-              <AppText style={styles.marketCaption} numberOfLines={1}>
-                {marketMeta.caption}
-              </AppText>
-              <Feather name="chevron-down" size={10} color={ASH} />
-            </Pressable>
-          </View>
-          <View style={[styles.aboveSearchSpacer, styles.aboveSearchTrailing]}>
-            {/* Compressed type circle — was wrecking the under-search strip */}
-            <Pressable
-              onPress={cycleIndustrialType}
-              style={[
-                styles.typeCircle,
-                typeActive ? styles.typeCircleActive : null,
-              ]}
-              accessibilityLabel={activeTypeTab?.label ?? t("home.industrialTypes.all")}
-              accessibilityHint={t("home.industrialTypes.all")}
-              testID="materials-type-circle"
-            >
-              {activeIcon.set === "mci" ? (
-                <MaterialCommunityIcons
-                  name={activeIcon.name}
-                  size={16}
-                  color={typeActive ? SNOW : ACCENT}
-                />
-              ) : (
-                <Feather
-                  name={activeIcon.name}
-                  size={16}
-                  color={typeActive ? SNOW : ACCENT}
-                />
-              )}
-            </Pressable>
-            {/* Keep per-type testIDs wired for guards / e2e without bloating UI */}
-            {typeTabs.map((tab) => (
-              <Pressable
-                key={tab.value}
-                onPress={() => onSelectType(tab.value)}
-                style={styles.typeHitGhost}
-                testID={`industrial-type-${tab.value}`}
-                accessibilityElementsHidden
-                importantForAccessibility="no-hide-descendants"
-              />
-            ))}
-          </View>
+            <Feather name="chevron-down" size={10} color={ASH} />
+          </Pressable>
         </View>
       </View>
 
-      {/* Band C — search + Filters */}
+      {/* Search + Filters → FilterSheet (the open/close refinements sheet) */}
       {searchOpen ? (
         <View style={[styles.searchPill, { flexDirection: rowDir }]}>
           <Ionicons name="search" size={16} color={ACCENT} />
@@ -407,39 +299,6 @@ export function MaterialsHomeHeader({
           </Pressable>
         </View>
       )}
-
-      {/* Band D — origin only (types left the strip; circle lives above search) */}
-      <View
-        style={[styles.originRow, { flexDirection: rowDir }]}
-        testID="materials-type-strip"
-      >
-        <View
-          style={[styles.originSeg, { flexDirection: rowDir }]}
-          testID="materials-origin-strip"
-        >
-          {originTabs.map((o) => {
-            const active = originKey === o.value;
-            return (
-              <Pressable
-                key={o.value}
-                onPress={() => onSelectOrigin(o.value)}
-                style={[styles.originSegChip, active ? styles.originSegChipActive : null]}
-                testID={`section-origin-${o.value}`}
-              >
-                <AppText
-                  style={[
-                    styles.originSegText,
-                    { color: active ? SNOW : ASH },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {o.label}
-                </AppText>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
     </View>
   );
 }
@@ -448,7 +307,7 @@ const styles = StyleSheet.create({
   root: {
     backgroundColor: VOID,
     paddingHorizontal: 16,
-    paddingBottom: 0,
+    paddingBottom: 4,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: HAIRLINE,
   },
@@ -471,7 +330,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.06)",
   },
   sortHitActive: { backgroundColor: ACCENT, borderColor: ACCENT },
-  brandBlock: { alignItems: "center", marginBottom: 2 },
+  brandBlock: { alignItems: "center", marginBottom: 4 },
   wordmarkRow: { alignItems: "center", gap: 6, marginBottom: 2 },
   wordmarkB: { width: 36, height: 44 },
   wordmarkTextCol: { gap: 1, flexShrink: 1 },
@@ -528,18 +387,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     flexShrink: 1,
   },
-  aboveSearchRow: {
-    width: "100%",
-    alignItems: "center",
-    minHeight: 36,
-    marginBottom: 2,
-  },
-  aboveSearchSpacer: { flex: 1, minWidth: 36 },
-  aboveSearchTrailing: {
-    alignItems: "flex-end",
-    justifyContent: "center",
-    position: "relative",
-  },
   bancoMarketWeld: {
     alignItems: "center",
     gap: 5,
@@ -566,27 +413,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: ASH,
     letterSpacing: 0.4,
-  },
-  typeCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: ACCENT,
-    backgroundColor: "rgba(168,42,28,0.12)",
-  },
-  typeCircleActive: {
-    backgroundColor: ACCENT,
-    borderColor: ACCENT,
-  },
-  typeHitGhost: {
-    position: "absolute",
-    width: 1,
-    height: 1,
-    opacity: 0,
-    overflow: "hidden",
   },
   searchPill: {
     height: 42,
@@ -633,29 +459,5 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     fontFamily: "Inter_700Bold",
     color: SNOW,
-  },
-  originRow: {
-    marginTop: 6,
-    marginBottom: 2,
-    alignItems: "center",
-    justifyContent: "flex-start",
-  },
-  originSeg: {
-    alignItems: "center",
-    gap: 2,
-    paddingHorizontal: 4,
-    backgroundColor: "rgba(255,255,255,0.05)",
-    borderRadius: 12,
-    paddingVertical: 3,
-  },
-  originSegChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-  },
-  originSegChipActive: { backgroundColor: ACCENT },
-  originSegText: {
-    fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
   },
 });

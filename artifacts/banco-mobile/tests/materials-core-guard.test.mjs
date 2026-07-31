@@ -1,5 +1,4 @@
-// B-CORE materials UPPER HEADER only — filters compressed, never erased.
-// Method: same as B-PROPERTIES (chrome inside SectionSearchApp).
+// B-CORE materials — locked contracts after audit (2026-07-31).
 // Run: node --test tests/materials-core-guard.test.mjs
 
 import assert from "node:assert/strict";
@@ -34,26 +33,24 @@ test("materials shell is thin SectionSearchApp — no fake hub home layer", () =
   assert.doesNotMatch(materials, /collapseInlineStrips/);
 });
 
-test("upper header is B-CORE bands with Filters inside search pill", () => {
+test("upper header is B-CORE identity + search Filters only (no type-circle pollution)", () => {
   assert.match(header, /testID="materials-core-header"/);
   assert.match(header, /testID="materials-core-brand"/);
   assert.match(header, /b-mark/);
   assert.match(header, /materialsBrand|materialsHubLabel/);
   assert.match(header, /section-filter-toggle/);
-  assert.match(header, /testID="materials-type-strip"/);
-  // Industrial type is a compressed circle above search — not strip-wrecking tabs.
-  assert.match(header, /materials-type-circle/);
-  assert.match(header, /industrial-type-\$\{tab\.value\}/);
-  // Market welded as micro caption beside BANCO — not a fat mid-brand pill.
   assert.match(header, /materials-market-beside-banco|materials-powered-market-row/);
-  assert.match(header, /bancoMarketWeld|marketWeld/);
+  assert.match(header, /materials-core-seal|categories\/materials\.jpg/);
+  // Pollution bans
+  assert.doesNotMatch(header, /materials-type-circle/);
+  assert.doesNotMatch(header, /typeHitGhost/);
   assert.doesNotMatch(header, /MarketCountryButton/);
   assert.doesNotMatch(header, /\b2450\b|\b18400\b|\b930\b/);
   assert.doesNotMatch(header, /@expo\/vector-icons|Marketplace|collapseInline/);
   assert.match(header, /@\/components\/icons/);
 });
 
-test("filters not erased — layered: header + material/origin strips + FilterSheet", () => {
+test("filters compressed not erased — axis strip + commodities + FilterSheet", () => {
   assert.match(filter, /showMaterial/);
   assert.match(filter, /showOrigin/);
   assert.match(filter, /filter-material/);
@@ -61,19 +58,19 @@ test("filters not erased — layered: header + material/origin strips + FilterSh
   assert.match(section, /MaterialsHomeHeader/);
   assert.match(section, /MiniAppBottomNav/);
   assert.doesNotMatch(section, /collapseInlineStrips/);
-  // Layer 2 strips restored under header (not hidden forever)
   assert.match(section, /showOriginChrome = isMaterialsSection/);
   assert.match(
     section,
     /showMaterialChrome\s*=\s*\n?\s*isMaterialsSection/,
   );
-  assert.match(section, /testID="materials-material-strip"/);
-  // Origin under search; type circle above search — both wired
-  assert.match(header, /testID="materials-origin-strip"/);
-  assert.match(header, /onSelectOrigin/);
-  assert.match(section, /onSelectOrigin/);
+  // Smart horizontal wrap strip under header
+  assert.match(section, /testID="materials-type-strip"/);
+  assert.match(section, /materialsAxisStrip|flexWrap/);
+  assert.match(section, /industrial-type-\$/);
+  assert.match(section, /testID="materials-origin-strip"/);
   assert.match(section, /selectOrigin/);
-  assert.match(header, /materials-core-seal|categories\/materials\.jpg/);
+  assert.match(section, /testID="materials-material-strip"/);
+  assert.match(section, /selectMaterial|selectIndustrialType/);
 });
 
 test("bottom nav component untouched and still BANCO five tabs contract", () => {
@@ -96,4 +93,13 @@ test("other sections not mounted with materials header", () => {
   const car = fs.readFileSync(path.join(root, "app/section/car.tsx"), "utf8");
   assert.doesNotMatch(factories, /MaterialsHomeHeader/);
   assert.doesNotMatch(car, /MaterialsHomeHeader/);
+});
+
+test("MarketCountryButton not polluted with materials-only tone/compact API", () => {
+  const picker = fs.readFileSync(
+    path.join(root, "components/MarketCountryPicker.tsx"),
+    "utf8",
+  );
+  assert.doesNotMatch(picker, /tone\?: "default" \| "onDark"/);
+  assert.doesNotMatch(picker, /triggerCompact/);
 });

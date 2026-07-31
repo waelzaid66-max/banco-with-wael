@@ -3,9 +3,9 @@ import { SectionSearchApp } from "@/components/search/SectionSearchApp";
 /**
  * B-CORE Industrial Hub — materials section.
  *
- * Upper header chrome (identity + search/Filters + type tabs) lives inside
- * SectionSearchApp via MaterialsHomeHeader. Commodity/origin/listingMode stay
- * in FilterSheet — never erased. MiniAppBottomNav untouched.
+ * Upper header: identity + search/Filters. Browse axes (type/origin/commodity)
+ * are smart horizontal strips inside SectionSearchApp. listingMode refinements
+ * stay in FilterSheet. MiniAppBottomNav untouched.
  */
 export default function MaterialsSectionScreen() {
   return (
