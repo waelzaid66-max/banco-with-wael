@@ -9,6 +9,9 @@
 ### Wave 4 (audit hardening)
 MSG-07b sliding-window absorb + newest-id mark-read + older-load gate · MSG-14 media open · MSG-08 report+hide · NOTIF-04 receipts · NOTIF-08 label · hub support copy · merge main
 
+### Wave 5 (precision audit + MSG-14b)
+Near-bottom autoscroll · Android prepend gate · hide copy honesty · poll-wins dedupe · before cursor id tie-break · DeviceNotRegistered-only prune · chat video picker
+
 
 | ID | Problem | Severity | Status |
 |----|---------|----------|--------|
@@ -39,6 +42,7 @@ MSG-07b sliding-window absorb + newest-id mark-read + older-load gate · MSG-14 
 | NOTIF-06 | OS badge missing in push | Medium | **Fixed** |
 | NOTIF-07 | Push register single-attempt | Medium | **Fixed** (backoff retry) |
 | MSG-14 | Video/audio rendered as broken image | Medium | **Fixed** (openable attachment) |
+| MSG-14b | Video picker still images-only | Low | **Fixed** (gallery images+videos + media_kind) |
 | MSG-08 | No report-message / hide from thread | High | **Fixed** (support ticket + soft-hide) |
 | NOTIF-04 | No Expo receipt processing | High | **Fixed** (receipt prune; durable retry = 04b) |
 | NOTIF-08 | “In-app” toggle also suppresses push | Medium | **Fixed** (label honesty) |
@@ -53,8 +57,8 @@ Guards: `test:messenger-wiring` · `test:production-wiring` · existing `test:no
 |----|-----|----------|-------|
 | MSG-05 | Poll-only (3s/8s/15s) — no WS/typing/presence | Product | G47; needs Owner decision before rewrite |
 | MSG-08b | No hard block-user (mutual ban) | High | Soft-hide + report exist; ban needs schema |
-| MSG-13 | No per-thread mute | Medium | Global prefs only |
-| MSG-14b | Video/audio *picker* still images-only | Low | Renderer opens URL (MSG-14) |
+| MSG-13 | No per-thread mute | Medium | Global prefs only; needs schema |
+| MSG-14c | Audio / voice-note recorder | Low | API accepts audio; no recorder UI yet |
 
 **Architecture (keep):** HTTP polling · participant auth · listing-anchored conversations · inbox already passes listingId+role.
 

@@ -265,6 +265,7 @@ test("MSG-07b absorbs vacated poll ids and gates older load", () => {
   assert.match(thread, /newestId/);
   assert.match(thread, /maintainVisibleContentPosition/);
   assert.match(thread, /prevPollMsgsRef\.current = \[\]/);
+  assert.match(thread, /nearBottomRef/);
 });
 
 test("MSG-14 non-image media renders openable attachment", () => {
@@ -273,11 +274,19 @@ test("MSG-14 non-image media renders openable attachment", () => {
   assert.match(thread, /Linking\.openURL/);
 });
 
+test("MSG-14b chat picker accepts videos with media_kind", () => {
+  assert.match(thread, /mediaTypes:\s*\["images",\s*"videos"\]/);
+  assert.match(thread, /uploadMediaAsset/);
+  assert.match(thread, /media_kind:\s*uploaded\.type === "video"/);
+  assert.match(thread, /partitionPickedAssets/);
+});
+
 test("MSG-08 report uses support tickets; hide uses deleteConversation", () => {
   assert.match(thread, /createSupportTicket/);
   assert.match(thread, /category: "abuse"/);
   assert.match(thread, /deleteConversation/);
   assert.match(thread, /action-report/);
+  assert.match(thread, /chat\.hideTitle/);
 });
 
 test("NOTIF-08 settings label discloses push is gated with in-app", () => {
@@ -293,4 +302,18 @@ test("NOTIF-04 push schedules Expo receipt processing", () => {
   assert.match(push, /getReceipts/);
   assert.match(push, /processPushReceipts/);
   assert.match(push, /scheduleReceiptCheck/);
+  const deadFnAt = push.indexOf("function isDeadDeviceError");
+  const deadFn = push.slice(deadFnAt, deadFnAt + 280);
+  assert.match(deadFn, /DeviceNotRegistered/);
+  assert.doesNotMatch(
+    deadFn,
+    /return error === "DeviceNotRegistered" \|\| error === "InvalidCredentials"/,
+    "InvalidCredentials must not prune device tokens",
+  );
+  assert.match(deadFn, /return error === "DeviceNotRegistered";/);
+});
+
+test("MSG-07b before cursor uses created_at + id tie-break", () => {
+  assert.match(apiConv, /lt\(messages\.id, anchor\.id\)/);
+  assert.match(apiConv, /orderBy\(desc\(messages\.createdAt\), desc\(messages\.id\)\)/);
 });

@@ -257,6 +257,17 @@ Each item below is a standing problem report. **Nothing listed is deleted from t
 
 ---
 
+## Wave 5 — precision audit
+
+**MSG-07b scroll yank:** Autoscroll only when near bottom; clear prepend gate on content-size (Android).  
+**MSG-07b cursor:** `before` uses `(created_at, id)` tie-break + stable orderBy.  
+**NOTIF-04 prune:** Only `DeviceNotRegistered` (never `InvalidCredentials`).  
+**MSG-08 hide copy:** `chat.hideTitle` / `hideBody` instead of delete dialog.  
+**MSG-14b:** Gallery `images`+`videos`, `uploadMediaAsset`, explicit `media_kind`, duration/size via `partitionPickedAssets`.  
+**Status:** Fixed
+
+---
+
 ## Still open
 
-MSG-05 / MSG-08b / MSG-13 / MSG-14b · NOTIF-02 / NOTIF-04b / NOTIF-10 · MAP-07 / MAP-08 / MAP-10
+MSG-05 / MSG-08b / MSG-13 / MSG-14c · NOTIF-02 / NOTIF-04b / NOTIF-10 · MAP-07 / MAP-08 / MAP-10

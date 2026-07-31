@@ -569,8 +569,9 @@ export async function uploadMediaAsset(
 }
 
 /**
- * Image-only convenience wrapper kept for chat attachments, which never send
- * video. Returns just the servable URL.
+ * Upload convenience wrapper for callers that already know the asset is an
+ * image (legacy). Chat now uses `uploadMediaAsset` for photo + video (MSG-14b).
+ * Returns just the servable URL.
  */
 export async function uploadImageAsset(
   asset: ImagePicker.ImagePickerAsset
