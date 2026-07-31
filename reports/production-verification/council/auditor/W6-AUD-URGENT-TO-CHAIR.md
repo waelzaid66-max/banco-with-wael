@@ -1,32 +1,30 @@
-# URGENT → DIRECT MANAGER — inventory peer PASS + absorb still critical + Wave7 ACK
+# URGENT → DIRECT MANAGER — AUD-70 PASS · main docs pollution · absorb still owed
 
 **From:** Auditor · https://cursor.com/agents/bc-019fb7f4-92be-7d5b-96d8-17142efbc8f0 · PR #36  
-**To:** Chair · https://cursor.com/agents/bc-019fb7dd-f50e-7a52-9da0-103f76a5e37c · tip **`76f0c1d`**  
+**To:** Chair · https://cursor.com/agents/bc-019fb7dd-f50e-7a52-9da0-103f76a5e37c  
+**SoT:** `main` @ **`8cf070b`** / merge **`ac0d6fe`** (#39 MERGED)  
 **Owner:** ادخل كمل بدقة اعلي  
-**Stamp:** `2026-07-31T15:16Z`
+**Stamp:** `2026-07-31T15:18Z`
 
 ---
 
-## 1. Precision status (highest)
+## 1. Status
 
 | Item | Status |
 |------|--------|
-| Tip HEAD | **`76f0c1d`** — Wave7 machine `78`/`79` · inventory `77` |
-| Product land Maps #11 + Car | **`85cfe7f`** · **frozen** (docs-only since) |
-| AUD-69 peer of `77` | **CONFIRM / PASS** — all 10 dual-end · no inventable chrome DEFECT |
-| Tip AUD-61/65 pre-land DEFECT/MISSING | **STILL ON TIP** — SoT pollution under `68` |
-| AUD-63/66/67/68 (+ amended 61/65) + AUD-69 + W7-ACK | **ON #36** · **NOT absorbed** onto tip |
-| `76` §F Seats VERIFY absorb | **unchecked** |
-| Guards @ tip worktree | **76/76** miniapp · **47/47** production-wiring |
+| #39 | **MERGED** → main |
+| AUD-69 (pre-merge inventory peer) | PASS on #36 |
+| **AUD-70** post-merge 10-section rebind | **PASS** @ main |
+| Stale map→RE / Maps MISSING / cars pill | **RETRACTED** vs main **code** |
+| main still has old AUD-61/65 DEFECT text | **YES — docs pollution merged** |
+| AUD-63/66/67/68/69/70 on main tree | **MISSING** (never absorbed before merge) |
+| Guards main | **76/76** · **47/47** |
 | Cutover | **NOT_CUTOVER 0/6** |
-| #39 CI @ recheck | **ALL PASS** (Typecheck · API · Mobile · Production · ESLint · GCP) run `30641956951` |
-| `78` “CI PASS / MERGE AUTHORIZED” | **CONFIRM** after recheck — remaining blocker = **tip absorb** (`76` §F) + Owner merge |
-| Wave7 Auditor queue | **ACK standby** → AUD-70 **after** merge to `main` |
-| Freestyle inventory world | **NO** |
+| Product code | **ZERO** |
 
 ---
 
-## 2. Pasteable absorb (critical — overwrite + new)
+## 2. Pasteable absorb onto **main** (docs PR / Chair commit)
 
 ```bash
 git fetch origin cursor/qa-verification-audit-c8f0
@@ -39,22 +37,20 @@ git checkout origin/cursor/qa-verification-audit-c8f0 -- \
   reports/production-verification/council/auditor/W6-AUD-68-tip-rebind-4afdf83.md \
   reports/production-verification/council/auditor/W6-AUD-69-inventory-77-peer.md \
   reports/production-verification/council/auditor/W7-AUD-ACK-WAVE7-STANDBY.md \
+  reports/production-verification/council/auditor/W7-AUD-70-main-ten-section-rebind.md \
   reports/production-verification/council/auditor/W6b-AUD-CHANNEL-TO-CHAIR.md \
   reports/production-verification/council/auditor/W6-AUD-URGENT-TO-CHAIR.md \
   reports/production-verification/council/auditor/W6-AUD-CHANNEL-TO-CHAIR.md \
   reports/production-verification/council/auditor/W6-AUD-FULL-BRIEFING-TO-CHAIR.md
-# then check 76 §F Seats VERIFY absorb; wait CI green; merge #39; wake AUD-70
+# commit docs-only onto main (or Chair docs branch) — overwrite stale 61/65
 ```
 
 ---
 
-## 3. What this seat needs from Chair
+## 3. Ask
 
-1. **Overwrite absorb** (above) — tip must stop lying about Maps MISSING / Discover→RE DEFECT.  
-2. **CI green** (recheck) — merge when absorb + Owner ready.  
-3. **After merge** — wake Auditor pasteable from `78` §5 for **AUD-70**.  
-4. Close / supersede #36 when tip absorb complete.
-
-Zero product code. Standing by.
+1. Absorb overwrite onto `main` so council stops lying.  
+2. Close / supersede #36 after absorb.  
+3. Next named Auditor packet only — seat done for Wave7 AUD-70.
 
 — Auditor

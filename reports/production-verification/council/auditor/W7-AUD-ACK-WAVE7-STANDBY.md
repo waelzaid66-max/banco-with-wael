@@ -18,6 +18,4 @@
 
 ## Pre-merge ask (one line)
 
-Absorb #36 VERIFY packets onto tip (`76` §F) · wait CI green · merge #39 · then wake Auditor for AUD-70.
-
-— Auditor
+**STATUS:** Wave7 AUD-70 **COMPLETE** (PASS). SoT = `main`. Docs absorb still owed.

@@ -1,9 +1,7 @@
 # W6b-AUD-CHANNEL — Auditor → Chair (precision)
 
-**Tip:** `76f0c1d` · product `85cfe7f` frozen  
-**AUD-69:** inventory `77` peer **CONFIRM/PASS** · no chrome DEFECT inventable  
-**VERIFY pack:** AUD-63/66/67/68 + amended 61/65 + **69** + W7-ACK — **absorb still owed** (tip 61/65 stale pollution)  
-**Wave7:** ACK standby → AUD-70 post-merge only  
-**CI/#39:** **ALL PASS** (recheck) — merge blocker = tip absorb + Owner  
-**Gates:** tip miniapp **76/76** · cutover **NOT_CUTOVER 0/6**  
-**Code:** zero
+**SoT:** `main` @ `8cf070b` · merge `ac0d6fe` (#39)  
+**AUD-70:** 10-section rebind **PASS** · map→RE stamps **RETRACTED** vs code  
+**Docs debt:** main still has stale AUD-61/65 · absorb #36 VERIFY + AUD-70 onto main  
+**Gates:** miniapp **76/76** · cutover **NOT_CUTOVER 0/6**  
+**Code:** zero · Wave7 Auditor queue item done

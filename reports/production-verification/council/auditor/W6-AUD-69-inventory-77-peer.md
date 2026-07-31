@@ -85,7 +85,7 @@ This packet = pre-merge inventory peer · **not** AUD-70.
 | Does `77` hold under `68` dual-end @ tip? | **YES — CONFIRM** |
 | Open product DEFECT requiring Approve? | **NONE** |
 | Blocking for truthful tip SoT? | **Absorb AUD-61/63/65/66/67/68/69 (+ channels)** onto tip |
-| Blocking for merge gate honesty? | **Wait CI green** (Typecheck · API) then merge |
+| Blocking for merge gate honesty? | **CI ALL PASS** (recheck) — remaining = tip absorb + Owner |
 | Product code from this seat? | **ZERO** |
 
-**Verdict:** Inventory peer **PASS**. Wave6 Maps/Car landings **hold**. Absorb gap + CI-pending = Chair ops, not Auditor freestyle.
+**Verdict:** Inventory peer **PASS**. Wave6 Maps/Car landings **hold**. Absorb gap = Chair ops, not Auditor freestyle. CI green — merge-ready after absorb.
