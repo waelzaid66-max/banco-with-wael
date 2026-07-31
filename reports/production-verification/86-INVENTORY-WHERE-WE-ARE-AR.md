@@ -1,24 +1,14 @@
-# 86 — جرد الوصول (Director)
+# 86 — جرد الوصول (بعد امتصاص ريبلت)
 
-**Tip `main`** · Master **`88`** · أوامر **`90`**
+**Tip `7e3b40a`+** · وزّع من **`91`** فقط
 
-## جملة واحدة
-Wave9 + تنظيف أسرار `.replit` + تحويل معاينة Replit لـ `banco-website` على الطريق — **ليس** Live Certified. الفريق ينفّذ `90` الآن.
-
-## مغلق
-DIR-01 · DIR-02 · Wave9 E · SEC-01/02 من الـ VCS · DEP-01a workflow · MOB-05 · NO-DELETE
-
-## مفتوح الآن
-| بند | من |
-|-----|-----|
-| Owner Secrets UI | Owner |
-| DIR-03 شوتات | Replit + UX |
-| SEC/DEP VERIFY | Intelligence |
-| AUTH-01 · ACC-00 · LIVE-01 | بعد Approve Plan |
-| فلاتر مزدوجة MOB-01..03 | HOLD |
-| SEC-02b PUBLIC_* shared | WATCH |
+## جملة
+ريبلت = عيون (تشغيل/شوتات/تقارير). التنظيف الأمني على git اتعمل. الأسرار على Owner. الشوتات على tip الجديد إلزامية. المنتج بعده Approve Plan لتخصص واحد.
 
 ## ابدأ
-`90-DIRECTOR-TEAM-WAKE.md` → الصق أمر مقعدك
+1. `91` ← توزيع التخصصات  
+2. `88` ← الباك لوج  
+3. PASTE Replit (90/90)  
+4. `OWNER-SECRETS-REQUIRED`
 
 — Director

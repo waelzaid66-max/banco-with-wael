@@ -2,10 +2,8 @@
 
 **Authority:** Chief Production Delivery Director  
 **Date:** 2026-07-31  
-**SoT tip:** `origin/main` (Director continue · Wave9 E + SEC/DEP hygiene)  
-**Mission:** Production Readiness — not feature invention  
-**Law:** Evidence or UNKNOWN · Repair not rewrite · NO-DELETE Leaflet/FilterSheet/mapLatch/messenger · No `*-5cf0` merges without written Director EXECUTE  
-**Team wake:** `90-DIRECTOR-TEAM-WAKE.md` 
+**SoT tip:** `origin/main` @ `7e3b40a` · Distribution **`91`**  
+**Team wake:** `90` · **Replit absorb + specialty assign:** **`91`** 
 
 This is the **ONE** engineering backlog. All other reports feed this file. Agents do not invent parallel lists.
 
@@ -84,6 +82,11 @@ Status: OPEN · VERIFY · HOLD · CLOSED · UNVERIFIED
 | **SEC-05** | P1 | `PUBLIC_API_BASE_URL` domain allowlist | `paymentProvider.ts` | PE-API | Reject foreign HTTPS | 10 |
 | **SEC-06** | P1 | Dependency High CVEs: next / js-yaml / brace-expansion | Replit P1-SEC-01 | PE-API | `pnpm audit` delta · CI green | 11 |
 | **SEC-07** | P1 | `publicVisibilityConditions()` coverage audit (all public queries + getById) | `feedVisibility.ts` · Replit P3-ABUSE | Intelligence→PE-API | Grep matrix PASS | 12 |
+| **API-HEALTH-01** | P1 | Health probe path honesty (`/healthz` vs `/api/v1/health` 404) | PIO ISSUE-005 | PE-API | curl matrix · Approve Plan | 13 |
+| **API-FACETS-01** | P1 | `/api/v1/search/facets` categories=0 with listings>0 | PIO ISSUE-006 | Intel curl → PE-API | JSON evidence | 14 |
+| **API-FACETS-02** | P2 | Clients hitting wrong `/api/v1/facets` paths | PIO ISSUE-008 | Intelligence | grep file:line | 14b |
+| **NODE-01** | P2 | Replit Node 20 vs CI Node 24 | PIO DRIFT-002 | Reliability draft Plan | Approve Plan | 25 |
+| **CODEGEN-01** | P2 | OpenAPI orval freshness gate in CI | P1-CODEGEN | Reliability draft Plan | Approve Plan | 26 |
 
 ### Track D — Mobile product (assigned narrow)
 
@@ -135,19 +138,15 @@ Requires: Physical Android · Physical iPhone · APNs · FCM · Production Backe
 ## 4. Implementation order (Director lock)
 
 ```
-DIR-01 CI tip green
-  → DIR-02 AUD-90 + DIR-03 Replit shots (parallel read-only)
-  → SEC-01 + SEC-02 (Owner secrets) 
-  → AUTH-01 (Approve Plan first)
-  → DEP-01 web canonical
-  → SEC-03…07
-  → ACC-00 audit packet
-  → MOB-04/06/07/09 only with Approve Plan
-  → MOB-01/02/03 HOLD until Owner names World
-  → LIVE-01 cutover (Owner infra)
+Owner Secrets (SEC-01/02)
+  → DIR-03 Replit+UX shots on tip 7e3b40a+
+  → Intelligence SEC/DEP VERIFY + API-FACETS curl
+  → Director Approve Plan (one of: API-FACETS-01 | AUTH-01 | SEC-03)
+  → PE one ID → REL+Intel VERIFY → merge
+  → LIVE-01 last (Owner Coolify)
 ```
 
-**One World / one EXECUTE packet at a time for product code.**
+See specialty paste packets in **`91`**.
 
 ---
 
@@ -172,8 +171,11 @@ Director may **reject** any PR that: invents features · merges `*-5cf0` · dele
 - `70` Hard Truth Map  
 - `reports/replit-env/2026-07-31-ALL-ISSUES-MASTER-REPORT.md` (normalized; 5cf0 advice rejected; ENV “fixed” claim overturned)  
 - `reports/intelligence/2026-07-31-PRODUCTION-INTELLIGENCE-REPORT.md` (READ ONLY — mapped below)  
+- `91-REPLIT-CORPUS-ABSORB-AND-TEAM-DISTRIBUTION.md` (**specialty SoT**)  
+- Auditor absorbed: DIR-02 · DIR-03 board · ACC-00 DRAFT · W9-AUD-90  
+- Reliability absorbed: W9-REL precision · DIR-01 green  
 - Local mobile test evidence on Wave9 E  
-- CI run history on `main`
+- CI run `30654946946` success on `7e3b40a`
 
 ### 6.1 Intelligence report mapping (2026-07-31)
 
