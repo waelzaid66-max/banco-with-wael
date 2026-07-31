@@ -535,8 +535,9 @@ export default function ListingDetailScreen() {
       const res = await createConversation({ listing_id: id });
       const conversationId = res.data?.id;
       if (!conversationId) throw new Error("missing conversation");
-      // Mirror inbox → thread chrome: listingId unlocks share/offer; role gates
-      // seller mark-sold. createConversation always returns both (buyer path).
+      // Forward listingId + viewer_role so offer / share / mark-sold chrome
+      // unlocks in the thread (same contract as inbox → /messages/[id]).
+      // createConversation always returns both on the buyer path.
       router.push({
         pathname: "/messages/[id]",
         params: {

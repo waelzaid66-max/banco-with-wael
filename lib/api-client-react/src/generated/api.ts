@@ -27,6 +27,8 @@ import type {
   AdminPlanUpdate,
   AiAssistantBody,
   AskBancoAssistant200,
+  AttachImportOrderDocument201,
+  AttachImportOrderDocumentBody,
   BoostListing200,
   BoostListingBody,
   BulkImportListings200,
@@ -76,6 +78,7 @@ import type {
   DealerBulkActionBody,
   DeleteAccount200,
   DeleteConversation200,
+  DeleteImportOrderDocument200,
   DeleteListing200,
   DeleteListingComment200,
   DeleteSavedSearch200,
@@ -177,6 +180,7 @@ import type {
   ListConversations200,
   ListGlobalSupply200,
   ListGlobalSupplyParams,
+  ListImportOrderDocuments200,
   ListInvestments200,
   ListInvestmentsParams,
   ListInvoices200,
@@ -2575,6 +2579,228 @@ export const useCancelImportOrder = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCancelImportOrderMutationOptions(options));
+    }
+
+export const getListImportOrderDocumentsUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/import-orders/${id}/documents`
+}
+
+/**
+ * Matches Express `GET /api/v1/import-orders/:id/documents`.
+ * @summary List the paperwork attached to an import order (owner only)
+ */
+export const listImportOrderDocuments = async (id: string, options?: RequestInit): Promise<ListImportOrderDocuments200> => {
+
+  return customFetch<ListImportOrderDocuments200>(getListImportOrderDocumentsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListImportOrderDocumentsQueryKey = (id: string,) => {
+    return [
+    `/api/v1/import-orders/${id}/documents`
+    ] as const;
+    }
+
+
+export const getListImportOrderDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof listImportOrderDocuments>>, TError = ErrorType<unknown>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listImportOrderDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListImportOrderDocumentsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listImportOrderDocuments>>> = ({ signal }) => listImportOrderDocuments(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listImportOrderDocuments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListImportOrderDocumentsQueryResult = NonNullable<Awaited<ReturnType<typeof listImportOrderDocuments>>>
+export type ListImportOrderDocumentsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List the paperwork attached to an import order (owner only)
+ */
+
+export function useListImportOrderDocuments<TData = Awaited<ReturnType<typeof listImportOrderDocuments>>, TError = ErrorType<unknown>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listImportOrderDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListImportOrderDocumentsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAttachImportOrderDocumentUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/import-orders/${id}/documents`
+}
+
+/**
+ * The file must already be uploaded through the shared presigned-URL flow; this records its servable URL under a checklist kind. Matches Express `POST /api/v1/import-orders/:id/documents`.
+ * @summary Attach an uploaded file to an import order (owner only)
+ */
+export const attachImportOrderDocument = async (id: string,
+    attachImportOrderDocumentBody: AttachImportOrderDocumentBody, options?: RequestInit): Promise<AttachImportOrderDocument201> => {
+
+  return customFetch<AttachImportOrderDocument201>(getAttachImportOrderDocumentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(attachImportOrderDocumentBody)
+  }
+);}
+
+
+
+
+export const getAttachImportOrderDocumentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof attachImportOrderDocument>>, TError,{id: string;data: BodyType<AttachImportOrderDocumentBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof attachImportOrderDocument>>, TError,{id: string;data: BodyType<AttachImportOrderDocumentBody>}, TContext> => {
+
+const mutationKey = ['attachImportOrderDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof attachImportOrderDocument>>, {id: string;data: BodyType<AttachImportOrderDocumentBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  attachImportOrderDocument(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AttachImportOrderDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof attachImportOrderDocument>>>
+    export type AttachImportOrderDocumentMutationBody = BodyType<AttachImportOrderDocumentBody>
+    export type AttachImportOrderDocumentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Attach an uploaded file to an import order (owner only)
+ */
+export const useAttachImportOrderDocument = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof attachImportOrderDocument>>, TError,{id: string;data: BodyType<AttachImportOrderDocumentBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof attachImportOrderDocument>>,
+        TError,
+        {id: string;data: BodyType<AttachImportOrderDocumentBody>},
+        TContext
+      > => {
+      return useMutation(getAttachImportOrderDocumentMutationOptions(options));
+    }
+
+export const getDeleteImportOrderDocumentUrl = (id: string,
+    documentId: string,) => {
+
+
+
+
+  return `/api/v1/import-orders/${id}/documents/${documentId}`
+}
+
+/**
+ * @summary Remove an attached document from an import order (owner only)
+ */
+export const deleteImportOrderDocument = async (id: string,
+    documentId: string, options?: RequestInit): Promise<DeleteImportOrderDocument200> => {
+
+  return customFetch<DeleteImportOrderDocument200>(getDeleteImportOrderDocumentUrl(id,documentId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteImportOrderDocumentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteImportOrderDocument>>, TError,{id: string;documentId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteImportOrderDocument>>, TError,{id: string;documentId: string}, TContext> => {
+
+const mutationKey = ['deleteImportOrderDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteImportOrderDocument>>, {id: string;documentId: string}> = (props) => {
+          const {id,documentId} = props ?? {};
+
+          return  deleteImportOrderDocument(id,documentId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteImportOrderDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof deleteImportOrderDocument>>>
+
+    export type DeleteImportOrderDocumentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Remove an attached document from an import order (owner only)
+ */
+export const useDeleteImportOrderDocument = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteImportOrderDocument>>, TError,{id: string;documentId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteImportOrderDocument>>,
+        TError,
+        {id: string;documentId: string},
+        TContext
+      > => {
+      return useMutation(getDeleteImportOrderDocumentMutationOptions(options));
     }
 
 export const getBumpListingUrl = (id: string,) => {

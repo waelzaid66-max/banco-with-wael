@@ -532,10 +532,10 @@ export async function sendMessage(
       type: "message",
       title: sender?.name ?? "رسالة جديدة · New message",
       body: preview.length > 80 ? `${preview.slice(0, 79)}…` : preview,
-      // Recipient's role when they open the thread (mark-sold / seller chrome).
       data: {
         conversation_id: conversationId,
         listing_id: conv.listingId,
+        // Recipient's role when they open the thread (mark-sold / seller chrome).
         role: isBuyer ? "seller" : "buyer",
       },
     });

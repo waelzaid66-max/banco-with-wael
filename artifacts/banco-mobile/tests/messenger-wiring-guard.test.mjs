@@ -25,6 +25,7 @@ const assistant = fs.readFileSync(path.join(root, "app/assistant.tsx"), "utf8");
 function pushParamsWindow(src, marker) {
   const at = src.indexOf(marker);
   assert.ok(at > 0, `missing marker: ${marker}`);
+  // params object typically sits within a few hundred chars after pathname.
   return src.slice(at, at + 900);
 }
 
@@ -69,11 +70,13 @@ test("thread gates share/offer on listingId (chrome that was unwired)", () => {
 test("assistant conversation action may forward listingId but never invents role", () => {
   const w = pushParamsWindow(assistant, 'pathname: "/messages/[id]"');
   assert.match(w, /a\.conversation_id/);
+  // Optional listingId from action only.
   assert.match(w, /a\.listing_id\s*\?\s*\{\s*listingId:\s*a\.listing_id/);
   assert.doesNotMatch(w, /role:\s*/);
 });
 
 test("mobile chat stays poll-only (G47 — no WebSocket client)", () => {
+  // Scan messenger surfaces for accidental WS introduction.
   for (const [label, src] of [
     ["thread", thread],
     ["inbox", inbox],
@@ -84,8 +87,16 @@ test("mobile chat stays poll-only (G47 — no WebSocket client)", () => {
       `${label} must remain poll-only (G47)`,
     );
   }
-  assert.match(thread, /refetchInterval:\s*3000/, "thread poll interval contract");
-  assert.match(inbox, /refetchInterval:\s*8000/, "inbox poll interval contract");
+  assert.match(
+    thread,
+    /refetchInterval:\s*3000/,
+    "thread poll interval contract",
+  );
+  assert.match(
+    inbox,
+    /refetchInterval:\s*8000/,
+    "inbox poll interval contract",
+  );
 });
 
 test("MSG-06/10 deliver seeds cache and preserves reply on retry", () => {

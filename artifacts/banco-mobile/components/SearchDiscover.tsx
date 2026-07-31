@@ -25,12 +25,19 @@ import { useColors } from "@/hooks/useColors";
 // shopper picks between). Each card pushes a dedicated section mini-app —
 // never filters the shared Search tab in place (that melt collapsed every
 // catalogue into one melted search surface).
-const SECTIONS: Category[] = ["car", "real_estate", "facilities", "materials"];
+// "all" is a Search-tab filter chip only — it is NOT a Discover portal and must
+// never resolve to /section/car (owner: «بيفتح قسم السيارات»).
+type BrowseSection = Exclude<Category, "all">;
+const SECTIONS: BrowseSection[] = [
+  "car",
+  "real_estate",
+  "facilities",
+  "materials",
+];
 
 // Dedicated section mini-app routes. Must stay registered in app/_layout.tsx
-// as Stack.Screen entries or router.push 404s.
-const SECTION_ROUTE: Record<Category, Href> = {
-  all: "/section/car",
+// as Stack.Screen entries or router.push 404s. No entry for "all".
+const SECTION_ROUTE: Record<BrowseSection, Href> = {
   car: "/section/car",
   real_estate: "/section/real-estate",
   facilities: "/section/factories",
@@ -41,8 +48,7 @@ const SECTION_ROUTE: Record<Category, Href> = {
 // staying in the BANCO red/charcoal family.
 // Red-family fallback fills behind the section photos (identity rule: logo red
 // + derivatives only — aligned with lib/sectionTheme's corrected palette).
-const SECTION_GRADIENT: Record<Category, [string, string]> = {
-  all: ["#7A0C12", "#1C0507"],
+const SECTION_GRADIENT: Record<BrowseSection, [string, string]> = {
   car: ["#8A0E14", "#1C0507"],
   real_estate: ["#7A1226", "#190509"],
   facilities: ["#7E1F14", "#140505"],
@@ -95,7 +101,7 @@ export function SearchDiscover({
   const rowDir = isRTL ? "row-reverse" : "row";
   const textAlign = isRTL ? "right" : "left";
 
-  const handleSectionPress = (cat: Category) => {
+  const handleSectionPress = (cat: BrowseSection) => {
     // ENTER dedicated section mini-app — never show engine strips on Discover
     // and never melt into shared Search criteria (Owner screenshot regression).
     router.push(SECTION_ROUTE[cat]);

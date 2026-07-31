@@ -1,6 +1,6 @@
 import { FeedItem, getMapClusters } from "@workspace/api-client-react";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, StyleSheet, View } from "react-native";
+import { Alert, Linking, StyleSheet, View } from "react-native";
 
 import { apiCategoryFor } from "@/components/CategoryTabs";
 import { useI18n } from "@/context/LanguageContext";
@@ -232,13 +232,25 @@ export function SearchResultsMap({
           if (hit) setSelectedId(msg.id);
           else onOpenListingId?.(msg.id);
         } else if (msg.type === "locate_error") {
-          // MAP-06: parity with native — surface deny/timeout instead of console-only.
+          // MAP-06: parity with native — surface deny/timeout; offer Settings on deny.
           Alert.alert(
             t("search.locateFailedTitle"),
             msg.reason === "denied"
               ? t("search.locateDeniedBody")
               : t("search.locateFailedBody"),
-            [{ text: t("common.cancel"), style: "cancel" }],
+            [
+              { text: t("common.cancel"), style: "cancel" },
+              ...(msg.reason === "denied"
+                ? [
+                    {
+                      text: t("profile.photoPermissionSettings"),
+                      onPress: () => {
+                        void Linking.openSettings();
+                      },
+                    },
+                  ]
+                : []),
+            ],
           );
         }
       } catch {
@@ -247,7 +259,7 @@ export function SearchResultsMap({
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, [scheduleFetchClusters, onOpenListingId]);
+  }, [scheduleFetchClusters, onOpenListingId, t]);
 
   const selected = useMemo(
     () => items.find((item) => item.id === selectedId) ?? null,

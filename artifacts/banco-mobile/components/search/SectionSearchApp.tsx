@@ -35,6 +35,14 @@ import { SearchResultsSurface } from "@/components/search/SearchResultsSurface";
 import { SearchResultsMap } from "@/components/search/SearchResultsMap";
 import { FilterSheet } from "@/components/search/FilterSheet";
 import { FilterPillSelect } from "@/components/search/FilterPillSelect";
+import {
+  PropertyHomeHeader,
+  RE_COMMERCIAL_TAB,
+  RE_COMMERCIAL_TYPES,
+  RE_MORE_TAB,
+  RE_MORE_TYPES,
+} from "@/components/search/property/PropertyHomeHeader";
+import { MaterialsHomeHeader } from "@/components/search/materials/MaterialsHomeHeader";
 import { axisShape, type SectionChrome } from "@/components/search/sectionChrome";
 import { MiniAppBottomNav } from "@/components/MiniAppBottomNav";
 import {
@@ -122,10 +130,18 @@ function isReOfferEngine(engine: EngineDef): boolean {
   return engine.params.offer_type === "sale" || engine.params.offer_type === "rent";
 }
 
-/** FilterSheet refinements only — never offer/type (those live on strips). */
+/** FilterSheet engines for RE: refinements only (compound/furnished/…).
+ *  Offer sale/rent lives on PropertyHomeHeader strip; property-type engines
+ *  stay out — Band D / propertyType owns those. */
 function isReSheetEngine(engine: EngineDef): boolean {
   if (engine.key === "all") return true;
-  if (engine.params.offer_type || engine.params.property_type) return false;
+  if (engine.params.property_type) return false;
+  if (
+    engine.params.offer_type === "sale" ||
+    engine.params.offer_type === "rent"
+  ) {
+    return false;
+  }
   return true;
 }
 
@@ -292,14 +308,19 @@ export function SectionSearchApp({
   const params = useLocalSearchParams<{
     map?: string | string[];
     engine?: string | string[];
+    property_type?: string | string[];
   }>();
   const mapParam = Array.isArray(params.map) ? params.map[0] : params.map;
   const engineParam = Array.isArray(params.engine)
     ? params.engine[0]
     : params.engine;
+  const propertyTypeParam = Array.isArray(params.property_type)
+    ? params.property_type[0]
+    : params.property_type;
 
   // Seed the engine once on mount → entering the page immediately loads this
   // section's results with no category chooser in sight.
+  // RE desks may also deep-link ?property_type=apartment (composes with ?engine=sale|rent).
   const seeded = useRef(false);
   useEffect(() => {
     if (seeded.current) return;
@@ -311,9 +332,19 @@ export function SectionSearchApp({
       allowed?.some((e) => e.key === engineParam)
         ? engineParam
         : null;
+    const deepPropertyType =
+      category === "real_estate" &&
+      propertyTypeParam &&
+      (RE_TYPE_PRIMARY as readonly string[]).includes(propertyTypeParam)
+        ? propertyTypeParam
+        : null;
+    // Type-only engines (apartment/villa/…) migrate to propertyType below in
+    // the normalize effect; if both engine=sale and property_type=… are set,
+    // keep the offer engine and apply the type from the dedicated param.
     const seed: SearchCriteria = {
       ...buildSeed(criteria.marketCountry),
       ...(deepEngine ? { engineKey: deepEngine } : {}),
+      ...(deepPropertyType ? { propertyType: deepPropertyType } : {}),
     };
     baselineRef.current = seed;
     commit(seed);
@@ -377,9 +408,9 @@ export function SectionSearchApp({
 
   useEffect(() => {
     if (!wantMap) return;
-    // Open as soon as results exist — server clusters work even when the
+    // Open map as soon as results exist — server clusters work even when the
     // current page has no pin coords. Waiting for hasPagePins left ?map=1 /
-    // Discover "Explore on map" stuck in list mode.
+    // Discover "Explore on map" / desk-map latched forever without client pins.
     if (inResultsView) {
       setMapMode(true);
       setWantMap(false);
@@ -421,13 +452,17 @@ export function SectionSearchApp({
   const reTypeTabs = useMemo(() => {
     if (!isRealEstateSection) return [] as string[];
     const counts = scopedFacets?.property_type;
-    return RE_TYPE_PRIMARY.filter((ty) => {
+    const tabs = RE_TYPE_PRIMARY.filter((ty) => {
       // Core residential/land always visible (fail-open identity of the section).
       if (ty === "apartment" || ty === "villa" || ty === "land") return true;
+      // Keep the shopper's current selection visible even when facet count is 0
+      // so desk/FilterSheet taps are never silently wiped after normalize.
+      if (criteria.propertyType === ty) return true;
       if (!counts) return true;
       return (counts[ty] ?? 0) > 0;
     });
-  }, [isRealEstateSection, scopedFacets]);
+    return tabs as string[];
+  }, [isRealEstateSection, scopedFacets, criteria.propertyType]);
   /** When a sheet refinement owns engineKey, offer strip still highlights all. */
   const activeOfferKey = useMemo(() => {
     if (!isRealEstateSection) return criteria.engineKey;
@@ -490,14 +525,11 @@ export function SectionSearchApp({
     if (
       criteria.category === "real_estate" &&
       criteria.propertyType &&
-      reTypeTabs.length > 0 &&
-      !reTypeTabs.includes(criteria.propertyType)
+      !(RE_TYPE_PRIMARY as readonly string[]).includes(criteria.propertyType)
     ) {
-      // Don't wipe a type that is merely facet-hidden mid-load; only when the
-      // tab list is populated and excludes it.
-      if (scopedFacets?.property_type) {
-        patch.propertyType = null;
-      }
+      // Only wipe values outside the RE primary taxonomy (e.g. stale junk).
+      // Never wipe a desk/FilterSheet type just because facets say count=0.
+      patch.propertyType = null;
     }
     if (Object.keys(patch).length === 0) return;
     applyPatch(patch);
@@ -702,6 +734,8 @@ export function SectionSearchApp({
 
   /** RE type strip — composes with offer engine (sale/rent) via propertyType. */
   const selectRePropertyType = (value: string) => {
+    // Band D picker sentinels — never commit as propertyType.
+    if (value === RE_COMMERCIAL_TAB || value === RE_MORE_TAB) return;
     if (value === RE_TYPE_ALL || value === criteria.propertyType) {
       update({ propertyType: null });
       return;
@@ -788,13 +822,17 @@ export function SectionSearchApp({
       ? criteria.originType
       : "all";
   const isMaterialsSection = criteria.category === "materials";
+  // B-CORE upper header: identity + search/Filters + market beside BANCO.
+  // Smart horizontal strip under header: industrial types + origin (wrap, flexGrow:0).
+  // Commodity strip when raw/all. listingMode + refinements stay in FilterSheet
+  // (sliders in search). Never erase strips.
   const showOriginChrome = isMaterialsSection;
-  // Commodity material strip: materials + (all | raw_material) — same gate as
-  // FilterSheet showMaterial. Machine/production_line clear material upstream.
   const showMaterialChrome =
     isMaterialsSection &&
     (criteria.industrialType === "all" ||
       criteria.industrialType === "raw_material");
+  const showMaterialsAxisStrip = showOriginChrome;
+  const showMaterialsLayer2 = showMaterialChrome;
   const showCarOriginChrome = criteria.category === "car" && !lockedEngine;
   const showCarBrandStrip = criteria.category === "car" && !lockedEngine;
   const showRentalTerms =
@@ -802,18 +840,77 @@ export function SectionSearchApp({
     (activeOfferKey === "rent" ||
       engineByKey(criteria.category, criteria.engineKey)?.params.offer_type ===
         "rent");
+  const showIndustrialChipsInStrip =
+    showIndustrialChips && !isMaterialsSection;
   // Keep engine chips visible during facet load — visibleEngines already
   // fails open when scopedFacets are undefined. Hiding on facetsLoading made
   // every section entry flash an empty strip then repaint.
-  // RE: only offer-axis chips (تمليك/إيجار) — types move to their own strip.
+  // RE: offer strip + type tabs live in PropertyHomeHeader (not primary chips).
   const showEngineChips =
     !lockedEngine &&
     stripEngineList.length > 1 &&
-    !showIndustrialChips;
+    !showIndustrialChips &&
+    !isRealEstateSection && !isMaterialsSection;
   // listingMode "For sale / Wanted" collides with RE offer sale/rent labels —
   // keep it for cars; RE uses offer engines + type strip (+ FilterSheet for مطلوب).
-  const showListingMode = !lockedEngine && !isRealEstateSection;
-  const showReTypeStrip = isRealEstateSection && reTypeTabs.length > 0;
+  const showListingMode = !lockedEngine && !isRealEstateSection && !isMaterialsSection;
+  // Types live in PropertyHomeHeader Band D (mock-aligned primary set).
+  const showReTypeStrip = false;
+  /** Band D tabs — All / Apartments / Villas / Commercial / Land / More.
+   *  Commercial + More are picker sentinels — never sent as API enums. */
+  const reHeaderTypeTabs = useMemo(() => {
+    if (!isRealEstateSection) return [] as { value: string; label: string }[];
+    return [
+      { value: RE_TYPE_ALL, label: t("search.discover.section.propertyTabAll") },
+      { value: "apartment", label: t("search.discover.section.deskApartment") },
+      { value: "villa", label: t("search.discover.section.deskVilla") },
+      {
+        value: RE_COMMERCIAL_TAB,
+        label: t("search.discover.section.propertyTabCommercial"),
+      },
+      { value: "land", label: t("search.discover.section.deskLand") },
+      {
+        value: RE_MORE_TAB,
+        label: t("search.discover.section.deskMore"),
+      },
+    ];
+  }, [isRealEstateSection, t]);
+  const reHeaderActiveType = useMemo(() => {
+    if (!criteria.propertyType) return RE_TYPE_ALL;
+    if (
+      (RE_COMMERCIAL_TYPES as readonly string[]).includes(criteria.propertyType)
+    ) {
+      return RE_COMMERCIAL_TAB;
+    }
+    if ((RE_MORE_TYPES as readonly string[]).includes(criteria.propertyType)) {
+      return RE_MORE_TAB;
+    }
+    if (
+      criteria.propertyType === "apartment" ||
+      criteria.propertyType === "villa" ||
+      criteria.propertyType === "land"
+    ) {
+      return criteria.propertyType;
+    }
+    return RE_TYPE_ALL;
+  }, [criteria.propertyType]);
+  const materialsHeaderTypeTabs = useMemo(() => {
+    if (!isMaterialsSection) return [] as { value: IndustrialType; label: string }[];
+    return [
+      { value: "all" as IndustrialType, label: t("home.industrialTypes.all") },
+      { value: "machine" as IndustrialType, label: t("home.industrialTypes.machine") },
+      {
+        value: "raw_material" as IndustrialType,
+        label: t("home.industrialTypes.raw_material"),
+      },
+      {
+        value: "production_line" as IndustrialType,
+        label: t("home.industrialTypes.production_line"),
+      },
+    ];
+  }, [isMaterialsSection, t]);
+  // Smart materials axis strip uses the same tab list (horizontal wrap chips).
+  const materialsAxisTabs = materialsHeaderTypeTabs;
   // Country + currency live in ONE compact MarketCountryButton on the primary
   // strip — every section, no exception (owner 2026-07-20, completed for RE +
   // materials 2026-07-27). The old spread matrix laid 21 country cells in a
@@ -859,6 +956,116 @@ export function SectionSearchApp({
     criteria.marketCountry !==
       (baselineRef.current?.marketCountry ?? DEFAULT_MARKET_COUNTRY),
   ].filter(Boolean).length;
+
+  /** Removable summary chips for B-PROPERTY — only real applied criteria. */
+  const reActiveChips = useMemo(() => {
+    if (!isRealEstateSection) return [] as { id: string; label: string; onClear: () => void }[];
+    const chips: { id: string; label: string; onClear: () => void }[] = [];
+    const q = draftQuery.trim() || criteria.q.trim();
+    if (q) {
+      chips.push({
+        id: "q",
+        label: q,
+        onClear: () => {
+          setDraftQuery("");
+          commitQueryNow("");
+        },
+      });
+    }
+    if (activeOfferKey === "sale" || activeOfferKey === "rent") {
+      const eng = engineByKey(criteria.category, activeOfferKey);
+      chips.push({
+        id: "offer",
+        label: eng ? t(eng.i18nKey) : activeOfferKey,
+        onClear: () => selectEngine("all"),
+      });
+    }
+    if (criteria.propertyType) {
+      const def = PROPERTY_TYPES.find((p) => p.value === criteria.propertyType);
+      chips.push({
+        id: "propertyType",
+        label: def ? (isRTL ? def.ar : def.en) : criteria.propertyType,
+        onClear: () => update({ propertyType: null }),
+      });
+    }
+    if (criteria.listingMode === "buy") {
+      chips.push({
+        id: "wanted",
+        label: t("search.listingModeBuy"),
+        onClear: () => selectListingMode("all"),
+      });
+    }
+    if (criteria.rentalTerm) {
+      const term = rentalTermsForSearch(criteria.marketCountry).find(
+        (r) => r.value === criteria.rentalTerm,
+      );
+      chips.push({
+        id: "rentalTerm",
+        label: term ? (isRTL ? term.ar : term.en) : criteria.rentalTerm,
+        onClear: () => update({ rentalTerm: null }),
+      });
+    }
+    if (criteria.location) {
+      chips.push({
+        id: "location",
+        label: criteria.location,
+        onClear: () => update({ location: "" }),
+      });
+    }
+    if (criteria.nearMeEnabled) {
+      chips.push({
+        id: "nearMe",
+        label: t("search.nearMe"),
+        onClear: () => update({ nearMeEnabled: false, nearLat: null, nearLng: null }),
+      });
+    }
+    if (criteria.minPrice || criteria.maxPrice) {
+      const lo = criteria.minPrice || "…";
+      const hi = criteria.maxPrice || "…";
+      chips.push({
+        id: "price",
+        label: `${lo}–${hi}`,
+        onClear: () => update({ minPrice: "", maxPrice: "" }),
+      });
+    }
+    if (criteria.paymentType === "installment") {
+      chips.push({
+        id: "payment",
+        label: t("search.installmentOnly"),
+        onClear: () => update({ paymentType: "any" }),
+      });
+    }
+    if (criteria.sort !== "recommended") {
+      chips.push({
+        id: "sort",
+        label: t(`search.sortOptions.${criteria.sort}`),
+        onClear: () => update({ sort: "recommended" }),
+      });
+    }
+    return chips;
+  }, [
+    isRealEstateSection,
+    draftQuery,
+    criteria.q,
+    criteria.category,
+    criteria.propertyType,
+    criteria.listingMode,
+    criteria.rentalTerm,
+    criteria.marketCountry,
+    criteria.location,
+    criteria.nearMeEnabled,
+    criteria.minPrice,
+    criteria.maxPrice,
+    criteria.paymentType,
+    criteria.sort,
+    activeOfferKey,
+    isRTL,
+    t,
+    selectEngine,
+    selectListingMode,
+    update,
+    commitQueryNow,
+  ]);
 
   // "Dirty" for exit-confirm = the criteria (or query text) diverges from the
   // per-entry baseline. Delta-based so a freshly-landed page with a persisted
@@ -1004,7 +1211,7 @@ export function SectionSearchApp({
         <Pressable
           onPress={() => {
             playSound("tap");
-            router.push("/listings/create?request=1" as Href);
+            router.push("/listings/create?request=1&category=real_estate" as Href);
           }}
           style={[
             styles.emptyCta,
@@ -1055,6 +1262,112 @@ export function SectionSearchApp({
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {isRealEstateSection ? (
+        <PropertyHomeHeader
+          searchOpen={searchOpen}
+          draftQuery={draftQuery}
+          searchSaved={searchSaved}
+          activeFilterCount={activeFilterCount}
+          activePropertyType={reHeaderActiveType}
+          activeOfferKey={activeOfferKey ?? "all"}
+          wantedActive={criteria.listingMode === "buy"}
+          selectedPropertyType={criteria.propertyType}
+          typeTabs={reHeaderTypeTabs}
+          marketCountry={criteria.marketCountry}
+          sort={criteria.sort}
+          inputRef={inputRef}
+          onBack={goBack}
+          onSaveSearch={handleSaveSearch}
+          onOpenStays={() => {
+            playSound("tap");
+            router.push("/section/booking" as Href);
+          }}
+          onOpenRequest={() => {
+            playSound("tap");
+            router.push("/listings/create?request=1&category=real_estate" as Href);
+          }}
+          onOpenMap={() => {
+            playSound("tap");
+            Haptics.selectionAsync();
+            // Latch map like Discover ?map=1 — open now if results ready,
+            // otherwise wait for inResultsView (MOB-07).
+            if (inResultsView) {
+              setMapMode(true);
+              setWantMap(false);
+            } else {
+              setWantMap(true);
+            }
+          }}
+          onOpenFilters={() => {
+            playSound("tap");
+            setShowFilters(true);
+          }}
+          onOpenSearch={openSearch}
+          onCloseSearch={closeSearch}
+          onQueryChange={handleQueryChange}
+          onSubmitQuery={() => commitQueryNow(draftQuery)}
+          onClearQuery={clearQuery}
+          onSelectType={(value) => {
+            playSound("tap");
+            Haptics.selectionAsync();
+            selectRePropertyType(value);
+          }}
+          onSelectOffer={(engineKey) => {
+            playSound("tap");
+            Haptics.selectionAsync();
+            selectEngine(engineKey);
+          }}
+          onToggleWanted={() => {
+            playSound("tap");
+            Haptics.selectionAsync();
+            selectListingMode(criteria.listingMode === "buy" ? "all" : "buy");
+          }}
+          onOpenMarket={() => {
+            playSound("tap");
+            setMarketPickerOpen(true);
+          }}
+          onCycleSort={() => {
+            playSound("tap");
+            const cycle = ["recommended", "newest", "price_asc", "price_desc"] as const;
+            const next =
+              cycle[(cycle.indexOf(criteria.sort as (typeof cycle)[number]) + 1) % cycle.length];
+            update({ sort: next });
+          }}
+        />
+      ) : isMaterialsSection ? (
+        <MaterialsHomeHeader
+          searchOpen={searchOpen}
+          draftQuery={draftQuery}
+          searchSaved={searchSaved}
+          activeFilterCount={activeFilterCount}
+          marketCountry={criteria.marketCountry}
+          sort={criteria.sort}
+          inputRef={inputRef}
+          onBack={goBack}
+          onSaveSearch={handleSaveSearch}
+          onOpenFilters={() => {
+            playSound("tap");
+            setShowFilters(true);
+          }}
+          onOpenSearch={openSearch}
+          onCloseSearch={closeSearch}
+          onQueryChange={handleQueryChange}
+          onSubmitQuery={() => commitQueryNow(draftQuery)}
+          onClearQuery={clearQuery}
+          onOpenMarket={() => {
+            playSound("tap");
+            setMarketPickerOpen(true);
+          }}
+          onCycleSort={() => {
+            playSound("tap");
+            const cycle = ["recommended", "newest", "price_asc", "price_desc"] as const;
+            const next =
+              cycle[(cycle.indexOf(criteria.sort as (typeof cycle)[number]) + 1) % cycle.length];
+            update({ sort: next });
+          }}
+        />
+      ) : (
+      <>
       {/* ── Section header: back + title/subtitle + section icon ── */}
       <View
         style={[
@@ -1148,9 +1461,11 @@ export function SectionSearchApp({
           )}
         </Pressable>
       </View>
+      </>
+      )}
 
-      {/* ── Collapsible search bar — shown when the search icon in the header is tapped ── */}
-      {searchOpen && (
+      {/* ── Collapsible search bar — non-RE/materials (those search live in home headers) ── */}
+      {!isRealEstateSection && !isMaterialsSection && searchOpen && (
         <View
           style={[
             styles.searchBar,
@@ -1193,7 +1508,8 @@ export function SectionSearchApp({
           </Pressable>
         </View>
       )}
-      {/* Inline autocomplete — renders just below the search bar */}
+
+      {/* Inline autocomplete — below search bar / section home headers */}
       {searchOpen && showSuggestions && suggestions.length > 0 && (
         <View
           style={[
@@ -1233,22 +1549,13 @@ export function SectionSearchApp({
         </View>
       )}
 
+      {/* ── B-PROPERTIES service desks retired from first paint — offer/map/request
+          live in FilterSheet + Band D. Import-hub rule still holds: no dead taps. ── */}
+
       {/* ── Primary chip strip: country/currency · sort · mode/engines.
-          The country button leads EVERY section — one compact control, one
-          left edge, so the strips below it stack on the same axis.
-
-          WRAPS instead of scrolling sideways. Measured in cars before the
-          change: 999px of content inside a 375px window — 624px, nearly two
-          screens, of the user's own segmentation hidden off the right edge
-          where nothing hints it exists. These are "which slice am I browsing"
-          chips, so they stay one-tap chips (a dropdown would cost a tap on the
-          most-used control); they simply all fit now.
-
-          `flexGrow: 0` is carried over deliberately: the old horizontal
-          ScrollView needed it because without it RN let the strip eat the
-          column and crushed the results into a black void with one card pinned
-          at the bottom (owner screenshot regression). A wrapping View is taller
-          than a single row, so that constraint matters more here, not less. ── */}
+          RE: country + sort live inside PropertyHomeHeader (no wasted strip row).
+          Other sections keep this strip unchanged. ── */}
+      {!isRealEstateSection && !isMaterialsSection ? (
       <View
         style={[styles.chipStrip, { flexDirection: rowDir }]}
         testID="section-primary-strip"
@@ -1297,7 +1604,7 @@ export function SectionSearchApp({
             color={criteria.sort !== "recommended" ? "#FFFFFF" : colors.mutedForeground}
           />
         </Pressable>
-        {(showListingMode || showEngineChips || showIndustrialChips || isRealEstateSection) ? (
+        {(showListingMode || showEngineChips || showIndustrialChips) ? (
           <View style={[styles.chipStripDivider, { backgroundColor: colors.border }]} />
         ) : null}
         {/* Offer + engine axes: the SECTION decides the shape, this only renders
@@ -1380,39 +1687,6 @@ export function SectionSearchApp({
             })
           )
         ) : null}
-        {/* RE: single Wanted chip (is_request) — not the full listingMode trio
-            that duplicated "For sale" next to offer "Sale/تمليك". */}
-        {isRealEstateSection && !lockedEngine ? (
-          <Pressable
-            onPress={() => {
-              playSound("tap");
-              Haptics.selectionAsync();
-              selectListingMode(criteria.listingMode === "buy" ? "all" : "buy");
-            }}
-            style={[
-              styles.stripChip,
-              {
-                backgroundColor:
-                  criteria.listingMode === "buy" ? accent : colors.secondary,
-              },
-            ]}
-            testID="section-listing-mode-buy"
-          >
-            <AppText
-              style={[
-                styles.stripChipText,
-                {
-                  color:
-                    criteria.listingMode === "buy"
-                      ? "#FFFFFF"
-                      : colors.mutedForeground,
-                },
-              ]}
-            >
-              {t("search.listingModeBuy")}
-            </AppText>
-          </Pressable>
-        ) : null}
         {showIndustrialChips ? [
           { key: "all" as IndustrialType, i18nKey: "home.industrialTypes.all" },
           ...((visibleIndTypes ?? []).map((ty) => ({ key: ty, i18nKey: `home.industrialTypes.${ty}` }))),
@@ -1432,61 +1706,94 @@ export function SectionSearchApp({
           );
         }) : null}
       </View>
+      ) : null}
 
-      {/* ── RE property-type strip (Stay-parallel) — never mixed into offer row ── */}
+      {/* ── RE property-type axis (Stay-parallel) — never mixed into offer row.
+          Shape comes from the section screen via chrome.propertyType:
+          "pill" collapses 16 types into one control (B-PROPERTY content-first);
+          "chips" keeps the horizontal strip for any section that still wants it. ── */}
       {showReTypeStrip ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.hScroll}
-          contentContainerStyle={[styles.reTypeStrip, { flexDirection: rowDir }]}
-          testID="re-type-strip"
-        >
-          {[{ value: RE_TYPE_ALL, label: t("home.engines.all") }]
-            .concat(
-              reTypeTabs.map((v) => {
+        axisShape(chrome, "propertyType") === "pill" ? (
+          <View
+            style={[styles.reTypeStrip, { flexDirection: rowDir }]}
+            testID="re-type-strip"
+          >
+            <FilterPillSelect
+              icon="home"
+              title={t("create.fields.propertyType")}
+              options={reTypeTabs.map((v) => {
                 const def = PROPERTY_TYPES.find((p) => p.value === v);
                 return {
                   value: v,
                   label: def ? (isRTL ? def.ar : def.en) : v,
                 };
-              }),
-            )
-            .map((tab) => {
-              const active =
-                tab.value === RE_TYPE_ALL
-                  ? !criteria.propertyType
-                  : criteria.propertyType === tab.value;
-              return (
-                <Pressable
-                  key={tab.value}
-                  onPress={() => {
-                    playSound("tap");
-                    Haptics.selectionAsync();
-                    selectRePropertyType(tab.value);
-                  }}
-                  style={[
-                    styles.stripChip,
-                    {
-                      backgroundColor: active ? accent : colors.card,
-                      borderWidth: 1,
-                      borderColor: active ? accent : colors.border,
-                    },
-                  ]}
-                  testID={`re-type-${tab.value}`}
-                >
-                  <AppText
+              })}
+              selected={criteria.propertyType ?? RE_TYPE_ALL}
+              allValue={RE_TYPE_ALL}
+              allLabel={t("search.discover.section.propertyTypeAny")}
+              onSelect={(v) => {
+                playSound("tap");
+                Haptics.selectionAsync();
+                selectRePropertyType(v);
+              }}
+              accentColor={accent}
+              testID="re-type-pill"
+            />
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.hScroll}
+            contentContainerStyle={[styles.reTypeStrip, { flexDirection: rowDir }]}
+            testID="re-type-strip"
+          >
+            {[{ value: RE_TYPE_ALL, label: t("home.engines.all") }]
+              .concat(
+                reTypeTabs.map((v) => {
+                  const def = PROPERTY_TYPES.find((p) => p.value === v);
+                  return {
+                    value: v,
+                    label: def ? (isRTL ? def.ar : def.en) : v,
+                  };
+                }),
+              )
+              .map((tab) => {
+                const active =
+                  tab.value === RE_TYPE_ALL
+                    ? !criteria.propertyType
+                    : criteria.propertyType === tab.value;
+                return (
+                  <Pressable
+                    key={tab.value}
+                    onPress={() => {
+                      playSound("tap");
+                      Haptics.selectionAsync();
+                      selectRePropertyType(tab.value);
+                    }}
                     style={[
-                      styles.stripChipText,
-                      { color: active ? "#FFFFFF" : colors.foreground },
+                      styles.stripChip,
+                      {
+                        backgroundColor: active ? accent : colors.card,
+                        borderWidth: 1,
+                        borderColor: active ? accent : colors.border,
+                      },
                     ]}
+                    testID={`re-type-${tab.value}`}
                   >
-                    {tab.label}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-        </ScrollView>
+                    <AppText
+                      style={[
+                        styles.stripChipText,
+                        { color: active ? "#FFFFFF" : colors.foreground },
+                      ]}
+                    >
+                      {tab.label}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+          </ScrollView>
+        )
       ) : null}
 
       {/* ── Cars: brand-picker button + origin chips — ONE compact strip.
@@ -1577,13 +1884,105 @@ export function SectionSearchApp({
         </ScrollView>
       ) : null}
 
-      {/* ── Materials commodity strip (حديد / ألومنيوم / …) ── */}
-      {showMaterialChrome ? (
+      {/* ── Materials smart axis strip: types + origin ONE horizontal scroll.
+          flexGrow:0 via hScroll — never eat results. FilterSheet = refinements. ── */}
+      {showMaterialsAxisStrip ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={[styles.hScroll, { flexGrow: 0 }]}
+          contentContainerStyle={[
+            styles.materialsAxisStrip,
+            { flexDirection: rowDir },
+          ]}
+          testID="materials-type-strip"
+        >
+          {materialsAxisTabs.map((tab) => {
+            const active = criteria.industrialType === tab.value;
+            return (
+              <Pressable
+                key={tab.value}
+                onPress={() => {
+                  playSound("tap");
+                  Haptics.selectionAsync();
+                  selectIndustrialType(tab.value);
+                }}
+                style={[
+                  styles.materialsAxisChip,
+                  {
+                    backgroundColor: active ? accent : colors.secondary,
+                    borderColor: active ? accent : colors.border,
+                  },
+                ]}
+                testID={`industrial-type-${tab.value}`}
+              >
+                <AppText
+                  style={[
+                    styles.materialsAxisChipText,
+                    { color: active ? "#FFFFFF" : colors.mutedForeground },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {tab.label}
+                </AppText>
+              </Pressable>
+            );
+          })}
+          <View
+            style={[styles.materialsAxisDivider, { backgroundColor: colors.border }]}
+          />
+          <View
+            style={[styles.materialsOriginCluster, { flexDirection: rowDir }]}
+            testID="materials-origin-strip"
+          >
+            {(["all", "local", "imported"] as const).map((o) => {
+              const active = originKey === o;
+              return (
+                <Pressable
+                  key={o}
+                  onPress={() => {
+                    playSound("tap");
+                    Haptics.selectionAsync();
+                    selectOrigin(o);
+                  }}
+                  style={[
+                    styles.materialsAxisChip,
+                    {
+                      backgroundColor: active ? accent : colors.secondary,
+                      borderColor: active ? accent : colors.border,
+                    },
+                  ]}
+                  testID={`section-origin-${o}`}
+                >
+                  <AppText
+                    style={[
+                      styles.materialsAxisChipText,
+                      { color: active ? "#FFFFFF" : colors.mutedForeground },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {o === "all"
+                      ? t("home.engines.all")
+                      : t(`create.opts.${o}`)}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+        </ScrollView>
+      ) : null}
+
+      {/* ── Materials commodities (Steel / Aluminum / …) — horizontal scroll ── */}
+      {showMaterialsLayer2 ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.hScroll}
-          contentContainerStyle={[styles.reTypeStrip, { flexDirection: rowDir }]}
+          contentContainerStyle={[
+            styles.reTypeStrip,
+            styles.materialsLayer2Strip,
+            { flexDirection: rowDir },
+          ]}
           testID="materials-material-strip"
         >
           <Pressable
@@ -1594,6 +1993,7 @@ export function SectionSearchApp({
             }}
             style={[
               styles.stripChip,
+              styles.materialsCommodityChip,
               {
                 backgroundColor: !criteria.material ? accent : colors.card,
                 borderWidth: 1,
@@ -1625,6 +2025,7 @@ export function SectionSearchApp({
                 }}
                 style={[
                   styles.stripChip,
+                  styles.materialsCommodityChip,
                   {
                     backgroundColor: active ? accent : colors.card,
                     borderWidth: 1,
@@ -1683,41 +2084,100 @@ export function SectionSearchApp({
         </View>
       ) : null}
 
-      {/* ── Rental term chips (RE rent / Booking) ── */}
+      {/* ── Rental term (RE rent) — pill, not a full chip row.
+          Same axis as before (criteria.rentalTerm); only the chrome shape
+          changes so rent browse keeps vertical space for listings. ── */}
       {showRentalTerms ? (
+        <View
+          style={[styles.rentalChrome, { flexDirection: rowDir }]}
+          testID="section-rental-chrome"
+        >
+          <FilterPillSelect
+            icon="calendar"
+            title={t("create.fields.rentalTerm")}
+            options={rentalTerms.map((r) => ({
+              value: r.value,
+              label: isRTL ? r.ar : r.en,
+            }))}
+            selected={criteria.rentalTerm ?? "any"}
+            allValue="any"
+            allLabel={t("search.discover.rentalTermAny")}
+            onSelect={(v) => {
+              playSound("tap");
+              Haptics.selectionAsync();
+              if (v === "any") {
+                update({ rentalTerm: null });
+                return;
+              }
+              selectRentalTerm(v);
+            }}
+            accentColor={accent}
+            testID="section-rental-pill"
+          />
+        </View>
+      ) : null}
+
+      {/* ── B-PROPERTY active filters — removable chips for applied refinements.
+          Only mounts when something is actually applied; each chip clears ONE
+          real criteria field (no fake filters). ── */}
+      {isRealEstateSection && reActiveChips.length > 0 ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.hScroll}
-          contentContainerStyle={[styles.rentalChrome, { flexDirection: rowDir }]}
+          contentContainerStyle={[styles.activeChipStrip, { flexDirection: rowDir }]}
+          testID="re-active-filters"
         >
-          {rentalTerms.map((r) => {
-            const active = criteria.rentalTerm === r.value;
-            return (
-              <Pressable
-                key={r.value}
-                onPress={() => {
-                  playSound("tap");
-                  Haptics.selectionAsync();
-                  selectRentalTerm(r.value);
-                }}
-                style={[
-                  styles.chip,
-                  { backgroundColor: active ? accent : colors.secondary },
-                ]}
-                testID={`section-rental-${r.value}`}
+          {reActiveChips.map((chip) => (
+            <Pressable
+              key={chip.id}
+              onPress={() => {
+                playSound("tap");
+                Haptics.selectionAsync();
+                chip.onClear();
+              }}
+              style={[
+                styles.activeChip,
+                {
+                  backgroundColor: `${accent}22`,
+                  borderColor: accent,
+                  flexDirection: rowDir,
+                },
+              ]}
+              testID={`re-active-${chip.id}`}
+              accessibilityRole="button"
+              accessibilityLabel={`${chip.label}. ${t("common.close")}`}
+            >
+              <AppText style={[styles.activeChipText, { color: accent }]} numberOfLines={1}>
+                {chip.label}
+              </AppText>
+              <Feather name="x" size={12} color={accent} />
+            </Pressable>
+          ))}
+          {reActiveChips.length > 1 ? (
+            <Pressable
+              onPress={() => {
+                playSound("tap");
+                clearAllFilters();
+              }}
+              style={[
+                styles.activeChip,
+                {
+                  backgroundColor: colors.secondary,
+                  borderColor: colors.border,
+                  flexDirection: rowDir,
+                },
+              ]}
+              testID="re-active-clear-all"
+            >
+              <AppText
+                style={[styles.activeChipText, { color: colors.mutedForeground }]}
+                numberOfLines={1}
               >
-                <AppText
-                  style={[
-                    styles.chipText,
-                    { color: active ? "#FFFFFF" : colors.mutedForeground },
-                  ]}
-                >
-                  {isRTL ? r.ar : r.en}
-                </AppText>
-              </Pressable>
-            );
-          })}
+                {t("search.clearAll")}
+              </AppText>
+            </Pressable>
+          ) : null}
         </ScrollView>
       ) : null}
 
@@ -1743,6 +2203,11 @@ export function SectionSearchApp({
         brandValue={brandValue}
         locationLabel={locationLabel}
         lockCategory
+        // Stay-parallel: scope RE sheet types to the primary taxonomy so
+        // twinhouse/clinic cannot drift away from the pill / desks.
+        propertyTypeOptions={
+          isRealEstateSection ? [...RE_TYPE_PRIMARY] : undefined
+        }
         onSelectCategory={() => {}}
         onSelectEngine={selectEngine}
         onBrowseBrand={browseBrandChip}
@@ -1788,13 +2253,19 @@ export function SectionSearchApp({
             items={mappableItems}
             criteria={criteria}
             onOpenListing={handleCardPress}
-            onOpenListingId={(id) =>
+            onOpenListingId={(id) => {
+              // Only focus booking chrome when the pin is actually bookable
+              // (or unknown off-page). Non-bookable RE pins open the listing.
+              const hit = items.find((i) => i.id === id);
+              const focusBooking =
+                criteria.category === "real_estate" &&
+                (hit == null || hit.is_bookable === true);
               router.push(
-                criteria.category === "real_estate"
+                focusBooking
                   ? `/listing/${id}?focus=booking`
                   : `/listing/${id}`,
-              )
-            }
+              );
+            }}
             onSave={toggleSave}
             isSaved={isSaved}
           />
@@ -1923,6 +2394,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: "Inter_700Bold",
   },
+  headerBrand: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.6,
+    marginTop: 2,
+  },
   headerSub: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
@@ -2012,6 +2489,45 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 18,
   },
+  // Materials smart axis — types + origin one horizontal scroll row (~3mm lifted).
+  materialsAxisStrip: {
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingTop: 4,
+    paddingBottom: 1,
+  },
+  materialsAxisChip: {
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  materialsAxisChipText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+  },
+  materialsAxisDivider: {
+    width: StyleSheet.hairlineWidth,
+    height: 18,
+    opacity: 0.7,
+    marginHorizontal: 2,
+  },
+  materialsOriginCluster: {
+    alignItems: "center",
+    gap: 6,
+  },
+  // Materials commodities strip rhythm
+  materialsLayer2Strip: {
+    alignItems: "center",
+    gap: 6,
+    paddingTop: 3,
+    paddingBottom: 1,
+  },
+  materialsCommodityChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
   carBrandBtn: {
     alignItems: "center",
     gap: 6,
@@ -2048,6 +2564,27 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   resultsCount: { fontSize: 12.5, paddingHorizontal: 16, paddingTop: 8 },
+  activeChipStrip: {
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingTop: 6,
+    paddingBottom: 2,
+  },
+  activeChip: {
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    borderWidth: 1,
+    maxWidth: 180,
+  },
+  activeChipText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    flexShrink: 1,
+  },
   suggestions: {
     marginHorizontal: 16,
     marginTop: 2,

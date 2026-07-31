@@ -694,6 +694,7 @@ export async function getTrending(
       views: interactions.views,
       clicks: interactions.clicks,
       industrial_type: listingAttributes.industrialType,
+      is_request: listings.isRequest,
     })
     .from(listings)
     .leftJoin(users, eq(listings.userId, users.id))
@@ -899,6 +900,7 @@ async function computeSimilarListings(listingId: string, limit: number): Promise
       user_role: users.role,
       quality_score: users.qualityScore,
       industrial_type: listingAttributes.industrialType,
+      is_request: listings.isRequest,
     })
     .from(listings)
     .leftJoin(users, eq(listings.userId, users.id))

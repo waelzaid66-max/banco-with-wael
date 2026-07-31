@@ -1,14 +1,12 @@
 import { SectionSearchApp } from "@/components/search/SectionSearchApp";
 
 /**
- * Real estate — segments on sale-vs-rent first, then property type.
+ * Real estate (B-PROPERTIES) — Stay-parity mini-app chrome inside SectionSearchApp.
  *
- * Its offer axis stays CHIPS on purpose: تمليك / إيجار is the decision a browsing
- * user flips constantly, and it is short enough to fit. Charging a tap to open a
- * list for it would tax the most-used control on the page — the opposite of what
- * the pill is for. Cars ask for a pill on their own offer axis because theirs
- * sits beside a five-value engine axis; real-estate's does not, and that is why
- * these two sections legitimately differ.
+ * Identity + search/filter + offer + Wanted + types (Commercial/More pickers)
+ * live in PropertyHomeHeader. Stays → /section/booking · Request → create RFQ.
+ * Deep refinements stay in FilterSheet.
+ * Do not touch Cars / Stay shell / Import / MiniAppBottomNav from this shell.
  */
 export default function RealEstateSectionScreen() {
   return (
@@ -16,7 +14,7 @@ export default function RealEstateSectionScreen() {
       category="real_estate"
       titleKey="home.categories.real_estate"
       subtitleKey="search.discover.section.realEstateSub"
-      chrome={{ engines: "chips" }}
+      chrome={{ engines: "chips", propertyType: "pill" }}
     />
   );
 }
