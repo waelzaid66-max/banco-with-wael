@@ -5,7 +5,6 @@ import {
 } from "@workspace/api-client-react";
 import Constants, { ExecutionEnvironment } from "expo-constants";
 import * as Device from "expo-device";
-import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 import { useEffect, useRef } from "react";
 import { Platform } from "react-native";
@@ -26,25 +25,31 @@ import { getCachedPushToken, setCachedPushToken } from "@/lib/pushTokenCache";
  *   warm taps and a cold start opened from a notification.
  *
  * Everything is best-effort and guarded: missing permission, a simulator, web,
- * or an absent EAS projectId all degrade silently to "no push" rather than
- * crashing — the in-app feed remains the source of truth.
+ * Expo Go (SDK 53+), or an absent EAS projectId all degrade silently to "no
+ * push" rather than crashing — the in-app feed remains the source of truth.
  */
 
-// Expo Go (SDK 53+) removed remote-push support; calling the remote notification
-// APIs there throws synchronously and red-boxes the whole app on launch. Detect
-// Expo Go and degrade to "no push" — standalone/dev builds are unaffected.
+// Expo Go (SDK 53+) removed remote-push support; importing/calling remote APIs
+// there throws/logs ERROR and red-boxes. Detect Expo Go and skip the module.
 const isExpoGo =
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
-// Foreground presentation. SDK 53+ uses shouldShowBanner/shouldShowList.
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+// Lazy-load only outside Expo Go so StoreClient never evaluates the module.
+const Notifications: typeof import("expo-notifications") | null = isExpoGo
+  ? null
+  : (require("expo-notifications") as typeof import("expo-notifications"));
+
+if (Notifications) {
+  // Foreground presentation. SDK 53+ uses shouldShowBanner/shouldShowList.
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+    }),
+  });
+}
 
 function platformTag(): "ios" | "android" | "web" {
   if (Platform.OS === "ios") return "ios";
@@ -68,7 +73,9 @@ function navigateWhenReady(dest: Parameters<typeof router.push>[0], attempt = 0)
 
 const handledResponseIds = new Set<string>();
 
-function handleResponse(response: Notifications.NotificationResponse | null) {
+type NotificationResponse = import("expo-notifications").NotificationResponse;
+
+function handleResponse(response: NotificationResponse | null) {
   if (!response) return;
   const id = response.notification.request.identifier;
   if (id && handledResponseIds.has(id)) return;
@@ -93,7 +100,7 @@ function handleResponse(response: Notifications.NotificationResponse | null) {
 async function obtainExpoPushToken(): Promise<string | null> {
   // Push tokens require a physical device; web/simulators can't get one.
   if (Platform.OS === "web") return null;
-  if (isExpoGo) return null;
+  if (isExpoGo || !Notifications) return null;
   if (!Device.isDevice) return null;
 
   if (Platform.OS === "android") {
@@ -206,7 +213,7 @@ export function PushNotificationsBridge() {
 
   // Deep-link on tap: cold start (opened from a notification) + warm taps.
   useEffect(() => {
-    if (isExpoGo) return;
+    if (isExpoGo || !Notifications) return;
     Notifications.getLastNotificationResponseAsync()
       .then(handleResponse)
       .catch(() => {});

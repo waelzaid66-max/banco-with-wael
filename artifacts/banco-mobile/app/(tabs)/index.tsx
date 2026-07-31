@@ -17,9 +17,9 @@ import * as Haptics from "expo-haptics";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { router, useNavigation, type Href } from "expo-router";
 import { Image } from "expo-image";
-import * as Notifications from "expo-notifications";
 import { FlashList, FlashListRef, ViewToken } from "@shopify/flash-list";
 import { BancoLogo } from "@/components/BancoLogo";
+import { setAppIconBadgeCount } from "@/lib/safeNotifications";
 import React, {
   useCallback,
   useEffect,
@@ -340,11 +340,9 @@ export default function FeedScreen() {
       : (notifQuery.data?.data ?? []).filter((n) => !n.read_at).length;
 
   // Mirror the in-app unread count onto the OS app-icon badge (0 clears it,
-  // including on sign-out). Best-effort: unsupported platforms resolve false.
+  // including on sign-out). Best-effort: Expo Go SDK 53+ / web no-op safely.
   useEffect(() => {
-    void Notifications.setBadgeCountAsync(isSignedIn ? unreadNotifs : 0).catch(
-      () => {}
-    );
+    void setAppIconBadgeCount(isSignedIn ? unreadNotifs : 0);
   }, [isSignedIn, unreadNotifs]);
 
   const [category, setCategory] = useState<Category>("all");

@@ -189,4 +189,19 @@ Owner Secrets
 - Reliability: W9-REL precision · DIR-01 green  
 - `88`/`89`/`90` · PASTE Wave8 · OWNER-SECRETS · DIR-REJECT-5CF0  
 
+## 7. Live screenshot absorb (PIO 2026-07-31 session)
+
+| Surface | Shot | Classification | Owner next |
+|---------|------|----------------|------------|
+| Landing :18150 | OK RTL | PASS visual | — |
+| Admin :22357 | Login · Google absent | UV-04 / ACC-00 | UX note · AUTH Plan |
+| Dealer :21539 | Login · Google present/grey | UV-04 | UX |
+| Expo :23351 | white blank | SEC-02 secrets + MOB-NOTIF-01 | Owner + PE (EXECUTED guard) + Replit re-shot |
+| Web :5000 | white / Clerk SSK invalid | **Owner Secrets** SEC-01/02 | Owner |
+| API :8080 | facets cats=0 · /health 404 | API-FACETS-01 · API-HEALTH-01 | Intel curl → PE |
+
+**Branch merge plan from PIO:** **REJECTED** — see `DIR-REJECT-BRANCH-MERGE-PLAN-2026-07-31.md`
+
+**MOB-NOTIF-01:** EXECUTED — Expo Go no longer static-imports notifications on Feed; push module skipped on StoreClient.
+
 — Chief Production Delivery Director
