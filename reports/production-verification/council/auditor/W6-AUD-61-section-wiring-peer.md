@@ -29,7 +29,7 @@
 | Portal factories | `/section/factories?map=1` | `:345` | **OK** |
 | Portal stays | `/section/booking?map=1` | `:351` | **OK** |
 | Copy | `exploreMapSub` = properties | `i18n.ts:520` / AR `:2803` | **DEFECT** (RE identity) |
-| Route `/section/maps` | — | absent | N/A (Opt B future) |
+| Route `/section/maps` | Owner mini-app **#11** required | **ABSENT** on tip/`main` | **MISSING** — end-state per Owner (see AUD-65); Opt A chooser-as-primary **SUPERSEDED** as final identity |
 
 ## C. Consumers per section (`?map=1`)
 
@@ -43,6 +43,7 @@
 
 **Judgment:** Maps **tech stack intact**; Maps **identity mis-surfaced** via Discover primary → RE. Repair = REL-16 (Approve-gated), not vendor rewrite.
 
-## D. Peer of Chair HIGH (#1)
+## D. Peer of Chair HIGH (#1) + Owner #11 amend
 
-**CONFIRM** producer primary defect; consumer latch **not** the break. Align design Opt **A** recommended.
+**CONFIRM** producer primary defect; consumer latch **not** the break.  
+**Owner amend (AUD-65):** final Maps identity = **`/section/maps` mini-app #11** — not Discover chooser alone. Leaflet must feed hub; do not delete vendor.
