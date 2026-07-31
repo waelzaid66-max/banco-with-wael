@@ -15,6 +15,7 @@ import { router } from "expo-router";
 import React from "react";
 import {
   ActivityIndicator,
+  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -22,6 +23,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as Clipboard from "expo-clipboard";
 
 import { useAuth } from "@clerk/expo";
 
@@ -411,12 +413,24 @@ export default function BanksScreen() {
     query: { queryKey: getGetMeQueryKey(), enabled: !!isSignedIn, staleTime: 60_000 },
   });
   const meRole = meQuery.data?.data?.role ?? "";
+  const meUserId = meQuery.data?.data?.id ?? "";
   const isFiRole = meRole === "financial_institution";
   // Wait for /me + inbox membership probe before Join vs awaiting.
   const roleReady = !isSignedIn || (!meQuery.isLoading && membershipKnown);
   // Awaiting link: signed-in FI without institution membership (admin owner_user_id / seat).
   const showAwaitingAdminLink = roleReady && !!isSignedIn && isFiRole && !isFiMember;
   const showJoinCta = roleReady && !isFiMember && !showAwaitingAdminLink;
+
+  const copyLinkAccountId = React.useCallback(async () => {
+    if (!meUserId) return;
+    try {
+      await Clipboard.setStringAsync(meUserId);
+      Alert.alert(t("business.banks.linkAccountIdCopied"));
+    } catch {
+      // Clipboard can fail in restricted web/iframe contexts — still show the ID.
+      Alert.alert(t("business.banks.linkAccountIdLabel"), meUserId);
+    }
+  }, [meUserId, t]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -479,7 +493,9 @@ export default function BanksScreen() {
         {/* FI phase 2 — the bank's own inbox (members only; hidden otherwise) */}
         <InstitutionInboxSection onMembershipChange={onMembershipChange} />
 
-        {/* Product types — explanatory brochure only (not a live partner directory) */}
+        {/* Product types — explanatory brochure only (not a live partner directory).
+            Rows are non-interactive examples — no card chrome that reads as a
+            browsable partner catalog (ADS-FIRST / MOB-02 honesty). */}
         <AppText
           style={[
             styles.sectionTitle,
@@ -495,47 +511,48 @@ export default function BanksScreen() {
           {t("business.banks.productsHint")}
         </AppText>
 
-        {PRODUCTS.map((p) => (
-          <View
-            key={p.titleKey}
-            accessibilityRole="text"
-            style={[
-              styles.productCard,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-                borderRadius: colors.radius,
-                flexDirection: rowDir,
-              },
-            ]}
-          >
-            <View style={[styles.productIcon, { backgroundColor: BLUE_BG }]}>
-              <MaterialCommunityIcons
-                name={p.icon}
-                size={22}
-                color={BLUE_DIM}
-              />
+        <View testID="banks-examples-list" style={styles.examplesList}>
+          {PRODUCTS.map((p, index) => (
+            <View
+              key={p.titleKey}
+              accessibilityRole="text"
+              style={[
+                styles.productRow,
+                {
+                  borderBottomColor: colors.border,
+                  borderBottomWidth: index < PRODUCTS.length - 1 ? StyleSheet.hairlineWidth : 0,
+                  flexDirection: rowDir,
+                },
+              ]}
+            >
+              <View style={[styles.productIcon, { backgroundColor: BLUE_BG }]}>
+                <MaterialCommunityIcons
+                  name={p.icon}
+                  size={18}
+                  color={BLUE_DIM}
+                />
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <AppText
+                  style={[
+                    styles.productTitle,
+                    { color: colors.foreground, textAlign },
+                  ]}
+                >
+                  {t(p.titleKey)}
+                </AppText>
+                <AppText
+                  style={[
+                    styles.productDesc,
+                    { color: colors.mutedForeground, textAlign },
+                  ]}
+                >
+                  {t(p.descKey)}
+                </AppText>
+              </View>
             </View>
-            <View style={{ flex: 1, gap: 3 }}>
-              <AppText
-                style={[
-                  styles.productTitle,
-                  { color: colors.foreground, textAlign },
-                ]}
-              >
-                {t(p.titleKey)}
-              </AppText>
-              <AppText
-                style={[
-                  styles.productDesc,
-                  { color: colors.mutedForeground, textAlign },
-                ]}
-              >
-                {t(p.descKey)}
-              </AppText>
-            </View>
-          </View>
-        ))}
+          ))}
+        </View>
 
         {/* Awaiting admin link (S2): the account already holds the FI role, so
             showing "Join" again would read as if the registration never landed.
@@ -573,6 +590,48 @@ export default function BanksScreen() {
             >
               {t("business.banks.awaitingLinkDesc")}
             </AppText>
+            {meUserId ? (
+              <View
+                style={[styles.linkIdBox, { borderColor: BLUE_BORDER }]}
+                testID="banks-link-account-id"
+              >
+                <AppText
+                  style={[
+                    styles.linkIdLabel,
+                    { color: colors.foreground, textAlign },
+                  ]}
+                >
+                  {t("business.banks.linkAccountIdLabel")}
+                </AppText>
+                <AppText
+                  style={[
+                    styles.linkIdHint,
+                    { color: colors.mutedForeground, textAlign },
+                  ]}
+                >
+                  {t("business.banks.linkAccountIdHint")}
+                </AppText>
+                <AppText
+                  style={[styles.linkIdValue, { color: colors.foreground }]}
+                  selectable
+                  testID="banks-link-account-id-value"
+                >
+                  {meUserId}
+                </AppText>
+                <Pressable
+                  onPress={() => void copyLinkAccountId()}
+                  style={[styles.linkIdCopyBtn, { borderColor: BLUE }]}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("business.banks.linkAccountIdCopy")}
+                  testID="banks-link-account-id-copy"
+                >
+                  <Feather name="copy" size={14} color={BLUE} />
+                  <AppText style={[styles.linkIdCopyText, { color: BLUE }]}>
+                    {t("business.banks.linkAccountIdCopy")}
+                  </AppText>
+                </Pressable>
+              </View>
+            ) : null}
             <Pressable
               onPress={() => router.push("/business/verification")}
               style={styles.joinBtn}
@@ -736,25 +795,56 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginBottom: 4,
   },
-  productCard: {
+  examplesList: {
+    marginBottom: 4,
+  },
+  // Example rows — not cards (no fill/border that reads as a partner catalog).
+  productRow: {
     alignItems: "center",
-    gap: 14,
-    padding: 16,
-    borderWidth: 1,
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 2,
   },
   productIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
-  productTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  productTitle: { fontSize: 14.5, fontFamily: "Inter_600SemiBold" },
   productDesc: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontFamily: "Inter_400Regular",
-    lineHeight: 19,
+    lineHeight: 18,
   },
+  linkIdBox: {
+    alignSelf: "stretch",
+    gap: 6,
+    padding: 12,
+    borderWidth: 1,
+    borderRadius: 12,
+    marginTop: 4,
+  },
+  linkIdLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  linkIdHint: { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 17 },
+  linkIdValue: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    marginTop: 2,
+  },
+  linkIdCopyBtn: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderRadius: 10,
+    marginTop: 4,
+  },
+  linkIdCopyText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
 
   // Join CTA
   joinBox: {

@@ -1651,6 +1651,11 @@ const en = {
       awaitingLinkDesc:
         "Your financial-institution account is submitted. Inbox access opens only after a BANCO admin links your institution — verification alone does not open the inbox.",
       awaitingLinkCta: "Check verification status",
+      linkAccountIdLabel: "Account ID for admin linking",
+      linkAccountIdHint:
+        "Send this ID to BANCO support so an admin can link your institution (owner_user_id).",
+      linkAccountIdCopy: "Copy ID",
+      linkAccountIdCopied: "Account ID copied",
       note: "BANCO is a verified ads platform — financing terms are set entirely by the institution.",
       inboxTitle: "Financing requests inbox",
       inboxEmpty: "No forwarded requests yet — Banco sends them here after review.",
@@ -3866,6 +3871,11 @@ const ar: typeof en = {
       awaitingLinkDesc:
         "حساب المؤسسة المالية اتبعت. صندوق الوارد يفتح فقط بعد ما أدمن بانكو يربط حساب مؤسستك — التوثيق لوحده مش بيفتح الصندوق.",
       awaitingLinkCta: "راجع حالة التوثيق",
+      linkAccountIdLabel: "معرّف الحساب لربط الأدمن",
+      linkAccountIdHint:
+        "ابعت المعرّف ده لدعم بانكو عشان الأدمن يربط مؤسستك (owner_user_id).",
+      linkAccountIdCopy: "نسخ المعرّف",
+      linkAccountIdCopied: "تم نسخ معرّف الحساب",
       note: "بانكو منصة إعلانات موثّقة — شروط التمويل تحددها المؤسسة بالكامل.",
       inboxTitle: "صندوق طلبات التمويل",
       inboxEmpty: "لا توجد طلبات محوّلة بعد — بانكو بترسلها هنا بعد الدراسة.",

@@ -1700,6 +1700,39 @@ test("Ads-first: Banks hub is brochure — no live intermediary directory API", 
   assert.match(src, /explanatory brochure only/);
 });
 
+test("Banks brochure examples are non-card rows (no catalog illusion)", () => {
+  const src = fs.readFileSync(BANKS, "utf8");
+  assert.match(src, /testID="banks-examples-list"/);
+  assert.match(src, /styles\.productRow/);
+  assert.doesNotMatch(
+    src,
+    /styles\.productCard/,
+    "productCard chrome that read as a partner catalog must stay gone",
+  );
+  // Rows remain non-interactive (MOB-02).
+  const examplesAt = src.indexOf('testID="banks-examples-list"');
+  assert.ok(examplesAt > 0);
+  const examplesBlock = src.slice(examplesAt, examplesAt + 1200);
+  assert.match(examplesBlock, /accessibilityRole="text"/);
+  assert.doesNotMatch(examplesBlock, /onPress=/);
+});
+
+test("Banks awaiting-admin exposes copyable account id for owner_user_id link", () => {
+  const src = fs.readFileSync(BANKS, "utf8");
+  const i18n = fs.readFileSync(I18N, "utf8");
+  assert.match(src, /testID="banks-link-account-id"/);
+  assert.match(src, /testID="banks-link-account-id-copy"/);
+  assert.match(src, /Clipboard\.setStringAsync/);
+  assert.match(src, /meQuery\.data\?\.data\?\.id/);
+  assert.match(i18n, /linkAccountIdLabel:/);
+  assert.match(i18n, /linkAccountIdCopy:/);
+  assert.match(
+    i18n,
+    /owner_user_id/,
+    "hint must name the admin field so ops can paste correctly",
+  );
+});
+
 test("Ads-first: FI verification uses /me role and does not unlock dealer storefront copy", () => {
   const src = fs.readFileSync(VERIFICATION, "utf8");
   assert.match(src, /financial_institution/);
