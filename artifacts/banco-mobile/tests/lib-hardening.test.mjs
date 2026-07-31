@@ -170,10 +170,20 @@ test("account-type gate keeps Skip + dismiss-first anti-trap", () => {
     /demoteBlockedTitle/,
     "elevated self-demote must stay client-blocked (S4)",
   );
+  assert.match(
+    src,
+    /meQuery\.isPending/,
+    "REL-09: account-type gate must wait for /me before offering picker",
+  );
+  assert.match(
+    src,
+    /meQuery\.isFetching/,
+    "REL-09: Skip→individual must not race while /me is fetching",
+  );
   const fn = src.indexOf("const chooseAccountType");
   assert.ok(fn >= 0);
   // Include demote guard preamble before dismiss/updateMe (slice must be long enough).
-  const slice = src.slice(fn, fn + 2800);
+  const slice = src.slice(fn, fn + 3200);
   const dismiss = slice.indexOf("setNeedsAccountType(false)");
   const update = slice.indexOf("await updateMe({ account_type");
   const chosen = slice.indexOf("accountTypeChosen: true");

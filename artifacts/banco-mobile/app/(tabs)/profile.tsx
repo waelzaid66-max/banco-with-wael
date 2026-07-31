@@ -346,15 +346,23 @@ export default function ProfileScreen() {
   // stuck legacy accounts missing accountTypeChosen, show the 4-type picker.
   // Skip while email-signup consent+updateMe pipeline owns the role write.
   // Skip when /me already has a non-individual role (flag may have failed mid-flight).
+  // REL-09 / MOB-A-06: wait until /me settles so Skip→individual cannot race
+  // an elevated role that has not hydrated yet (server still DEMOTE_BLOCKED).
   useEffect(() => {
     if (!user) return;
     authJustHappenedRef.current = false;
     if (consentPendingRef.current || signupInFlightRef.current) return;
     if (user.unsafeMetadata?.accountTypeChosen) return;
+    if (meQuery.isPending) return;
     const role = meQuery.data?.data?.role;
     if (role && role !== "individual") return;
     setNeedsAccountType(true);
-  }, [user, user?.unsafeMetadata?.accountTypeChosen, meQuery.data?.data?.role]);
+  }, [
+    user,
+    user?.unsafeMetadata?.accountTypeChosen,
+    meQuery.data?.data?.role,
+    meQuery.isPending,
+  ]);
 
   // Step 3 of the picker flow: only fires AFTER the user has acknowledged the
   // in-app rationale, so the OS prompt never appears without a disclosure.
@@ -714,6 +722,16 @@ export default function ProfileScreen() {
     const currentRole =
       meQuery.data?.data?.role ||
       ((user?.publicMetadata?.role as string) || "");
+    // REL-09: do not dismiss the gate or PATCH individual while /me is still
+    // in flight with no role yet — avoids racing elevated accounts.
+    if (
+      type === "individual" &&
+      !currentRole &&
+      (meQuery.isPending || meQuery.isFetching)
+    ) {
+      savingAccountTypeRef.current = false;
+      return;
+    }
     const elevated =
       currentRole === "financial_institution" ||
       currentRole === "company" ||

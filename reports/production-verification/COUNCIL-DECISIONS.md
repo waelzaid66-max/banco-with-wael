@@ -149,6 +149,17 @@
 
 ---
 
+## D-2026-07-31-14 — Mobile Success Audit Wave 4 + MOB-A-06 / REL-09
+
+| | |
+|--|--|
+| **Decision** | Owner mandate: full mobile success audit (screen/button/connection) under anti-reckless law (`67-MOBILE-SUCCESS-AUDIT-WAVE4.md`). |
+| **MOB-A-06** | Severity **MEDIUM** (not HIGH): server `DEMOTE_BLOCKED` backstop exists. Client waits for `/me` before Skip→individual (**REL-09** Chair-executed). |
+| **Adopted** | Zones A–B Chair static done; C/E→Auditor; D→Reliability; F→Support; visuals UNVERIFIED until device. |
+| **Rejected** | Inventing pixel defects; reckless AuthGate redesign; MOBILE_DEVICE_GO without screenshots. |
+
+---
+
 ## Template for future disputes
 
 ```markdown
