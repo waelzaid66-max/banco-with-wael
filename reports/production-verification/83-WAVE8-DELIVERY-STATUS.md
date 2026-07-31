@@ -1,20 +1,14 @@
-# Wave 8 — Delivery status (Owner)
+# Wave 8+ — Delivery status (Owner)
 
-**SoT:** `main` @ `3420aec` (Tranche D product land `a05190e` ⊂ tip)  
+**SoT:** `main` @ `aa62473`  
 **Date:** 2026-07-31  
 
 ## Done
-1. Studies 01–03 · 10 Worlds  
-2. A+B+C CLOSED  
-3. **Tranche D CLOSED** — CI chain fix + per-World map/identity guards  
-4. Auditor AUD-80…85 absorbed  
-5. **CI tip GREEN** — Mobile · Production gates · API · Typecheck · ESLint · GCP  
+Wave8 A–D · 10 Worlds protected · CI green · Replit PASTE ready · **Strict orders `85` + inventory `86` issued for full team**
 
-## Local REL-00
-section-guard **85/85** · chain **167/167** · mobile pack PASS  
+## Next
+Team lands → each seat runs **85 §2** → Replit shots → Auditor/REL VERIFY → **STANDBY**  
+Product World only if Owner names HOLD or Replit proves ProductBug
 
 ## HOLD
-Factories header · Banks directory · REL-21 · Live Certified / Coolify cutover  
-
-## Team
-AUD-86 · REL-00 · **STANDBY**
+Factories header · Banks directory · REL-21 · Arabic seed · Coolify Live
