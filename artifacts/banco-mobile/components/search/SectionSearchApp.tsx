@@ -787,13 +787,15 @@ export function SectionSearchApp({
       : "all";
   const isMaterialsSection = criteria.category === "materials";
   // B-CORE upper header owns market/sort/types/search+Filters (layer 1).
-  // Commodity + origin strips stay visible under the header (layer 2) — compressed,
-  // never erased. listingMode also remains in FilterSheet.
+  // Layer 2: origin + commodity share ONE compact strip (never a wasted full
+  // origin-only row). listingMode remains in FilterSheet. Never erase strips.
   const showOriginChrome = isMaterialsSection;
   const showMaterialChrome =
     isMaterialsSection &&
     (criteria.industrialType === "all" ||
       criteria.industrialType === "raw_material");
+  // Origin + commodity share one layer-2 strip (showOriginChrome kept for guards).
+  const showMaterialsLayer2 = showOriginChrome;
   const showCarOriginChrome = criteria.category === "car" && !lockedEngine;
   const showCarBrandStrip = criteria.category === "car" && !lockedEngine;
   const showRentalTerms =
@@ -1638,110 +1640,132 @@ export function SectionSearchApp({
         </ScrollView>
       ) : null}
 
-      {/* ── Materials commodity strip (حديد / ألومنيوم / …) ── */}
-      {showMaterialChrome ? (
+      {/* ── Materials layer 2: origin + commodity in ONE strip (no wasted row) ──
+          Origin leads as a dense segment; commodities follow when raw/all.
+          Filters stay wired (selectOrigin / selectMaterial) — never erased. */}
+      {showMaterialsLayer2 ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.hScroll}
-          contentContainerStyle={[styles.reTypeStrip, { flexDirection: rowDir }]}
+          contentContainerStyle={[
+            styles.reTypeStrip,
+            styles.materialsLayer2Strip,
+            { flexDirection: rowDir },
+          ]}
           testID="materials-material-strip"
         >
-          <Pressable
-            onPress={() => {
-              playSound("tap");
-              Haptics.selectionAsync();
-              update({ material: null });
-            }}
-            style={[
-              styles.stripChip,
-              {
-                backgroundColor: !criteria.material ? accent : colors.card,
-                borderWidth: 1,
-                borderColor: !criteria.material ? accent : colors.border,
-              },
-            ]}
-            testID="materials-material-all"
+          <View
+            style={[styles.materialsOriginCluster, { flexDirection: rowDir }]}
+            testID="materials-origin-strip"
           >
-            <AppText
-              style={[
-                styles.stripChipText,
-                {
-                  color: !criteria.material ? "#FFFFFF" : colors.foreground,
-                },
-              ]}
-            >
-              {t("home.engines.all")}
-            </AppText>
-          </Pressable>
-          {MATERIAL_TYPES.map((m) => {
-            const active = criteria.material === m.value;
-            return (
+            {(["all", "local", "imported"] as const).map((o) => {
+              const active = originKey === o;
+              return (
+                <Pressable
+                  key={o}
+                  onPress={() => {
+                    playSound("tap");
+                    Haptics.selectionAsync();
+                    selectOrigin(o);
+                  }}
+                  style={[
+                    styles.materialsOriginChip,
+                    {
+                      backgroundColor: active ? accent : colors.secondary,
+                      borderColor: active ? accent : colors.border,
+                    },
+                  ]}
+                  testID={`section-origin-${o}`}
+                >
+                  <AppText
+                    style={[
+                      styles.materialsOriginChipText,
+                      { color: active ? "#FFFFFF" : colors.mutedForeground },
+                    ]}
+                  >
+                    {o === "all"
+                      ? t("home.engines.all")
+                      : t(`create.opts.${o}`)}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {showMaterialChrome ? (
+            <>
+              <View
+                style={[
+                  styles.materialsLayer2Divider,
+                  { backgroundColor: colors.border },
+                ]}
+              />
               <Pressable
-                key={m.value}
                 onPress={() => {
                   playSound("tap");
                   Haptics.selectionAsync();
-                  selectMaterial(m.value);
+                  update({ material: null });
                 }}
                 style={[
                   styles.stripChip,
+                  styles.materialsCommodityChip,
                   {
-                    backgroundColor: active ? accent : colors.card,
+                    backgroundColor: !criteria.material ? accent : colors.card,
                     borderWidth: 1,
-                    borderColor: active ? accent : colors.border,
+                    borderColor: !criteria.material ? accent : colors.border,
                   },
                 ]}
-                testID={`materials-material-${m.value}`}
+                testID="materials-material-all"
               >
                 <AppText
                   style={[
                     styles.stripChipText,
-                    { color: active ? "#FFFFFF" : colors.foreground },
+                    {
+                      color: !criteria.material
+                        ? "#FFFFFF"
+                        : colors.foreground,
+                    },
                   ]}
                 >
-                  {isRTL ? m.ar : m.en}
+                  {t("home.engines.all")}
                 </AppText>
               </Pressable>
-            );
-          })}
+              {MATERIAL_TYPES.map((m) => {
+                const active = criteria.material === m.value;
+                return (
+                  <Pressable
+                    key={m.value}
+                    onPress={() => {
+                      playSound("tap");
+                      Haptics.selectionAsync();
+                      selectMaterial(m.value);
+                    }}
+                    style={[
+                      styles.stripChip,
+                      styles.materialsCommodityChip,
+                      {
+                        backgroundColor: active ? accent : colors.card,
+                        borderWidth: 1,
+                        borderColor: active ? accent : colors.border,
+                      },
+                    ]}
+                    testID={`materials-material-${m.value}`}
+                  >
+                    <AppText
+                      style={[
+                        styles.stripChipText,
+                        { color: active ? "#FFFFFF" : colors.foreground },
+                      ]}
+                    >
+                      {isRTL ? m.ar : m.en}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </>
+          ) : null}
         </ScrollView>
-      ) : null}
-
-      {/* ── Origin chips (materials only) ── */}
-      {showOriginChrome ? (
-        <View
-          style={[styles.chipRow, { flexDirection: rowDir }]}
-          testID="materials-origin-strip"
-        >
-          {(["all", "local", "imported"] as const).map((o) => {
-            const active = originKey === o;
-            return (
-              <Pressable
-                key={o}
-                onPress={() => {
-                  playSound("tap");
-                  Haptics.selectionAsync();
-                  selectOrigin(o);
-                }}
-                style={[
-                  styles.chip,
-                  { backgroundColor: active ? accent : colors.secondary },
-                ]}
-                testID={`section-origin-${o}`}
-              >
-                <AppText
-                  style={[
-                    styles.chipText,
-                    { color: active ? "#FFFFFF" : colors.mutedForeground },
-                  ]}
-                >
-                  {o === "all" ? t("home.engines.all") : t(`create.opts.${o}`)}
-                </AppText>
-              </Pressable>
-            );
-          })}
-        </View>
       ) : null}
 
       {/* ── Rental term chips (RE rent / Booking) ── */}
@@ -2072,6 +2096,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 18,
+  },
+  // Materials layer 2 — origin welded into the commodity strip (dense, one row).
+  materialsLayer2Strip: {
+    alignItems: "center",
+    gap: 6,
+    paddingTop: 6,
+    paddingBottom: 2,
+  },
+  materialsOriginCluster: {
+    alignItems: "center",
+    gap: 4,
+    paddingInlineEnd: 2,
+  },
+  materialsOriginChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  materialsOriginChipText: {
+    fontSize: 11.5,
+    fontFamily: "Inter_600SemiBold",
+  },
+  materialsLayer2Divider: {
+    width: StyleSheet.hairlineWidth,
+    height: 22,
+    opacity: 0.7,
+    marginHorizontal: 2,
+  },
+  materialsCommodityChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   carBrandBtn: {
     alignItems: "center",

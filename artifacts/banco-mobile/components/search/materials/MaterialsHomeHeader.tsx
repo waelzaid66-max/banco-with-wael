@@ -2,8 +2,9 @@
  * B-CORE Industrial Hub — upper header only (materials).
  *
  * Same method as B-PROPERTIES / Stay: bands A–D inside SectionSearchApp.
- * Compresses search + Filters + industrial types + market/sort into the header.
- * Does NOT erase filters — commodity/origin/listingMode stay in FilterSheet.
+ * Compresses search + Filters + industrial types into the header.
+ * Market/currency welded beside BANCO above the search pill (stable type strip).
+ * Does NOT erase filters — commodity/origin/listingMode stay layered below / FilterSheet.
  * Does NOT touch MiniAppBottomNav.
  * No fake vanity counts. No separate hub dashboard.
  */
@@ -118,13 +119,14 @@ export function MaterialsHomeHeader({
 }: Props) {
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
-  const topPad = Math.max(insets.top, Platform.OS === "web" ? 10 : 0);
+  // ~2mm tighter than previous top rhythm (owner 2026-07-31).
+  const topPad = Math.max(insets.top, Platform.OS === "web" ? 8 : 0);
   const rowDir = isRTL ? "row-reverse" : "row";
   const textAlign = isRTL ? "right" : "left";
   const sortActive = sort !== "recommended";
 
   return (
-    <View style={[styles.root, { paddingTop: topPad - 1 }]} testID="materials-core-header">
+    <View style={[styles.root, { paddingTop: Math.max(0, topPad - 2) }]} testID="materials-core-header">
       {/* Band A */}
       <View style={[styles.topBar, { flexDirection: rowDir }]}>
         <Pressable
@@ -136,7 +138,7 @@ export function MaterialsHomeHeader({
         >
           <Feather
             name={isRTL ? "arrow-right" : "arrow-left"}
-            size={20}
+            size={18}
             color={SNOW}
           />
         </Pressable>
@@ -149,13 +151,13 @@ export function MaterialsHomeHeader({
         >
           <Feather
             name="bookmark"
-            size={18}
+            size={16}
             color={searchSaved ? ACCENT : SNOW}
           />
         </Pressable>
       </View>
 
-      {/* Band B — B-CORE Industrial Hub identity + compact industrial seal */}
+      {/* Band B — B-CORE identity + compact industrial seal (~2mm denser) */}
       <View style={styles.brandBlock} testID="materials-core-brand">
         <View
           style={[
@@ -172,7 +174,6 @@ export function MaterialsHomeHeader({
               {t("search.discover.section.materialsHubLabel")}
             </AppText>
           </View>
-          {/* Mock-aligned industrial seal — cropped, not half-screen hero */}
           <View style={styles.heroSeal} testID="materials-core-seal">
             <Image source={HERO_PHOTO} style={styles.heroSealPhoto} contentFit="cover" />
             <LinearGradient
@@ -187,7 +188,7 @@ export function MaterialsHomeHeader({
 
         <View style={styles.taglineRow}>
           <View style={styles.taglineRule} />
-          <AppText style={styles.tagline} numberOfLines={2}>
+          <AppText style={styles.tagline} numberOfLines={1}>
             {t("search.discover.section.materialsTagline")}
           </AppText>
           <View style={styles.taglineRule} />
@@ -196,17 +197,26 @@ export function MaterialsHomeHeader({
         <AppText style={styles.poweredLabel} numberOfLines={1}>
           {t("booking.poweredBy")}
         </AppText>
+        {/* Market welded beside BANCO above the search pill — type strip stays stable */}
         <View
           style={[
             styles.poweredRow,
             { flexDirection: isRTL ? "row-reverse" : "row" },
           ]}
+          testID="materials-powered-market-row"
         >
           <Image
             source={BANCO_LOGO}
             style={styles.poweredLogo}
             contentFit="contain"
             tintColor={ACCENT}
+          />
+          <MarketCountryButton
+            selected={marketCountry}
+            onPress={onOpenMarket}
+            compact
+            tone="onDark"
+            testID="materials-market-beside-banco"
           />
           <Pressable
             onPress={onCycleSort}
@@ -220,7 +230,7 @@ export function MaterialsHomeHeader({
           >
             <Feather
               name={sortIcon(sort)}
-              size={13}
+              size={12}
               color={sortActive ? SNOW : ASH}
             />
           </Pressable>
@@ -230,7 +240,7 @@ export function MaterialsHomeHeader({
       {/* Band C — search + Filters compressed inside pill (not erased) */}
       {searchOpen ? (
         <View style={[styles.searchPill, { flexDirection: rowDir }]}>
-          <Ionicons name="search" size={17} color={ACCENT} />
+          <Ionicons name="search" size={16} color={ACCENT} />
           <TextInput
             ref={inputRef}
             value={draftQuery}
@@ -245,11 +255,11 @@ export function MaterialsHomeHeader({
           />
           {draftQuery.length > 0 ? (
             <Pressable onPress={onClearQuery} hitSlop={8} testID="section-search-clear">
-              <Feather name="x" size={15} color={ASH} />
+              <Feather name="x" size={14} color={ASH} />
             </Pressable>
           ) : (
             <Pressable onPress={onCloseSearch} hitSlop={8} testID="section-search-close">
-              <Feather name="x" size={15} color={ASH} />
+              <Feather name="x" size={14} color={ASH} />
             </Pressable>
           )}
           <Pressable
@@ -258,7 +268,7 @@ export function MaterialsHomeHeader({
             style={styles.filterInSearch}
             testID="section-filter-toggle"
           >
-            <Feather name="sliders" size={16} color={ACCENT} />
+            <Feather name="sliders" size={15} color={ACCENT} />
             {activeFilterCount > 0 ? (
               <View style={styles.filterBadge}>
                 <AppText style={styles.filterBadgeText}>{activeFilterCount}</AppText>
@@ -273,7 +283,7 @@ export function MaterialsHomeHeader({
             style={[styles.searchMainHit, { flexDirection: rowDir }]}
             testID="section-search-open"
           >
-            <Ionicons name="search" size={17} color={ACCENT} />
+            <Ionicons name="search" size={16} color={ACCENT} />
             <AppText
               style={[
                 styles.searchPlaceholder,
@@ -286,7 +296,7 @@ export function MaterialsHomeHeader({
           </Pressable>
           {draftQuery.length > 0 ? (
             <Pressable onPress={onClearQuery} hitSlop={8} testID="section-search-clear">
-              <Feather name="x" size={15} color={ASH} />
+              <Feather name="x" size={14} color={ASH} />
             </Pressable>
           ) : null}
           <Pressable
@@ -295,7 +305,7 @@ export function MaterialsHomeHeader({
             style={styles.filterInSearch}
             testID="section-filter-toggle"
           >
-            <Feather name="sliders" size={16} color={ACCENT} />
+            <Feather name="sliders" size={15} color={ACCENT} />
             {activeFilterCount > 0 ? (
               <View style={styles.filterBadge}>
                 <AppText style={styles.filterBadgeText}>{activeFilterCount}</AppText>
@@ -305,7 +315,7 @@ export function MaterialsHomeHeader({
         </View>
       )}
 
-      {/* Band D — market + large industrial type tabs (real criteria) */}
+      {/* Band D — industrial type tabs only (market lives beside BANCO) */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -313,10 +323,6 @@ export function MaterialsHomeHeader({
         style={styles.tabsScroll}
         testID="materials-type-strip"
       >
-        <View style={styles.marketInTabs}>
-          <MarketCountryButton selected={marketCountry} onPress={onOpenMarket} />
-        </View>
-        <View style={styles.tabDivider} />
         {typeTabs.map((tab, index) => {
           const active = activeIndustrialType === tab.value;
           const tint = active ? SNOW : ASH;
@@ -332,13 +338,13 @@ export function MaterialsHomeHeader({
                 {icon.set === "mci" ? (
                   <MaterialCommunityIcons
                     name={icon.name}
-                    size={22}
+                    size={20}
                     color={active ? SNOW : ACCENT}
                   />
                 ) : (
                   <Feather
                     name={icon.name}
-                    size={22}
+                    size={20}
                     color={active ? SNOW : ACCENT}
                   />
                 )}
@@ -361,89 +367,89 @@ const styles = StyleSheet.create({
   root: {
     backgroundColor: VOID,
     paddingHorizontal: 16,
-    paddingBottom: 2,
+    paddingBottom: 0,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: HAIRLINE,
   },
-  topBar: { alignItems: "center", minHeight: 34 },
+  topBar: { alignItems: "center", minHeight: 28 },
   topSpacer: { flex: 1 },
   iconHit: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     alignItems: "center",
     justifyContent: "center",
   },
-  brandBlock: { alignItems: "center", marginBottom: 4 },
-  wordmarkRow: { alignItems: "center", gap: 8, marginBottom: 4 },
-  wordmarkB: { width: 42, height: 52 },
-  wordmarkTextCol: { gap: 2, flexShrink: 1 },
+  brandBlock: { alignItems: "center", marginBottom: 2 },
+  wordmarkRow: { alignItems: "center", gap: 6, marginBottom: 2 },
+  wordmarkB: { width: 36, height: 44 },
+  wordmarkTextCol: { gap: 1, flexShrink: 1 },
   heroSeal: {
-    width: 72,
-    height: 60,
-    borderRadius: 12,
+    width: 60,
+    height: 50,
+    borderRadius: 10,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(168,42,28,0.55)",
-    marginInlineStart: 4,
+    marginInlineStart: 2,
   },
   heroSealPhoto: { ...StyleSheet.absoluteFillObject },
   heroSealMark: {
     position: "absolute",
-    left: 4,
-    bottom: 4,
-    width: 22,
-    height: 26,
+    left: 3,
+    bottom: 3,
+    width: 18,
+    height: 22,
   },
-  heroSealB: { width: 22, height: 26 },
+  heroSealB: { width: 18, height: 22 },
   wordmarkCore: {
-    fontSize: 28,
+    fontSize: 24,
     fontFamily: "Inter_700Bold",
     color: ACCENT,
-    letterSpacing: 2.6,
+    letterSpacing: 2.2,
   },
   wordmarkHub: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: "Inter_600SemiBold",
     color: SNOW,
-    letterSpacing: 2.6,
+    letterSpacing: 2.2,
     textTransform: "uppercase",
   },
   taglineRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     maxWidth: "100%",
     paddingHorizontal: 8,
-    marginBottom: 2,
+    marginBottom: 1,
   },
   taglineRule: {
     flex: 1,
     height: StyleSheet.hairlineWidth * 2,
     backgroundColor: ACCENT,
-    maxWidth: 48,
+    maxWidth: 40,
     opacity: 0.85,
   },
   tagline: {
-    fontSize: 10,
+    fontSize: 9,
     fontFamily: "Inter_500Medium",
     color: ASH,
     textAlign: "center",
     flexShrink: 1,
   },
   poweredLabel: {
-    fontSize: 8,
+    fontSize: 7,
     fontFamily: "Inter_500Medium",
     color: ASH,
-    letterSpacing: 1.1,
+    letterSpacing: 1,
     textTransform: "uppercase",
     marginBottom: 1,
   },
-  poweredRow: { alignItems: "center", gap: 8 },
-  poweredLogo: { width: 68, height: 16 },
+  poweredRow: { alignItems: "center", gap: 6, flexWrap: "wrap", justifyContent: "center" },
+  poweredLogo: { width: 60, height: 14 },
   sortNearBanco: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: StyleSheet.hairlineWidth,
@@ -452,7 +458,7 @@ const styles = StyleSheet.create({
   },
   sortNearBancoActive: { backgroundColor: ACCENT, borderColor: ACCENT },
   searchPill: {
-    height: 46,
+    height: 42,
     borderRadius: 999,
     paddingHorizontal: 12,
     alignItems: "center",
@@ -465,16 +471,16 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     gap: 8,
-    minHeight: 44,
+    minHeight: 40,
   },
   searchPlaceholder: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "Inter_500Medium",
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "Inter_400Regular",
     color: SNOW,
     padding: 0,
@@ -497,29 +503,28 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: SNOW,
   },
-  tabsScroll: { marginTop: 8, marginHorizontal: -16 },
+  tabsScroll: { marginTop: 6, marginHorizontal: -16 },
   tabsRow: {
     alignItems: "center",
     paddingHorizontal: 12,
     gap: 0,
-    minHeight: 56,
+    minHeight: 48,
   },
-  marketInTabs: { paddingHorizontal: 4, justifyContent: "center" },
   tabItem: {
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 12,
-    minWidth: 72,
-    gap: 4,
-    borderRadius: 16,
-    paddingVertical: 8,
+    minWidth: 68,
+    gap: 3,
+    borderRadius: 14,
+    paddingVertical: 6,
   },
-  tabItemActive: { backgroundColor: ACCENT, paddingHorizontal: 14 },
-  tabLabel: { fontSize: 10.5, fontFamily: "Inter_600SemiBold" },
+  tabItemActive: { backgroundColor: ACCENT, paddingHorizontal: 12 },
+  tabLabel: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
   tabDivider: {
     width: StyleSheet.hairlineWidth,
     alignSelf: "center",
-    height: 28,
+    height: 24,
     backgroundColor: HAIRLINE,
   },
 });
