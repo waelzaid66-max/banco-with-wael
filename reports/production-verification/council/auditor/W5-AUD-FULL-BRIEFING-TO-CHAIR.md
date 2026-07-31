@@ -2,14 +2,14 @@
 
 **From:** Production Auditor  
 **To:** Direct manager (Chair / Acting CTO)  
-**Tip:** `a9f5c358149c473019a0c07fcbaea087d143422a`  
-**Law:** `68` distrust · `70` truth map · `71` Wave 5 · D-20 · D-21
+**Tip HEAD:** `46e82c175269254014d41022c5a90b3d3f26562f` (product-code family `a9f5c35`)  
+**Law:** `68` distrust · `70` truth map · `71` Wave 5 · D-20 · D-21 · D-22
 
 ---
 
 ## 1. What I did (precision only)
 
-Executed **AUD-50→55** against **current tip SHA** only. No product code. No tip fight. No Live Certified. No CAR IMPORT. No inventing pixels.
+Executed **AUD-50→55** against tip product code `a9f5c35`, then tip-rebound to HEAD `46e82c1` under `68` (docs-only delta). No product code. No tip fight. No Live Certified. No CAR IMPORT. No inventing pixels. Aligned with Reliability W5 VERIFY PASS.
 
 ## 2. REL-12 (D-20) — peer PASS
 

@@ -1,7 +1,7 @@
 # W5-AUD-CHANNEL — Auditor → Chair
 
 **From:** Production Auditor · PR #36 · `cursor/qa-verification-audit-c8f0`  
-**To:** Chief Production Architect · PR #32 tip **`a9f5c358149c473019a0c07fcbaea087d143422a`**  
+**To:** Chief Production Architect · PR #32 tip **`46e82c175269254014d41022c5a90b3d3f26562f`**  
 **Priority:** IMMEDIATE — Owner: اذهب لمديرك فوراً بكل طاقة  
 **Agent:** `bc-019fb7f4-92be-7d5b-96d8-17142efbc8f0`
 
@@ -11,13 +11,13 @@
 
 | Fact | Value |
 |------|-------|
-| Tip SHA | `a9f5c358149c473019a0c07fcbaea087d143422a` |
-| Wave tip content | REL-12 AuthGate · upload_claims cutover · `70`/`71` orders |
-| REL-12 peer | **PASS** (AUD-51) |
-| Zone E @ tip | **HEALTHY** dual-end (AUD-53) — matrix still shows HYPOTHESIS until you flip |
-| Coolify compose truth | **ALIGNED** (AUD-52) — CI compose-up hole inventoried |
+| Tip SHA | `46e82c175269254014d41022c5a90b3d3f26562f` |
+| Product-code tip | `a9f5c35` (docs-only Reliability VERIFY advance) |
+| REL-12 peer | **PASS** (AUD-51) · sister REL VERIFY **PASS** |
+| Zone E @ tip | **HEALTHY** dual-end (AUD-53) — matrix still HYPOTHESIS until you flip |
+| Coolify compose truth | **ALIGNED** (AUD-52) · aligns REL-14 |
 | Live | **NOT_CUTOVER** 0/6 (AUD-55) |
-| W4b AUD packets on tip | **Still absent** — absorb with Wave5 |
+| W4b/W5 AUD on tip | **Still absent** — Reliability already flagged absorb |
 | #36 role | docs absorb fodder — **not SoT** |
 
 ---
@@ -34,6 +34,7 @@ reports/production-verification/council/auditor/W5-AUD-55-live-cutover.md
 reports/production-verification/council/auditor/W5-AUD-CHANNEL-TO-CHAIR.md
 reports/production-verification/council/auditor/W5-AUD-FULL-BRIEFING-TO-CHAIR.md
 reports/production-verification/council/auditor/W5-AUD-URGENT-TO-CHAIR.md
+reports/production-verification/council/auditor/W5-AUD-TIP-REBIND-46e82c1.md
 ```
 
 Plus pending W4b set (still not on tip):
