@@ -1,5 +1,5 @@
 /**
- * BANCO Maps — mini-app #11 (Wave 6 Opt B).
+ * BANCO Maps — mini-app §7 of 10 (Wave 6 Opt B land; Wave 8 count lock).
  *
  * Dedicated Maps world from Discover Search. Reuses Leaflet / SearchResultsMap /
  * clusters — never deletes vendor stack. World tabs filter this map surface;

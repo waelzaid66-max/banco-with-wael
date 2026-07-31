@@ -260,8 +260,8 @@ export function SearchDiscover({ onExploreMap }: Props) {
         </View>
       </Pressable>
 
-      {/* Explore on map — ALWAYS present (owner). Wave 6: primary CTA enters
-          Maps mini-app #11 (/section/maps). Secondary chips intentionally
+      {/* Explore on map — ALWAYS present (owner). Primary CTA enters
+          Maps mini-app §7 (/section/maps). Secondary chips intentionally
           duplicate per-catalogue ?map=1 feeds (Owner: maps serve all sections). */}
       <Pressable
         onPress={onExploreMap}
