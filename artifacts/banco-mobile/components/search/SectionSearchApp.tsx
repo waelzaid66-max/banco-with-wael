@@ -164,6 +164,20 @@ export interface SectionSearchAppProps {
    * executes it. Omitted axes keep the shipped chip behaviour (see sectionChrome).
    */
   chrome?: SectionChrome;
+  /**
+   * Materials Mini-App: seed industrial subtype when opening catalog from Home.
+   * Defaults to "all". Does not change strip/FilterSheet behaviour.
+   */
+  initialIndustrialType?: IndustrialType;
+  /** Optional commodity seed (materials catalog). */
+  initialMaterial?: string | null;
+  /** Open FilterSheet once on mount (home Filters CTA). */
+  openFiltersOnMount?: boolean;
+  /**
+   * When set, back returns to the Mini-App home instead of router.back().
+   * Still runs the existing dirty-reset path.
+   */
+  onRequestClose?: () => void;
 }
 
 /**
@@ -183,6 +197,10 @@ export function SectionSearchApp({
   subtitleKey,
   headerIcon,
   chrome,
+  initialIndustrialType = "all",
+  initialMaterial = null,
+  openFiltersOnMount = false,
+  onRequestClose,
 }: SectionSearchAppProps) {
   const colors = useColors();
   const { t, isRTL } = useI18n();
@@ -273,12 +291,23 @@ export function SectionSearchApp({
       marketCountry: market,
       category,
       engineKey: baseEngine,
+      industrialType:
+        category === "materials" || category === "facilities"
+          ? initialIndustrialType
+          : "all",
+      material: category === "materials" ? initialMaterial : null,
       rentalTerm:
         lockedEngine === "rent"
           ? sanitizeRentalTermForMarket(null, market)
           : null,
     }),
-    [category, baseEngine, lockedEngine],
+    [
+      category,
+      baseEngine,
+      lockedEngine,
+      initialIndustrialType,
+      initialMaterial,
+    ],
   );
 
   // The clean, per-entry baseline. Captured when the page seeds (and updated
@@ -522,6 +551,14 @@ export function SectionSearchApp({
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const [brandValue, setBrandValue] = useState<string | null>(null);
   const [carPickerOpen, setCarPickerOpen] = useState(false);
+
+  // Materials hub Filters CTA → open sheet once; strips stay fully intact.
+  const openedFiltersRef = useRef(false);
+  useEffect(() => {
+    if (!openFiltersOnMount || openedFiltersRef.current) return;
+    openedFiltersRef.current = true;
+    setShowFilters(true);
+  }, [openFiltersOnMount]);
 
   const autocompleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const commitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -910,11 +947,15 @@ export function SectionSearchApp({
 
   const goBack = () => {
     playSound("tap");
+    const leave = () => {
+      if (onRequestClose) onRequestClose();
+      else router.back();
+    };
     if (isDirty) {
-      resetAndLeave(() => router.back());
+      resetAndLeave(leave);
       return;
     }
-    router.back();
+    leave();
   };
 
   const rowDir = isRTL ? "row-reverse" : "row";
