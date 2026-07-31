@@ -160,6 +160,17 @@
 
 ---
 
+## D-2026-07-31-15 — Reliability Wave4: REL-09 ACK + Zone D + REL-10 ask
+
+| | |
+|--|--|
+| **Decision** | Reliability verifies Chair REL-09; files Zone D L1 evidence; does **not** repair Zone C create/`industrial` until Approve Plan REL-10. |
+| **Adopted** | `W4-REL-09-VERIFY.md` · Zone D packet · `W4-REL-00-tip-reverify.md` · ask `W4-REL-ASK-CHAIR-REL10-CREATE-CATEGORY.md`. |
+| **Rejected** | Re-implementing REL-09; coding MOB-C-01 without Approve; Live Certified. |
+| **Evidence** | Tip gates green; Zone C skeptic MOB-C-01 confirmed on `create.tsx` deepCategory allowlist. |
+
+---
+
 ## Template for future disputes
 
 ```markdown
