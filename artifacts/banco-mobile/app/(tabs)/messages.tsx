@@ -301,6 +301,18 @@ export default function MessagesScreen() {
           <AppText style={[styles.emptyText, { color: colors.mutedForeground }]}>
             {t("messages.emptyHint")}
           </AppText>
+          <Pressable
+            onPress={() => router.push("/(tabs)/search")}
+            style={[
+              styles.signInBtn,
+              { backgroundColor: colors.primary, borderRadius: colors.radius },
+            ]}
+            testID="messages-browse"
+          >
+            <AppText style={[styles.signInText, { color: colors.primaryForeground }]}>
+              {t("messages.emptyCta")}
+            </AppText>
+          </Pressable>
         </View>
       ) : (
         <FlatList

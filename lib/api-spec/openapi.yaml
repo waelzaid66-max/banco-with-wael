@@ -4531,11 +4531,15 @@ paths:
                   type: string
                 latitude:
                   type: number
+                  minimum: -90
+                  maximum: 90
                   description: >
                     Optional precise pin (send with longitude). Overrides the area
                     centroid for near-me search + map display.
                 longitude:
                   type: number
+                  minimum: -180
+                  maximum: 180
                   description: Optional precise pin (send with latitude).
                 status:
                   type: string

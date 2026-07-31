@@ -189,3 +189,111 @@ test("NOTIF-09 unknown notification routes to /notifications", () => {
   assert.match(body, /return "\/notifications";\s*\n\}/);
   assert.doesNotMatch(body, /return null;/);
 });
+
+// ── Wave 3 ──────────────────────────────────────────────────────────────
+
+const nearMe = fs.readFileSync(path.join(root, "lib/nearMe.ts"), "utf8");
+const inbox = fs.readFileSync(path.join(root, "app/(tabs)/messages.tsx"), "utf8");
+const importOrder = fs.readFileSync(
+  path.join(root, "app/import/order/[id].tsx"),
+  "utf8",
+);
+const importHub = fs.readFileSync(path.join(root, "app/import/index.tsx"), "utf8");
+const pushHook = fs.readFileSync(
+  path.join(root, "hooks/usePushNotifications.tsx"),
+  "utf8",
+);
+const editListing = fs.readFileSync(
+  path.join(root, "app/listings/edit/[id].tsx"),
+  "utf8",
+);
+const emailSvc = fs.readFileSync(
+  path.join(root, "../api-server/src/services/EmailService.ts"),
+  "utf8",
+);
+const notifSvc = fs.readFileSync(
+  path.join(root, "../api-server/src/services/NotificationService.ts"),
+  "utf8",
+);
+const pushSvc = fs.readFileSync(
+  path.join(root, "../api-server/src/services/PushService.ts"),
+  "utf8",
+);
+const home = fs.readFileSync(path.join(root, "app/(tabs)/index.tsx"), "utf8");
+
+test("MSG-07b thread can load older pages via before=", () => {
+  assert.match(thread, /getMessages\(/);
+  assert.match(thread, /before:\s*oldest\.id/);
+  assert.match(thread, /testID="thread-load-older"/);
+});
+
+test("MSG-11 email CTA uses website workspace messages path", () => {
+  assert.match(emailSvc, /\/workspace\/messages\/\$\{args\.conversationId\}/);
+  assert.doesNotMatch(
+    emailSvc,
+    /appUrl\(`\/messages\/\$\{args\.conversationId\}`\)/,
+  );
+});
+
+test("MSG-12 import support creates ticket (not generic inbox)", () => {
+  assert.match(importOrder, /createSupportTicket/);
+  assert.match(importOrder, /category:\s*"import_order"/);
+  assert.doesNotMatch(importOrder, /router\.push\("\/messages"/);
+  assert.match(importHub, /href:\s*"support"/);
+  assert.match(importHub, /createSupportTicket/);
+});
+
+test("MSG-15 inbox empty has browse CTA", () => {
+  assert.match(inbox, /testID="messages-browse"/);
+  assert.match(inbox, /messages\.emptyCta/);
+});
+
+test("NOTIF-05 unread is full count not page-capped", () => {
+  assert.match(notifSvc, /count\(\*\)::int/);
+  assert.match(home, /meta\?\.total/);
+});
+
+test("NOTIF-06 push payload includes badge", () => {
+  assert.match(pushSvc, /badge,/);
+});
+
+test("NOTIF-07 push registration retries with backoff", () => {
+  assert.match(pushHook, /const delays = \[0, 2000, 5000, 15000\]/);
+});
+
+test("MSG-07b absorbs vacated poll ids and gates older load", () => {
+  assert.match(thread, /prevPollMsgsRef/);
+  assert.match(thread, /readyForOlderRef/);
+  assert.match(thread, /loadingOlderRef/);
+  assert.match(thread, /newestId/);
+  assert.match(thread, /maintainVisibleContentPosition/);
+  assert.match(thread, /prevPollMsgsRef\.current = \[\]/);
+});
+
+test("MSG-14 non-image media renders openable attachment", () => {
+  assert.match(thread, /mediaKind === "video"/);
+  assert.match(thread, /chat\.mediaVideo/);
+  assert.match(thread, /Linking\.openURL/);
+});
+
+test("MSG-08 report uses support tickets; hide uses deleteConversation", () => {
+  assert.match(thread, /createSupportTicket/);
+  assert.match(thread, /category: "abuse"/);
+  assert.match(thread, /deleteConversation/);
+  assert.match(thread, /action-report/);
+});
+
+test("NOTIF-08 settings label discloses push is gated with in-app", () => {
+  const i18n = fs.readFileSync(path.join(root, "constants/i18n.ts"), "utf8");
+  assert.match(i18n, /Alerts \(in-app \+ push\)/);
+});
+
+test("NOTIF-04 push schedules Expo receipt processing", () => {
+  const push = fs.readFileSync(
+    path.join(root, "../api-server/src/services/PushService.ts"),
+    "utf8",
+  );
+  assert.match(push, /getReceipts/);
+  assert.match(push, /processPushReceipts/);
+  assert.match(push, /scheduleReceiptCheck/);
+});

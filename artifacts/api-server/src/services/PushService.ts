@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
-import { pushTokens, users } from "@workspace/db/schema";
-import { eq, inArray, and } from "drizzle-orm";
+import { pushTokens, users, notifications } from "@workspace/db/schema";
+import { eq, inArray, and, isNull, sql } from "drizzle-orm";
 
 /**
  * PushService — registration + best-effort remote delivery of Expo push
@@ -9,18 +9,39 @@ import { eq, inArray, and } from "drizzle-orm";
  *
  * Delivery uses Expo's push service (https://exp.host/--/api/v2/push/send),
  * which needs no server-side secret for Expo push tokens. Tokens reported as
- * DeviceNotRegistered are pruned so dead devices stop being targeted.
+ * DeviceNotRegistered (on send tickets OR later receipts) are pruned so dead
+ * devices stop being targeted.
+ *
+ * NOTIF-04: after a successful ticket, we schedule a receipt check (~15s) so
+ * APNs/FCM delivery failures that only appear on receipts also prune tokens.
+ * A durable cross-process retry queue is still tracked separately (ops / DB).
  */
 
 const EXPO_PUSH_ENDPOINT = "https://exp.host/--/api/v2/push/send";
+const EXPO_RECEIPTS_ENDPOINT = "https://exp.host/--/api/v2/push/getReceipts";
 // Expo accepts up to 100 messages per request.
 const EXPO_CHUNK_SIZE = 100;
+/** Expo docs: wait before fetching receipts; tickets are not receipts. */
+const RECEIPT_DELAY_MS = 15_000;
 
 export interface PushPayload {
   title: string;
   body: string;
   data?: Record<string, unknown> | null;
 }
+
+type ExpoTicket = {
+  status: string;
+  id?: string;
+  message?: string;
+  details?: { error?: string };
+};
+
+type ExpoReceipt = {
+  status: string;
+  message?: string;
+  details?: { error?: string };
+};
 
 /** Loose validation of an Expo push token shape. */
 export function isExpoPushToken(token: string): boolean {
@@ -96,6 +117,68 @@ async function pruneTokens(tokens: string[]): Promise<void> {
   }
 }
 
+function isDeadDeviceError(error?: string): boolean {
+  return error === "DeviceNotRegistered" || error === "InvalidCredentials";
+}
+
+/**
+ * NOTIF-04: fetch Expo push receipts and prune tokens that failed at the
+ * provider. Best-effort — never throws to callers.
+ */
+export async function processPushReceipts(
+  ticketIds: string[],
+  tokenByTicketId: Map<string, string>,
+): Promise<void> {
+  if (ticketIds.length === 0) return;
+  try {
+    const res = await fetch(EXPO_RECEIPTS_ENDPOINT, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ ids: ticketIds }),
+    });
+    if (!res.ok) {
+      console.error("[Push receipts] Expo responded", res.status);
+      return;
+    }
+    const json = (await res.json()) as {
+      data?: Record<string, ExpoReceipt>;
+    };
+    const dead: string[] = [];
+    for (const [ticketId, receipt] of Object.entries(json.data ?? {})) {
+      if (receipt.status === "error" && isDeadDeviceError(receipt.details?.error)) {
+        const token = tokenByTicketId.get(ticketId);
+        if (token) dead.push(token);
+      }
+    }
+    await pruneTokens(dead);
+  } catch (err) {
+    console.error("[Push receipts]", err);
+  }
+}
+
+function scheduleReceiptCheck(
+  ticketIds: string[],
+  tokenByTicketId: Map<string, string>,
+): void {
+  if (ticketIds.length === 0) return;
+  // Best-effort on warm Node / Fluid Compute. Serverless cold-exit may skip;
+  // durable queue remains tracked as NOTIF-04b.
+  const delay =
+    typeof setTimeout === "function"
+      ? setTimeout(() => {
+          void processPushReceipts(ticketIds, tokenByTicketId);
+        }, RECEIPT_DELAY_MS)
+      : null;
+  // Avoid keeping the event-loop handle forever in long-lived processes if
+  // the runtime supports unref (Node).
+  if (delay && typeof (delay as NodeJS.Timeout).unref === "function") {
+    (delay as NodeJS.Timeout).unref();
+  }
+}
+
 /**
  * Send a push to every registered device of an internal user id. Best-effort:
  * all errors are swallowed after logging. Caller passes the SAME userId used
@@ -115,12 +198,21 @@ export async function sendPushToUser(
     const tokens = rows.map((r) => r.token).filter(isExpoPushToken);
     if (tokens.length === 0) return;
 
+    // NOTIF-06: absolute OS badge = current unread for this user (includes the
+    // in-app row just inserted by createNotification before this send).
+    const [unreadRow] = await db
+      .select({ c: sql<number>`count(*)::int` })
+      .from(notifications)
+      .where(and(eq(notifications.userId, userId), isNull(notifications.readAt)));
+    const badge = Number(unreadRow?.c ?? 0);
+
     const messages = tokens.map((to) => ({
       to,
       title: payload.title,
       body: payload.body,
       data: payload.data ?? {},
       sound: "default" as const,
+      badge,
       // Android notification channel — created client-side on registration.
       channelId: "default",
     }));
@@ -155,20 +247,27 @@ async function sendChunk(
     }
 
     const json = (await res.json()) as {
-      data?: Array<{ status: string; details?: { error?: string } }>;
+      data?: ExpoTicket[];
     };
 
     const dead: string[] = [];
+    const receiptIds: string[] = [];
+    const tokenByTicketId = new Map<string, string>();
+
     json.data?.forEach((ticket, idx) => {
-      if (
-        ticket.status === "error" &&
-        ticket.details?.error === "DeviceNotRegistered" &&
-        chunkTokens[idx]
-      ) {
-        dead.push(chunkTokens[idx]);
+      const token = chunkTokens[idx];
+      if (!token) return;
+      if (ticket.status === "error" && isDeadDeviceError(ticket.details?.error)) {
+        dead.push(token);
+        return;
+      }
+      if (ticket.status === "ok" && ticket.id) {
+        receiptIds.push(ticket.id);
+        tokenByTicketId.set(ticket.id, token);
       }
     });
     await pruneTokens(dead);
+    scheduleReceiptCheck(receiptIds, tokenByTicketId);
   } catch (err) {
     console.error("[Push chunk]", err);
   }

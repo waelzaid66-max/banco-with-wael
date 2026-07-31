@@ -1128,6 +1128,7 @@ export async function updateListing(
     base_price_cash?: number;
     location?: string;
     // Optional precise pin (MAP-09). Both axes required to store; omit to leave.
+    // Schema enforces both-or-neither.
     latitude?: number;
     longitude?: number;
     // Lifecycle status patch (Task #71): seller marks the deal closed/hidden.
@@ -1292,6 +1293,7 @@ export async function updateListing(
         flagReason: normalized.flagReason,
         // Only patch status when the caller provided it (mark sold / archive).
         ...(updates.status ? { status: updates.status } : {}),
+        // MAP-09: only overwrite pin when both axes are provided.
         ...pinPatch,
         updatedAt: new Date(),
       })
