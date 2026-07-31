@@ -70,9 +70,16 @@ export default function CompanyProfileScreen() {
       const conversationId = res.data?.id;
       if (!conversationId) throw new Error("missing conversation");
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      // Same listing chrome as inbox → thread (share listing / offer). Do not
+      // drop listingId/role — that made chat from company feel "unwired".
       router.push({
         pathname: "/messages/[id]",
-        params: { id: conversationId, name: res.data?.counterparty_name ?? profile.name },
+        params: {
+          id: conversationId,
+          name: res.data?.counterparty_name ?? profile.name,
+          listingId: res.data?.listing_id ?? profile.latest_listing_id,
+          role: res.data?.viewer_role ?? "buyer",
+        },
       });
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);

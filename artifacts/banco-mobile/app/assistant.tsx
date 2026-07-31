@@ -133,7 +133,15 @@ export default function AssistantScreen() {
       return;
     }
     if (a.kind === "conversation" && a.conversation_id) {
-      router.push(`/messages/${a.conversation_id}`);
+      // Forward listingId only when the assistant stamped it — never invent role
+      // (N1.2). Share/offer unlock from listingId alone.
+      router.push({
+        pathname: "/messages/[id]",
+        params: {
+          id: a.conversation_id,
+          ...(a.listing_id ? { listingId: a.listing_id } : {}),
+        },
+      });
       return;
     }
     if (a.kind === "search") {

@@ -537,6 +537,7 @@ export default function ListingDetailScreen() {
       if (!conversationId) throw new Error("missing conversation");
       // Forward listingId + viewer_role so offer / share / mark-sold chrome
       // unlocks in the thread (same contract as inbox → /messages/[id]).
+      // createConversation always returns both on the buyer path.
       router.push({
         pathname: "/messages/[id]",
         params: {
