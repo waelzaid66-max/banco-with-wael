@@ -1,70 +1,47 @@
-# W6-AUD-63 — Peer VERIFY REL-16/17/20 @ EXECUTE tip `85cfe7f`
+# W6-AUD-63 — Peer VERIFY REL-16/17/20 @ tip `59f3fba` (Wave 6b)
 
-- Seat: Production Auditor · Protocol `68` dual-end  
-- Tip: `cursor/section-wiring-audit-e37c` @ **`85cfe7faeae52214307f7c73eb83483d829b8c67`**  
-- Chair EXECUTE: `75-WAVE6-MAPS-MINIAPP-11-EXECUTE.md`  
-- Orders: `74` AUD-63 · Owner Maps mini-app **#11**  
-- Stamp: `2026-07-31T15:01:45Z`  
-- Mode: **VERIFY only** — zero product code
+- Seat: Production Auditor · Protocol `68`  
+- Tip: `cursor/section-wiring-audit-e37c` @ **`59f3fba50fc91e5a9c136d3bad0b23d9b9a35e3e`**  
+- Product land: `85cfe7f` (no code delta since) · Orders: **`76` §B** · EXECUTE `75` · Chair VERIFY packet  
+- Sister: Reliability REL-16/17/20 VERIFY **PASS** (D-25) — **ALIGN**  
+- Stamp: `2026-07-31T15:08:48Z`  
+- Mode: VERIFY only · **zero product code**
 
-## REL-16 — Maps primary → `/section/maps` (not RE)
+## REL-16 — Maps #11
 
-| Check | Evidence | Pass |
-|-------|----------|------|
-| Producer `exploreOnMap` | `search.tsx:488-491` `router.push("/section/maps")` | **YES** |
-| No RE hardcode in primary | comment `:485-486` · guard forbids `real-estate?map=1` in exploreOnMap | **YES** |
-| FAB same producer | `discover-map-toggle` → `exploreOnMap()` `:1087` | **YES** |
-| CTA present | `SearchDiscover` `discover-explore-map` | **YES** |
-| Route mini-app #11 | `app/section/maps.tsx` → `MapsHubApp` | **YES** |
-| Stack registered | `_layout.tsx` `name="section/maps"` | **YES** |
-| Hub reuses Leaflet map | `MapsHubApp` imports `SearchResultsMap` · `testID="maps-hub"` | **YES** |
-| Hub feeds sections (intentional dup) | world tabs → car/RE/materials/factories/booking `?map=1` | **YES** |
-| Discover secondary portals kept | car + **properties** + materials + factories + stays `?map=1` | **YES** |
-| Copy not property-only | `exploreMapSub` = “Open BANCO Maps — every catalogue…” / AR maps section | **YES** |
-| Guard MOB-07 retargeted | `section-miniapp-guard` exploreOnMap → `/section/maps` | **YES** |
-| Vendor not deleted | `assets/map-vendor/*` present | **YES** |
+| Check | Tip evidence | Pass |
+|-------|--------------|------|
+| Discover primary | `search.tsx:491` `router.push("/section/maps")` | **YES** |
+| ≠ RE hardcode | no exploreOnMap → `real-estate?map=1` | **YES** |
+| FAB | `discover-map-toggle` → `exploreOnMap()` | **YES** |
+| Route | `app/section/maps.tsx` → `MapsHubApp` | **YES** |
+| Hub + Leaflet | `SearchResultsMap` · world tabs · `maps-hub` | **YES** |
+| Intentional `?map=1` feeds | Discover portals + hub sectionHref | **YES** |
+| Vendor present | `assets/map-vendor/*` (5 files) | **YES** |
+| Guard | MOB-07 retargeted (Chair/REL 76/76) | **YES** |
 
-**AUD-63 REL-16: PASS**
+**PASS**
 
-## REL-17 — Cars tertiary chips visible
+## REL-17 — Cars chips
 
 | Check | Evidence | Pass |
 |-------|----------|------|
-| Car chrome | `car.tsx` `engines: "chips"` (was pill) | **YES** |
-| Strip renders chips | `SectionSearchApp` `testID={\`engine-${e.key}\`}` path when not pill | **YES** |
-| Guard chrome contract | car file must match `listingMode:"pill"` + `engines:"chips"` | **YES** |
-| FilterSheet kept | still wired in SectionSearchApp | **YES** |
-| API enums untouched | no invent — existing CAR_ENGINES | **YES** |
+| `engines: "chips"` | `car.tsx:20` | **YES** |
+| Chip testIDs path | SectionSearchApp `engine-${e.key}` | **YES** |
 
-**AUD-63 REL-17: PASS**
+**PASS**
 
-## REL-20 — CarsHomeHeader Stay-parity (named in EXECUTE)
+## REL-20 — CarsHomeHeader
 
 | Check | Evidence | Pass |
 |-------|----------|------|
-| Header component | `components/search/car/CarsHomeHeader.tsx` `cars-home-header` | **YES** |
-| Mounted for car | `SectionSearchApp:1375-1411` `<CarsHomeHeader …>` | **YES** |
-| Map affordance | `cars-header-map` → `openOrLatchMap` | **YES** |
-| Guard | mounts CarsHomeHeader + BOOM brand markers | **YES** |
-| Car ≠ Import | Discover still `discover-car-import` → `/import`; car.tsx comments forbid melt | **YES** |
+| Mount | SectionSearchApp `<CarsHomeHeader` | **YES** |
+| Header file | `car/CarsHomeHeader.tsx` | **YES** |
 
-**AUD-63 REL-20: PASS** (present on tip; visual UNVERIFIED)
-
-## Forbidden honored
-
-| Forbidden | Observed |
-|-----------|----------|
-| Delete Leaflet/clusters/FilterSheet/Import/Stay | **Not deleted** |
-| Banks directory / RE header freestyle | **Not touched** |
-| Live Certified | **Not claimed** |
-
-## HOLD remains
-
-REL-21 vehicle taxonomy · OPS cutover NOT_CUTOVER · device visuals.
+**PASS**
 
 ## Auditor JUDGMENT
 
-**ALREADY_FIXED_ON_TIP** · peer **PASS** for REL-16 + REL-17 + REL-20.  
-Do **not** re-implement. Absorb Auditor evidence onto #39; merge when Reliability REL-00 green.
-
-**Does not equal Live Certified.**
+**ALREADY_FIXED_ON_TIP** · peer **PASS** · do not re-implement.  
+Align Chair `W6-CHAIR-VERIFY-MAPS11-BOOM-CAR` + Reliability VERIFY.  
+Visuals UNVERIFIED · Live Certified **forbidden** · REL-21 HOLD.
