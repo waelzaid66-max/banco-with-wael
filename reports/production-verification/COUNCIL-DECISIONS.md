@@ -278,6 +278,16 @@
 
 ---
 
+## D-2026-07-31-26 — Wave 7 merge + Reliability REL-00 on main
+
+| | |
+|--|--|
+| **Decision** | #39 merged to `main`; Chair ten-section inventory `77` answers seat جرد ask (Stay FINISHED sacred). Reliability runs **REL-00 on main only**. |
+| **Adopted** | `W7-REL-00-main-reverify.md` · `W7-REL-CHANNEL-TO-CHAIR.md` · ask SUPERSEDED. Gates 76/7/32/47/167/18 @ `8cf070b`. |
+| **Rejected** | Freelancing World جرد without ASSIGN · re-coding REL-16/17/20 · Stay/RE taste edits · Live Certified. |
+
+---
+
 ## Template for future disputes
 
 ```markdown
