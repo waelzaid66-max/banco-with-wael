@@ -87,7 +87,8 @@ export function MaterialsHomeHeader({
 }: Props) {
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
-  const topPad = Math.max(insets.top, Platform.OS === "web" ? 8 : 0);
+  // Lift header block ~3mm (~19dp) for more results space (owner 2026-07-31).
+  const topPad = Math.max(insets.top, Platform.OS === "web" ? 4 : 0);
   const rowDir = isRTL ? "row-reverse" : "row";
   const textAlign = isRTL ? "right" : "left";
   const sortActive = sort !== "recommended";
@@ -105,7 +106,7 @@ export function MaterialsHomeHeader({
 
   return (
     <View
-      style={[styles.root, { paddingTop: Math.max(0, topPad - 2) }]}
+      style={[styles.root, { paddingTop: Math.max(0, topPad - 6) }]}
       testID="materials-core-header"
     >
       <View style={[styles.topBar, { flexDirection: rowDir }]}>
@@ -307,22 +308,22 @@ const styles = StyleSheet.create({
   root: {
     backgroundColor: VOID,
     paddingHorizontal: 16,
-    paddingBottom: 4,
+    paddingBottom: 2,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: HAIRLINE,
   },
-  topBar: { alignItems: "center", minHeight: 28, gap: 2 },
+  topBar: { alignItems: "center", minHeight: 24, gap: 2 },
   topSpacer: { flex: 1 },
   iconHit: {
-    width: 32,
-    height: 32,
+    width: 30,
+    height: 30,
     alignItems: "center",
     justifyContent: "center",
   },
   sortHit: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: StyleSheet.hairlineWidth,
@@ -330,13 +331,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.06)",
   },
   sortHitActive: { backgroundColor: ACCENT, borderColor: ACCENT },
-  brandBlock: { alignItems: "center", marginBottom: 4 },
-  wordmarkRow: { alignItems: "center", gap: 6, marginBottom: 2 },
-  wordmarkB: { width: 36, height: 44 },
-  wordmarkTextCol: { gap: 1, flexShrink: 1 },
+  brandBlock: { alignItems: "center", marginBottom: 2 },
+  wordmarkRow: { alignItems: "center", gap: 6, marginBottom: 0 },
+  wordmarkB: { width: 34, height: 42 },
+  wordmarkTextCol: { gap: 0, flexShrink: 1 },
   heroSeal: {
-    width: 60,
-    height: 50,
+    width: 56,
+    height: 46,
     borderRadius: 10,
     overflow: "hidden",
     borderWidth: 1,
@@ -348,21 +349,21 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 3,
     bottom: 3,
-    width: 18,
-    height: 22,
+    width: 16,
+    height: 20,
   },
-  heroSealB: { width: 18, height: 22 },
+  heroSealB: { width: 16, height: 20 },
   wordmarkCore: {
-    fontSize: 24,
+    fontSize: 22,
     fontFamily: "Inter_700Bold",
     color: ACCENT,
-    letterSpacing: 2.2,
+    letterSpacing: 2,
   },
   wordmarkHub: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontFamily: "Inter_600SemiBold",
     color: SNOW,
-    letterSpacing: 2.2,
+    letterSpacing: 2,
     textTransform: "uppercase",
   },
   taglineRow: {
@@ -371,17 +372,17 @@ const styles = StyleSheet.create({
     gap: 6,
     maxWidth: "100%",
     paddingHorizontal: 8,
-    marginBottom: 2,
+    marginBottom: 1,
   },
   taglineRule: {
     flex: 1,
     height: StyleSheet.hairlineWidth * 2,
     backgroundColor: ACCENT,
-    maxWidth: 40,
+    maxWidth: 36,
     opacity: 0.85,
   },
   tagline: {
-    fontSize: 9,
+    fontSize: 8.5,
     fontFamily: "Inter_500Medium",
     color: ASH,
     textAlign: "center",
@@ -392,6 +393,7 @@ const styles = StyleSheet.create({
     gap: 5,
     justifyContent: "center",
     flexShrink: 1,
+    marginBottom: 1,
   },
   poweredLabelInline: {
     fontSize: 7,
@@ -400,14 +402,14 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: "uppercase",
   },
-  poweredLogo: { width: 56, height: 13 },
+  poweredLogo: { width: 52, height: 12 },
   marketWeld: {
     alignItems: "center",
     gap: 3,
     paddingHorizontal: 2,
-    paddingVertical: 1,
+    paddingVertical: 0,
   },
-  marketFlag: { fontSize: 11, lineHeight: 14 },
+  marketFlag: { fontSize: 11, lineHeight: 13 },
   marketCaption: {
     fontSize: 10,
     fontFamily: "Inter_600SemiBold",
@@ -415,7 +417,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   searchPill: {
-    height: 42,
+    height: 40,
     borderRadius: 999,
     paddingHorizontal: 12,
     alignItems: "center",
@@ -428,7 +430,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     gap: 8,
-    minHeight: 40,
+    minHeight: 38,
   },
   searchPlaceholder: {
     flex: 1,

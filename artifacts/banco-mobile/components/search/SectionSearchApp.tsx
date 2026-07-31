@@ -2129,17 +2129,17 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 18,
   },
-  // Materials smart axis — types + origin one horizontal scroll row.
+  // Materials smart axis — types + origin one horizontal scroll row (~3mm lifted).
   materialsAxisStrip: {
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 12,
-    paddingTop: 8,
-    paddingBottom: 2,
+    paddingTop: 4,
+    paddingBottom: 1,
   },
   materialsAxisChip: {
     paddingHorizontal: 11,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
   },
@@ -2161,12 +2161,12 @@ const styles = StyleSheet.create({
   materialsLayer2Strip: {
     alignItems: "center",
     gap: 6,
-    paddingTop: 6,
-    paddingBottom: 2,
+    paddingTop: 3,
+    paddingBottom: 1,
   },
   materialsCommodityChip: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 5,
   },
   carBrandBtn: {
     alignItems: "center",
