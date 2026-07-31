@@ -98,6 +98,7 @@ Status: OPEN · VERIFY · HOLD · CLOSED · UNVERIFIED
 | **MOB-03** | P2 | Stay type + Wanted dual | `87` D-W9-08 | PE-Mobile | **HOLD** | 22 |
 | **MOB-04** | P2 | Android tab bar elevation / hit targets | Replit P2-ANDROID-01 · `_layout.tsx` elev present | UX audit first | VERIFY then plan | 15 |
 | **MOB-05** | P2 | Pins: `@clerk/expo@3.3.1` · `@expo/vector-icons@15.0.3` exact | package.json | Intelligence | **CLOSED** | — |
+| **MOB-NOTIF-01** | P0 | Expo Go SDK 53 `expo-notifications` ERROR on Feed/bridge | PIO deep-dive + logs | PE-Mobile/Director | **CLOSED** (safe load) · UV-03 device still UNVERIFIED | — |
 | **MOB-06** | P2 | Post-signup intent refs clear on abandon | Replit P2-AUTH-02 | PE-Mobile | OPEN after AUTH-01 | 16 |
 | **MOB-07** | P2 | Role upgrade individual→dealer path | Replit P2-AUTH-03 | PE-Mobile | OPEN | 17 |
 | **MOB-08** | P3 | FlatList windowing params | Replit P2-PERF-01 | PE-Mobile | HOLD | 30 |

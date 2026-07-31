@@ -63,7 +63,7 @@
 | Pri | ID | من ريبلت/PIO | Owner الوحيد | ماذا يفعل الآن | دليل النجاح |
 |-----|----|--------------|---------------|----------------|-------------|
 | 1 | **SEC-01/02 Owner** | Paymob key · Clerk pair | **Owner** | ضع Secrets · أبلغ `SECRETS_SET=yes\|no` | Director ACK |
-| 2 | **DIR-03** | شاشات بيضاء / شوتات | **Replit + UX** | PASTE + R01–R12 على tip | shot IDs · Maps RED · Factories map |
+| 2 | **DIR-03** | شاشات بيضاء / شوتات | **Replit + UX** | PASTE + R01–R12 على tip **بعد** MOB-NOTIF-01 | shot IDs · Maps RED · Factories map · Expo blank re-check |
 | 3 | **SEC-02 VERIFY** | ISSUE-001/002 | **Intelligence** | grep `.replit` نظيف + ack shots | VERIFY packet |
 | 4 | **DEP-01 VERIFY** | ISSUE-004 website | **Intelligence + Replit** | workflow = website · :5000 shot | VERIFY |
 | 5 | **API-HEALTH-01** NEW | ISSUE-005 `/api/v1/health` 404 | **PE-API** | STANDBY → Approve Plan: وثّق `/healthz` أو alias | curl matrix |
