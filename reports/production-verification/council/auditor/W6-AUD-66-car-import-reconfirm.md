@@ -1,9 +1,9 @@
 # W6-AUD-66 — Car ≠ Import reconfirm @ tip `59f3fba`
 
 - Seat: Production Auditor · Worlds: **B-oom Car (2)** + **Car Import (9)**  
-- Tip: **`59f3fba50fc91e5a9c136d3bad0b23d9b9a35e3e`** (code = `85cfe7f`)  
+- Tip: **`4afdf839ad998cc4e9be251b2e40b576ab24dab9`** (code = `85cfe7f`)  
 - Orders: `76` AUD-66  
-- Stamp: `2026-07-31T15:08:48Z`
+- Stamp: `2026-07-31T15:12:00Z`
 
 ## Dual-end
 

@@ -1,9 +1,9 @@
 # W6-AUD-67 — Retract stale map→RE / Maps-MISSING stamps @ tip `59f3fba`
 
 - Seat: Production Auditor · Protocol `68` tip-rebind  
-- Tip: **`59f3fba50fc91e5a9c136d3bad0b23d9b9a35e3e`**  
+- Tip: **`4afdf839ad998cc4e9be251b2e40b576ab24dab9`**  
 - Orders: `76` AUD-67 · Chair VERIFY §5  
-- Stamp: `2026-07-31T15:08:48Z`
+- Stamp: `2026-07-31T15:12:00Z`
 
 ## Retracted / SUPERSEDED (must not re-cite as current tip truth)
 
