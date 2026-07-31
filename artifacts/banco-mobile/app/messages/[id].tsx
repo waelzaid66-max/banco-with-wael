@@ -1306,7 +1306,7 @@ export default function ThreadScreen() {
         }}
         onCancel={() => setShowAttachRationale(false)}
         config={{
-          icon: "images-outline",
+          icon: "image-outline",
           title: t("chat.photoPermTitle"),
           message: t("chat.photoPermBody"),
           bullets: [
