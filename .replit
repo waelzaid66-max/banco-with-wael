@@ -31,7 +31,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "pnpm --filter @workspace/banco-web exec -- next dev --hostname 0.0.0.0 --port 5000"
+args = "pnpm --filter @workspace/banco-website exec -- next dev --hostname 0.0.0.0 --port 5000"
 waitForPort = 5000
 
 [agent]
@@ -124,16 +124,15 @@ OPENAI_MODEL = "gpt-4o-mini"
 OPENAI_MAX_COMPLETION_TOKENS = "4096"
 CLERK_TELEMETRY_DISABLED = "true"
 
+# SEC-01/02: secrets MUST live in Replit Secrets / Coolify — never commit.
+# Required in Secrets: PAYMENT_CONFIG_ENCRYPTION_KEY, CLERK_SECRET_KEY,
+# matching CLERK_PUBLISHABLE_KEY (pk_test for dev / pk_live only on true prod).
 [userenv.development]
 AI_INTEGRATIONS_OPENAI_BASE_URL = "http://localhost:1106/modelfarm/openai"
-PAYMENT_CONFIG_ENCRYPTION_KEY = "E33MRfnq6bCW2U+VzYXluRhP/6iGnJtQjnW3oCU4vu4="
 CLERK_PUBLISHABLE_KEY = "pk_test_ZXZvbHZpbmctbWFncGllLTQzLmNsZXJrLmFjY291bnRzLmRldiQ"
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_test_ZXZvbHZpbmctbWFncGllLTQzLmNsZXJrLmFjY291bnRzLmRldiQ"
 VITE_CLERK_PUBLISHABLE_KEY = "pk_test_ZXZvbHZpbmctbWFncGllLTQzLmNsZXJrLmFjY291bnRzLmRldiQ"
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_test_ZXZvbHZpbmctbWFncGllLTQzLmNsZXJrLmFjY291bnRzLmRldiQ"
 
 [userenv.production]
-CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuYmFuY28udG9kYXkk"
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuYmFuY28udG9kYXkk"
-VITE_CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuYmFuY28udG9kYXkk"
-EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuYmFuY28udG9kYXkk"
-EXPO_PUBLIC_DOMAIN = "banco.today"
+# Publishable + secret keys: set via Secrets UI (do not commit pk_live / sk_*).

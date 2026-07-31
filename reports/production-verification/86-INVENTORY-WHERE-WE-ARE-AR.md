@@ -1,23 +1,24 @@
 # 86 — جرد الوصول (Director)
 
-**Chair/Director** · 2026-07-31 · SoT `main` · Master = **`88`**
+**Tip `main`** · Master **`88`** · أوامر **`90`**
 
 ## جملة واحدة
-المنتج على `main` بعد Wave9 E محمي بالحراس؛ **ليس** Live Certified. السلطة الهندسية = Director · الخطة الوحيدة = `88` · الأوامر = `89`.
+Wave9 + تنظيف أسرار `.replit` + تحويل معاينة Replit لـ `banco-website` على الطريق — **ليس** Live Certified. الفريق ينفّذ `90` الآن.
 
 ## مغلق
-Wave8 A–D · Wave9 E (خرائط أحمر · Factories map · Materials origin · Stay rose · tabs pin) · NO-DELETE مثبت
+DIR-01 · DIR-02 · Wave9 E · SEC-01/02 من الـ VCS · DEP-01a workflow · MOB-05 · NO-DELETE
 
-## مفتوح (من `88` فقط)
-DIR-01 CI · SEC-01/02 أسرار و`.replit` · AUTH-01 · DEP-01 ويب · ACC-00 حسابات · UV أجهزة · LIVE-01 · فلاتر مزدوجة HOLD
+## مفتوح الآن
+| بند | من |
+|-----|-----|
+| Owner Secrets UI | Owner |
+| DIR-03 شوتات | Replit + UX |
+| SEC/DEP VERIFY | Intelligence |
+| AUTH-01 · ACC-00 · LIVE-01 | بعد Approve Plan |
+| فلاتر مزدوجة MOB-01..03 | HOLD |
+| SEC-02b PUBLIC_* shared | WATCH |
 
-## ممنوع
-دمج `*-5cf0` · اختراع عوالم · مسح Leaflet/FilterSheet · ادّعاء COMPLETE بدون دليل
-
-## ابدأ هنا
-1. `88-DIRECTOR-MASTER-BACKLOG.md`  
-2. `89-DIRECTOR-STANDING-ORDERS.md`  
-3. `87` جرد العوالم  
-4. PASTE Replit (عيون فقط)
+## ابدأ
+`90-DIRECTOR-TEAM-WAKE.md` → الصق أمر مقعدك
 
 — Director
