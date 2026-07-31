@@ -174,7 +174,7 @@ export const RENTAL_TERMS: { value: string; en: string; ar: string }[] = [
 ];
 
 /** Markets + currencies — SoT `@workspace/taxonomy/markets` (AUD-02). */
-export {
+import {
   MARKET_COUNTRIES,
   DEFAULT_MARKET_COUNTRY,
   CURRENCY_BY_MARKET,
@@ -182,6 +182,15 @@ export {
   currencyForMarket,
   type MarketCountry,
 } from "@workspace/taxonomy/markets";
+
+export {
+  MARKET_COUNTRIES,
+  DEFAULT_MARKET_COUNTRY,
+  CURRENCY_BY_MARKET,
+  EXTRA_CURRENCIES,
+  currencyForMarket,
+  type MarketCountry,
+};
 
 /** The rental-term catalogue rows available in a given market country. */
 export function rentalTermsForCountry(
