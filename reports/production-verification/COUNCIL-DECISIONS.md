@@ -248,6 +248,36 @@
 
 ---
 
+## D-2026-07-31-23 — Chair Accept #32 → main (CONDITIONAL GO)
+
+| | |
+|--|--|
+| **Decision** | Chair Accepts engineering tip #32 into `main` for Coolify **staging**. Public remains **NOT_CUTOVER**. |
+| **Adopted** | Merge `6ad7a48` · handoff `72-OWNER-HANDOFF-ACCEPT-32.md` · REL-15 + AP-CI **DEFERRED** · OPS owns DNS/secrets/well-known/EAS. |
+| **Rejected** | Live Certified from Accept · coding deferred items without new Approve · CAR IMPORT W4/5. |
+
+---
+
+## D-2026-07-31-24 — Wave 6 ARMED (WAIT) + Reliability preflight ACK
+
+| | |
+|--|--|
+| **Decision** | Wave 6 section-separation orders armed on PR #39; **no product code** until Owner Maps A/B/C + Chair EXECUTE. Reliability files dual-end preflight for REL-16/17 only. |
+| **Adopted** | `74-…WAVE6.md` · design · `73` audit · Reliability `W6-REL-CHANNEL` · `W6-REL-PREFLIGHT-16/17` · `W6-REL-00-standby`. |
+| **Rejected** | Freelancing REL-16/17/20 · Import/Car melt · deleting Leaflet · Live Certified. |
+
+---
+
+## D-2026-07-31-25 — Maps #11 land + Reliability VERIFY (World Maps)
+
+| | |
+|--|--|
+| **Decision** | Chair executed Maps mini-app #11 Opt B + Car chips/header on tip `85cfe7f`. Reliability **VERIFY-only** for World Maps (REL-16) + companion Cars REL-17/20. |
+| **Adopted** | `75-WAVE6-MAPS-MINIAPP-11-EXECUTE.md` · `W6-REL-16-VERIFY-MAPS` · `W6-REL-17/20-VERIFY-CARS` · `W6-REL-00` · channel. Gates 76/47/167/18. |
+| **Rejected** | Reliability re-coding Maps/Car · REL-21 without Approve · Live Certified. |
+
+---
+
 ## Template for future disputes
 
 ```markdown

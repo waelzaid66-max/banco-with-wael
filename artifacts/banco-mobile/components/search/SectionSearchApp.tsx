@@ -43,6 +43,7 @@ import {
   RE_MORE_TYPES,
 } from "@/components/search/property/PropertyHomeHeader";
 import { MaterialsHomeHeader } from "@/components/search/materials/MaterialsHomeHeader";
+import { CarsHomeHeader } from "@/components/search/car/CarsHomeHeader";
 import { axisShape, type SectionChrome } from "@/components/search/sectionChrome";
 import { MiniAppBottomNav } from "@/components/MiniAppBottomNav";
 import {
@@ -823,6 +824,7 @@ export function SectionSearchApp({
       ? criteria.originType
       : "all";
   const isMaterialsSection = criteria.category === "materials";
+  const isCarSection = criteria.category === "car";
   // B-CORE upper header: identity + search/Filters + market beside BANCO.
   // Smart horizontal strip under header: industrial types + origin (wrap, flexGrow:0).
   // Commodity strip when raw/all. listingMode + refinements stay in FilterSheet
@@ -1370,6 +1372,43 @@ export function SectionSearchApp({
             update({ sort: next });
           }}
         />
+      ) : isCarSection ? (
+        <CarsHomeHeader
+          searchOpen={searchOpen}
+          draftQuery={draftQuery}
+          searchSaved={searchSaved}
+          activeFilterCount={activeFilterCount}
+          marketCountry={criteria.marketCountry}
+          sort={criteria.sort}
+          inputRef={inputRef}
+          onBack={goBack}
+          onSaveSearch={handleSaveSearch}
+          onOpenMap={() => {
+            playSound("tap");
+            Haptics.selectionAsync();
+            openOrLatchMap({ inResultsView, setMapMode, setWantMap });
+          }}
+          onOpenFilters={() => {
+            playSound("tap");
+            setShowFilters(true);
+          }}
+          onOpenSearch={openSearch}
+          onCloseSearch={closeSearch}
+          onQueryChange={handleQueryChange}
+          onSubmitQuery={() => commitQueryNow(draftQuery)}
+          onClearQuery={clearQuery}
+          onOpenMarket={() => {
+            playSound("tap");
+            setMarketPickerOpen(true);
+          }}
+          onCycleSort={() => {
+            playSound("tap");
+            const cycle = ["recommended", "newest", "price_asc", "price_desc"] as const;
+            const next =
+              cycle[(cycle.indexOf(criteria.sort as (typeof cycle)[number]) + 1) % cycle.length];
+            update({ sort: next });
+          }}
+        />
       ) : (
       <>
       {/* ── Section header: back + title/subtitle + section icon ── */}
@@ -1468,8 +1507,8 @@ export function SectionSearchApp({
       </>
       )}
 
-      {/* ── Collapsible search bar — non-RE/materials (those search live in home headers) ── */}
-      {!isRealEstateSection && !isMaterialsSection && searchOpen && (
+      {/* ── Collapsible search bar — non-RE/materials/car (those search live in home headers) ── */}
+      {!isRealEstateSection && !isMaterialsSection && !isCarSection && searchOpen && (
         <View
           style={[
             styles.searchBar,
@@ -1558,7 +1597,8 @@ export function SectionSearchApp({
 
       {/* ── Primary chip strip: country/currency · sort · mode/engines.
           RE: country + sort live inside PropertyHomeHeader (no wasted strip row).
-          Other sections keep this strip unchanged. ── */}
+          B-oom Car: market/sort in CarsHomeHeader; listingMode + engines stay
+          visible here as chips (Wave 6 REL-17 — do not bury). ── */}
       {!isRealEstateSection && !isMaterialsSection ? (
       <View
         style={[styles.chipStrip, { flexDirection: rowDir }]}
@@ -1575,7 +1615,7 @@ export function SectionSearchApp({
             4th header icon that crowded the title). Cycles recommended → newest
             → price low→high → high→low. Isolated: plain criteria state, never
             persisted, resets on leave/reload, rides the ordinary `sort` param
-            without touching engines/facets. */}
+            without touching engines/facets. Car also exposes sort in CarsHomeHeader. */}
         <Pressable
           onPress={() => {
             playSound("tap");
@@ -1612,10 +1652,8 @@ export function SectionSearchApp({
           <View style={[styles.chipStripDivider, { backgroundColor: colors.border }]} />
         ) : null}
         {/* Offer + engine axes: the SECTION decides the shape, this only renders
-            it. Cars ask for pills because their engine axis carries five values
-            (new / used / imported / bank / islamic instalment) which measured
-            999px inside a 375px window as chips. A section whose axis is short
-            and constantly flicked asks for chips instead and keeps its taps. */}
+            it. Cars ask for chips (REL-17) so new/used/import/instalment stay
+            visible. A section whose axis is set once may ask for a pill. */}
         {showListingMode ? (
           axisShape(chrome, "listingMode") === "pill" ? (
             <FilterPillSelect

@@ -1,17 +1,15 @@
 import { SectionSearchApp } from "@/components/search/SectionSearchApp";
 
 /**
- * Cars — B‑OOM's movable-asset section.
+ * B-oom Car — BANCO's all-vehicles section (cars · boats · launches · planes…).
  *
- * Its chrome is declared HERE, not inside the shared mini-app, so a judgement
- * about cars can never silently become the rule for real-estate or materials.
+ * Chrome is declared HERE so a cars judgement never silently becomes the rule
+ * for real-estate or materials. Car Import (`/import`) is a separate world —
+ * never melt Import into this section.
  *
- * Both axes are pills because both are long and set once, not flicked: the offer
- * axis is three values but sits beside the engine axis, and the engine axis
- * carries five (new · used · imported · bank instalment · islamic instalment).
- * Measured as chips they ran 999px inside a 375px window — 624px of the seller's
- * own segmentation off-screen with nothing admitting it was there — and wrapping
- * them produced four rows, 163px of chrome before the first car.
+ * Engines = chips (Wave 6 REL-17): new · used · imported · bank · islamic must
+ * stay visible on the strip. listingMode stays a pill (sale / wanted, set once).
+ * Stay-parity identity lives in CarsHomeHeader (REL-20).
  */
 export default function CarSectionScreen() {
   return (
@@ -19,7 +17,7 @@ export default function CarSectionScreen() {
       category="car"
       titleKey="home.categories.car"
       subtitleKey="search.discover.section.carSub"
-      chrome={{ listingMode: "pill", engines: "pill" }}
+      chrome={{ listingMode: "pill", engines: "chips" }}
     />
   );
 }

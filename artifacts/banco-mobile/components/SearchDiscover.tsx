@@ -81,8 +81,8 @@ interface Props {
   onApplySaved: (s: SavedSearch) => void;
   onOpenListing: (item: FeedItem) => void;
   /**
-   * Enter the real-estate section mini-app with map intent (host pushes
-   * /section/real-estate?map=1). Must never melt Discover into shared Search.
+   * Enter Maps mini-app #11 (/section/maps). Must never melt Discover into
+   * shared Search, and must never hardcode Real Estate.
    */
   onExploreMap: () => void;
   /** Re-run a recent text search (fills the input + commits immediately). */
@@ -272,10 +272,9 @@ export function SearchDiscover({
         </View>
       </Pressable>
 
-      {/* Explore on map — ALWAYS present on the Discover home (owner request).
-          Primary CTA → RE ?map=1; secondary chips produce map latches for the
-          other catalogues (cars / materials / factories / stays) so every
-          section has a Discover map producer (MAP inventory gap). */}
+      {/* Explore on map — ALWAYS present (owner). Wave 6: primary CTA enters
+          Maps mini-app #11 (/section/maps). Secondary chips intentionally
+          duplicate per-catalogue ?map=1 feeds (Owner: maps serve all sections). */}
       <Pressable
         onPress={onExploreMap}
         style={styles.mapCtaWrap}
@@ -333,6 +332,12 @@ export function SearchDiscover({
               href: "/section/car?map=1" as Href,
               label: t("search.discover.exploreMapCar"),
               testID: "discover-map-car",
+            },
+            {
+              id: "real_estate",
+              href: "/section/real-estate?map=1" as Href,
+              label: t("search.discover.exploreMapProperties"),
+              testID: "discover-map-properties",
             },
             {
               id: "materials",
