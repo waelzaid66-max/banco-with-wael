@@ -1,10 +1,10 @@
 # W6-AUD-63 — Peer VERIFY REL-16/17/20 @ tip `59f3fba` (Wave 6b)
 
 - Seat: Production Auditor · Protocol `68`  
-- Tip: `cursor/section-wiring-audit-e37c` @ **`59f3fba50fc91e5a9c136d3bad0b23d9b9a35e3e`**  
-- Product land: `85cfe7f` (no code delta since) · Orders: **`76` §B** · EXECUTE `75` · Chair VERIFY packet  
-- Sister: Reliability REL-16/17/20 VERIFY **PASS** (D-25) — **ALIGN**  
-- Stamp: `2026-07-31T15:08:48Z`  
+- Tip: `cursor/section-wiring-audit-e37c` @ **`4afdf839ad998cc4e9be251b2e40b576ab24dab9`**  
+- Product land: `85cfe7f` (no `artifacts/` delta since · docs-only tip moves) · Orders: **`76` §B** · EXECUTE `75` · Chair VERIFY · D-25  
+- Sister: Reliability REL-16/17/20 VERIFY **PASS** — **ALIGN** · REL inventory ASSIGN ask = **not Auditor** (Maps world done)  
+- Stamp: `2026-07-31T15:12:00Z` · guard tip archive **76/76 PASS** · cutover **NOT_CUTOVER 0/6**  
 - Mode: VERIFY only · **zero product code**
 
 ## REL-16 — Maps #11
