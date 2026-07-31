@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-31  
 **Scope:** `/section/materials` only — do not touch Cars, Stay, RE, Factories UI, Import, API, DB, auth  
-**Status:** Awaiting owner approval before implementation  
+**Status:** REJECTED by owner 2026-07-31 — wrong identity (CORE/B copy), HTML fake screenshot, touched original materials strips. Reverted to main catalog.  
 **Method:** Same as B-PROPERTIES colleague — chrome **inside** `SectionSearchApp`, not a separate hub route  
 
 ---

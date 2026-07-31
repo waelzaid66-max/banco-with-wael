@@ -659,53 +659,6 @@ export function FilterSheet({
                   </>
                 ) : null}
 
-                {criteria.category === "materials" ? (
-                  <>
-                    <SectionLabel
-                      text={t("search.listingModeAll")}
-                      align={textAlign}
-                      colors={colors}
-                    />
-                    <View style={[styles.chipRow, { flexDirection: rowDir }]}>
-                      {(["all", "sale", "buy"] as const).map((mode) => {
-                        const active = criteria.listingMode === mode;
-                        return (
-                          <Pressable
-                            key={mode}
-                            onPress={() => onUpdate({ listingMode: mode })}
-                            style={[
-                              styles.chip,
-                              {
-                                backgroundColor: active
-                                  ? colors.primary
-                                  : colors.secondary,
-                              },
-                            ]}
-                            testID={`filter-listing-mode-${mode}`}
-                          >
-                            <AppText
-                              style={[
-                                styles.chipText,
-                                {
-                                  color: active
-                                    ? colors.primaryForeground
-                                    : colors.mutedForeground,
-                                },
-                              ]}
-                            >
-                              {mode === "all"
-                                ? t("search.listingModeAll")
-                                : mode === "sale"
-                                  ? t("search.listingModeSale")
-                                  : t("search.listingModeBuy")}
-                            </AppText>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                  </>
-                ) : null}
-
                 {showMaterial ? (
                   <>
                     <SectionLabel

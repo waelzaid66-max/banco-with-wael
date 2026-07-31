@@ -35,7 +35,6 @@ import { SearchResultsSurface } from "@/components/search/SearchResultsSurface";
 import { SearchResultsMap } from "@/components/search/SearchResultsMap";
 import { FilterSheet } from "@/components/search/FilterSheet";
 import { FilterPillSelect } from "@/components/search/FilterPillSelect";
-import { MaterialsHomeHeader } from "@/components/search/materials/MaterialsHomeHeader";
 import { axisShape, type SectionChrome } from "@/components/search/sectionChrome";
 import { MiniAppBottomNav } from "@/components/MiniAppBottomNav";
 import {
@@ -786,10 +785,13 @@ export function SectionSearchApp({
       ? criteria.originType
       : "all";
   const isMaterialsSection = criteria.category === "materials";
-  // Origin + commodity stay in FilterSheet when B-CORE header owns first paint
-  // (compressed into header Filters — never erased; see FilterSheet showOrigin/Material).
-  const showOriginChrome = false; // materials origin lives in FilterSheet under B-CORE header
-  const showMaterialChrome = false;
+  const showOriginChrome = isMaterialsSection;
+  // Commodity material strip: materials + (all | raw_material) — same gate as
+  // FilterSheet showMaterial. Machine/production_line clear material upstream.
+  const showMaterialChrome =
+    isMaterialsSection &&
+    (criteria.industrialType === "all" ||
+      criteria.industrialType === "raw_material");
   const showCarOriginChrome = criteria.category === "car" && !lockedEngine;
   const showCarBrandStrip = criteria.category === "car" && !lockedEngine;
   const showRentalTerms =
@@ -797,9 +799,6 @@ export function SectionSearchApp({
     (activeOfferKey === "rent" ||
       engineByKey(criteria.category, criteria.engineKey)?.params.offer_type ===
         "rent");
-  // Industrial types live in MaterialsHomeHeader Band D for materials.
-  const showIndustrialChipsInStrip =
-    showIndustrialChips && !isMaterialsSection;
   // Keep engine chips visible during facet load — visibleEngines already
   // fails open when scopedFacets are undefined. Hiding on facetsLoading made
   // every section entry flash an empty strip then repaint.
@@ -810,26 +809,8 @@ export function SectionSearchApp({
     !showIndustrialChips;
   // listingMode "For sale / Wanted" collides with RE offer sale/rent labels —
   // keep it for cars; RE uses offer engines + type strip (+ FilterSheet for مطلوب).
-  // Materials: listingMode available in FilterSheet under B-CORE header chrome.
-  const showListingMode =
-    !lockedEngine && !isRealEstateSection && !isMaterialsSection;
+  const showListingMode = !lockedEngine && !isRealEstateSection;
   const showReTypeStrip = isRealEstateSection && reTypeTabs.length > 0;
-  /** Band D — All / Machines / Raw materials / Production lines. */
-  const materialsHeaderTypeTabs = useMemo(() => {
-    if (!isMaterialsSection) return [] as { value: IndustrialType; label: string }[];
-    return [
-      { value: "all" as IndustrialType, label: t("home.industrialTypes.all") },
-      { value: "machine" as IndustrialType, label: t("home.industrialTypes.machine") },
-      {
-        value: "raw_material" as IndustrialType,
-        label: t("home.industrialTypes.raw_material"),
-      },
-      {
-        value: "production_line" as IndustrialType,
-        label: t("home.industrialTypes.production_line"),
-      },
-    ];
-  }, [isMaterialsSection, t]);
   // Country + currency live in ONE compact MarketCountryButton on the primary
   // strip — every section, no exception (owner 2026-07-20, completed for RE +
   // materials 2026-07-27). The old spread matrix laid 21 country cells in a
@@ -1071,47 +1052,6 @@ export function SectionSearchApp({
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {isMaterialsSection ? (
-        <MaterialsHomeHeader
-          searchOpen={searchOpen}
-          draftQuery={draftQuery}
-          searchSaved={searchSaved}
-          activeFilterCount={activeFilterCount}
-          activeIndustrialType={criteria.industrialType}
-          typeTabs={materialsHeaderTypeTabs}
-          marketCountry={criteria.marketCountry}
-          sort={criteria.sort}
-          inputRef={inputRef}
-          onBack={goBack}
-          onSaveSearch={handleSaveSearch}
-          onOpenFilters={() => {
-            playSound("tap");
-            setShowFilters(true);
-          }}
-          onOpenSearch={openSearch}
-          onCloseSearch={closeSearch}
-          onQueryChange={handleQueryChange}
-          onSubmitQuery={() => commitQueryNow(draftQuery)}
-          onClearQuery={clearQuery}
-          onSelectType={(value) => {
-            playSound("tap");
-            Haptics.selectionAsync();
-            selectIndustrialType(value);
-          }}
-          onOpenMarket={() => {
-            playSound("tap");
-            setMarketPickerOpen(true);
-          }}
-          onCycleSort={() => {
-            playSound("tap");
-            const cycle = ["recommended", "newest", "price_asc", "price_desc"] as const;
-            const next =
-              cycle[(cycle.indexOf(criteria.sort as (typeof cycle)[number]) + 1) % cycle.length];
-            update({ sort: next });
-          }}
-        />
-      ) : (
-      <>
       {/* ── Section header: back + title/subtitle + section icon ── */}
       <View
         style={[
@@ -1250,9 +1190,7 @@ export function SectionSearchApp({
           </Pressable>
         </View>
       )}
-      </>
-      )}
-      {/* Inline autocomplete — renders just below the search bar / MaterialsHomeHeader */}
+      {/* Inline autocomplete — renders just below the search bar */}
       {searchOpen && showSuggestions && suggestions.length > 0 && (
         <View
           style={[
@@ -1308,7 +1246,6 @@ export function SectionSearchApp({
           column and crushed the results into a black void with one card pinned
           at the bottom (owner screenshot regression). A wrapping View is taller
           than a single row, so that constraint matters more here, not less. ── */}
-      {!isMaterialsSection ? (
       <View
         style={[styles.chipStrip, { flexDirection: rowDir }]}
         testID="section-primary-strip"
@@ -1357,7 +1294,7 @@ export function SectionSearchApp({
             color={criteria.sort !== "recommended" ? "#FFFFFF" : colors.mutedForeground}
           />
         </Pressable>
-        {(showListingMode || showEngineChips || showIndustrialChipsInStrip || isRealEstateSection) ? (
+        {(showListingMode || showEngineChips || showIndustrialChips || isRealEstateSection) ? (
           <View style={[styles.chipStripDivider, { backgroundColor: colors.border }]} />
         ) : null}
         {/* Offer + engine axes: the SECTION decides the shape, this only renders
@@ -1473,7 +1410,7 @@ export function SectionSearchApp({
             </AppText>
           </Pressable>
         ) : null}
-        {showIndustrialChipsInStrip ? [
+        {showIndustrialChips ? [
           { key: "all" as IndustrialType, i18nKey: "home.industrialTypes.all" },
           ...((visibleIndTypes ?? []).map((ty) => ({ key: ty, i18nKey: `home.industrialTypes.${ty}` }))),
         ].map((item) => {
@@ -1492,7 +1429,6 @@ export function SectionSearchApp({
           );
         }) : null}
       </View>
-      ) : null}
 
       {/* ── RE property-type strip (Stay-parallel) — never mixed into offer row ── */}
       {showReTypeStrip ? (
