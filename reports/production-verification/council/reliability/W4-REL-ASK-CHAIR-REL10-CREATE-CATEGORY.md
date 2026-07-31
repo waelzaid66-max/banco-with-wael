@@ -1,11 +1,13 @@
 # W4-REL — Ask Chair: Approve Plan REL-10 (create consumes industrial)
 
+**Status:** **ANSWERED** — Chair force-exec REL-10 (`d1998fa`) · Reliability ACK `W4-REL-10-VERIFY.md` @ `7d49cbd` (D-16 / D-17)
+
 **From:** Production Reliability Engineer  
 **To:** Chief Production Architect  
 **Date:** 2026-07-31  
-**Tip SHA:** `1e4ed1c`  
+**Tip SHA (ask):** `1e4ed1c` → **landed tip:** `7d49cbd`  
 **Evidence packet:** `council/mobile/W4-CHAIR-ZONE-C-LISTINGS-SKEPTIC.md` (Chair skeptic)  
-**Anti-reckless:** No code until Approve Plan (Wave 4 §0.1)
+**Anti-reckless:** No code until Approve Plan (Wave 4 §0.1) — Chair executed; Reliability VERIFY-only
 
 ## Independent confirm (Reliability)
 

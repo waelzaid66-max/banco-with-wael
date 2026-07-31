@@ -180,6 +180,16 @@
 | **Adopted** | Shared `resolveCreateDeepLinkCategory` + `sectionEmptyPostRequestCategory` in `listingCreateTaxonomy`; materials→`raw_materials`; request=1 forces deep category over draft (**REL-10**). |
 | **Rejected** | Changing API category enum; touching currency/markets SoT; claiming Zone C fully HEALTHY without further skeptic on edit/mine. |
 
+---
+
+## D-2026-07-31-17 — Reliability ACK REL-10 (VERIFY-only)
+
+| | |
+|--|--|
+| **Decision** | Reliability dual-end verifies Chair REL-10 on tip `7d49cbd`; does **not** re-implement. |
+| **Adopted** | `W4-REL-10-VERIFY.md` · updated `W4-REL-00-tip-reverify.md` · ask marked ANSWERED. Gates: miniapp 72 · market 7 · harden 32 · wiring 47 · chain 167 · confidence 18 · api tsc PASS. |
+| **Rejected** | Coding MOB-C-09/10 without Approve; Live Certified; self-merge #32. |
+| **Evidence** | Producer `sectionEmptyPostRequestCategory` + consumer `resolveCreateDeepLinkCategory` + `?request=1` draft override; distrust §1/§7 satisfied. |
 
 ---
 
