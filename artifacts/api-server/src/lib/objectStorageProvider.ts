@@ -104,8 +104,24 @@ export function getObjectStorageService(): ObjectStorage {
   }
 
   if (provider === "s3") {
-    cached = new S3ObjectStorageService();
-    return cached;
+    const hasS3Creds =
+      process.env.S3_BUCKET?.trim() && process.env.AWS_REGION?.trim();
+    if (!hasS3Creds && isReplitRuntime()) {
+      // Graceful dev fallback: OBJECT_STORAGE_PROVIDER=s3 is set (for future
+      // Coolify deployment) but S3 credentials are not configured yet. Since
+      // we are clearly inside a Replit runtime, fall back to the local sidecar
+      // instead of crashing the server. This never fires on Coolify/Cloud Run
+      // because isReplitRuntime() will be false there.
+      console.warn(
+        "[BANCO] OBJECT_STORAGE_PROVIDER=s3 but S3_BUCKET/AWS_REGION not set " +
+          "— falling back to Replit sidecar (dev-only). " +
+          "Set S3_BUCKET + AWS_REGION + AWS credentials for S3 to take effect.",
+      );
+      provider = "replit";
+    } else {
+      cached = new S3ObjectStorageService();
+      return cached;
+    }
   }
   if (provider === "replit") {
     if (

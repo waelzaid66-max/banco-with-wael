@@ -52,13 +52,31 @@ export class UploadOwnershipError extends Error {
 export class ObjectStorageService {
   constructor() {}
 
+  /**
+   * Normalize a raw path for the Replit GCS sidecar. The sidecar requires
+   * paths in the form `{bucketId}/{objectName}`. When PRIVATE_OBJECT_DIR or
+   * PUBLIC_OBJECT_SEARCH_PATHS are set to plain prefixes like `/private` or
+   * `private` (correct for S3, wrong for the sidecar), we prepend the default
+   * Replit bucket ID so both formats work transparently.
+   */
+  private normalizeSidecarPath(raw: string): string {
+    const trimmed = raw.startsWith("/") ? raw.slice(1) : raw;
+    // Already looks like bucket/prefix (contains at least one "/")
+    if (trimmed.includes("/")) return trimmed;
+    // Plain prefix — prepend default bucket ID
+    const bucketId =
+      process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID?.trim() ||
+      "replit-objstore-41fc812e-9f5e-42cb-93cc-f15445fe1efa";
+    return `${bucketId}/${trimmed}`;
+  }
+
   getPublicObjectSearchPaths(): Array<string> {
     const pathsStr = process.env.PUBLIC_OBJECT_SEARCH_PATHS || "";
     const paths = Array.from(
       new Set(
         pathsStr
           .split(",")
-          .map((path) => path.trim())
+          .map((path) => this.normalizeSidecarPath(path.trim()))
           .filter((path) => path.length > 0)
       )
     );
@@ -79,7 +97,7 @@ export class ObjectStorageService {
           "tool and set PRIVATE_OBJECT_DIR env var."
       );
     }
-    return dir;
+    return this.normalizeSidecarPath(dir);
   }
 
   async searchPublicObject(filePath: string): Promise<File | null> {
