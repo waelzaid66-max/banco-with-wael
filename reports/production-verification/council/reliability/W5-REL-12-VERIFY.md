@@ -1,8 +1,7 @@
 # W5-REL-12-VERIFY — ACK Chair REL-12 (MOB-C-10 AuthGate)
 
 **Seat:** Production Reliability Engineer · `bc-019fb4d1…53de`  
-**Tip SHA:** `a9f5c351e8f0e8c0e8f0e8c0` — use `git rev-parse` below  
-**Actual tip:** recorded at file time via commit `a9f5c35`  
+**Tip SHA:** `a9f5c358149c473019a0c07fcbaea087d143422a`  
 **Landing:** D-20 · `W5-REL-12-CHAIR-EXECUTE.md`  
 **Ask answered:** `W4b-REL-ASK-CHAIR-REL12-AUTHGATE.md`  
 **Mode:** VERIFY only — **did not re-code**
