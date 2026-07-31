@@ -95,11 +95,13 @@ test("other sections not mounted with materials header", () => {
   assert.doesNotMatch(car, /MaterialsHomeHeader/);
 });
 
-test("MarketCountryButton not polluted with materials-only tone/compact API", () => {
+test("MarketCountryButton not polluted with materials-only tone API", () => {
   const picker = fs.readFileSync(
     path.join(root, "components/MarketCountryPicker.tsx"),
     "utf8",
   );
+  // tone=onDark was a materials-only fork — keep MarketCountryButton shared.
+  // compact/micro density is intentional production chrome (create + RE header).
   assert.doesNotMatch(picker, /tone\?: "default" \| "onDark"/);
-  assert.doesNotMatch(picker, /triggerCompact/);
+  assert.match(picker, /density\?: "default" \| "micro"/);
 });
