@@ -194,7 +194,6 @@ test("NOTIF-09 unknown notification routes to /notifications", () => {
 
 // ── Wave 3 ──────────────────────────────────────────────────────────────
 
-const nearMe = fs.readFileSync(path.join(root, "lib/nearMe.ts"), "utf8");
 const inbox = fs.readFileSync(path.join(root, "app/(tabs)/messages.tsx"), "utf8");
 const importOrder = fs.readFileSync(
   path.join(root, "app/import/order/[id].tsx"),
@@ -203,10 +202,6 @@ const importOrder = fs.readFileSync(
 const importHub = fs.readFileSync(path.join(root, "app/import/index.tsx"), "utf8");
 const pushHook = fs.readFileSync(
   path.join(root, "hooks/usePushNotifications.tsx"),
-  "utf8",
-);
-const editListing = fs.readFileSync(
-  path.join(root, "app/listings/edit/[id].tsx"),
   "utf8",
 );
 const emailSvc = fs.readFileSync(
