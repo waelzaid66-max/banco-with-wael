@@ -64,7 +64,7 @@ production-wiring-guard.test.mjs   47/47 PASS
 | Item | Class | Note |
 |------|-------|------|
 | `77` tip stamp `59f3fba` | **docs drift** | Inventory content still holds @ HEAD `76f0c1d` / product `85cfe7f`; SHA line is stale |
-| `78` §3 merge gate “CI PASS” checked | **AMEND / HOLD merge** | Observed `2026-07-31T15:15Z`: Typecheck & API **pending**; `mergeStateStatus=UNSTABLE`. Merge AUTHORIZED **only after** those green |
+| `78` §3 merge gate “CI PASS” | **CONFIRM (recheck)** | At first observe Typecheck/API were pending; **recheck `2026-07-31T15:17Z`:** Typecheck · API · Mobile · Production · ESLint · GCP all **PASS** on #39 run `30641956951`. Merge gate CI checkbox now honest. |
 | Tip absorbed AUD-61/65 | **CRITICAL SoT pollution** | Tip still has **pre-land** DEFECT/MISSING text; amended packets + AUD-63/66/67/68 **still missing** from tip tree |
 | `76` §F “Seats VERIFY absorb” | **unchecked** | Chair must overwrite from #36 before tip docs tell truth |
 | Live Certified | **FORBIDDEN** | `pnpm ops:live-cutover` → **NOT_CUTOVER 0/6** (Replit apex + Horizons www) |

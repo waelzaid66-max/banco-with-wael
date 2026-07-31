@@ -19,8 +19,8 @@
 | `76` §F Seats VERIFY absorb | **unchecked** |
 | Guards @ tip worktree | **76/76** miniapp · **47/47** production-wiring |
 | Cutover | **NOT_CUTOVER 0/6** |
-| #39 CI @ observe | Typecheck + API **pending** · others PASS · `mergeStateStatus=UNSTABLE` |
-| `78` “CI PASS / MERGE AUTHORIZED” | **AMEND** — authorize only when Typecheck+API green |
+| #39 CI @ recheck | **ALL PASS** (Typecheck · API · Mobile · Production · ESLint · GCP) run `30641956951` |
+| `78` “CI PASS / MERGE AUTHORIZED” | **CONFIRM** after recheck — remaining blocker = **tip absorb** (`76` §F) + Owner merge |
 | Wave7 Auditor queue | **ACK standby** → AUD-70 **after** merge to `main` |
 | Freestyle inventory world | **NO** |
 
@@ -51,7 +51,7 @@ git checkout origin/cursor/qa-verification-audit-c8f0 -- \
 ## 3. What this seat needs from Chair
 
 1. **Overwrite absorb** (above) — tip must stop lying about Maps MISSING / Discover→RE DEFECT.  
-2. **Merge honesty** — hold merge until Typecheck & API PASS (or re-stamp `78` §3).  
+2. **CI green** (recheck) — merge when absorb + Owner ready.  
 3. **After merge** — wake Auditor pasteable from `78` §5 for **AUD-70**.  
 4. Close / supersede #36 when tip absorb complete.
 

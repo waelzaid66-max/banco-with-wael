@@ -9,7 +9,7 @@
 
 ## 0. One-screen verdict
 
-Inventory `77` peer **PASS** (AUD-69). Wave6 Maps/Car landings **hold**. Tip docs still polluted by stale AUD-61/65. Wave7 ACK — Auditor standby for AUD-70 **after** merge. CI not fully green yet. Cutover 0/6. **Zero product code.**
+Inventory `77` peer **PASS** (AUD-69). Wave6 Maps/Car landings **hold**. Tip docs still polluted by stale AUD-61/65. Wave7 ACK — Auditor standby for AUD-70 **after** merge. **#39 CI ALL PASS** (recheck). Cutover 0/6. **Zero product code.**
 
 ---
 
@@ -53,7 +53,7 @@ All **10** owner sections mount + stack-register on tip. Discover→`/section/ma
 
 1. Pasteable absorb in `W6-AUD-URGENT-TO-CHAIR.md`  
 2. Check `76` §F Seats VERIFY absorb  
-3. Hold merge until Typecheck & API PASS (amend `78` §3 if needed)  
+3. CI green confirmed — merge when absorb + Owner ready  
 4. Merge #39 → wake Auditor AUD-70 from `78` §5  
 5. Ops cutover remains Owner/Coolify — not Auditor fiction
 
