@@ -103,8 +103,6 @@ integrations = ["javascript_openai_ai_integrations:2.0.0", "javascript_object_st
 path = "scripts/post-merge.sh"
 timeoutMs = 600000
 
-# ── Port mappings ─────────────────────────────────────────────────────────────
-# :3000 = Mobile serve.js (Expo web + QR)
 [[ports]]
 localPort = 3000
 externalPort = 6800
@@ -121,22 +119,10 @@ externalPort = 3002
 localPort = 3003
 externalPort = 3003
 
-# :5000 = Web App dev (Next.js) / nginx in production → external :80
 [[ports]]
 localPort = 5000
 externalPort = 80
 
-# :5002 = dealer-os dev
-[[ports]]
-localPort = 5002
-externalPort = 5173
-
-# :5003 = admin-os dev
-[[ports]]
-localPort = 5003
-externalPort = 6000
-
-# :8080 = api-server (direct access + proxied in production)
 [[ports]]
 localPort = 8080
 externalPort = 8080
@@ -155,7 +141,7 @@ externalPort = 5173
 
 [[ports]]
 localPort = 8084
-externalPort = 4200
+externalPort = 6000
 
 [[ports]]
 localPort = 18150

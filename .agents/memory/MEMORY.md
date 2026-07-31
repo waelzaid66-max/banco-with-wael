@@ -1,3 +1,4 @@
+- [BANCO Replit deploy topology](banco-replit-deploy-topology.md) — nginx:5000 routes all 5 surfaces in prod; Expo web build makes mobile show real app; all ports documented
 - [B.4 release state](b4-release-state.md) — B.4 tagged ce2d7a7; architect CONFIRM-B4:YES; deleteServingUrls provider-aware; Claude PRs merged; OPENAI+RESEND rotated; open items listed
 - [BANCO AI assistant env fix](banco-ai-env-fix.md) — OPENAI_API_KEY dummy env var in shared overrides real secret; AI_INTEGRATIONS_OPENAI_BASE_URL localhost kills prod; both must be absent from shared/prod; dev-only overrides acceptable
 - [BANCO email completeness](banco-email-completeness.md) — message/new_match/price_drop email functions added; all 9 NotificationCategory types now have email templates; AlertService+ConversationService wire fire-and-forget via isEmailChannelEnabled gate
