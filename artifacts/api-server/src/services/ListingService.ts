@@ -1132,6 +1132,9 @@ export async function updateListing(
     longitude?: number;
     // Lifecycle status patch (Task #71): seller marks the deal closed/hidden.
     status?: "active" | "sold" | "archived";
+    // MAP-09: optional precise pin (both or neither — schema-enforced).
+    latitude?: number;
+    longitude?: number;
     specs?: Record<string, unknown>;
     // Additive (Task #40): optional logistics & delivery patch, all nullable.
     logistics?: {
@@ -1292,6 +1295,7 @@ export async function updateListing(
         flagReason: normalized.flagReason,
         // Only patch status when the caller provided it (mark sold / archive).
         ...(updates.status ? { status: updates.status } : {}),
+        // MAP-09: only overwrite pin when both axes are provided.
         ...pinPatch,
         updatedAt: new Date(),
       })

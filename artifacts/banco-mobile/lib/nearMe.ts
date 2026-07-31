@@ -36,8 +36,8 @@ function requestBrowserCoords(): Promise<NearCoords | null> {
 
 /**
  * Requests foreground location permission and returns the device coordinates.
- * Returns null on denied permission or any runtime error — callers show UX.
- * Web uses `navigator.geolocation` so FilterSheet near-me works on Expo web.
+ * Returns null on denied permission, missing geolocation, or any runtime error.
+ * Web uses the browser Geolocation API (MAP-05); native uses expo-location.
  */
 export async function requestNearMeCoords(): Promise<NearCoords | null> {
   if (Platform.OS === "web") {

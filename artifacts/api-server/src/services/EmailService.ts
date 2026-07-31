@@ -548,7 +548,12 @@ export async function sendNewMessageEmail(args: {
   const lang: EmailLang = args.lang ?? "ar";
   const ar = lang === "ar";
   const { transport, appUrl } = await resolveEmailRuntime();
-  const cta = appUrl(`/messages/${args.conversationId}`);
+  // MSG-11: email CTAs land on the website workspace thread (not mobile /messages).
+  const cta = appUrl(
+    lang === "en"
+      ? `/en/workspace/messages/${args.conversationId}`
+      : `/workspace/messages/${args.conversationId}`,
+  );
 
   const preview =
     args.preview.length > 100
