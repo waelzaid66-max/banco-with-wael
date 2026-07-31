@@ -3,6 +3,7 @@ import { Feather, Ionicons } from "@/components/icons";
 import { AppTextInput as TextInput } from "@/components/AppTextInput";
 import {
   createListing,
+  updateMe,
   useGetMe,
   getGetMeQueryKey,
   useGetMySubscription,
@@ -1173,6 +1174,11 @@ export default function CreateListingScreen() {
 
       setPhase("saving");
       const res = await createListing(body);
+      // Keep profile phone SoT in sync so Call/WhatsApp lead reveal works after
+      // publish when the seller never saved a phone on /me (best-effort).
+      if (cleanPhones[0] && !accountPhone) {
+        void updateMe({ phone: cleanPhones[0] }).catch(() => {});
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setCreatedId(res.data?.id);
       setDone(true);

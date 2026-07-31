@@ -18,6 +18,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -83,6 +84,7 @@ export default function CompanyProfileScreen() {
       });
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      Alert.alert(t("listing.contactFailTitle"), t("business.company.messageFail"));
     } finally {
       setOpeningChat(false);
     }
