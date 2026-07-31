@@ -245,6 +245,8 @@ Zone A primary tab **routing and i18n on primary CTAs are largely sound**: Feed/
 
 **One HIGH defect with code evidence:** Profile account-type Skip/Continue can race `/me` and bypass the elevated self-demotion guard (`MOB-A-06`).  
 
+**Chair adjudication (D-14):** Severity **MEDIUM** — server `DEMOTE_BLOCKED` backstop exists. **REL-09** waits for `/me` before picker/Skip→individual (fixed on tip).  
+
 **Low risks only** on AuthGate consistency for Saved card open and ungated chrome (FAB/bell) that rely on destination walls (`MOB-A-05`, `MOB-A-07`).  
 
 No CRITICAL dead `router.push` or hardcoded wrong category on Zone A primary CTAs found in this static pass.
