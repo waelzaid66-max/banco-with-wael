@@ -16,7 +16,8 @@ export type SearchSort =
   | "newest"
   | "price_asc"
   | "price_desc"
-  | "popular";
+  | "popular"
+  | "nearest";
 
 // Industrial subtype literals, sourced from the DB enum so filter inputs line
 // up with the `listing_attributes.industrial_type` column in `inArray(...)`.
@@ -320,6 +321,19 @@ export function buildAttributeConditions(f: {
  * only when all three geo params are present. Effective coordinate = listing
  * override, else the joined area centroid.
  */
+export function nearMeDistanceKmSql(parsed: {
+  near_lat: number;
+  near_lng: number;
+}): SQL {
+  const effLat = sql`COALESCE(${listings.latitude}, ${locations.latitude})`;
+  const effLng = sql`COALESCE(${listings.longitude}, ${locations.longitude})`;
+  return sql`6371 * acos(LEAST(1, GREATEST(-1,
+    cos(radians(${parsed.near_lat})) * cos(radians(${effLat}))
+      * cos(radians(${effLng}) - radians(${parsed.near_lng}))
+    + sin(radians(${parsed.near_lat})) * sin(radians(${effLat}))
+  )))`;
+}
+
 export function nearMeConditions(parsed: {
   near_lat?: number;
   near_lng?: number;
@@ -338,11 +352,10 @@ export function nearMeConditions(parsed: {
   const latDelta = parsed.radius_km / 111;
   const cosLat = Math.max(Math.cos((parsed.near_lat * Math.PI) / 180), 0.01);
   const lngDelta = parsed.radius_km / (111 * cosLat);
-  const distanceKm = sql`6371 * acos(LEAST(1, GREATEST(-1,
-    cos(radians(${parsed.near_lat})) * cos(radians(${effLat}))
-      * cos(radians(${effLng}) - radians(${parsed.near_lng}))
-    + sin(radians(${parsed.near_lat})) * sin(radians(${effLat}))
-  )))`;
+  const distanceKm = nearMeDistanceKmSql({
+    near_lat: parsed.near_lat,
+    near_lng: parsed.near_lng,
+  });
   return [
     sql`${effLat} IS NOT NULL AND ${effLng} IS NOT NULL`,
     sql`${effLat} BETWEEN ${parsed.near_lat - latDelta} AND ${parsed.near_lat + latDelta}`,
@@ -358,11 +371,20 @@ export async function searchListings(
 ): Promise<{ items: FeedItem[]; cursor?: string; has_next: boolean }> {
   const sort: SearchSort = parsed.sort ?? "recommended";
   // recommended / newest keep the created_at keyset cursor (backward compatible
-  // with existing clients). price_* / popular sort by a non-cursor key, so they
-  // paginate by numeric offset instead — the cursor is opaque to the client, so
-  // each sort carries its own consistent cursor format within a paging session.
+  // with existing clients). price_* / popular / nearest sort by a non-cursor
+  // key, so they paginate by numeric offset instead — the cursor is opaque to
+  // the client, so each sort carries its own consistent cursor format within a
+  // paging session. nearest without near_lat/lng falls back to recommended
+  // ordering (honest: cannot rank by distance without a reference point).
+  const canNearest =
+    sort === "nearest" &&
+    parsed.near_lat != null &&
+    parsed.near_lng != null;
   const useOffset =
-    sort === "price_asc" || sort === "price_desc" || sort === "popular";
+    sort === "price_asc" ||
+    sort === "price_desc" ||
+    sort === "popular" ||
+    canNearest;
 
   const conditions = [eq(listings.status, "active")];
 
@@ -423,16 +445,23 @@ export async function searchListings(
   // Popularity = lifetime views + clicks (interactions is 1:1 with a listing,
   // so the LEFT JOIN never fans rows out and is safe to keep for every sort).
   const popularity = sql<number>`COALESCE(${interactions.views}, 0) + COALESCE(${interactions.clicks}, 0)`;
-  const orderBy: SQL[] =
-    sort === "price_asc"
+  const orderBy: SQL[] = canNearest
+    ? [
+        asc(
+          nearMeDistanceKmSql({
+            near_lat: parsed.near_lat!,
+            near_lng: parsed.near_lng!,
+          }),
+        ),
+        asc(listings.id),
+      ]
+    : sort === "price_asc"
       ? [asc(listings.basePriceCash), asc(listings.id)]
       : sort === "price_desc"
         ? [desc(listings.basePriceCash), asc(listings.id)]
         : sort === "popular"
           ? [desc(popularity), asc(listings.id)]
-          : // recommended / newest: bump-aware recency (recycled listings
-            // resurface to the top); created_at preserved, only the SORT key
-            // is effective. id tiebreaker keeps the keyset cursor stable.
+          : // recommended / newest / nearest-without-coords: bump-aware recency
             [
               desc(sql`COALESCE(${listings.bumpedAt}, ${listings.createdAt})`),
               asc(listings.id),

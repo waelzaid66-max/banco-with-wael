@@ -93,8 +93,10 @@ test("edit listing wires MapPinPicker + update lat/lng (MAP-09)", () => {
   );
   assert.match(edit, /MapPinPicker/);
   assert.match(edit, /testID="edit-pick-on-map"/);
+  assert.match(edit, /testID="edit-pin-tools"/);
   assert.match(edit, /latitude:\s*pin\.lat/);
   assert.match(edit, /longitude:\s*pin\.lng/);
+  assert.match(edit, /pinTouched/);
 });
 
 test("message notifications forward stamped role (mark-sold chrome)", () => {
@@ -192,7 +194,6 @@ test("NOTIF-09 unknown notification routes to /notifications", () => {
 
 // ── Wave 3 ──────────────────────────────────────────────────────────────
 
-const nearMe = fs.readFileSync(path.join(root, "lib/nearMe.ts"), "utf8");
 const inbox = fs.readFileSync(path.join(root, "app/(tabs)/messages.tsx"), "utf8");
 const importOrder = fs.readFileSync(
   path.join(root, "app/import/order/[id].tsx"),
@@ -201,10 +202,6 @@ const importOrder = fs.readFileSync(
 const importHub = fs.readFileSync(path.join(root, "app/import/index.tsx"), "utf8");
 const pushHook = fs.readFileSync(
   path.join(root, "hooks/usePushNotifications.tsx"),
-  "utf8",
-);
-const editListing = fs.readFileSync(
-  path.join(root, "app/listings/edit/[id].tsx"),
   "utf8",
 );
 const emailSvc = fs.readFileSync(
@@ -268,6 +265,7 @@ test("MSG-07b absorbs vacated poll ids and gates older load", () => {
   assert.match(thread, /newestId/);
   assert.match(thread, /maintainVisibleContentPosition/);
   assert.match(thread, /prevPollMsgsRef\.current = \[\]/);
+  assert.match(thread, /nearBottomRef/);
 });
 
 test("MSG-14 non-image media renders openable attachment", () => {
@@ -276,11 +274,28 @@ test("MSG-14 non-image media renders openable attachment", () => {
   assert.match(thread, /Linking\.openURL/);
 });
 
+test("MSG-14b chat picker accepts videos with media_kind", () => {
+  assert.match(thread, /mediaTypes:\s*\["images",\s*"videos"\]/);
+  assert.match(thread, /uploadMediaAsset/);
+  assert.match(thread, /media_kind:\s*uploaded\.type === "video"/);
+  assert.match(thread, /partitionPickedAssets/);
+  assert.match(thread, /uploading\) return/);
+});
+
 test("MSG-08 report uses support tickets; hide uses deleteConversation", () => {
   assert.match(thread, /createSupportTicket/);
   assert.match(thread, /category: "abuse"/);
   assert.match(thread, /deleteConversation/);
   assert.match(thread, /action-report/);
+  assert.match(thread, /chat\.hideTitle/);
+});
+
+test("MSG-08 inbox soft-hide uses hide copy (not delete)", () => {
+  assert.match(inbox, /handleHide/);
+  assert.match(inbox, /chat\.hideTitle/);
+  assert.match(inbox, /chat\.hideThread/);
+  assert.doesNotMatch(inbox, /messages\.deleteTitle/);
+  assert.doesNotMatch(inbox, /handleDelete/);
 });
 
 test("NOTIF-08 settings label discloses push is gated with in-app", () => {
@@ -296,4 +311,83 @@ test("NOTIF-04 push schedules Expo receipt processing", () => {
   assert.match(push, /getReceipts/);
   assert.match(push, /processPushReceipts/);
   assert.match(push, /scheduleReceiptCheck/);
+  const deadFnAt = push.indexOf("function isDeadDeviceError");
+  const deadFn = push.slice(deadFnAt, deadFnAt + 280);
+  assert.match(deadFn, /DeviceNotRegistered/);
+  assert.doesNotMatch(
+    deadFn,
+    /return error === "DeviceNotRegistered" \|\| error === "InvalidCredentials"/,
+    "InvalidCredentials must not prune device tokens",
+  );
+  assert.match(deadFn, /return error === "DeviceNotRegistered";/);
+});
+
+test("MSG-07b before cursor uses created_at + id tie-break", () => {
+  assert.match(apiConv, /lt\(messages\.id, anchor\.id\)/);
+  assert.match(apiConv, /orderBy\(desc\(messages\.createdAt\), desc\(messages\.id\)\)/);
+  assert.match(apiConv, /if \(!anchor\?\.createdAt\) return \[\]/);
+});
+
+test("MSG-07b does not arm older-load on contentSizeChange", () => {
+  assert.match(thread, /nearBottomRef/);
+  assert.match(thread, /Do NOT arm readyForOlder here/);
+  assert.match(thread, /unique\.length === 0/);
+});
+
+test("MAP-07 Leaflet is vendored inline (no unpkg)", () => {
+  const mapHtml = fs.readFileSync(
+    path.join(root, "components/search/mapHtml.ts"),
+    "utf8",
+  );
+  const pinPicker = fs.readFileSync(
+    path.join(root, "components/MapPinPicker.tsx"),
+    "utf8",
+  );
+  assert.match(mapHtml, /mapVendorInline/);
+  assert.match(mapHtml, /LEAFLET_JS/);
+  assert.doesNotMatch(mapHtml, /unpkg\.com\/leaflet/);
+  assert.doesNotMatch(pinPicker, /unpkg\.com\/leaflet/);
+  assert.ok(
+    fs.existsSync(path.join(root, "components/search/mapVendorInline.ts")),
+  );
+});
+
+test("MAP-08 nearest sort is a real API sort value", () => {
+  const searchSvc = fs.readFileSync(
+    path.join(root, "../api-server/src/services/SearchService.ts"),
+    "utf8",
+  );
+  const filterSheet = fs.readFileSync(
+    path.join(root, "components/search/FilterSheet.tsx"),
+    "utf8",
+  );
+  assert.match(searchSvc, /"nearest"/);
+  assert.match(searchSvc, /nearMeDistanceKmSql/);
+  assert.match(filterSheet, /"nearest"/);
+  assert.match(filterSheet, /nearestNeedsNearMe/);
+  assert.match(filterSheet, /!criteria\.nearMeEnabled/);
+});
+
+test("MAP-10 map Html still posts locate_error + viewport bridge", () => {
+  const mapHtml = fs.readFileSync(
+    path.join(root, "components/search/mapHtml.ts"),
+    "utf8",
+  );
+  assert.match(mapHtml, /locate_error/);
+  assert.match(mapHtml, /type:\s*"viewport"/);
+  assert.match(mapHtml, /BANCO_MAP/);
+});
+
+test("MSG-11b website thread: media links + newest-id mark-read + soft send", () => {
+  const webThread = fs.readFileSync(
+    path.join(root, "../banco-website/components/workspace/MessageThreadPanel.tsx"),
+    "utf8",
+  );
+  assert.match(webThread, /lastNewestIdRef/);
+  assert.match(webThread, /newestId/);
+  assert.match(webThread, /media_url/);
+  assert.match(webThread, /messagesMediaVideo/);
+  assert.match(webThread, /setQueryData/);
+  assert.match(webThread, /Soft refresh only/);
+  assert.match(webThread, /maxLength=\{4000\}/);
 });

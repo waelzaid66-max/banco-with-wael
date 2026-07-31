@@ -73,12 +73,13 @@ export default function MessagesScreen() {
   const deleteMut = useDeleteConversation();
 
   // Long-press to soft-hide a thread for this user only (see backend un-hide).
-  const handleDelete = useCallback((id: string) => {
+  // Honesty: this is hide-from-inbox, not hard delete — match thread sheet copy.
+  const handleHide = useCallback((id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert(t("messages.deleteTitle"), t("messages.deleteBody"), [
+    Alert.alert(t("chat.hideTitle"), t("chat.hideBody"), [
       { text: t("common.cancel"), style: "cancel" },
       {
-        text: t("common.delete"),
+        text: t("chat.hideThread"),
         style: "destructive",
         onPress: () => {
           deleteMut.mutate(
@@ -173,7 +174,7 @@ export default function MessagesScreen() {
             },
           })
         }
-        onLongPress={() => handleDelete(item.id)}
+        onLongPress={() => handleHide(item.id)}
         delayLongPress={350}
         style={[
           styles.row,
@@ -256,7 +257,7 @@ export default function MessagesScreen() {
         </View>
       </Pressable>
     );
-  }, [rowDir, colors, handleDelete, isRTL, lang, t]);
+  }, [rowDir, colors, handleHide, isRTL, lang, t]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

@@ -1212,7 +1212,7 @@ export const SearchListingsQueryParams = zod.object({
   "near_lat": zod.coerce.number().optional().describe('Near-me anchor latitude (requires near_lng and radius_km).'),
   "near_lng": zod.coerce.number().optional().describe('Near-me anchor longitude (requires near_lat and radius_km).'),
   "radius_km": zod.coerce.number().min(searchListingsQueryRadiusKmMin).max(searchListingsQueryRadiusKmMax).optional().describe('Search radius in kilometres from the near-me anchor.'),
-  "sort": zod.enum(['recommended', 'newest', 'price_asc', 'price_desc', 'popular']).default(searchListingsQuerySortDefault).describe('Result ordering. recommended (default) and newest use the created_at keyset cursor; price_asc, price_desc and popular switch to offset pagination (their cursor is an opaque numeric offset). popular ranks by lifetime interactions (views + clicks).'),
+  "sort": zod.enum(['recommended', 'newest', 'price_asc', 'price_desc', 'popular', 'nearest']).default(searchListingsQuerySortDefault).describe('Result ordering. recommended (default) and newest use the created_at keyset cursor; price_asc, price_desc, popular and nearest switch to offset pagination (their cursor is an opaque numeric offset). popular ranks by lifetime interactions (views + clicks). nearest ranks by Haversine distance when near_lat/near_lng are present.'),
   "cursor": zod.coerce.string().optional(),
   "limit": zod.coerce.number().default(searchListingsQueryLimitDefault)
 })

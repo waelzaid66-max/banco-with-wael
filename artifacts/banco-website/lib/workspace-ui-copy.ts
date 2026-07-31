@@ -133,6 +133,9 @@ export type WorkspaceUiCopy = {
   messagesSending: string;
   messagesSendError: string;
   messagesThreadEmpty: string;
+  messagesMediaImage: string;
+  messagesMediaVideo: string;
+  messagesMediaAudio: string;
   walletTitle: string;
   walletAvailable: string;
   walletBalanceHint: string;
@@ -340,9 +343,9 @@ const COPY: Record<SiteLocale, WorkspaceUiCopy> = {
     messagesErrorTitle: "تعذّر تحميل الرسائل",
     messagesNoMessages: "لا رسائل بعد",
     messagesUnread: "{count} غير مقروء",
-    messagesDeleteTitle: "حذف المحادثة؟",
-    messagesDeleteBody: "ستُزال من صندوق الوارد. الطرف الآخر ما زال يراها.",
-    messagesDelete: "حذف",
+    messagesDeleteTitle: "إخفاء المحادثة؟",
+    messagesDeleteBody: "ستُخفى من صندوق الوارد لديك فقط. الطرف الآخر ما زال يراها.",
+    messagesDelete: "إخفاء",
     messagesCancel: "إلغاء",
     messagesBack: "العودة للرسائل",
     messagesPlaceholder: "اكتب رسالة…",
@@ -350,6 +353,9 @@ const COPY: Record<SiteLocale, WorkspaceUiCopy> = {
     messagesSending: "جاري الإرسال…",
     messagesSendError: "تعذّر إرسال الرسالة.",
     messagesThreadEmpty: "لا رسائل بعد — قل مرحبًا.",
+    messagesMediaImage: "فتح الصورة",
+    messagesMediaVideo: "فتح الفيديو",
+    messagesMediaAudio: "فتح الصوت",
     walletTitle: "المحفظة",
     walletAvailable: "الرصيد المتاح",
     walletBalanceHint: "يُستخدم للترويج والإبراز المميز",
@@ -555,9 +561,9 @@ const COPY: Record<SiteLocale, WorkspaceUiCopy> = {
     messagesErrorTitle: "Couldn't load messages",
     messagesNoMessages: "No messages yet",
     messagesUnread: "{count} unread",
-    messagesDeleteTitle: "Delete conversation?",
-    messagesDeleteBody: "It's removed from your inbox. The other person can still see it.",
-    messagesDelete: "Delete",
+    messagesDeleteTitle: "Hide conversation?",
+    messagesDeleteBody: "It's hidden from your inbox only. The other person can still see it.",
+    messagesDelete: "Hide",
     messagesCancel: "Cancel",
     messagesBack: "Back to messages",
     messagesPlaceholder: "Write a message…",
@@ -565,6 +571,9 @@ const COPY: Record<SiteLocale, WorkspaceUiCopy> = {
     messagesSending: "Sending…",
     messagesSendError: "Could not send message.",
     messagesThreadEmpty: "No messages yet — say hello.",
+    messagesMediaImage: "Open image",
+    messagesMediaVideo: "Open video",
+    messagesMediaAudio: "Open audio",
     walletTitle: "Wallet",
     walletAvailable: "Available Balance",
     walletBalanceHint: "Used for boosts and premium placements",

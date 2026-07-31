@@ -24,7 +24,8 @@ export type SearchSort =
   | "newest"
   | "price_asc"
   | "price_desc"
-  | "popular";
+  | "popular"
+  | "nearest";
 
 export type PaymentType = "any" | "installment";
 

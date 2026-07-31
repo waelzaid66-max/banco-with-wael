@@ -9,6 +9,15 @@
 ### Wave 4 (audit hardening)
 MSG-07b sliding-window absorb + newest-id mark-read + older-load gate · MSG-14 media open · MSG-08 report+hide · NOTIF-04 receipts · NOTIF-08 label · hub support copy · merge main
 
+### Wave 5 (precision audit + MSG-14b)
+Near-bottom autoscroll · Android prepend gate · hide copy honesty · poll-wins dedupe · before cursor id tie-break · DeviceNotRegistered-only prune · chat video picker
+
+### Wave 6 (precision + maps)
+MSG-07b P1 scroll/prepend/anchor · MAP-07 vendored Leaflet · MAP-08 `nearest` sort · MAP-10 bridge guards
+
+### Wave 7 (honesty + website parity + sibling ledger)
+Inbox hide copy · nearest gated on Near me · website thread media/mark-read/soft-send · offer state hoist · Discover inventory truth · delivery ledger for sibling agent
+
 
 | ID | Problem | Severity | Status |
 |----|---------|----------|--------|
@@ -31,6 +40,7 @@ MSG-07b sliding-window absorb + newest-id mark-read + older-load gate · MSG-14 
 | MAP-06 | Web locate failure silent | Medium | **Fixed** (Alert parity) |
 | MSG-07b | Older-page load via `before=` + sliding-window absorb | Medium | **Fixed** (audit harden) |
 | MSG-11 | Email CTA path mismatch | Medium | **Fixed** (workspace messages) |
+| MSG-11b | Website thread text-only; mark-read by length; no soft-send | Medium | **Fixed** (media links + newest-id + cache seed) |
 | MSG-12 | Import support generic inbox | Medium | **Fixed** (support tickets) |
 | MSG-15 | Inbox empty no browse CTA | Low | **Fixed** |
 | MAP-05 | Web near-me null | Medium | **Fixed** (browser geolocation) |
@@ -39,9 +49,14 @@ MSG-07b sliding-window absorb + newest-id mark-read + older-load gate · MSG-14 
 | NOTIF-06 | OS badge missing in push | Medium | **Fixed** |
 | NOTIF-07 | Push register single-attempt | Medium | **Fixed** (backoff retry) |
 | MSG-14 | Video/audio rendered as broken image | Medium | **Fixed** (openable attachment) |
+| MSG-14b | Video picker still images-only | Low | **Fixed** (gallery images+videos + media_kind) |
 | MSG-08 | No report-message / hide from thread | High | **Fixed** (support ticket + soft-hide) |
+| MSG-08c | Inbox soft-hide labeled Delete | Medium | **Fixed** (`chat.hide*` copy; website Hide) |
 | NOTIF-04 | No Expo receipt processing | High | **Fixed** (receipt prune; durable retry = 04b) |
 | NOTIF-08 | “In-app” toggle also suppresses push | Medium | **Fixed** (label honesty) |
+| MAP-07 | CDN Leaflet/MarkerCluster dependency | Medium | **Fixed** (inlined vendor; OSM tiles still network) |
+| MAP-08 | No sort=nearest / silent fallback without near-me | Product | **Fixed** (Haversine + FilterSheet gate; draw-area = 08b) |
+| MAP-10 | No map interaction guards | Low | **Fixed** (bridge locate/viewport guards) |
 
 Guards: `test:messenger-wiring` · `test:production-wiring` · existing `test:notification-routing`
 
@@ -53,8 +68,8 @@ Guards: `test:messenger-wiring` · `test:production-wiring` · existing `test:no
 |----|-----|----------|-------|
 | MSG-05 | Poll-only (3s/8s/15s) — no WS/typing/presence | Product | G47; needs Owner decision before rewrite |
 | MSG-08b | No hard block-user (mutual ban) | High | Soft-hide + report exist; ban needs schema |
-| MSG-13 | No per-thread mute | Medium | Global prefs only |
-| MSG-14b | Video/audio *picker* still images-only | Low | Renderer opens URL (MSG-14) |
+| MSG-13 | No per-thread mute | Medium | Global prefs only; needs schema |
+| MSG-14c | Audio / voice-note recorder | Low | API accepts audio; no recorder UI yet |
 
 **Architecture (keep):** HTTP polling · participant auth · listing-anchored conversations · inbox already passes listingId+role.
 
@@ -72,24 +87,25 @@ Guards: `test:messenger-wiring` · `test:production-wiring` · existing `test:no
 
 ## C. Maps — per section
 
-**Stack (all browse maps):** Leaflet 1.9.4 + MarkerCluster 1.5.3 + OSM tiles via unpkg · WebView/iframe · `GET /v1/search/map` · **not** react-native-maps.
+**Stack (all browse maps):** Leaflet 1.9.4 + MarkerCluster 1.5.3 **inlined** via `mapVendorInline.ts` · OSM tiles (network) · WebView/iframe · `GET /v1/search/map` · **not** react-native-maps.
 
 | Section | Map | Latch | Sync filters | Features shown | Gaps |
 |---------|-----|-------|--------------|----------------|------|
-| Cars | Yes (shared) | Fixed MAP-01 | Yes | Pins, clusters, locate, near circle, filters | Discover map chip `?map=1` |
-| Real estate | Yes + Discover Explore | Fixed MAP-01 | Yes | Same + Discover CTA | Off-page open always `?focus=booking` |
+| Cars | Yes (shared) | Fixed MAP-01 | Yes | Pins, clusters, locate, near circle, filters, nearest | — |
+| Real estate | Yes + Discover Explore | Fixed MAP-01 | Yes | Same + Discover CTA + section chips | Off-page open always `?focus=booking` |
 | Booking/Stays | Yes (best latch) | OK | Yes | Rent filters + bookable emerald pins + near circle + StayCard overlay | — |
-| Facilities | Yes | Fixed MAP-01 | Yes | Industrial tint | Discover map chip `?map=1` |
-| Materials | Yes + header map | Fixed MAP-01 | Yes | Industrial tint + header map | Discover map chip `?map=1` |
+| Facilities | Yes | Fixed MAP-01 | Yes | Industrial tint + Discover chip | — |
+| Materials | Yes + header map | Fixed MAP-01 | Yes | Industrial tint + header map + Discover chip | — |
 | Car Import hub | Indirect via cars+import engine | N/A | Via cars | Cars map when `?engine=import` | No shipment geo map |
+
+**Discover map chips:** Present in `SearchDiscover.tsx` (`exploreMapCar` / materials / factories / stays) — not missing.
 
 ### Shared map gaps (tracked, not erased)
 
 | ID | Gap | Severity |
 |----|-----|----------|
-| MAP-07 | CDN Leaflet/OSM dependency | Medium |
-| MAP-08 | No draw-area / sort=nearest | Product deferred |
-| MAP-10 | No E2E map interaction tests | Low |
+| MAP-08b | No draw-area polygon filter | Product deferred |
+| MAP-07b | OSM raster tiles still require network | Medium (by design) |
 
 ---
 
@@ -106,7 +122,8 @@ Guards: `test:messenger-wiring` · `test:production-wiring` · existing `test:no
 | #21 | Messenger listing chrome (continued by this branch) |
 | #22 | B-PROPERTY (+ some map/notif overlap) |
 | #25 | Materials B-CORE |
-| #26 | This production wiring wave |
+| #26 | Merged production wiring wave 1–2 |
+| #30 | This branch — waves 3–7 production wiring |
 
 ---
 
@@ -115,8 +132,9 @@ Guards: `test:messenger-wiring` · `test:production-wiring` · existing `test:no
 ### Messenger
 - Inbox poll 8s · thread poll 3s · tab unread 15s  
 - Listing-anchored conversations · share listing card · price offer / accept-decline  
-- Reactions · reply quotes · image attach · mark-sold (seller + listingId)  
-- Soft-hide conversation · participant auth  
+- Reactions · reply quotes · image/video attach · mark-sold (seller + listingId)  
+- Soft-hide conversation (inbox + thread, honest Hide copy) · participant auth  
+- Website thread: media open links · newest-id mark-read · soft-send cache seed  
 
 ### Notifications
 - In-app feed · push registration (Expo) · typed deep links · mute prefs  
@@ -125,6 +143,6 @@ Guards: `test:messenger-wiring` · `test:production-wiring` · existing `test:no
 ### Maps
 - Per-section browse maps · market-country framing · locate-me · near-me radius chips + **circle**  
 - Page pins + server clusters · price/bookable on singles · FilterSheet sync  
-- Create + edit MapPinPicker (MAP-09)  
+- Create + edit MapPinPicker (MAP-09) · `sort=nearest` gated on Near me  
 - Discover multi-section map producers (RE primary + car/materials/factories/stays chips)  
-- Shared `lib/mapLatch.ts` + web near-me (`lib/nearMe.ts`)  
+- Shared `lib/mapLatch.ts` + web near-me (`lib/nearMe.ts`) · inlined Leaflet vendor  

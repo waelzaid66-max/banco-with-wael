@@ -311,19 +311,26 @@ export async function getMessages(
 
   const conditions = [eq(messages.conversationId, conversationId)];
 
-  // Cursor page (older than `before`): load messages strictly older than the
-  // anchor's created_at within this conversation.
+  // Cursor page (older than `before`): messages strictly before the anchor in
+  // (created_at, id) order so same-timestamp siblings are not skipped.
   if (opts.before) {
     const [anchor] = await db
-      .select({ createdAt: messages.createdAt })
+      .select({ createdAt: messages.createdAt, id: messages.id })
       .from(messages)
       .where(
         and(eq(messages.id, opts.before), eq(messages.conversationId, conversationId))
       )
       .limit(1);
-    if (anchor?.createdAt) {
-      conditions.push(lt(messages.createdAt, anchor.createdAt));
-    }
+    // Missing/foreign anchor must NOT fall through to the newest window —
+    // that looks like "no older messages" after client dedupe and can stick
+    // the mobile prepend gate.
+    if (!anchor?.createdAt) return [];
+    conditions.push(
+      or(
+        lt(messages.createdAt, anchor.createdAt),
+        and(eq(messages.createdAt, anchor.createdAt), lt(messages.id, anchor.id)),
+      )!,
+    );
   }
 
   // MSG-07: optional limit returns the newest N (DESC then reverse to ASC).
@@ -338,13 +345,13 @@ export async function getMessages(
         .select()
         .from(messages)
         .where(and(...conditions))
-        .orderBy(desc(messages.createdAt))
+        .orderBy(desc(messages.createdAt), desc(messages.id))
         .limit(limit)
     : await db
         .select()
         .from(messages)
         .where(and(...conditions))
-        .orderBy(asc(messages.createdAt));
+        .orderBy(asc(messages.createdAt), asc(messages.id));
 
   const rows = limit ? [...raw].reverse() : raw;
 

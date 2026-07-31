@@ -46,7 +46,8 @@ function asSort(value: SearchParamValue): SearchSort {
     raw === "newest" ||
     raw === "price_asc" ||
     raw === "price_desc" ||
-    raw === "popular"
+    raw === "popular" ||
+    raw === "nearest"
   ) {
     return raw;
   }

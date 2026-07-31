@@ -524,6 +524,7 @@ export default function SearchScreen() {
         nearMeEnabled: false,
         nearLat: null,
         nearLng: null,
+        ...(criteria.sort === "nearest" ? { sort: "recommended" as const } : {}),
       });
       return;
     }
@@ -538,7 +539,7 @@ export default function SearchScreen() {
       nearLng: coords.lng,
       nearRadiusKm: DEFAULT_NEAR_RADIUS_KM,
     });
-  }, [criteria.nearMeEnabled, t, update]);
+  }, [criteria.nearMeEnabled, criteria.sort, t, update]);
 
   const rentalTerms = rentalTermsForSearch(criteria.marketCountry);
 

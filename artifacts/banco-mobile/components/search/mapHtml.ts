@@ -1,4 +1,11 @@
 import type { FeedItem } from "@workspace/api-client-react";
+import {
+  LEAFLET_CSS,
+  LEAFLET_JS,
+  MARKER_CLUSTER_CSS,
+  MARKER_CLUSTER_DEFAULT_CSS,
+  MARKER_CLUSTER_JS,
+} from "./mapVendorInline";
 
 /** A single price pin on the map. */
 export interface MapMarker {
@@ -58,8 +65,7 @@ export type MapBridgeMessage =
   /** Locate-me failed (permission deny / timeout / unavailable) — host shows Alert. */
   | { type: "locate_error"; reason: "denied" | "unavailable" | "timeout" };
 
-const LEAFLET = "https://unpkg.com/leaflet@1.9.4/dist";
-const CLUSTER = "https://unpkg.com/leaflet.markercluster@1.5.3/dist";
+const OSM_TILES = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 
 /**
  * Project the feed onto map pins. Only items that carry valid coordinates are
@@ -143,9 +149,10 @@ export function buildMapHtml(
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<link rel="stylesheet" href="${LEAFLET}/leaflet.css" />
-<link rel="stylesheet" href="${CLUSTER}/MarkerCluster.css" />
-<link rel="stylesheet" href="${CLUSTER}/MarkerCluster.Default.css" />
+<!-- MAP-07: Leaflet + MarkerCluster inlined (no unpkg/cdnjs). OSM tiles still network. -->
+<style>${LEAFLET_CSS}</style>
+<style>${MARKER_CLUSTER_CSS}</style>
+<style>${MARKER_CLUSTER_DEFAULT_CSS}</style>
 <style>
   html, body, #map { height: 100%; margin: 0; padding: 0; }
   body { background: ${theme.card}; }
@@ -233,8 +240,8 @@ export function buildMapHtml(
 </head>
 <body>
 <div id="map"></div>
-<script src="${LEAFLET}/leaflet.js"></script>
-<script src="${CLUSTER}/leaflet.markercluster.js"></script>
+<script>${LEAFLET_JS}</script>
+<script>${MARKER_CLUSTER_JS}</script>
 <script>
   (function () {
     var DATA = ${json};
@@ -258,7 +265,7 @@ export function buildMapHtml(
     var map = L.map("map", { zoomControl: false, attributionControl: true })
       .setView([${lat}, ${lng}], ${zoom});
     L.control.zoom({ position: "topright" }).addTo(map);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    L.tileLayer("${OSM_TILES}", {
       maxZoom: 19,
       attribution: "&copy; OpenStreetMap"
     }).addTo(map);

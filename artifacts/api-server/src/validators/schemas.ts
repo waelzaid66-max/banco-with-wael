@@ -885,6 +885,7 @@ export const SearchSortValues = [
   "price_asc",
   "price_desc",
   "popular",
+  "nearest",
 ] as const;
 
 export const FeedQuerySchema = z.object({
