@@ -86,7 +86,7 @@ function ClerkAppProviderConfigured({ children }: ClerkAppProviderProps) {
       appearance={clerkAppearance}
       signInUrl={signInPath(locale)}
       signUpUrl={signUpPath(locale)}
-      fallbackRedirectUrl={workspacePath(locale)}
+      signInFallbackRedirectUrl={workspacePath(locale)}
     >
       <AuthTokenBridgeInner />
       {children}
