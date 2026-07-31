@@ -100,3 +100,16 @@ test("unknown / incomplete notification falls back to /notifications", () => {
   assert.match(body, /return "\/notifications";\s*\n\}/);
   assert.doesNotMatch(body, /return null;/);
 });
+
+// Wave 2 contract: car_import lifecycle pings deep-link into order detail when
+// the server stamped import_order_id; older rows fall back to tracking.
+test("car_import with import_order_id opens /import/order/[id]", () => {
+  assert.match(routing, /type === "car_import"/);
+  assert.match(routing, /import_order_id/);
+  assert.match(routing, /\/import\/order\/\[id\]/);
+  const carIdx = routing.indexOf('type === "car_import"');
+  const detailIdx = routing.indexOf("/import/order/[id]", carIdx);
+  const fallbackIdx = routing.indexOf("/import-tracking", carIdx);
+  assert.ok(carIdx >= 0 && detailIdx > carIdx);
+  assert.ok(fallbackIdx > detailIdx, "fallback tracking must follow the detail route");
+});

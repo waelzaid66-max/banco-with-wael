@@ -2468,8 +2468,29 @@ export const importOrders = pgTable(
   ]
 );
 
+// Buyer-uploaded paperwork attached to one import order (invoice, passport,
+// power of attorney, …). Files live in object storage via the shared
+// presigned-URL upload flow; this table only records the servable URL + kind.
+export const importOrderDocuments = pgTable(
+  "import_order_documents",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orderId: uuid("order_id")
+      .references(() => importOrders.id, { onDelete: "cascade" })
+      .notNull(),
+    // One of the fixed checklist kinds (invoice/export/passport/id/poa/
+    // insurance/shipping/customs) — validated at the API layer.
+    kind: text("kind").notNull(),
+    url: text("url").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [index("idx_import_order_documents_order").on(table.orderId)]
+);
+
 export type ImportOrder = typeof importOrders.$inferSelect;
 export type InsertImportOrder = typeof importOrders.$inferInsert;
+export type ImportOrderDocument = typeof importOrderDocuments.$inferSelect;
+export type InsertImportOrderDocument = typeof importOrderDocuments.$inferInsert;
 
 /* ── Task #40 inferred types ───────────────────────────── */
 export type InvestmentOpportunity = typeof investmentOpportunities.$inferSelect;

@@ -1058,6 +1058,91 @@ export const CancelImportOrderResponse = zod.object({
 
 
 /**
+ * Matches Express `GET /api/v1/import-orders/:id/documents`.
+ * @summary List the paperwork attached to an import order (owner only)
+ */
+export const ListImportOrderDocumentsParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ListImportOrderDocumentsResponse = zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string(),
+  "order_id": zod.string(),
+  "kind": zod.enum(['invoice', 'export', 'passport', 'id', 'poa', 'insurance', 'shipping', 'customs']).describe('Fixed paperwork checklist for a car import — mirrors the mobile Import Documents screen. New kinds are additive.'),
+  "url": zod.string(),
+  "created_at": zod.string()
+}).describe('One buyer-uploaded file attached to an import order.')).optional(),
+  "error": zod.object({
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
+  "message": zod.string()
+}).nullish(),
+  "meta": zod.object({
+  "cursor": zod.string().optional(),
+  "has_next": zod.boolean().optional(),
+  "total": zod.number().optional()
+}).optional()
+})
+
+
+/**
+ * The file must already be uploaded through the shared presigned-URL flow; this records its servable URL under a checklist kind. Matches Express `POST /api/v1/import-orders/:id/documents`.
+ * @summary Attach an uploaded file to an import order (owner only)
+ */
+export const AttachImportOrderDocumentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const AttachImportOrderDocumentBody = zod.object({
+  "kind": zod.enum(['invoice', 'export', 'passport', 'id', 'poa', 'insurance', 'shipping', 'customs']).describe('Fixed paperwork checklist for a car import — mirrors the mobile Import Documents screen. New kinds are additive.'),
+  "url": zod.string().describe('Servable URL returned by the presigned-upload flow.')
+})
+
+export const AttachImportOrderDocumentResponse = zod.object({
+  "data": zod.object({
+  "id": zod.string(),
+  "order_id": zod.string(),
+  "kind": zod.enum(['invoice', 'export', 'passport', 'id', 'poa', 'insurance', 'shipping', 'customs']).describe('Fixed paperwork checklist for a car import — mirrors the mobile Import Documents screen. New kinds are additive.'),
+  "url": zod.string(),
+  "created_at": zod.string()
+}).optional().describe('One buyer-uploaded file attached to an import order.'),
+  "error": zod.object({
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
+  "message": zod.string()
+}).nullish(),
+  "meta": zod.object({
+  "cursor": zod.string().optional(),
+  "has_next": zod.boolean().optional(),
+  "total": zod.number().optional()
+}).optional()
+})
+
+
+/**
+ * @summary Remove an attached document from an import order (owner only)
+ */
+export const DeleteImportOrderDocumentParams = zod.object({
+  "id": zod.coerce.string(),
+  "documentId": zod.coerce.string()
+})
+
+export const DeleteImportOrderDocumentResponse = zod.object({
+  "data": zod.object({
+  "deleted": zod.boolean()
+}),
+  "error": zod.object({
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
+  "message": zod.string()
+}).nullable(),
+  "meta": zod.object({
+  "cursor": zod.string().optional(),
+  "has_next": zod.boolean().optional(),
+  "total": zod.number().optional()
+})
+})
+
+
+/**
  * Owner-only. Sets bumped_at to now so the listing sorts by COALESCE(bumped_at, created_at) in recency feeds and search. NEVER changes created_at — the true publish date is preserved. Rate-limited with a cooldown; only active, publicly visible listings can be recycled.
  * @summary Recycle (renew) a listing to the top of recency feeds
  */

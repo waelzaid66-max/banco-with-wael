@@ -6,9 +6,20 @@ import {
   updateImportOrderStage,
   cancelImportOrder,
   getImportOrder,
+  listImportOrderDocuments,
+  attachImportOrderDocument,
+  deleteImportOrderDocument,
 } from "./ImportOrderService";
 import { db, deleteUsers, uniq, randomUUID } from "../__tests__/helpers";
-import { importOrders, notifications, users } from "@workspace/db/schema";
+import {
+  importOrders,
+  importOrderDocuments,
+  notifications,
+  uploadClaims,
+  users,
+} from "@workspace/db/schema";
+import { recordUploadClaim } from "../lib/uploadClaims";
+import { UploadOwnershipError } from "../lib/objectStorage";
 
 /**
  * ImportOrderService — the CAR IMPORT mini-app's order lifecycle. Covers the
@@ -156,5 +167,175 @@ describe("ImportOrderService — stage machine & cancel rules", () => {
     await expect(cancelImportOrder(attacker.clerkId, id)).rejects.toMatchObject({
       code: "NOT_FOUND",
     });
+  });
+});
+
+describe("ImportOrderService — order documents (wave 3)", () => {
+  // External (non first-party) URL — assertCallerMayUseUpload no-ops; used for
+  // lifecycle tests that are not about upload ownership.
+  const DOC_URL = "https://storage.banco.test/uploads/passport-page.jpg";
+
+  it("attaches, lists (newest first) and deletes a document", async () => {
+    const { clerkId } = await createBuyer();
+    const { id } = await createImportOrder(clerkId, {});
+    orderIds.push(id);
+
+    const older = await attachImportOrderDocument(clerkId, id, {
+      kind: "invoice",
+      url: `${DOC_URL}?n=1`,
+    });
+    const newer = await attachImportOrderDocument(clerkId, id, {
+      kind: "passport",
+      url: `${DOC_URL}?n=2`,
+    });
+    expect(newer.order_id).toBe(id);
+    expect(newer.kind).toBe("passport");
+
+    const listed = await listImportOrderDocuments(clerkId, id);
+    expect(listed.map((d) => d.id)).toEqual(
+      expect.arrayContaining([newer.id, older.id]),
+    );
+    // Newest first.
+    expect(listed[0]?.id).toBe(newer.id);
+
+    await deleteImportOrderDocument(clerkId, id, newer.id);
+    const after = await listImportOrderDocuments(clerkId, id);
+    expect(after.map((d) => d.id)).not.toContain(newer.id);
+    expect(after.map((d) => d.id)).toContain(older.id);
+
+    // Deleting again → NOT_FOUND.
+    await expect(
+      deleteImportOrderDocument(clerkId, id, newer.id),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("is IDOR-scoped: another user can neither list, attach, nor delete", async () => {
+    const owner = await createBuyer();
+    const attacker = await createBuyer();
+    const { id } = await createImportOrder(owner.clerkId, {});
+    orderIds.push(id);
+    const doc = await attachImportOrderDocument(owner.clerkId, id, {
+      kind: "invoice",
+      url: DOC_URL,
+    });
+
+    await expect(
+      listImportOrderDocuments(attacker.clerkId, id),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(
+      attachImportOrderDocument(attacker.clerkId, id, {
+        kind: "id",
+        url: DOC_URL,
+      }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    await expect(
+      deleteImportOrderDocument(attacker.clerkId, id, doc.id),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("terminal orders (cancelled + delivered) block attach and delete", async () => {
+    const { clerkId } = await createBuyer();
+    const { id: cancelledId } = await createImportOrder(clerkId, {});
+    orderIds.push(cancelledId);
+    const cancelledDoc = await attachImportOrderDocument(clerkId, cancelledId, {
+      kind: "poa",
+      url: DOC_URL,
+    });
+    await cancelImportOrder(clerkId, cancelledId);
+
+    await expect(
+      attachImportOrderDocument(clerkId, cancelledId, {
+        kind: "id",
+        url: DOC_URL,
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_DATA" });
+    await expect(
+      deleteImportOrderDocument(clerkId, cancelledId, cancelledDoc.id),
+    ).rejects.toMatchObject({ code: "INVALID_DATA" });
+
+    const { id: deliveredId } = await createImportOrder(clerkId, {});
+    orderIds.push(deliveredId);
+    const deliveredDoc = await attachImportOrderDocument(clerkId, deliveredId, {
+      kind: "customs",
+      url: DOC_URL,
+    });
+    await updateImportOrderStage(deliveredId, "review");
+    await updateImportOrderStage(deliveredId, "confirm");
+    await updateImportOrderStage(deliveredId, "shipping");
+    await updateImportOrderStage(deliveredId, "customs");
+    await updateImportOrderStage(deliveredId, "delivered");
+
+    await expect(
+      attachImportOrderDocument(clerkId, deliveredId, {
+        kind: "shipping",
+        url: DOC_URL,
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_DATA" });
+    await expect(
+      deleteImportOrderDocument(clerkId, deliveredId, deliveredDoc.id),
+    ).rejects.toMatchObject({ code: "INVALID_DATA" });
+  });
+
+  it("rejects first-party upload URLs without a valid claim (upload IDOR)", async () => {
+    const owner = await createBuyer();
+    const attacker = await createBuyer();
+    const { id } = await createImportOrder(owner.clerkId, {});
+    orderIds.push(id);
+
+    const objectPath = `/objects/uploads/${randomUUID()}`;
+    await recordUploadClaim(objectPath, attacker.clerkId);
+    const stolenUrl = `https://banco.example/api/v1/uploads/objects/uploads/${objectPath.split("/").pop()}`;
+
+    await expect(
+      attachImportOrderDocument(owner.clerkId, id, {
+        kind: "passport",
+        url: stolenUrl,
+      }),
+    ).rejects.toBeInstanceOf(UploadOwnershipError);
+
+    await db.delete(uploadClaims).where(eq(uploadClaims.objectPath, objectPath));
+  });
+
+  it("enforces the per-order document cap", async () => {
+    const { clerkId } = await createBuyer();
+    const { id } = await createImportOrder(clerkId, {});
+    orderIds.push(id);
+
+    // Insert 24 rows directly to avoid 24 round-trips through attach.
+    await db.insert(importOrderDocuments).values(
+      Array.from({ length: 24 }, (_, i) => ({
+        orderId: id,
+        kind: "invoice",
+        url: `${DOC_URL}?cap=${i}`,
+      })),
+    );
+
+    await expect(
+      attachImportOrderDocument(clerkId, id, {
+        kind: "passport",
+        url: `${DOC_URL}?overflow=1`,
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_DATA" });
+  });
+
+  it("documents cascade away when the order is deleted", async () => {
+    const { clerkId } = await createBuyer();
+    const { id } = await createImportOrder(clerkId, {});
+    const doc = await attachImportOrderDocument(clerkId, id, {
+      kind: "customs",
+      url: DOC_URL,
+    });
+    expect(doc.id).toBeTruthy();
+
+    await db.delete(importOrders).where(eq(importOrders.id, id));
+    // Order gone → owner guard NOT_FOUND; and the document row is cascaded.
+    await expect(
+      listImportOrderDocuments(clerkId, id),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    const orphan = await db
+      .select({ id: importOrderDocuments.id })
+      .from(importOrderDocuments)
+      .where(eq(importOrderDocuments.id, doc.id));
+    expect(orphan).toHaveLength(0);
   });
 });

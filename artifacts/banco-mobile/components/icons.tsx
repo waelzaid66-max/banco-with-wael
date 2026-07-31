@@ -240,6 +240,7 @@ const ICONS: Record<string, LucideIcon> = {
   "certificate-outline": Award,
   "ferry": Ship,
   "file-document-multiple-outline": Files,
+  "file-outline": FileText,
   "file-sign": FilePen,
   "gavel": Gavel,
   "headset": Headset,

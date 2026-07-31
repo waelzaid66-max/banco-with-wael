@@ -1,8 +1,26 @@
 import { db } from "@workspace/db";
-import { importOrders, listings, users } from "@workspace/db/schema";
+import {
+  importOrders,
+  importOrderDocuments,
+  listings,
+  users,
+} from "@workspace/db/schema";
 import { and, eq, desc } from "drizzle-orm";
 import { createNotification } from "./NotificationService";
-import type { ImportOrder, ImportOrderListItem } from "../validators/schemas";
+import {
+  assertCallerMayUseUpload,
+  consumeUploadClaim,
+  parseServingWildcard,
+  servingWildcardToObjectPath,
+} from "../lib/uploadClaims";
+import { getObjectStorageService } from "../lib/objectStorageProvider";
+import type {
+  ImportOrder,
+  ImportOrderDocument,
+  ImportOrderListItem,
+} from "../validators/schemas";
+
+const objectStorageService = getObjectStorageService();
 
 export interface CreateImportOrderInput {
   listing_id?: string;
@@ -240,4 +258,118 @@ export async function getImportOrder(
     .limit(1);
   if (!row) return null;
   return toDto(row);
+}
+
+/* ── Order documents (wave 3) ─────────────────────────────────────────────
+ * Buyer paperwork attached to one order. Files are uploaded through the shared
+ * presigned-URL flow first; these functions only record/remove the servable
+ * URL. Every function is IDOR-scoped through the order's userId.
+ */
+
+// Hard cap per order — 8 checklist kinds × a few pages each is plenty.
+const MAX_DOCUMENTS_PER_ORDER = 24;
+
+function docToDto(row: typeof importOrderDocuments.$inferSelect): ImportOrderDocument {
+  return {
+    id: row.id,
+    order_id: row.orderId,
+    kind: row.kind as ImportOrderDocument["kind"],
+    url: row.url,
+    created_at: row.createdAt
+      ? row.createdAt.toISOString()
+      : new Date().toISOString(),
+  };
+}
+
+/** The order row iff it belongs to the caller — shared owner guard. */
+async function requireOwnOrder(clerkId: string, orderId: string) {
+  const userId = await resolveUserId(clerkId);
+  const [row] = await db
+    .select({ id: importOrders.id, stage: importOrders.stage })
+    .from(importOrders)
+    .where(and(eq(importOrders.id, orderId), eq(importOrders.userId, userId)))
+    .limit(1);
+  if (!row)
+    throw Object.assign(new Error("Import order not found"), {
+      code: "NOT_FOUND",
+    });
+  return row;
+}
+
+export async function listImportOrderDocuments(
+  clerkId: string,
+  orderId: string
+): Promise<ImportOrderDocument[]> {
+  await requireOwnOrder(clerkId, orderId);
+  const rows = await db
+    .select()
+    .from(importOrderDocuments)
+    .where(eq(importOrderDocuments.orderId, orderId))
+    .orderBy(desc(importOrderDocuments.createdAt));
+  return rows.map(docToDto);
+}
+
+export async function attachImportOrderDocument(
+  clerkId: string,
+  orderId: string,
+  input: { kind: string; url: string }
+): Promise<ImportOrderDocument> {
+  const order = await requireOwnOrder(clerkId, orderId);
+  // Terminal orders are read-only — paperwork can no longer change anything.
+  if (order.stage === "cancelled" || order.stage === "delivered")
+    throw Object.assign(
+      new Error(`Cannot attach documents to a ${order.stage} order`),
+      { code: "INVALID_DATA" }
+    );
+
+  // Same ownership gate as listings/chat/company: never persist a first-party
+  // upload URL the caller did not presign (or already own via ACL).
+  await assertCallerMayUseUpload(input.url, clerkId);
+
+  const existing = await db
+    .select({ id: importOrderDocuments.id })
+    .from(importOrderDocuments)
+    .where(eq(importOrderDocuments.orderId, orderId));
+  if (existing.length >= MAX_DOCUMENTS_PER_ORDER)
+    throw Object.assign(new Error("Document limit reached for this order"), {
+      code: "INVALID_DATA",
+    });
+
+  const [created] = await db
+    .insert(importOrderDocuments)
+    .values({ orderId, kind: input.kind, url: input.url })
+    .returning();
+
+  // Promote so the buyer's Image viewer (no bearer) can load the file; then
+  // consume the claim so the slot cannot be re-attached elsewhere.
+  await objectStorageService.promoteServingUrlToPublic(created.url, clerkId);
+  const wildcard = parseServingWildcard(created.url);
+  if (wildcard) await consumeUploadClaim(servingWildcardToObjectPath(wildcard));
+
+  return docToDto(created);
+}
+
+export async function deleteImportOrderDocument(
+  clerkId: string,
+  orderId: string,
+  documentId: string
+): Promise<void> {
+  const order = await requireOwnOrder(clerkId, orderId);
+  if (order.stage === "cancelled" || order.stage === "delivered")
+    throw Object.assign(
+      new Error(`Cannot delete documents on a ${order.stage} order`),
+      { code: "INVALID_DATA" }
+    );
+
+  const [deleted] = await db
+    .delete(importOrderDocuments)
+    .where(
+      and(
+        eq(importOrderDocuments.id, documentId),
+        eq(importOrderDocuments.orderId, orderId)
+      )
+    )
+    .returning({ id: importOrderDocuments.id });
+  if (!deleted)
+    throw Object.assign(new Error("Document not found"), { code: "NOT_FOUND" });
 }

@@ -5,6 +5,9 @@ import {
   getImportOrderHandler,
   updateImportOrderStageHandler,
   cancelImportOrderHandler,
+  listImportOrderDocumentsHandler,
+  attachImportOrderDocumentHandler,
+  deleteImportOrderDocumentHandler,
 } from "../../controllers/importOrderController";
 import { requireAuth, requireAdminRole, requirePermission } from "../../middlewares/authGuard";
 import {
@@ -28,5 +31,25 @@ router.patch(
   updateImportOrderStageHandler,
 );
 router.post("/:id/cancel", writeRateLimiter, requireAuth, cancelImportOrderHandler);
+// Order paperwork — owner-scoped attach/list/remove (files go through the
+// shared presigned-upload flow first; these only record the servable URL).
+router.get(
+  "/:id/documents",
+  publicRateLimiter,
+  requireAuth,
+  listImportOrderDocumentsHandler,
+);
+router.post(
+  "/:id/documents",
+  writeRateLimiter,
+  requireAuth,
+  attachImportOrderDocumentHandler,
+);
+router.delete(
+  "/:id/documents/:documentId",
+  writeRateLimiter,
+  requireAuth,
+  deleteImportOrderDocumentHandler,
+);
 
 export default router;
