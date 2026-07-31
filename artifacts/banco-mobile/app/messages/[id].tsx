@@ -2,6 +2,7 @@ import { Feather } from "@/components/icons";
 import {
   useGetMessages,
   sendMessage,
+  getMessages,
   reactToMessage,
   markConversationRead,
   updateListing,
@@ -126,6 +127,11 @@ export default function ThreadScreen() {
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const listRef = useRef<FlatList<Row>>(null);
   const lastReadCountRef = useRef(0);
+  // MSG-07b: older pages live outside the poll cache so refetch never wipes them.
+  const [older, setOlder] = useState<Message[]>([]);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [hasMoreOlder, setHasMoreOlder] = useState(true);
+  const isPrependingRef = useRef(false);
 
   // MSG-07: page the newest N messages every poll so long threads don't
   // re-download unbounded history every 3s. Older pages load via before=.
@@ -145,6 +151,14 @@ export default function ThreadScreen() {
 
   const messages: Message[] = query.data?.data ?? [];
 
+  // Reset older page when switching threads.
+  useEffect(() => {
+    setOlder([]);
+    setHasMoreOlder(true);
+    setLoadingOlder(false);
+    lastReadCountRef.current = 0;
+  }, [conversationId]);
+
   // Mark the thread read whenever new messages arrive (or on first load),
   // then refresh the inbox so the unread badge clears.
   const markRead = useCallback(async () => {
@@ -159,22 +173,25 @@ export default function ThreadScreen() {
     }
   }, [conversationId, qc, t]);
 
-  // Rows = server history followed by any still-pending optimistic messages.
+  // Rows = older pages + newest page + pending optimistic messages.
   const rows: Row[] = [
+    ...older.map((msg) => ({ kind: "server" as const, msg })),
     ...messages.map((msg) => ({ kind: "server" as const, msg })),
     ...pending.map((msg) => ({ kind: "pending" as const, msg })),
   ];
 
   // Read receipt belongs only under the last of MY delivered messages.
   const lastMineReadAt = (() => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].is_mine) return messages[i].read_at ?? null;
+    const all = [...older, ...messages];
+    for (let i = all.length - 1; i >= 0; i--) {
+      if (all[i].is_mine) return all[i].read_at ?? null;
     }
     return undefined;
   })();
   const lastMineId = (() => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].is_mine) return messages[i].id;
+    const all = [...older, ...messages];
+    for (let i = all.length - 1; i >= 0; i--) {
+      if (all[i].is_mine) return all[i].id;
     }
     return undefined;
   })();
@@ -187,9 +204,42 @@ export default function ThreadScreen() {
     if (messages.length !== lastReadCountRef.current) {
       lastReadCountRef.current = messages.length;
       markRead();
-      scrollToEnd(true);
+      if (!isPrependingRef.current) scrollToEnd(true);
     }
   }, [messages.length, markRead, scrollToEnd]);
+
+  const loadOlder = useCallback(async () => {
+    if (!conversationId || loadingOlder || !hasMoreOlder) return;
+    const oldest = older[0] ?? messages[0];
+    if (!oldest) return;
+    setLoadingOlder(true);
+    isPrependingRef.current = true;
+    try {
+      const res = await getMessages(conversationId, {
+        limit: THREAD_PAGE,
+        before: oldest.id,
+      });
+      const page = res.data ?? [];
+      if (page.length < THREAD_PAGE) setHasMoreOlder(false);
+      if (page.length > 0) {
+        setOlder((prev) => {
+          const seen = new Set(prev.map((m) => m.id));
+          for (const m of messages) seen.add(m.id);
+          const unique = page.filter((m) => !seen.has(m.id));
+          return [...unique, ...prev];
+        });
+      } else {
+        setHasMoreOlder(false);
+      }
+    } catch {
+      // Keep hasMore so the user can retry by scrolling again.
+    } finally {
+      setLoadingOlder(false);
+      requestAnimationFrame(() => {
+        isPrependingRef.current = false;
+      });
+    }
+  }, [conversationId, loadingOlder, hasMoreOlder, older, messages]);
 
   // Deliver one optimistic message: render it instantly, then POST. MSG-06:
   // POST success commits the bubble (seed cache + drop pending) even if the
@@ -806,8 +856,33 @@ export default function ThreadScreen() {
             renderItem={renderRow}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
-            onContentSizeChange={() =>
-              listRef.current?.scrollToEnd({ animated: false })
+            onContentSizeChange={() => {
+              if (!isPrependingRef.current) {
+                listRef.current?.scrollToEnd({ animated: false });
+              }
+            }}
+            onScroll={(e) => {
+              if (e.nativeEvent.contentOffset.y < 80) {
+                void loadOlder();
+              }
+            }}
+            scrollEventThrottle={200}
+            ListHeaderComponent={
+              loadingOlder ? (
+                <View style={styles.olderSpinner}>
+                  <ActivityIndicator color={colors.primary} />
+                </View>
+              ) : hasMoreOlder && (older.length > 0 || messages.length >= THREAD_PAGE) ? (
+                <Pressable
+                  onPress={() => void loadOlder()}
+                  style={styles.olderBtn}
+                  testID="thread-load-older"
+                >
+                  <AppText style={{ color: colors.primary, fontWeight: "600", fontSize: 13 }}>
+                    {t("messages.loadOlder")}
+                  </AppText>
+                </Pressable>
+              ) : null
             }
             ListEmptyComponent={
               <View style={styles.empty}>
@@ -1289,6 +1364,8 @@ const styles = StyleSheet.create({
   empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, paddingTop: 80 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
   retryBtn: { marginTop: 8, paddingHorizontal: 18, paddingVertical: 10 },
+  olderSpinner: { paddingVertical: 12, alignItems: "center" },
+  olderBtn: { paddingVertical: 12, alignItems: "center" },
   inputBar: {
     alignItems: "flex-end",
     gap: 8,

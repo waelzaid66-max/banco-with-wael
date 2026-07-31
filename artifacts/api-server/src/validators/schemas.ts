@@ -1398,6 +1398,9 @@ export const UpdateListingSchema = z
     // Lifecycle status patch (Task #71). Sellers mark a deal closed ("sold")
     // or hide a listing ("archived").
     status: z.enum(["active", "sold", "archived"]).optional(),
+    // MAP-09: optional precise pin patch (both axes or neither).
+    latitude: z.number().min(-90).max(90).optional(),
+    longitude: z.number().min(-180).max(180).optional(),
     specs: z.record(z.unknown()).optional(),
     // Additive (Task #40): optional logistics & delivery patch.
     logistics: LogisticsInputSchema.optional(),
@@ -1407,7 +1410,13 @@ export const UpdateListingSchema = z
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field must be provided for update",
-  });
+  })
+  .refine(
+    (data) =>
+      (data.latitude === undefined && data.longitude === undefined) ||
+      (data.latitude !== undefined && data.longitude !== undefined),
+    { message: "latitude and longitude must be sent together" },
+  );
 
 export const UpdateListingResultSchema = z
   .object({ id: z.string(), updated: z.boolean() })

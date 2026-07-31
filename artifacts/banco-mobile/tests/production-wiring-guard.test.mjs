@@ -143,3 +143,85 @@ test("NOTIF-09 unknown notification routes to /notifications", () => {
   assert.match(body, /return "\/notifications";\s*\n\}/);
   assert.doesNotMatch(body, /return null;/);
 });
+
+// ── Wave 3 ──────────────────────────────────────────────────────────────
+
+const nearMe = fs.readFileSync(path.join(root, "lib/nearMe.ts"), "utf8");
+const inbox = fs.readFileSync(path.join(root, "app/(tabs)/messages.tsx"), "utf8");
+const importOrder = fs.readFileSync(
+  path.join(root, "app/import/order/[id].tsx"),
+  "utf8",
+);
+const importHub = fs.readFileSync(path.join(root, "app/import/index.tsx"), "utf8");
+const pushHook = fs.readFileSync(
+  path.join(root, "hooks/usePushNotifications.tsx"),
+  "utf8",
+);
+const editListing = fs.readFileSync(
+  path.join(root, "app/listings/edit/[id].tsx"),
+  "utf8",
+);
+const emailSvc = fs.readFileSync(
+  path.join(root, "../api-server/src/services/EmailService.ts"),
+  "utf8",
+);
+const notifSvc = fs.readFileSync(
+  path.join(root, "../api-server/src/services/NotificationService.ts"),
+  "utf8",
+);
+const pushSvc = fs.readFileSync(
+  path.join(root, "../api-server/src/services/PushService.ts"),
+  "utf8",
+);
+const home = fs.readFileSync(path.join(root, "app/(tabs)/index.tsx"), "utf8");
+
+test("MSG-07b thread can load older pages via before=", () => {
+  assert.match(thread, /getMessages\(/);
+  assert.match(thread, /before:\s*oldest\.id/);
+  assert.match(thread, /testID="thread-load-older"/);
+});
+
+test("MSG-11 email CTA uses website workspace messages path", () => {
+  assert.match(emailSvc, /\/workspace\/messages\/\$\{args\.conversationId\}/);
+  assert.doesNotMatch(
+    emailSvc,
+    /appUrl\(`\/messages\/\$\{args\.conversationId\}`\)/,
+  );
+});
+
+test("MSG-12 import support creates ticket (not generic inbox)", () => {
+  assert.match(importOrder, /createSupportTicket/);
+  assert.match(importOrder, /category:\s*"import_order"/);
+  assert.doesNotMatch(importOrder, /router\.push\("\/messages"/);
+  assert.match(importHub, /href:\s*"support"/);
+  assert.match(importHub, /createSupportTicket/);
+});
+
+test("MSG-15 inbox empty has browse CTA", () => {
+  assert.match(inbox, /testID="messages-browse"/);
+  assert.match(inbox, /messages\.emptyCta/);
+});
+
+test("MAP-05 web near-me uses browser geolocation", () => {
+  assert.match(nearMe, /navigator\.geolocation\.getCurrentPosition/);
+  assert.doesNotMatch(nearMe, /if \(Platform\.OS === "web"\) return null;/);
+});
+
+test("MAP-09 edit listing wires MapPinPicker + lat/lng patch", () => {
+  assert.match(editListing, /MapPinPicker/);
+  assert.match(editListing, /testID="edit-pin-tools"/);
+  assert.match(editListing, /latitude:\s*pin\.lat/);
+});
+
+test("NOTIF-05 unread is full count not page-capped", () => {
+  assert.match(notifSvc, /count\(\*\)::int/);
+  assert.match(home, /meta\?\.total/);
+});
+
+test("NOTIF-06 push payload includes badge", () => {
+  assert.match(pushSvc, /badge,/);
+});
+
+test("NOTIF-07 push registration retries with backoff", () => {
+  assert.match(pushHook, /const delays = \[0, 2000, 5000, 15000\]/);
+});

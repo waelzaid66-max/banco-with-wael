@@ -93,7 +93,10 @@ export default function NotificationsScreen() {
   });
 
   const items: Notification[] = query.data?.data ?? [];
-  const unread = items.filter((n) => !n.read_at).length;
+  const unread =
+    typeof query.data?.meta?.total === "number"
+      ? query.data.meta.total
+      : items.filter((n) => !n.read_at).length;
 
   const invalidate = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: getListNotificationsQueryKey() });

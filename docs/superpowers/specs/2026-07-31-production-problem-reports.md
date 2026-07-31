@@ -157,14 +157,74 @@ Each item below is a standing problem report. **Nothing listed is deleted from t
 
 ---
 
-## Open tracked (next waves)
+---
 
-| ID | Notes |
-|----|-------|
-| MSG-05 | WS/typing — Owner decision (G47 poll-only) |
-| MSG-07b | Older-page scroll UI |
-| MSG-08 | Block / report message |
-| MSG-11–15 | Email deep-link, import support context, mute, media kinds, empty CTA |
-| NOTIF-02/10 | Ops: EAS/APNs/FCM + env |
-| NOTIF-04–08 | Receipts, unread cap, badge payload, retry register, in-app label |
-| MAP-05/07–10 | Web near-me coords, CDN, draw-area, edit MapPinPicker, E2E |
+## MSG-07b — Older messages page
+
+**Symptom:** Threads longer than 400 only showed the newest page.  
+**Fix:** Local `older[]` + `getMessages(..., { before })` on scroll-top / Load earlier; poll cache untouched.  
+**Status:** Fixed
+
+---
+
+## MSG-11 — Email CTA path
+
+**Symptom:** Message emails linked `/messages/:id` (mobile path on website host).  
+**Fix:** `/workspace/messages/:id` (+ `/en/...` when lang=en).  
+**Status:** Fixed
+
+---
+
+## MSG-12 — Import support generic inbox
+
+**Symptom:** Support CTA opened empty messenger inbox.  
+**Fix:** `createSupportTicket` with order context (order detail) / import category (hub).  
+**Status:** Fixed
+
+---
+
+## MSG-15 — Inbox empty browse CTA
+
+**Fix:** Browse listings button → `/(tabs)/search`.  
+**Status:** Fixed
+
+---
+
+## MAP-05 — Web near-me
+
+**Fix:** Browser `navigator.geolocation` in `requestNearMeCoords` (native expo-location unchanged).  
+**Status:** Fixed
+
+---
+
+## MAP-09 — Edit MapPinPicker
+
+**Fix:** Optional pin tools on edit + PATCH `latitude`/`longitude` (both-or-neither).  
+**Status:** Fixed
+
+---
+
+## NOTIF-05 — Unread capped at 100
+
+**Fix:** SQL `count(*)` for unread; home/notifications read `meta.total`.  
+**Status:** Fixed
+
+---
+
+## NOTIF-06 — Push badge
+
+**Fix:** Expo payload `badge` = current unread count.  
+**Status:** Fixed
+
+---
+
+## NOTIF-07 — Push register single-attempt
+
+**Fix:** Backoff retries 0/2s/5s/15s.  
+**Status:** Fixed
+
+---
+
+## Still open
+
+MSG-05/08/13/14 · NOTIF-02/04/08/10 · MAP-07/08/10

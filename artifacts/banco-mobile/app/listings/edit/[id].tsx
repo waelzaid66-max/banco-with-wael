@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppText } from "@/components/AppText";
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { LocationPicker } from "@/components/LocationPicker";
+import { MapPinPicker } from "@/components/MapPinPicker";
 import {
   ListingCurrencyButton,
   MarketCountryButton,
@@ -38,6 +39,7 @@ import {
 import { useI18n } from "@/context/LanguageContext";
 import { useSession } from "@/context/SessionContext";
 import { useColors } from "@/hooks/useColors";
+import { requestNearMeCoords } from "@/lib/nearMe";
 
 function digitsToNumber(raw: string): number {
   const cleaned = raw.replace(/[^0-9.]/g, "");
@@ -72,6 +74,10 @@ export default function EditListingScreen() {
   const [locationValue, setLocationValue] = useState<string | null>(null);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
   const [marketPickerOpen, setMarketPickerOpen] = useState(false);
+  const [mapPinPickerOpen, setMapPinPickerOpen] = useState(false);
+  const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
+  const [pinTouched, setPinTouched] = useState(false);
+  const [pinBusy, setPinBusy] = useState(false);
   const [price, setPrice] = useState("");
   // Manual multi-market editing (user requirement): the listing's market and
   // pricing currency stay editable after publish. Server-side the specs patch
@@ -101,6 +107,18 @@ export default function EditListingScreen() {
         ? sp.currency.trim().toUpperCase()
         : currencyForMarket(mkt),
     );
+    // Seed pin from listing coordinates when present (MAP-09) — do not mark
+    // touched until the seller confirms map/GPS so we don't overwrite silently.
+    const coords = listing.coordinates;
+    if (
+      coords &&
+      typeof coords.lat === "number" &&
+      typeof coords.lng === "number" &&
+      Number.isFinite(coords.lat) &&
+      Number.isFinite(coords.lng)
+    ) {
+      setPin({ lat: coords.lat, lng: coords.lng });
+    }
     setHydrated(true);
   }, [listing, hydrated]);
 
@@ -126,6 +144,23 @@ export default function EditListingScreen() {
       },
     },
   });
+
+  const captureLocation = async () => {
+    if (pinBusy) return;
+    setPinBusy(true);
+    try {
+      const coords = await requestNearMeCoords();
+      if (!coords) {
+        Alert.alert(t("search.locateFailedTitle"), t("search.locateFailedBody"));
+        return;
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setPin(coords);
+      setPinTouched(true);
+    } finally {
+      setPinBusy(false);
+    }
+  };
 
   const onSave = () => {
     if (!id || !title.trim()) return;
@@ -155,6 +190,9 @@ export default function EditListingScreen() {
         // Merged server-side — only these two keys change, other specs stay.
         specs: { market_country: marketCountry, currency },
         media,
+        ...(pinTouched && pin
+          ? { latitude: pin.lat, longitude: pin.lng }
+          : {}),
       },
     });
   };
@@ -267,6 +305,71 @@ export default function EditListingScreen() {
             </Pressable>
           </Field>
 
+          {/* MAP-09: optional precise pin tools (parity with create). */}
+          <View
+            style={[styles.pinToolsRow, { flexDirection: rowDir }]}
+            testID="edit-pin-tools"
+          >
+            <Pressable
+              onPress={() => {
+                Haptics.selectionAsync();
+                setMapPinPickerOpen(true);
+              }}
+              style={[
+                styles.pinToolBtn,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: pin ? "#16a34a" : colors.border,
+                  borderRadius: colors.radius,
+                  flexDirection: rowDir,
+                },
+              ]}
+              testID="edit-pick-on-map"
+            >
+              <Feather
+                name="map"
+                size={16}
+                color={pin ? "#16a34a" : colors.foreground}
+              />
+              <AppText
+                style={[
+                  styles.pinToolText,
+                  { color: pin ? colors.foreground : colors.mutedForeground },
+                ]}
+                numberOfLines={1}
+              >
+                {pin ? t("create.locationCaptured") : t("create.pickOnMap")}
+              </AppText>
+            </Pressable>
+            <Pressable
+              onPress={() => void captureLocation()}
+              disabled={pinBusy}
+              style={[
+                styles.pinToolBtn,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                  borderRadius: colors.radius,
+                  flexDirection: rowDir,
+                  opacity: pinBusy ? 0.6 : 1,
+                },
+              ]}
+              testID="edit-use-location"
+            >
+              {pinBusy ? (
+                <ActivityIndicator color={colors.foreground} size="small" />
+              ) : (
+                <Feather name="map-pin" size={16} color={colors.foreground} />
+              )}
+              <AppText
+                style={[styles.pinToolText, { color: colors.mutedForeground }]}
+                numberOfLines={1}
+              >
+                {pinBusy ? t("create.locationCapturing") : t("create.useMyLocation")}
+              </AppText>
+            </Pressable>
+          </View>
+
           <Field
             label={isFurnishedDaily ? t("editListing.priceNightHint") : t("editListing.priceHint")}
             colors={colors}
@@ -326,6 +429,19 @@ export default function EditListingScreen() {
         }}
       />
 
+      <MapPinPicker
+        visible={mapPinPickerOpen}
+        marketCountry={marketCountry}
+        initial={pin}
+        onClose={() => setMapPinPickerOpen(false)}
+        onConfirm={(next) => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          setPin(next);
+          setPinTouched(true);
+          setMapPinPickerOpen(false);
+        }}
+      />
+
       <LocationPicker
         visible={locationPickerOpen}
         selectedValue={locationValue ?? undefined}
@@ -367,6 +483,17 @@ function Field({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  pinToolsRow: { gap: 8 },
+  pinToolBtn: {
+    flex: 1,
+    gap: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+  },
+  pinToolText: { fontSize: 12, fontFamily: "Inter_600SemiBold", flexShrink: 1 },
   chipRow: { flexWrap: "wrap", gap: 8 },
   chip: {
     paddingHorizontal: 12,

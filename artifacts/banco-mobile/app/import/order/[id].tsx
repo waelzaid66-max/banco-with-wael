@@ -8,10 +8,11 @@ import {
   getGetImportOrderQueryKey,
   useCancelImportOrder,
   getListMyImportOrdersQueryKey,
+  createSupportTicket,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -71,6 +72,7 @@ export default function ImportOrderDetailScreen() {
     },
   });
   const order = orderQuery.data?.data;
+  const [supportBusy, setSupportBusy] = useState(false);
 
   const { mutate: cancelOrder, isPending: cancelling } = useCancelImportOrder({
     mutation: {
@@ -81,6 +83,31 @@ export default function ImportOrderDetailScreen() {
       onError: () => Alert.alert(t("importOrder.cancelError")),
     },
   });
+
+  const contactSupport = async () => {
+    if (!order || supportBusy) return;
+    setSupportBusy(true);
+    try {
+      await createSupportTicket({
+        subject: `Import order ${order.id}`,
+        category: "import_order",
+        message: [
+          `Import order support request`,
+          `Order ID: ${order.id}`,
+          `Stage: ${order.stage}`,
+          order.origin_country ? `Origin: ${order.origin_country}` : null,
+          order.destination_country ? `Destination: ${order.destination_country}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      });
+      Alert.alert(t("importOrder.supportSentTitle"), t("importOrder.supportSentBody"));
+    } catch {
+      Alert.alert(t("common.error"), t("importOrder.supportError"));
+    } finally {
+      setSupportBusy(false);
+    }
+  };
 
   const confirmCancel = () => {
     Alert.alert(t("importOrder.cancelTitle"), t("importOrder.cancelBody"), [
@@ -307,12 +334,24 @@ export default function ImportOrderDetailScreen() {
                 {t("importOrder.supportHint")}
               </AppText>
               <Pressable
-                onPress={() => router.push("/messages" as never)}
-                style={[styles.supportBtn, { borderColor: colors.border, flexDirection: rowDir }]}
+                onPress={() => void contactSupport()}
+                disabled={supportBusy}
+                style={[
+                  styles.supportBtn,
+                  {
+                    borderColor: colors.border,
+                    flexDirection: rowDir,
+                    opacity: supportBusy ? 0.6 : 1,
+                  },
+                ]}
                 accessibilityRole="button"
                 testID="import-order-support"
               >
-                <Feather name="message-circle" size={16} color={colors.foreground} />
+                {supportBusy ? (
+                  <ActivityIndicator color={colors.foreground} size="small" />
+                ) : (
+                  <Feather name="message-circle" size={16} color={colors.foreground} />
+                )}
                 <AppText style={[styles.supportBtnText, { color: colors.foreground }]}>
                   {t("importOrder.supportCta")}
                 </AppText>

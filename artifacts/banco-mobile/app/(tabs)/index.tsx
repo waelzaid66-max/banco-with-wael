@@ -334,9 +334,10 @@ export default function FeedScreen() {
       refetchOnWindowFocus: true,
     },
   });
-  const unreadNotifs = (notifQuery.data?.data ?? []).filter(
-    (n) => !n.read_at
-  ).length;
+  const unreadNotifs =
+    typeof notifQuery.data?.meta?.total === "number"
+      ? notifQuery.data.meta.total
+      : (notifQuery.data?.data ?? []).filter((n) => !n.read_at).length;
 
   // Mirror the in-app unread count onto the OS app-icon badge (0 clears it,
   // including on sign-out). Best-effort: unsupported platforms resolve false.

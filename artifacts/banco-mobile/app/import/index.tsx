@@ -6,13 +6,15 @@ import { Feather, MaterialCommunityIcons } from "@/components/icons";
 import {
   useListMyImportOrders,
   getListMyImportOrdersQueryKey,
+  createSupportTicket,
 } from "@workspace/api-client-react";
 import { useUser } from "@clerk/expo";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { router, type Href } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
+  Alert,
   Platform,
   Pressable,
   RefreshControl,
@@ -38,7 +40,7 @@ const SERVICES: {
   icon: MCIName;
   titleKey: string;
   subKey: string;
-  href: Href | "track" | "myImports";
+  href: Href | "track" | "myImports" | "support";
   testID: string;
 }[] = [
   {
@@ -110,7 +112,7 @@ const SERVICES: {
     icon: "headset",
     titleKey: "importHub.support",
     subKey: "importHub.supportSub",
-    href: "/messages" as Href,
+    href: "support",
     testID: "import-hub-support",
   },
 ];
@@ -125,6 +127,7 @@ export default function CarImportHubScreen() {
   const rowDir = isRTL ? "row-reverse" : "row";
   const textAlign: "left" | "right" = isRTL ? "right" : "left";
   const { user } = useUser();
+  const [supportBusy, setSupportBusy] = useState(false);
 
   const ordersQuery = useListMyImportOrders({
     query: {
@@ -150,6 +153,29 @@ export default function CarImportHubScreen() {
   const go = (href: Href) => {
     if (Platform.OS !== "web") Haptics.selectionAsync();
     router.push(href);
+  };
+
+  const contactSupport = async () => {
+    if (supportBusy) return;
+    if (!user) {
+      go("/(tabs)/profile" as Href);
+      return;
+    }
+    setSupportBusy(true);
+    try {
+      if (Platform.OS !== "web") Haptics.selectionAsync();
+      await createSupportTicket({
+        subject: "BANCO car import support",
+        category: "import",
+        message:
+          "Car import hub support request — please follow up with the buyer on their import journey.",
+      });
+      Alert.alert(t("importOrder.supportSentTitle"), t("importOrder.supportSentBody"));
+    } catch {
+      Alert.alert(t("common.error"), t("importOrder.supportError"));
+    } finally {
+      setSupportBusy(false);
+    }
   };
 
   const stats: { key: string; labelKey: string; value?: string }[] = [
@@ -244,8 +270,10 @@ export default function CarImportHubScreen() {
         <View style={[styles.grid, { flexDirection: isRTL ? "row-reverse" : "row" }]}>
           {SERVICES.map((svc) => {
             const isMyImports = svc.href === "myImports";
-            const target: Href =
-              svc.href === "track"
+            const isSupport = svc.href === "support";
+            const target: Href | null = isSupport
+              ? null
+              : svc.href === "track"
                 ? trackTarget
                 : isMyImports
                   ? ("/import-tracking" as Href)
@@ -253,7 +281,11 @@ export default function CarImportHubScreen() {
             return (
               <Pressable
                 key={svc.key}
-                onPress={() => go(target)}
+                onPress={() => {
+                  if (isSupport) void contactSupport();
+                  else if (target) go(target);
+                }}
+                disabled={isSupport && supportBusy}
                 accessibilityRole="button"
                 accessibilityLabel={t(svc.titleKey as never)}
                 testID={svc.testID}
@@ -263,7 +295,7 @@ export default function CarImportHubScreen() {
                     backgroundColor: colors.card,
                     borderColor: colors.border,
                     transform: [{ scale: pressed ? 0.97 : 1 }],
-                    opacity: pressed ? 0.9 : 1,
+                    opacity: pressed || (isSupport && supportBusy) ? 0.9 : 1,
                   },
                 ]}
               >

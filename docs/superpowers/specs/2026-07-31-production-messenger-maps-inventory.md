@@ -25,6 +25,15 @@
 | MAP-03 | Near-me radius circle removed from `mapHtml` | High | **Fixed** (restore circle + hosts) |
 | MAP-04 | `/search/map` clusters lack price/bookable | High | **Fixed** (server emits + client prefer) |
 | MAP-06 | Web locate failure silent | Medium | **Fixed** (Alert parity) |
+| MSG-07b | Older-page load via `before=` | Medium | **Fixed** (scroll + button) |
+| MSG-11 | Email CTA path mismatch | Medium | **Fixed** (workspace messages) |
+| MSG-12 | Import support generic inbox | Medium | **Fixed** (support tickets) |
+| MSG-15 | Inbox empty no browse CTA | Low | **Fixed** |
+| MAP-05 | Web near-me null | Medium | **Fixed** (browser geolocation) |
+| MAP-09 | Edit missing MapPinPicker | Medium | **Fixed** |
+| NOTIF-05 | Unread capped at 100 | Medium | **Fixed** (full count) |
+| NOTIF-06 | OS badge missing in push | Medium | **Fixed** |
+| NOTIF-07 | Push register single-attempt | Medium | **Fixed** (backoff retry) |
 
 Guards: `test:messenger-wiring` · `test:production-wiring` · existing `test:notification-routing`
 
@@ -35,13 +44,9 @@ Guards: `test:messenger-wiring` · `test:production-wiring` · existing `test:no
 | ID | Gap | Severity | Notes |
 |----|-----|----------|-------|
 | MSG-05 | Poll-only (3s/8s/15s) — no WS/typing/presence | Product | G47; needs Owner decision before rewrite |
-| MSG-07b | Older-than-page scroll-up load (`before=`) UI | Medium | API ready; mobile still newest-400 only |
 | MSG-08 | No block-user / report-message | High | Trust & safety |
-| MSG-11 | Email CTA `/messages/:id` vs website `/workspace/messages` | Medium | Deep link mismatch |
-| MSG-12 | Import support opens generic inbox | Medium | No order-context thread |
 | MSG-13 | No per-thread mute | Medium | Global prefs only |
 | MSG-14 | Video/audio API > mobile renderer (images only) | Medium | |
-| MSG-15 | Inbox empty state no browse CTA | Low | Deferred P2 in #22 |
 
 **Architecture (keep):** HTTP polling · participant auth · listing-anchored conversations · inbox already passes listingId+role.
 
@@ -53,9 +58,6 @@ Guards: `test:messenger-wiring` · `test:production-wiring` · existing `test:no
 |----|-----|----------|-------|
 | NOTIF-02 | EAS/APNs/FCM device delivery not certified | Blocker (ops) | External credentials |
 | NOTIF-04 | No Expo receipt processing / retry queue | High | `PushService` |
-| NOTIF-05 | Unread badge capped at newest 100 | Medium | |
-| NOTIF-06 | OS badge not in push payload | Medium | Home-tab sync only |
-| NOTIF-07 | Push registration single-attempt | Medium | |
 | NOTIF-08 | “In-app” toggle also suppresses push | Medium | Label vs semantics |
 | NOTIF-10 | API base / Clerk env required for any delivery | Blocker (ops) | Cloud/EAS secrets |
 
@@ -69,7 +71,7 @@ Guards: `test:messenger-wiring` · `test:production-wiring` · existing `test:no
 |---------|-----|-------|--------------|----------------|------|
 | Cars | Yes (shared) | Fixed MAP-01 | Yes | Pins, clusters, locate, near circle, filters | No Discover map producer |
 | Real estate | Yes + Discover Explore | Fixed MAP-01 | Yes | Same + Discover CTA | Off-page open always `?focus=booking` |
-| Booking/Stays | Yes (best latch) | OK | Yes | Rent filters + bookable emerald pins | — |
+| Booking/Stays | Yes (best latch) | OK | Yes | Rent filters + bookable emerald pins + near circle | — |
 | Facilities | Yes | Fixed MAP-01 | Yes | Industrial tint | No map-first CTA |
 | Materials | Yes | Fixed MAP-01 | Yes | Industrial tint | No map-first CTA |
 | Car Import hub | Indirect via cars+import engine | N/A | Via cars | Cars map when `?engine=import` | No shipment geo map; no `map=1` producer |
@@ -78,10 +80,8 @@ Guards: `test:messenger-wiring` · `test:production-wiring` · existing `test:no
 
 | ID | Gap | Severity |
 |----|-----|----------|
-| MAP-05 | Web near-me criteria unavailable (`requestNearMeCoords` null) | Medium |
 | MAP-07 | CDN Leaflet/OSM dependency | Medium |
 | MAP-08 | No draw-area / sort=nearest | Product deferred |
-| MAP-09 | Edit listing missing MapPinPicker | Medium |
 | MAP-10 | No E2E map interaction tests | Low |
 
 ---

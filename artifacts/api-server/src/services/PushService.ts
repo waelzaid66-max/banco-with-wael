@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
-import { pushTokens, users } from "@workspace/db/schema";
-import { eq, inArray, and } from "drizzle-orm";
+import { pushTokens, users, notifications } from "@workspace/db/schema";
+import { eq, inArray, and, isNull, sql } from "drizzle-orm";
 
 /**
  * PushService — registration + best-effort remote delivery of Expo push
@@ -115,12 +115,21 @@ export async function sendPushToUser(
     const tokens = rows.map((r) => r.token).filter(isExpoPushToken);
     if (tokens.length === 0) return;
 
+    // NOTIF-06: absolute OS badge = current unread for this user (includes the
+    // in-app row just inserted by createNotification before this send).
+    const [unreadRow] = await db
+      .select({ c: sql<number>`count(*)::int` })
+      .from(notifications)
+      .where(and(eq(notifications.userId, userId), isNull(notifications.readAt)));
+    const badge = Number(unreadRow?.c ?? 0);
+
     const messages = tokens.map((to) => ({
       to,
       title: payload.title,
       body: payload.body,
       data: payload.data ?? {},
       sound: "default" as const,
+      badge,
       // Android notification channel — created client-side on registration.
       channelId: "default",
     }));
