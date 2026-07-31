@@ -39,6 +39,20 @@ function mapError(res: Response, err: unknown, label: string) {
   // listings / company / upload controllers.
   if (e.code === "FORBIDDEN" || e.name === "UploadOwnershipError")
     return res.status(403).json(errorResponse("FORBIDDEN", e.message ?? "Forbidden"));
+  // Missing migrate (e.g. import_order_documents) → honest 503, not opaque 500.
+  const pgCode = e.code ?? (err as { cause?: { code?: string } })?.cause?.code;
+  const msg = String(e.message ?? "");
+  if (
+    pgCode === "42P01" ||
+    (/does not exist/i.test(msg) && /import_order/i.test(msg))
+  ) {
+    return res.status(503).json(
+      errorResponse(
+        "SERVICE_UNAVAILABLE",
+        "Import documents storage is not ready — run DB migrate (drizzle push) on this environment",
+      ),
+    );
+  }
   console.error(label, err);
   return res.status(500).json(errorResponse("INTERNAL_ERROR", "Request failed"));
 }

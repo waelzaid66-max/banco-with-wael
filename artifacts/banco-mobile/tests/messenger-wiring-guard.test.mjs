@@ -104,3 +104,30 @@ test("MSG-06/10 deliver seeds cache and preserves reply on retry", () => {
   assert.match(thread, /reply_to_id\?: string/);
   assert.match(thread, /maxLength=\{4000\}/);
 });
+
+test("listing contact never silently no-ops when phone missing", () => {
+  assert.match(
+    listing,
+    /listing\.contactUnavailable/,
+    "Call/WhatsApp without phone must Alert contactUnavailable",
+  );
+});
+
+test("company chat failure surfaces Alert (not haptic-only)", () => {
+  assert.match(company, /Alert\.alert/);
+  assert.match(company, /business\.company\.messageFail/);
+});
+
+test("Stay hub publish deep-links to real_estate create wizard", () => {
+  const hub = fs.readFileSync(path.join(root, "app/rentals/hub.tsx"), "utf8");
+  assert.match(
+    hub,
+    /listings\/create\?category=real_estate/,
+    "Stay host add-unit must not open bare /listings/create (wrong category risk)",
+  );
+});
+
+test("create publish syncs primary phone to /me when profile phone empty", () => {
+  const create = fs.readFileSync(path.join(root, "app/listings/create.tsx"), "utf8");
+  assert.match(create, /updateMe\(\{\s*phone:\s*cleanPhones\[0\]\s*\}\)/);
+});

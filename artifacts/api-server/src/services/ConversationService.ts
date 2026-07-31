@@ -207,6 +207,10 @@ export async function createConversation(
     )
     .limit(1);
 
+  if (!conv) {
+    throw codedError("INTERNAL_ERROR", "Conversation could not be created");
+  }
+
   // Re-opening a thread the buyer had hidden brings it back into their inbox.
   if (conv.buyerDeletedAt) {
     await db
