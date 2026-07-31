@@ -1,5 +1,4 @@
 import { Feather } from "@/components/icons";
-import { FeedItem } from "@workspace/api-client-react";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, type Href } from "expo-router";
@@ -16,9 +15,7 @@ import {
   Category,
   CategoryIcon,
 } from "@/components/CategoryTabs";
-import { type CarBrand } from "@/constants/cars";
 import { useI18n } from "@/context/LanguageContext";
-import { SavedSearch } from "@/context/SessionContext";
 import { useColors } from "@/hooks/useColors";
 
 // Concrete, browseable sections (no "all" — these are the real catalogues a
@@ -77,25 +74,16 @@ const BANCO_WATERMARK = require("../assets/images/banco-logo.png");
 const BOOKING_PHOTO = require("../assets/images/categories/booking.jpg");
 
 interface Props {
-  onBrowseBrand: (brand: CarBrand) => void;
-  onApplySaved: (s: SavedSearch) => void;
-  onOpenListing: (item: FeedItem) => void;
   /**
-   * Enter Maps mini-app #11 (/section/maps). Must never melt Discover into
+   * Enter Maps mini-app §7 (/section/maps). Must never melt Discover into
    * shared Search, and must never hardcode Real Estate.
+   * Brand/saved/listing melt props were removed (Wave8 Tranche B) — Discover
+   * only router.pushes section mini-apps; FilterSheet keeps browseBrand live.
    */
   onExploreMap: () => void;
-  /** Re-run a recent text search (fills the input + commits immediately). */
-  onSearchQuery: (q: string) => void;
 }
 
-export function SearchDiscover({
-  onBrowseBrand: _onBrowseBrand,
-  onApplySaved: _onApplySaved,
-  onOpenListing: _onOpenListing,
-  onExploreMap,
-  onSearchQuery: _onSearchQuery,
-}: Props) {
+export function SearchDiscover({ onExploreMap }: Props) {
   const colors = useColors();
   const { t, isRTL } = useI18n();
   const rowDir = isRTL ? "row-reverse" : "row";

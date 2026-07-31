@@ -480,9 +480,11 @@ export default function SearchScreen() {
 
   // Discover section cards MUST NOT filter this tab in place (that melted
   // catalogues into shared Search criteria). They router.push SECTION_ROUTE
-  // inside SearchDiscover — do not reintroduce a Discover→host category bridge.
+  // inside SearchDiscover — do not reintroduce a Discover→host melt bridge
+  // (onBrowseBrand / onApplySaved / onOpenListing / onSearchQuery removed
+  // Wave8 Tranche B; FilterSheet + CarPicker still use browseBrand).
 
-  // Discover "Explore on map" → ENTER Maps mini-app #11 (/section/maps).
+  // Discover "Explore on map" → ENTER Maps mini-app §7 (/section/maps).
   // Never hardcode RE. Never melt Discover into shared Search criteria (MOB-07).
   // Per-section ?map=1 portals remain intentional duplication (Owner law).
   const exploreOnMap = () => {
@@ -608,16 +610,7 @@ export default function SearchScreen() {
   let overlay: React.ReactNode = null;
   if (viewState === "discover") {
     overlay = (
-      <SearchDiscover
-        onBrowseBrand={(b) => browseBrand(b, null)}
-        onApplySaved={applySaved}
-        onOpenListing={handleCardPress}
-        onExploreMap={exploreOnMap}
-        onSearchQuery={(q) => {
-          setDraftQuery(q);
-          commitQueryNow(q);
-        }}
-      />
+      <SearchDiscover onExploreMap={exploreOnMap} />
     );
   } else if (viewState === "loading") {
     overlay = (

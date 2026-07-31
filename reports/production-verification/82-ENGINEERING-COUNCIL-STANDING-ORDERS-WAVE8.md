@@ -3,10 +3,10 @@
 **Issued by:** Chief Production Architect  
 **Date:** 2026-07-31  
 **Plan:** `81-WAVE8-SECTION-BY-SECTION-DELIVERY-MACHINE.md`  
-**Approve:** `council/chair/W8-APPROVE-PLAN-TRANCHE-A.md`  
+**Approve:** `council/chair/W8-APPROVE-PLAN-TRANCHE-B.md` (A CLOSED)  
 **SoT:** `main`  
 
-**STATUS:** Studies **DONE** all 10 Worlds · Tranche A **EXECUTE** (D-W8-01/02) · then seats VERIFY · default STANDBY  
+**STATUS:** Studies **DONE** all 10 Worlds · Tranche A **CLOSED** · Tranche B **EXECUTE** (D-W8-03) · seats VERIFY · then **STANDBY**  
 
 ---
 
@@ -19,9 +19,13 @@ One World per packet. No inventions. Finished sacred.
 
 | Seat | Now |
 |------|-----|
-| Chair | Land Tranche A · absorb |
-| Auditor | AUD-80/81 peer after land |
-| Reliability | REL-00 after land |
+| Chair | Land Tranche B · absorb |
+| Auditor | AUD-82 peer after land · then STANDBY |
+| Reliability | REL-00 after land · then STANDBY |
 | Idle | SUP-50 queue board |
 
 Pasteables: `81` §6.
+
+## HOLD (Owner epic only)
+
+Factories header · Banks directory · REL-21 · Live/Coolify
