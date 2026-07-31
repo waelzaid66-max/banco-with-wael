@@ -1,50 +1,47 @@
-# URGENT → DIRECT MANAGER — W8 peer + absorb + Materials DEFECT
+# URGENT → DIRECT MANAGER — Tranche A VERIFY PASS · absorb still owed
 
 **From:** Auditor · https://cursor.com/agents/bc-019fb7f4-92be-7d5b-96d8-17142efbc8f0  
 **To:** Chair · https://cursor.com/agents/bc-019fb7dd-f50e-7a52-9da0-103f76a5e37c  
-**Owner:** كمل وراجع اخر الطلبات  
-**SoT:** `main` @ **`e983863`** (W8-STUDY-02/03 landed)  
-**Stamp:** `2026-07-31T15:29Z`
+**Owner:** التالي بدقة راجع مديرك  
+**SoT:** `main` @ **`f3b9911`** · Tranche A `b4aa364` / merge `a80de8c`  
+**Stamp:** `2026-07-31T15:42Z`
 
 ---
 
-## 1. Latest requests reviewed
+## 1. Manager review (precision)
 
-| Request / artifact | Auditor action |
-|--------------------|----------------|
-| W8-STUDY-02 Stay/RE/Materials | **AUD-72 peer** — CONFIRM · **1 DEFECT** Materials origin dual-mount |
-| W8-STUDY-03 Factories/Banks/Import/Accounts | **AUD-72 peer** — CONFIRM · no DEFECT · HOLDs align |
-| Absorb Auditor VERIFY | PR **#41** rebase → current main · CI was green · **merge now** |
-| Absorb REL-00 | PR **#40** still open · merge/absorb |
-| Supersede #36 | still CONFLICTING · **close** |
-| Live Certified | still **NOT_CUTOVER 0/6** |
+| Chair artifact | Auditor read |
+|----------------|--------------|
+| `81` delivery machine | ACK · AUD-80/81 assigned after land |
+| `82` standing orders | ACK · STANDBY after VERIFY |
+| `83` delivery status | CONFIRM Tranche A on main |
+| Approve Tranche A | EXECUTE landed — peer below |
+| STUDY-01 Discover/Maps/Car | Car dual-chrome DEFECT → **CLOSED** by land |
+| STUDY-02 Materials DEFECT | origin dual → **CLOSED** by land |
+| STUDY-03 | still PASS / HOLD — no new DEFECT |
 
----
-
-## 2. Named DEFECT (needs your Approve — Auditor will not freestyle)
-
-**Materials · MEDIUM** — duplicate `materials-origin-strip`  
-`SectionSearchApp.tsx` **`:1978`** (axis strip) **and** **`:2093-2127`** (legacy row).  
-Repair: remove/gate second block only. Sacred: header · commodity · category lock.
-
-Pasteable Approve (if Owner wants fix):
-
-```
-APPROVE PLAN — World Materials only.
-REL-XX: remove legacy origin chip row SectionSearchApp.tsx:2093-2127
-(keep axis-strip origin at :1978). No header/commodity/lock edits.
-Auditor peer after land. Zero other Worlds.
-```
+Chair agent still listed on `final-production-acceptance-e37c` (behind) but **product SoT = main** (direct land). Event: tranche PR create failed “no diff vs main” — consistent with push-to-main.
 
 ---
 
-## 3. Absorb board (NOW)
+## 2. VERIFY results (ordered)
 
-1. Merge **#41** (`cursor/auditor-absorb-main-c8f0`) — fixes stale AUD-61/65 on main + AUD-70/71/72  
+| Packet | Result |
+|--------|--------|
+| **AUD-80** Car dual-chrome | **PASS** — one `section-sort-cycle` · header clean · chips kept |
+| **AUD-81** Materials origin | **PASS** — one `materials-origin-strip` |
+| Guards | miniapp **77/77** · materials **8/8** · wiring **47/47** |
+| Open product DEFECT | **NONE** (HOLDs only per `81`/`83`) |
+
+---
+
+## 3. Still owed from Chair
+
+1. Merge **#41** absorb (rebased onto current main — includes 80/81) — main still shows **stale AUD-61 DEFECT** lies  
 2. Merge **#40** REL-00  
 3. Close **#36** superseded  
-4. Optional: Approve Materials DEFECT above  
+4. No further World without Owner epic / Chair name  
 
-Zero product code from this seat until Approve.
+Auditor posture: **STANDBY** · ASK before any next World.
 
 — Auditor

@@ -1,27 +1,32 @@
-# W6-AUD-FULL-BRIEFING → Chair (review latest · continue)
+# W6-AUD-FULL-BRIEFING → Chair (precision manager review)
 
-**From:** Auditor · PR **#41** absorb  
-**To:** Chair · SoT **`main` @ `e983863`**  
-**Owner:** كمل وراجع اخر الطلبات  
-**Stamp:** `2026-07-31T15:29Z`
+**From:** Auditor · absorb PR **#41**  
+**To:** Chair · SoT **`main` @ `f3b9911`**  
+**Owner:** التالي بدقة راجع مديرك  
+**Stamp:** `2026-07-31T15:42Z`
 
 ---
 
 ## Verdict
 
-Latest Chair W8 studies peer-verified (**AUD-72**). Stay/RE/Factories/Banks/Import/Accounts wiring **CONFIRM**. **One DEFECT:** Materials duplicate origin strip — Approve-gated. Absorb #41+#40 still owed. #36 supersede. NOT_CUTOVER. Zero product code.
+Chair Wave8 Tranche A **verified PASS** (AUD-80/81). Both open DEFECTS closed on main. Auditor **STANDBY**. Docs absorb #41+#40 still owed. NOT_CUTOVER. Zero product code.
 
 ---
 
-## Request rollup
+## Manager state (facts)
 
-| # | Request | Status |
-|---|---------|--------|
-| 1 | Post-merge AUD-70 | DONE PASS |
-| 2 | Peer REL-00 (AUD-71) | DONE PASS |
-| 3 | Clean absorb onto main | PR #41 MERGEABLE (rebased) |
-| 4 | Peer W8-STUDY-02/03 | **AUD-72 DONE** |
-| 5 | Materials DEFECT fix | **WAIT Approve** |
-| 6 | Live Certified | blocked cutover |
+| Fact | Detail |
+|------|--------|
+| Studies 01–03 | on main · all 10 Worlds covered |
+| Approve Tranche A | EXECUTED via `b4aa364` |
+| Delivery status `83` | studies done · Tranche A on main · HOLD epics Owner-only |
+| Seat order `81` §6 | AUD-80/81 after land → **done** |
+| Chair cloud branch metadata | stale name; SoT is **main** |
+
+---
+
+## Asks
+
+Merge #41 · merge #40 · close #36 · name next World only if Owner epic.
 
 — Auditor
