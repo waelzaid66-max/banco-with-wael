@@ -94,6 +94,28 @@
 
 ---
 
+## D-2026-07-31-09 — Chair force-execute REL-04/05 + coordination protocol
+
+| | |
+|--|--|
+| **Decision** | When Reliability lags approved Wave 2 repairs, Chair force-executes on tip; Reliability verifies. |
+| **Adopted** | REL-04 Skip i18n + REL-05 dealer currency UI/API on tip; `65-W2-CHAIR-COORDINATION-PROTOCOL.md` quality bars. |
+| **Rejected** | Waiting idle while seats sit on stale branches; seats re-implementing Chair landings. |
+| **Evidence** | `council/reliability/W2-REL-04-05-CHAIR-EXECUTE.md` |
+
+---
+
+## D-2026-07-31-10 — Reliability ACK Wave 2 + tip-health
+
+| | |
+|--|--|
+| **Decision** | Reliability verifies Chair force-exec REL-04/05; does not re-implement; fixes D-08 markets re-export local import so tip typecheck/confidence stay green. |
+| **Adopted** | `W2-REL-04-05-VERIFY.md` + `W2-REL-00-tip-reverify.md`; import+re-export in `listingCreateTaxonomy.ts`; create-market guard reads taxonomy SoT. |
+| **Rejected** | Re-coding REL-04/05; competing tips; Live Certified claim. |
+| **Evidence** | 47 wiring · 167 chain · 18 confidence · api/dealer typecheck PASS |
+
+---
+
 ## Template for future disputes
 
 ```markdown
