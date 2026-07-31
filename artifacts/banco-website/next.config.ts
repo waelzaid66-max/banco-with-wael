@@ -33,9 +33,15 @@ const nextConfig: NextConfig = {
   ...(assetCdnOrigin ? { assetPrefix: assetCdnOrigin } : {}),
   // In dev, include the Replit proxy domain so /_next/* assets & HMR WS are not blocked.
   // In prod, leave empty — production never runs behind a Replit dev proxy.
-  allowedDevOrigins: replitDevDomain
-    ? [replitDevDomain, `https://${replitDevDomain}`, `http://${replitDevDomain}`]
-    : [],
+  allowedDevOrigins: [
+    // Local access (curl, Screenshot tool, any direct 127.0.0.1 request)
+    "127.0.0.1",
+    "localhost",
+    // Replit preview proxy — injected at runtime; empty string if not on Replit
+    ...(replitDevDomain
+      ? [replitDevDomain, `https://${replitDevDomain}`, `http://${replitDevDomain}`]
+      : []),
+  ],
   transpilePackages: [
     "@workspace/design-tokens",
     "@workspace/search-contract",
