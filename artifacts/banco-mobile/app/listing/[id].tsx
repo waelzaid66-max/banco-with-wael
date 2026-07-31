@@ -497,7 +497,10 @@ export default function ListingDetailScreen() {
         });
         phone = res.data?.phone ?? undefined;
       }
-      if (!phone) return;
+      if (!phone) {
+        Alert.alert(t("listing.contactFailTitle"), t("listing.contactUnavailable"));
+        return;
+      }
 
       if (action === "whatsapp") {
         await openWhatsApp(phone);
@@ -548,8 +551,8 @@ export default function ListingDetailScreen() {
         },
       });
     } catch {
-      // Fall back to WhatsApp handoff if the in-app conversation can't start
-      // (e.g. listing has no linked seller account).
+      // Fall back to WhatsApp handoff if the in-app conversation can't start.
+      // handleCTA alerts when phone is missing — never silent.
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       await handleCTA("chat");
     } finally {

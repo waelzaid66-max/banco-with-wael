@@ -160,7 +160,7 @@ export default function RentalHostHubScreen() {
             <Pressable
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push("/listings/create");
+                router.push("/listings/create?category=real_estate");
               }}
               style={[
                 styles.addCard,
