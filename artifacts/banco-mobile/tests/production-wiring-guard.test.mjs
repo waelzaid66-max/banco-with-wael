@@ -397,21 +397,43 @@ test("CTO: listing currencies cover mobile market map (no silent EGP rewrite)", 
     path.join(root, "../api-server/src/lib/supportedCurrencies.ts"),
     "utf8",
   );
-  const taxonomy = fs.readFileSync(
+  const markets = fs.readFileSync(
+    path.join(root, "../../lib/taxonomy/src/markets.ts"),
+    "utf8",
+  );
+  const taxonomyBridge = fs.readFileSync(
     path.join(root, "constants/listingCreateTaxonomy.ts"),
     "utf8",
   );
-  const marketCodes = [...taxonomy.matchAll(/:\s*"(EGP|SAR|AED|KWD|QAR|BHD|IQD|LBP|MAD|TND|SDG|TRY|GBP|USD|EUR|JOD|OMR|LYD|DZD|ILS|SYP|YER)"/g)].map(
-    (m) => m[1],
+  assert.match(
+    taxonomyBridge,
+    /@workspace\/taxonomy\/markets/,
+    "mobile must re-export markets from taxonomy (AUD-02)",
   );
-  for (const code of new Set(marketCodes)) {
-    assert.match(
-      currencies,
-      new RegExp(`"${code}"`),
-      `server allowlist missing market currency ${code}`,
-    );
-  }
+  assert.match(
+    currencies,
+    /listingCurrencyAllowlist/,
+    "server must derive allowlist from taxonomy (AUD-02)",
+  );
+  const marketCodes = [
+    ...markets.matchAll(
+      /:\s*"(EGP|SAR|AED|KWD|QAR|BHD|IQD|LBP|MAD|TND|SDG|TRY|GBP|USD|EUR|JOD|OMR|LYD|DZD|ILS|SYP|YER)"/g,
+    ),
+  ].map((m) => m[1]);
+  assert.ok(new Set(marketCodes).size >= 20, "taxonomy markets currency map too small");
+  assert.match(markets, /listingCurrencyAllowlist/);
   assert.match(currencies, /normalizeListingCurrency/);
+});
+
+test("AUD-02: web search-markets re-exports taxonomy MARKET_COUNTRIES", () => {
+  for (const app of ["banco-web", "banco-website"]) {
+    const markets = fs.readFileSync(
+      path.join(root, `../${app}/lib/search-markets.ts`),
+      "utf8",
+    );
+    assert.match(markets, /@workspace\/taxonomy\/markets/);
+    assert.match(markets, /WEB_MARKET_COUNTRIES = MARKET_COUNTRIES/);
+  }
 });
 
 test("CTO: mobile searchParams gates car/industry/origin like search-contract", () => {
