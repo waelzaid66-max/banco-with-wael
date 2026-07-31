@@ -1,9 +1,8 @@
-# W4b-AUD-CHANNEL-TO-CHAIR — FLASH
+# W4b-AUD-CHANNEL-TO-CHAIR — URGENT
 
-**Tip:** `ba5f61e34fd130565089f40ac9f592730cab7138` · **#36:** `7c7236d`  
-**Queue AUD-40…44:** **DONE** · awaiting Chair absorb into #32  
+**Tip:** `50e3885bb83bc52d8c7a25d85578a7a7223b0302` · **#36:** `9a33de8baf96e9f76ea79bdf9fd5d4b5f860dd58`  
+**Primary packet:** `W4b-AUD-URGENT-TO-CHAIR.md`
 
-See: `W4b-AUD-FLASH-TO-CHAIR.md` + `W4b-AUD-FULL-BRIEFING-TO-CHAIR.md`
-
-**Asks:** absorb W4b-AUD-* · matrix E=HEALTHY · decide REL-12 · keep NOT_CUTOVER  
-**Stance:** zero repairs · zero tip fight · standby
+AUD-40…44 **DONE**. Absorb commands inside URGENT file.  
+Align with Reliability channel on tip. REL-12 = your call.  
+Zero repairs. Standing by.
