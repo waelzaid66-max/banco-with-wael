@@ -73,7 +73,7 @@ function plugGate(req: NextRequest): NextResponse | null {
 // throws on every request, so no page (not even the public home) can render.
 // Fall back to a pass-through for public routes in that case. In production,
 // protected routes must FAIL CLOSED (503) — never silently skip auth.protect().
-export default function middleware(req: NextRequest, event: NextFetchEvent) {
+export default async function middleware(req: NextRequest, event: NextFetchEvent) {
   const gated = plugGate(req);
 
   // Plug OFF (or maintenance redirect when ON): do not run Clerk on those responses.
@@ -81,6 +81,7 @@ export default function middleware(req: NextRequest, event: NextFetchEvent) {
     return gated;
   }
 
+  // Missing publishable key → pass-through (CI / static builds / keyless dev).
   if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
     if (process.env.NODE_ENV === "production" && isProtectedRoute(req)) {
       return new NextResponse("Authentication is not configured", {
@@ -91,7 +92,31 @@ export default function middleware(req: NextRequest, event: NextFetchEvent) {
     return NextResponse.next();
   }
 
-  return clerkGuard(req, event);
+  // Missing secret key → same graceful path.
+  // Prevents a 500 splash when NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is set but
+  // CLERK_SECRET_KEY is not yet configured (common on first Replit run).
+  if (!process.env.CLERK_SECRET_KEY) {
+    if (process.env.NODE_ENV === "production" && isProtectedRoute(req)) {
+      return new NextResponse("Authentication is not configured", {
+        status: 503,
+        headers: { "Cache-Control": "no-store" },
+      });
+    }
+    return NextResponse.next();
+  }
+
+  // Both keys present — let Clerk handle the request.
+  // In dev only: if Clerk throws (e.g. mismatched key pair after a secret rotation),
+  // fall through for public routes so the homepage stays reachable.
+  try {
+    return await clerkGuard(req, event);
+  } catch (err) {
+    if (process.env.NODE_ENV !== "production" && !isProtectedRoute(req)) {
+      console.error("[middleware] Clerk error on public route — passing through in dev:", err);
+      return NextResponse.next();
+    }
+    throw err;
+  }
 }
 
 export const config = {

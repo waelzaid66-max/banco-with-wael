@@ -130,8 +130,11 @@ services:
       start_period: 45s
       retries: 3
 
-  # ── banco-web (Next.js consumer app) ────────────────────────────────────────
+  # ── banco-web (FROZEN Next twin — profile-gated; canonical consumer is banco-website)
+  # Enable explicitly: docker compose --profile legacy-banco-web up -d
+  # Parity with docker-compose.coolify.yml which uses the same profile gate.
   banco-web:
+    profiles: ["legacy-banco-web"]
     build:
       context: .
       dockerfile: deploy/coolify/Dockerfile.banco-web

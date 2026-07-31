@@ -20,12 +20,22 @@ const assetCdnOrigin = process.env.NEXT_PUBLIC_ASSET_CDN_URL?.trim().replace(
   "",
 );
 
+// Replit preview runs inside an iframe on a proxied domain. We need to:
+//   1. list that domain in allowedDevOrigins (Next.js 15 WS/HMR cross-origin check)
+//   2. omit X-Frame-Options: SAMEORIGIN in dev so the iframe isn't blocked
+// REPLIT_DEV_DOMAIN is injected automatically by the Replit runtime.
+const replitDevDomain = process.env.REPLIT_DEV_DOMAIN ?? "";
+const isProd = process.env.NODE_ENV === "production";
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   ...(assetCdnOrigin ? { assetPrefix: assetCdnOrigin } : {}),
-  // Allow Replit's proxied preview (cross-origin iframe) to load /_next/* assets
-  allowedDevOrigins: ["*"],
+  // In dev, include the Replit proxy domain so /_next/* assets & HMR WS are not blocked.
+  // In prod, leave empty — production never runs behind a Replit dev proxy.
+  allowedDevOrigins: replitDevDomain
+    ? [replitDevDomain, `https://${replitDevDomain}`, `http://${replitDevDomain}`]
+    : [],
   transpilePackages: [
     "@workspace/design-tokens",
     "@workspace/search-contract",
@@ -38,7 +48,11 @@ const nextConfig: NextConfig = {
       {
         source: "/:path*",
         headers: [
-          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          // X-Frame-Options: SAMEORIGIN blocks Replit's preview iframe in dev.
+          // Keep the header in production only — the CDN/Nginx layer enforces it there.
+          ...(isProd
+            ? [{ key: "X-Frame-Options", value: "SAMEORIGIN" }]
+            : []),
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self)" },
