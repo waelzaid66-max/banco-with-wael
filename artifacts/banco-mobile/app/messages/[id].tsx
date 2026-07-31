@@ -1098,6 +1098,14 @@ export default function ThreadScreen() {
             renderItem={renderRow}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
+            // Perf: chat threads can be long; keep only 2-3 screens rendered.
+            // Lower maxToRenderPerBatch + shorter batchingPeriod keep JS frame
+            // budget healthy so typing stays snappy while messages are loading.
+            windowSize={5}
+            maxToRenderPerBatch={15}
+            updateCellsBatchingPeriod={30}
+            initialNumToRender={20}
+            removeClippedSubviews={Platform.OS === "android"}
             onContentSizeChange={() => {
               if (isPrependingRef.current) {
                 // Prepend layout settled — safe to clear the gate (Android).

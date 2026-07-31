@@ -3,6 +3,7 @@ import React, { useEffect, useRef } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -128,6 +129,15 @@ export function SearchResultsSurface({
         onEndReached={onEndReached}
         onEndReachedThreshold={0.5}
         scrollEnabled={items.length > 0}
+        // Virtualization tuning — keeps frame rate healthy with 50+ results.
+        // windowSize=7 keeps 3 screens above/below rendered; default (21) is
+        // wasteful. maxToRenderPerBatch+updateCellsBatchingPeriod control how
+        // many cells mount per JS frame so the thread stays responsive.
+        windowSize={7}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        initialNumToRender={8}
+        removeClippedSubviews={Platform.OS === "android"}
         refreshControl={
           onRefresh ? (
             <RefreshControl

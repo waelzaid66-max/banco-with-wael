@@ -16,7 +16,13 @@ const IMAGE_QUALITY = 0.85;
 // PUT reliability knobs. Storage PUTs can stall on flaky mobile networks, so we
 // bound each attempt and retry transient failures with backoff instead of
 // failing the whole upload (and, for listings, the whole multi-asset set).
-const PUT_TIMEOUT_MS = 60_000;
+//
+// Video needs a much longer per-attempt window than images: a 50 MB clip on a
+// slow mobile connection (say 2 Mbps uplink = 250 KB/s) takes ~200 s just to
+// transfer. We keep the image limit tight (60 s) so small uploads fail fast,
+// but give video up to 5 minutes (300 s) per attempt.
+const PUT_TIMEOUT_MS_IMAGE = 60_000;
+const PUT_TIMEOUT_MS_VIDEO = 300_000;
 const MAX_PUT_ATTEMPTS = 3;
 
 /**
@@ -358,14 +364,18 @@ function xhrPut(
  * and fail fast. A caller abort short-circuits immediately (never retried). On a
  * retry the progress meter restarts from the new attempt's events, so the UI may
  * see it briefly jump backward — acceptable for a transient retry.
+ *
+ * `timeoutMs` is chosen by the caller based on media type: video uploads get the
+ * longer window (PUT_TIMEOUT_MS_VIDEO) because a 50 MB clip on a 2 Mbps uplink
+ * takes ~200 s; images keep the tight 60 s window so small uploads fail fast.
  */
 async function putWithProgress(
   url: string,
   blob: Blob,
   contentType: string,
-  opts?: UploadControl
+  opts?: UploadControl & { timeoutMs?: number }
 ): Promise<void> {
-  const { onProgress, signal } = opts ?? {};
+  const { onProgress, signal, timeoutMs = PUT_TIMEOUT_MS_IMAGE } = opts ?? {};
   let lastErr: unknown;
   for (let attempt = 1; attempt <= MAX_PUT_ATTEMPTS; attempt++) {
     if (signal?.aborted) throw new UploadAbortError();
@@ -373,7 +383,7 @@ async function putWithProgress(
       await xhrPut(url, blob, contentType, {
         onProgress,
         signal,
-        timeoutMs: PUT_TIMEOUT_MS,
+        timeoutMs,
       });
       return;
     } catch (err) {
@@ -528,15 +538,27 @@ async function requestUploadUrlResilient(
  * path for every surface (listing upload-on-add, chat, profile, business). Both
  * the metadata request and the PUT are bounded + retried so the whole upload
  * survives transient network failures.
+ *
+ * Video uploads use PUT_TIMEOUT_MS_VIDEO (5 min) per attempt so a 50 MB clip
+ * on a slow mobile uplink doesn't time out mid-transfer. Images use the tight
+ * 60 s window so small uploads fail fast and the retry cycle stays short.
+ * The blob-read deadline mirrors the PUT window for videos (local I/O is fast,
+ * but large files on low-end Android with slow internal storage can take longer).
  */
 export async function uploadResolvedMedia(
   media: ResolvedMedia,
   opts?: UploadControl
 ): Promise<UploadedMedia> {
   if (opts?.signal?.aborted) throw new UploadAbortError();
+  const isVideo = media.type === "video";
+  const putTimeoutMs = isVideo ? PUT_TIMEOUT_MS_VIDEO : PUT_TIMEOUT_MS_IMAGE;
+  // Local blob read: same window as the PUT — low-end Android writing a large
+  // temp file can be slower than expected; 30 s is fine for images.
+  const blobReadTimeoutMs = isVideo ? PUT_TIMEOUT_MS_VIDEO : REQUEST_URL_TIMEOUT_MS;
+
   const blob = await withDeadline(
     readAsBlob(media.uri),
-    REQUEST_URL_TIMEOUT_MS,
+    blobReadTimeoutMs,
     opts?.signal
   );
 
@@ -549,7 +571,10 @@ export async function uploadResolvedMedia(
     opts?.signal
   );
 
-  await putWithProgress(upload_url, blob, media.contentType, opts);
+  await putWithProgress(upload_url, blob, media.contentType, {
+    ...opts,
+    timeoutMs: putTimeoutMs,
+  });
 
   return { url, type: media.type };
 }
