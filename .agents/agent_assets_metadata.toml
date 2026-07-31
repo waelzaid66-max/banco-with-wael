@@ -89,3 +89,9 @@ id = "cTP31Q7keqER8-T7i3W_3"
 uri = "file://database_backup.dump.gz"
 type = "unspecified"
 title = "database_backup.dump.gz — نسخة احتياطية مضغوطة للقاعدة الحالية"
+
+[[outputs]]
+id = "Huw2-kirFaogLec77-os3"
+uri = "file://reports/BANCO_FULL_READ_ONLY_AUDIT_2026-07-30_AR.md"
+type = "text"
+title = "تقرير التدقيق الكامل لبنية BANCO — قراءة فقط"

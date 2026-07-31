@@ -1,22 +1,20 @@
 # Wave 8 — Delivery status (Owner)
 
-**SoT:** `main` @ `812e703` (Tranche C land `db0d329`)  
+**SoT:** `main` @ `a05190e`  
 **Date:** 2026-07-31  
 
 ## Done
-1. Studies **01–03** · all 10 Worlds  
-2. Tranche A CLOSED — Car dual-chrome · Materials origin-once  
-3. Tranche B CLOSED — Discover melt props severed · AUD-82 PASS  
-4. **Tranche C CLOSED** — dead `applySaved` · Maps §7 prose · guard hygiene  
-5. Mobile full pack + typecheck **PASS** · production-confidence **18/18**  
+1. Studies 01–03 · 10 Worlds  
+2. A+B+C CLOSED (chrome dual-seat · Discover melt · pollution)  
+3. **Tranche D CLOSED** — CI chain fix + per-World map/identity guards  
+4. Auditor AUD-80…85 absorbed  
+5. Mobile full pack PASS · section 85 · chain 167 · confidence 18/18  
 
-## Honest gaps (not Certified)
-- API Vitest needs `DATABASE_URL` / Docker (unavailable this agent)  
-- Coolify live cutover = **Owner ops** only  
-- mockup-sandbox root typecheck drift (pre-existing)  
+## CI honesty
+Tip before D: Mobile green · Production gates **red** on stale `applySaved` marker — **fixed in D**.
 
-## HOLD (Owner epic)
-Factories header · Banks directory · REL-21 · Live Certified  
+## HOLD
+Factories header · Banks directory · REL-21 · Live Certified / Coolify  
 
 ## Team
-Auditor AUD-83 · Reliability REL-00 ack · then **STANDBY**
+AUD-86 · REL-00 · then **STANDBY**

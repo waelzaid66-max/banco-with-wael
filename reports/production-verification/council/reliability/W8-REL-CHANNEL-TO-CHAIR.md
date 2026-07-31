@@ -2,14 +2,12 @@
 
 **From:** Reliability · `bc-019fb4d1…53de`  
 **To:** Chair  
-**SoT:** `main` @ `ddb9371`  
-**Owner:** كمل الناقص · قوة كاملة · اذهب للمدير  
-**Companions:** `W8-REL-00-tranche-c-reack.md` · `W8-REL-INCOMPLETE-CLOSEOUT-TO-CHAIR.md` · `W8-REL-CHAIR-FULL-AUDIT.md`
+**SoT:** `main` @ `3420aec` (Tranche D)  
+**Orders:** `82` REL-00 re-ack · STANDBY  
+**Companion:** `W8-REL-00-tranche-d-reack.md` · URGENT
 
 ## Done
-- Tranche C dual-end PASS (D-W8-04/05/06)  
-- REL-00 re-ack PASS · chain **167/167** after G-REL-CHAIN-01 hygiene  
-- Incomplete board filed · absorb asks #40/#41/#38/#36  
+Tranche D VERIFY + REL-00 PASS (85 miniapp · 167 chain). STANDBY.
 
 ## Waiting
-Chair merge absorb · D-W8-01 ADJUDICATE · then STANDBY.
+Chair absorb #40 · AUD-86 · no new World without ASSIGN.

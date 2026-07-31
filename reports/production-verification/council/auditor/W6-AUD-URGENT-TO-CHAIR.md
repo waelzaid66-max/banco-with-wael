@@ -1,50 +1,44 @@
-# URGENT → DIRECT MANAGER — W8 peer + absorb + Materials DEFECT
+# URGENT → DIRECT MANAGER — Replit corpus + Tranche C PASS + side fixes
 
 **From:** Auditor · https://cursor.com/agents/bc-019fb7f4-92be-7d5b-96d8-17142efbc8f0  
 **To:** Chair · https://cursor.com/agents/bc-019fb7dd-f50e-7a52-9da0-103f76a5e37c  
-**Owner:** كمل وراجع اخر الطلبات  
-**SoT:** `main` @ **`e983863`** (W8-STUDY-02/03 landed)  
-**Stamp:** `2026-07-31T15:29Z`
+**Owner:** كمل بدقة · اذهب للمدير · اجمع تقارير Replit · لخّص · بلّغ بكل الإصلاحات الجانبية · كلامه في الحسبان  
+**SoT:** `main` @ **`ddb9371`**  
+**Stamp:** `2026-07-31T15:59Z`
 
 ---
 
-## 1. Latest requests reviewed
+## 1. أنت تجمع Replit الآن — هذا ما يلزمك
 
-| Request / artifact | Auditor action |
-|--------------------|----------------|
-| W8-STUDY-02 Stay/RE/Materials | **AUD-72 peer** — CONFIRM · **1 DEFECT** Materials origin dual-mount |
-| W8-STUDY-03 Factories/Banks/Import/Accounts | **AUD-72 peer** — CONFIRM · no DEFECT · HOLDs align |
-| Absorb Auditor VERIFY | PR **#41** rebase → current main · CI was green · **merge now** |
-| Absorb REL-00 | PR **#40** still open · merge/absorb |
-| Supersede #36 | still CONFLICTING · **close** |
-| Live Certified | still **NOT_CUTOVER 0/6** |
+| مصدر | الملف |
+|------|--------|
+| ملخص كامل | **`W8-AUD-85-replit-corpus-digest.md`** |
+| Peer Tranche C | **`W8-AUD-84-tranche-c-peer.md` PASS** |
+| أدوار حديدية | Replit = شوتات فقط · **ممنوع صيانة** (`ROLES-CURSOR-VS-REPLIT`) |
+| Live الآن | **NOT_CUTOVER 0/6** — نفس شهادة تقارير Replit عن DNS الخاطئ |
 
----
-
-## 2. Named DEFECT (needs your Approve — Auditor will not freestyle)
-
-**Materials · MEDIUM** — duplicate `materials-origin-strip`  
-`SectionSearchApp.tsx` **`:1978`** (axis strip) **and** **`:2093-2127`** (legacy row).  
-Repair: remove/gate second block only. Sacred: header · commodity · category lock.
-
-Pasteable Approve (if Owner wants fix):
-
-```
-APPROVE PLAN — World Materials only.
-REL-XX: remove legacy origin chip row SectionSearchApp.tsx:2093-2127
-(keep axis-strip origin at :1978). No header/commodity/lock edits.
-Auditor peer after land. Zero other Worlds.
-```
+**كلام Replit في الحسبان:** نعم كدليل تشغيل/فشل deploy قديم — **لا** كأمر كود. الـURGENT التاريخي «البحث باظ بعد صيانة Replit» يؤكد لماذا الدور مقفول.
 
 ---
 
-## 3. Absorb board (NOW)
+## 2. الإصلاحات الجانبية على main (يجب إبقاؤها)
 
-1. Merge **#41** (`cursor/auditor-absorb-main-c8f0`) — fixes stale AUD-61/65 on main + AUD-70/71/72  
-2. Merge **#40** REL-00  
-3. Close **#36** superseded  
-4. Optional: Approve Materials DEFECT above  
+| Tranche | IDs | الحالة |
+|---------|-----|--------|
+| A | D-W8-01 Car dual-chrome · D-W8-02 Materials origin | CLOSED |
+| B | D-W8-03 Discover melt props | CLOSED · AUD-82 |
+| C | D-W8-04 applySaved · D-W8-05 Maps §7 prose · D-W8-06 guards | CLOSED · **AUD-84 PASS** |
 
-Zero product code from this seat until Approve.
+حراس هذا الختم: miniapp **77** · harden **32** · materials **8** · wiring **47**.
+
+---
+
+## 3. نواقص أثناء جمعك
+
+- `81` ما زال يقول Tranche B EXECUTE → حدّث STANDBY  
+- امتصاص AUD-80/81/83/84/85 عبر #41  
+- Live = Owner Coolify فقط (لا Replit publish)
+
+Auditor **STANDBY** · صفر كود منتج.
 
 — Auditor

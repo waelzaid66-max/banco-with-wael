@@ -338,6 +338,16 @@
 
 ---
 
+## D-2026-07-31-32 — Tranche D REL-00 re-ack (new Owner tasks)
+
+| | |
+|--|--|
+| **Decision** | Owner→Chair: merge green + protect every World map/identity. Chair landed D (#44). Reliability REL-00 re-ack immediately. |
+| **Adopted** | `W8-REL-00-tranche-d-reack.md` · URGENT channel. Gates **85**/8/4/7/32/47/11/**167**/18 @ `3420aec`. |
+| **Rejected** | HOLD freestyle · Live Certified · tip fight. |
+
+---
+
 ## Template for future disputes
 
 ```markdown

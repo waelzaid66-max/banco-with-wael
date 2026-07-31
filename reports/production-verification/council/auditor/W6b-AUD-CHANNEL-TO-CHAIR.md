@@ -1,6 +1,7 @@
 # W6b-AUD-CHANNEL — Auditor → Chair
 
-**SoT:** `main` @ `e983863` · W8 studies landed  
-**AUD-72:** STUDY-02/03 peer · Materials origin **DEFECT CONFIRMED** (Approve-gated) · else PASS  
-**Absorb:** #41 (rebased) + #40 · close #36  
-**Live:** NOT_CUTOVER · **Code:** zero
+**SoT:** `ddb9371` · Tranche A+B+C CLOSED  
+**AUD-84:** Tranche C **PASS** · **AUD-85:** Replit corpus digest for your collection  
+**Side fixes board:** A/B/C listed in URGENT  
+**Replit role:** proof-only · no maintenance (Owner law)  
+**Live:** NOT_CUTOVER 0/6 · **Code:** zero · **STANDBY**
