@@ -1015,7 +1015,11 @@ test("RE Commercial Band D opens subtype picker (honest API enums)", () => {
     /RE_COMMERCIAL_TYPES[\s\S]*?"office"[\s\S]*?"shop"[\s\S]*?"warehouse"[\s\S]*?"commercial_land"/,
     "Commercial picker must list real API property_type values",
   );
-  assert.match(header, /testID=\{`re-commercial-\$\{value\}`\}/);
+  assert.match(
+    header,
+    /typePicker === "commercial" \? "re-commercial"/,
+    "Commercial rows must keep re-commercial-* testIDs",
+  );
   assert.match(
     section,
     /value:\s*RE_COMMERCIAL_TAB/,
@@ -1033,7 +1037,7 @@ test("RE Commercial Band D opens subtype picker (honest API enums)", () => {
   );
 });
 
-test("RE Wanted + Stays are reachable from PropertyHomeHeader (P1)", () => {
+test("RE Wanted + Stays + Request are reachable from PropertyHomeHeader (P1/P2)", () => {
   const section = fs.readFileSync(SECTION_APP, "utf8");
   const header = fs.readFileSync(
     path.join(APP_ROOT, "components", "search", "property", "PropertyHomeHeader.tsx"),
@@ -1043,6 +1047,8 @@ test("RE Wanted + Stays are reachable from PropertyHomeHeader (P1)", () => {
   assert.match(header, /onToggleWanted/);
   assert.match(header, /testID="re-header-stays"/);
   assert.match(header, /onOpenStays/);
+  assert.match(header, /testID="re-header-request"/);
+  assert.match(header, /onOpenRequest/);
   assert.match(
     section,
     /onToggleWanted=\{[\s\S]*?selectListingMode/,
@@ -1053,10 +1059,40 @@ test("RE Wanted + Stays are reachable from PropertyHomeHeader (P1)", () => {
     /onOpenStays=\{[\s\S]*?\/section\/booking/,
     "Stays header hit must push /section/booking",
   );
+  assert.match(
+    section,
+    /onOpenRequest=\{[\s\S]*?\/listings\/create\?request=1/,
+    "Request header hit must push create RFQ route",
+  );
   assert.doesNotMatch(
     section,
     /false && isRealEstateSection[\s\S]*?section-listing-mode-buy/,
     "dead Wanted chip gate must not remain",
+  );
+});
+
+test("RE More Band D opens deep-type picker (honest API enums)", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  const header = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "property", "PropertyHomeHeader.tsx"),
+    "utf8",
+  );
+  assert.match(header, /export const RE_MORE_TAB = "__more__"/);
+  assert.match(
+    header,
+    /RE_MORE_TYPES[\s\S]*?"studio"[\s\S]*?"chalet"[\s\S]*?"townhouse"[\s\S]*?"duplex"[\s\S]*?"penthouse"[\s\S]*?"hotel"/,
+  );
+  assert.match(header, /testID=\{`\$\{pickerTestPrefix\}-\$\{value\}`\}|testID=\{`\$\{pickerTestPrefix\}-/);
+  assert.match(section, /value:\s*RE_MORE_TAB/);
+  assert.match(
+    section,
+    /RE_MORE_TYPES[\s\S]*?RE_MORE_TAB/,
+    "Deep residential/hotel types must light the More Band D tab",
+  );
+  assert.match(
+    section,
+    /RE_COMMERCIAL_TAB \|\| value === RE_MORE_TAB|RE_MORE_TAB \|\| value === RE_COMMERCIAL_TAB|value === RE_COMMERCIAL_TAB \|\| value === RE_MORE_TAB/,
+    "selectRePropertyType must reject both picker sentinels",
   );
 });
 
@@ -1073,9 +1109,10 @@ test("RE chrome does not remount retired ReServiceDesks; bottom tabs untouched",
     "search",
     "ReServiceDesks.tsx",
   );
-  assert.ok(
+  assert.equal(
     fs.existsSync(desksPath),
-    "ReServiceDesks file may remain as orphan; do not silently delete without owner call",
+    false,
+    "ReServiceDesks.tsx must be deleted — logic lives in PropertyHomeHeader",
   );
   const tabsLayout = fs.readFileSync(
     path.join(APP_ROOT, "app", "(tabs)", "_layout.tsx"),

@@ -3,8 +3,8 @@ import { SectionSearchApp } from "@/components/search/SectionSearchApp";
 /**
  * Real estate (B-PROPERTIES) — Stay-parity mini-app chrome inside SectionSearchApp.
  *
- * Identity + search/filter + offer (sale/rent) + Wanted + primary types live in
- * PropertyHomeHeader (Commercial opens subtype picker). Stays entry → /section/booking.
+ * Identity + search/filter + offer + Wanted + types (Commercial/More pickers)
+ * live in PropertyHomeHeader. Stays → /section/booking · Request → create RFQ.
  * Deep refinements stay in FilterSheet.
  * Do not touch Cars / Stay shell / Import / MiniAppBottomNav from this shell.
  */

@@ -1,8 +1,8 @@
 /**
  * B-PROPERTIES — premium black header (visual shell).
  *
- * Stay-parity bands (A–D): back/save/stays · wordmark · search+filter pill ·
- * offer+Wanted · type tabs (Commercial opens real subtype picker).
+ * Stay-parity bands (A–D): back / stays / request / save · wordmark ·
+ * search+filter pill · offer+Wanted · type tabs (Commercial + More pickers).
  * Country/currency (micro) + sort sit next to BANCO above the search pill.
  * Presentational only — parent owns criteria and sheets. RE-only.
  */
@@ -39,6 +39,8 @@ const HAIRLINE = "rgba(255,255,255,0.16)";
 
 /** Band D sentinel — opens commercial subtype picker (never sent to API). */
 export const RE_COMMERCIAL_TAB = "__commercial__";
+/** Band D sentinel — opens deep residential/hotel picker (never sent to API). */
+export const RE_MORE_TAB = "__more__";
 
 /** Real API property_type values under the Commercial Band D tab. */
 export const RE_COMMERCIAL_TYPES = [
@@ -48,10 +50,22 @@ export const RE_COMMERCIAL_TYPES = [
   "commercial_land",
 ] as const;
 
+/** Deep types under More — primary apartment/villa/land stay as direct tabs. */
+export const RE_MORE_TYPES = [
+  "studio",
+  "chalet",
+  "townhouse",
+  "duplex",
+  "penthouse",
+  "hotel",
+] as const;
+
 export type PropertyTypeTab = {
   value: string;
   label: string;
 };
+
+type TypePickerKind = "commercial" | "more" | null;
 
 type PropertyHomeHeaderProps = {
   searchOpen: boolean;
@@ -63,7 +77,7 @@ type PropertyHomeHeaderProps = {
   activeOfferKey: string;
   /** Wanted browse (`listingMode=buy`) — composes with offer. */
   wantedActive: boolean;
-  /** Live propertyType for commercial sheet row highlight. */
+  /** Live propertyType for picker row highlight. */
   selectedPropertyType: string | null;
   typeTabs: PropertyTypeTab[];
   marketCountry: string;
@@ -72,6 +86,7 @@ type PropertyHomeHeaderProps = {
   onBack: () => void;
   onSaveSearch: () => void;
   onOpenStays: () => void;
+  onOpenRequest: () => void;
   onOpenFilters: () => void;
   onOpenSearch: () => void;
   onCloseSearch: () => void;
@@ -99,6 +114,8 @@ function tabIcon(value: string): React.ComponentProps<typeof Ionicons>["name"] {
       return "storefront-outline";
     case "land":
       return "map-outline";
+    case RE_MORE_TAB:
+      return "ellipsis-horizontal";
     default:
       return "radio-button-off";
   }
@@ -127,6 +144,7 @@ export function PropertyHomeHeader({
   onBack,
   onSaveSearch,
   onOpenStays,
+  onOpenRequest,
   onOpenFilters,
   onOpenSearch,
   onCloseSearch,
@@ -141,7 +159,7 @@ export function PropertyHomeHeader({
 }: PropertyHomeHeaderProps) {
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
-  const [commercialOpen, setCommercialOpen] = useState(false);
+  const [typePicker, setTypePicker] = useState<TypePickerKind>(null);
   // Owner rule: never invent a fake 67px web pad (it destroyed headers before).
   // ~2mm tighter than Stay default — reclaim listing space (owner 2026-07-31).
   const topPad = Math.max(insets.top, Platform.OS === "web" ? 10 : 0);
@@ -156,11 +174,30 @@ export function PropertyHomeHeader({
 
   const handleTypePress = (value: string) => {
     if (value === RE_COMMERCIAL_TAB) {
-      setCommercialOpen(true);
+      setTypePicker("commercial");
+      return;
+    }
+    if (value === RE_MORE_TAB) {
+      setTypePicker("more");
       return;
     }
     onSelectType(value);
   };
+
+  const pickerOptions =
+    typePicker === "commercial"
+      ? RE_COMMERCIAL_TYPES
+      : typePicker === "more"
+        ? RE_MORE_TYPES
+        : null;
+  const pickerTitle =
+    typePicker === "commercial"
+      ? t("search.discover.section.propertyTabCommercial")
+      : typePicker === "more"
+        ? t("search.discover.section.deskMore")
+        : "";
+  const pickerTestPrefix =
+    typePicker === "commercial" ? "re-commercial" : "re-more";
 
   return (
     <View style={[styles.root, { paddingTop: topPad - 1 }]} testID="re-property-header">
@@ -190,6 +227,16 @@ export function PropertyHomeHeader({
           accessibilityLabel={t("search.discover.section.deskStays")}
         >
           <Ionicons name="calendar" size={18} color={SNOW} />
+        </Pressable>
+        <Pressable
+          onPress={onOpenRequest}
+          style={styles.iconHit}
+          hitSlop={12}
+          testID="re-header-request"
+          accessibilityRole="button"
+          accessibilityLabel={t("search.discover.section.deskRequest")}
+        >
+          <Ionicons name="document-text-outline" size={18} color={SNOW} />
         </Pressable>
         <Pressable
           onPress={onSaveSearch}
@@ -428,21 +475,19 @@ export function PropertyHomeHeader({
       </ScrollView>
 
       <Modal
-        visible={commercialOpen}
+        visible={typePicker != null}
         transparent
         animationType="fade"
-        onRequestClose={() => setCommercialOpen(false)}
+        onRequestClose={() => setTypePicker(null)}
       >
         <Pressable
-          style={styles.commercialBackdrop}
-          onPress={() => setCommercialOpen(false)}
-          testID="re-commercial-backdrop"
+          style={styles.typePickerBackdrop}
+          onPress={() => setTypePicker(null)}
+          testID={`re-${typePicker ?? "type"}-backdrop`}
         >
-          <View style={styles.commercialSheet}>
-            <AppText style={styles.commercialTitle}>
-              {t("search.discover.section.propertyTabCommercial")}
-            </AppText>
-            {RE_COMMERCIAL_TYPES.map((value) => {
+          <View style={styles.typePickerSheet} testID="re-type-picker-sheet">
+            <AppText style={styles.typePickerTitle}>{pickerTitle}</AppText>
+            {(pickerOptions ?? []).map((value) => {
               const def = PROPERTY_TYPES.find((p) => p.value === value);
               const label = def ? (isRTL ? def.ar : def.en) : value;
               const rowActive = selectedPropertyType === value;
@@ -450,20 +495,20 @@ export function PropertyHomeHeader({
                 <Pressable
                   key={value}
                   onPress={() => {
-                    setCommercialOpen(false);
+                    setTypePicker(null);
                     onSelectType(value);
                   }}
                   style={[
-                    styles.commercialRow,
+                    styles.typePickerRow,
                     { flexDirection: rowDir },
-                    rowActive ? styles.commercialRowActive : null,
+                    rowActive ? styles.typePickerRowActive : null,
                   ]}
-                  testID={`re-commercial-${value}`}
+                  testID={`${pickerTestPrefix}-${value}`}
                 >
                   <AppText
                     style={[
-                      styles.commercialRowText,
-                      rowActive ? styles.commercialRowTextActive : null,
+                      styles.typePickerRowText,
+                      rowActive ? styles.typePickerRowTextActive : null,
                     ]}
                   >
                     {label}
@@ -654,13 +699,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
   },
-  commercialBackdrop: {
+  typePickerBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.55)",
     justifyContent: "center",
     paddingHorizontal: 24,
   },
-  commercialSheet: {
+  typePickerSheet: {
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: HAIRLINE,
@@ -670,7 +715,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     width: "100%",
   },
-  commercialTitle: {
+  typePickerTitle: {
     fontSize: 15,
     fontFamily: "Inter_700Bold",
     color: SNOW,
@@ -679,7 +724,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: HAIRLINE,
   },
-  commercialRow: {
+  typePickerRow: {
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
@@ -687,15 +732,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: HAIRLINE,
   },
-  commercialRowActive: {
+  typePickerRowActive: {
     backgroundColor: "rgba(184,30,60,0.14)",
   },
-  commercialRowText: {
+  typePickerRowText: {
     fontSize: 14,
     fontFamily: "Inter_500Medium",
     color: SNOW,
   },
-  commercialRowTextActive: {
+  typePickerRowTextActive: {
     color: ACCENT,
     fontFamily: "Inter_600SemiBold",
   },

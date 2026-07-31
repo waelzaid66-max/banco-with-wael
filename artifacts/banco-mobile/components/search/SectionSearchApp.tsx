@@ -39,6 +39,8 @@ import {
   PropertyHomeHeader,
   RE_COMMERCIAL_TAB,
   RE_COMMERCIAL_TYPES,
+  RE_MORE_TAB,
+  RE_MORE_TYPES,
 } from "@/components/search/property/PropertyHomeHeader";
 import { axisShape, type SectionChrome } from "@/components/search/sectionChrome";
 import { MiniAppBottomNav } from "@/components/MiniAppBottomNav";
@@ -731,8 +733,8 @@ export function SectionSearchApp({
 
   /** RE type strip — composes with offer engine (sale/rent) via propertyType. */
   const selectRePropertyType = (value: string) => {
-    // Commercial Band D uses a UI sentinel — never commit it as propertyType.
-    if (value === RE_COMMERCIAL_TAB) return;
+    // Band D picker sentinels — never commit as propertyType.
+    if (value === RE_COMMERCIAL_TAB || value === RE_MORE_TAB) return;
     if (value === RE_TYPE_ALL || value === criteria.propertyType) {
       update({ propertyType: null });
       return;
@@ -847,8 +849,8 @@ export function SectionSearchApp({
   const showListingMode = !lockedEngine && !isRealEstateSection;
   // Types live in PropertyHomeHeader Band D (mock-aligned primary set).
   const showReTypeStrip = false;
-  /** Band D tabs — All / Apartments / Villas / Commercial / Land.
-   *  Commercial is a picker sentinel (RE_COMMERCIAL_TAB) — never sent as API enum. */
+  /** Band D tabs — All / Apartments / Villas / Commercial / Land / More.
+   *  Commercial + More are picker sentinels — never sent as API enums. */
   const reHeaderTypeTabs = useMemo(() => {
     if (!isRealEstateSection) return [] as { value: string; label: string }[];
     return [
@@ -860,6 +862,10 @@ export function SectionSearchApp({
         label: t("search.discover.section.propertyTabCommercial"),
       },
       { value: "land", label: t("search.discover.section.deskLand") },
+      {
+        value: RE_MORE_TAB,
+        label: t("search.discover.section.deskMore"),
+      },
     ];
   }, [isRealEstateSection, t]);
   const reHeaderActiveType = useMemo(() => {
@@ -868,6 +874,9 @@ export function SectionSearchApp({
       (RE_COMMERCIAL_TYPES as readonly string[]).includes(criteria.propertyType)
     ) {
       return RE_COMMERCIAL_TAB;
+    }
+    if ((RE_MORE_TYPES as readonly string[]).includes(criteria.propertyType)) {
+      return RE_MORE_TAB;
     }
     if (
       criteria.propertyType === "apartment" ||
@@ -1248,6 +1257,10 @@ export function SectionSearchApp({
           onOpenStays={() => {
             playSound("tap");
             router.push("/section/booking" as Href);
+          }}
+          onOpenRequest={() => {
+            playSound("tap");
+            router.push("/listings/create?request=1" as Href);
           }}
           onOpenFilters={() => {
             playSound("tap");
