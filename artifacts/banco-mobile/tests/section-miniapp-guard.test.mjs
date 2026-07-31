@@ -2103,3 +2103,93 @@ test("W8-D: Accounts Stack screens stay registered beside profile", () => {
     );
   }
 });
+
+// ── Wave9 Tranche E — identity + Factories map + origin de-dupe ────────────
+
+test("W9-E: Maps hub accent is red-family (no gold identity break)", () => {
+  const hub = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "maps", "MapsHubApp.tsx"),
+    "utf8",
+  );
+  assert.doesNotMatch(
+    hub,
+    /#C4A35A/,
+    "Maps hub must not use gold accent outside BANCO red-family",
+  );
+  assert.match(
+    hub,
+    /sectionAccent\(\s*["']all["']\s*\)/,
+    "Maps hub accent must bind sectionAccent(all)",
+  );
+  assert.match(
+    hub,
+    /flexGrow:\s*0/,
+    "Maps world-tabs ScrollView must pin flexGrow:0",
+  );
+  // Vendor stack must remain
+  assert.match(hub, /SearchResultsMap/);
+});
+
+test("W9-E: Leaflet vendor files still on disk (NO-DELETE)", () => {
+  for (const rel of [
+    "assets/map-vendor/leaflet.js",
+    "assets/map-vendor/leaflet.css",
+    "assets/map-vendor/leaflet.markercluster.js",
+    "components/search/mapVendorInline.ts",
+    "components/search/mapHtml.ts",
+    "lib/mapLatch.ts",
+  ]) {
+    assert.ok(
+      fs.existsSync(path.join(APP_ROOT, rel)),
+      `must not delete map stack file: ${rel}`,
+    );
+  }
+});
+
+test("W9-E: Generic section header exposes section-header-map (Factories)", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  assert.match(
+    section,
+    /testID="section-header-map"/,
+    "Generic header must expose section-header-map for Factories map entry",
+  );
+  const at = section.indexOf('testID="section-header-map"');
+  const win = section.slice(Math.max(0, at - 500), at);
+  assert.match(win, /openOrLatchMap/, "section-header-map must latch map");
+});
+
+test("W9-E: Materials FilterSheet hides origin when strip owns it", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  const filter = fs.readFileSync(FILTER_SHEET, "utf8");
+  assert.match(
+    section,
+    /hideOriginAxis=\{isMaterialsSection\}/,
+    "Materials must pass hideOriginAxis into FilterSheet",
+  );
+  assert.match(
+    filter,
+    /hideOriginAxis/,
+    "FilterSheet must declare hideOriginAxis",
+  );
+  assert.match(
+    filter,
+    /showOrigin = criteria\.category === ["']materials["'] && !hideOriginAxis/,
+    "showOrigin must respect hideOriginAxis",
+  );
+  // Strip origin SoT remains
+  assert.match(section, /testID="materials-origin-strip"/);
+});
+
+test("W9-E: Stay rose dead hero StyleSheet removed", () => {
+  const booking = fs.readFileSync(BOOKING_APP, "utf8");
+  assert.doesNotMatch(
+    booking,
+    /#650E36/,
+    "Retired rose hero color must not remain in BookingStaysApp",
+  );
+  assert.match(
+    booking,
+    /<StaysHomeHeader\b/,
+    "StaysHomeHeader mount must remain (sacred)",
+  );
+});

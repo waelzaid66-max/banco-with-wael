@@ -1463,6 +1463,27 @@ export function SectionSearchApp({
         >
           <Feather name="search" size={18} color={draftQuery ? "#FFFFFF" : colors.foreground} />
         </Pressable>
+        {/* W9 D-W9-02: Factories (and other generic-header worlds) need a header
+            map hit — FAB alone is easy to miss. Do NOT invent FactoriesHomeHeader. */}
+        <Pressable
+          onPress={() => {
+            playSound("tap");
+            Haptics.selectionAsync();
+            openOrLatchMap({ inResultsView, setMapMode, setWantMap });
+          }}
+          style={[
+            styles.iconBtn,
+            {
+              backgroundColor: colors.secondary,
+              borderRadius: colors.radius,
+            },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={t("search.viewMap")}
+          testID="section-header-map"
+        >
+          <Feather name="map" size={18} color={colors.foreground} />
+        </Pressable>
         <Pressable
           onPress={() => {
             playSound("tap");
@@ -2193,6 +2214,8 @@ export function SectionSearchApp({
         brandValue={brandValue}
         locationLabel={locationLabel}
         lockCategory
+        // Materials axis strip owns origin (D-W9-03) — sheet keeps material refinements.
+        hideOriginAxis={isMaterialsSection}
         // Stay-parallel: scope RE sheet types to the primary taxonomy so
         // twinhouse/clinic cannot drift away from the pill / desks.
         propertyTypeOptions={
