@@ -4,7 +4,7 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
-    "dev": "CI=1 EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=$CLERK_PUBLISHABLE_KEY EXPO_PUBLIC_CLERK_PROXY_URL=$CLERK_PROXY_URL EXPO_PACKAGER_PROXY_URL=https://$REPLIT_EXPO_DEV_DOMAIN EXPO_PUBLIC_DOMAIN=$REPLIT_DEV_DOMAIN EXPO_PUBLIC_REPL_ID=$REPL_ID REACT_NATIVE_PACKAGER_HOSTNAME=$REPLIT_DEV_DOMAIN pnpm exec expo start --localhost --port ${PORT:-8081}",
+    "dev": "bash scripts/dev-env.sh",
     "build": "node scripts/build.js",
     "serve": "node server/serve.js",
     "typecheck": "tsc -b ../../lib/api-client-react ../../lib/search-contract --force && tsc -p tsconfig.json --noEmit",
@@ -17,9 +17,10 @@
     "test:i18n": "node --test tests/i18n-usage.test.mjs",
     "test:accounts": "node --test tests/accounts-clerk-journey.test.mjs",
     "test:notification-routing": "node --test tests/notification-routing.test.mjs",
+    "test:create-market": "node --test tests/create-listing-market-guard.test.mjs",
     "test:scale": "node --test tests/scale-readiness.test.mjs",
     "test:cdn": "node --test tests/cdn-readiness.test.mjs",
-    "test": "pnpm run test:icons && pnpm run test:lib && pnpm run test:resilience && pnpm run test:universal-links && pnpm run test:session-restore && pnpm run test:section-guard && pnpm run test:i18n && pnpm run test:accounts && pnpm run test:notification-routing && pnpm run test:scale && pnpm run test:cdn"
+    "test": "pnpm run test:icons && pnpm run test:lib && pnpm run test:resilience && pnpm run test:universal-links && pnpm run test:session-restore && pnpm run test:section-guard && pnpm run test:i18n && pnpm run test:accounts && pnpm run test:notification-routing && pnpm run test:create-market && pnpm run test:scale && pnpm run test:cdn"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

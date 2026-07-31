@@ -23,11 +23,15 @@ import { AppText } from "@/components/AppText";
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { LocationPicker } from "@/components/LocationPicker";
 import {
+  ListingCurrencyButton,
+  MarketCountryButton,
+  MarketCountryPicker,
+} from "@/components/MarketCountryPicker";
+import {
   ListingMediaEditor,
   type ListingMediaEditorHandle,
 } from "@/components/listings/ListingMediaEditor";
 import {
-  MARKET_COUNTRIES,
   currencyForMarket,
   EXTRA_CURRENCIES,
 } from "@/constants/listingCreateTaxonomy";
@@ -67,6 +71,7 @@ export default function EditListingScreen() {
   const [location, setLocation] = useState("");
   const [locationValue, setLocationValue] = useState<string | null>(null);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
+  const [marketPickerOpen, setMarketPickerOpen] = useState(false);
   const [price, setPrice] = useState("");
   // Manual multi-market editing (user requirement): the listing's market and
   // pricing currency stay editable after publish. Server-side the specs patch
@@ -277,84 +282,49 @@ export default function EditListingScreen() {
             />
           </Field>
 
-          {/* Manual multi-market editing: market + pricing currency stay
-              editable after publish (specs patch merges server-side). */}
+          {/* Compact market + currency (same chrome as create) — no chip clouds. */}
           <Field label={t("create.fields.marketCountry")} colors={colors} isRTL={isRTL}>
-            <View style={[styles.chipRow, { flexDirection: rowDir }]}>
-              {MARKET_COUNTRIES.map((m) => {
-                const active = marketCountry === m.value;
-                return (
-                  <Pressable
-                    key={m.value}
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      setMarketCountry(m.value);
-                      // Follow the market's currency unless the seller already
-                      // picked a cross-border one (USD/EUR stay as chosen).
-                      if (!EXTRA_CURRENCIES.includes(currency as (typeof EXTRA_CURRENCIES)[number])) {
-                        setCurrency(currencyForMarket(m.value));
-                      }
-                    }}
-                    style={[
-                      styles.chip,
-                      {
-                        backgroundColor: active ? colors.primary : colors.card,
-                        borderColor: active ? colors.primary : colors.border,
-                        borderRadius: colors.radius,
-                      },
-                    ]}
-                    testID={`edit-market-${m.value}`}
-                  >
-                    <AppText
-                      style={[
-                        styles.chipText,
-                        { color: active ? colors.primaryForeground : colors.foreground },
-                      ]}
-                    >
-                      {isRTL ? m.ar : m.en}
-                    </AppText>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <MarketCountryButton
+              selected={marketCountry}
+              showCurrency={false}
+              testID="edit-market-country-btn"
+              onPress={() => {
+                Haptics.selectionAsync();
+                setMarketPickerOpen(true);
+              }}
+            />
           </Field>
 
           <Field label={t("create.fields.currency")} colors={colors} isRTL={isRTL}>
-            <View style={[styles.chipRow, { flexDirection: rowDir }]}>
-              {[currencyForMarket(marketCountry), ...EXTRA_CURRENCIES].map((code) => {
-                const active = currency === code;
-                return (
-                  <Pressable
-                    key={code}
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      setCurrency(code);
-                    }}
-                    style={[
-                      styles.chip,
-                      {
-                        backgroundColor: active ? colors.primary : colors.card,
-                        borderColor: active ? colors.primary : colors.border,
-                        borderRadius: colors.radius,
-                      },
-                    ]}
-                    testID={`edit-currency-${code}`}
-                  >
-                    <AppText
-                      style={[
-                        styles.chipText,
-                        { color: active ? colors.primaryForeground : colors.foreground },
-                      ]}
-                    >
-                      {code}
-                    </AppText>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <ListingCurrencyButton
+              value={currency}
+              marketCountry={marketCountry}
+              testIDPrefix="edit-currency"
+              onChange={(code) => {
+                Haptics.selectionAsync();
+                setCurrency(code);
+              }}
+            />
           </Field>
         </KeyboardAwareScrollViewCompat>
       )}
+
+      <MarketCountryPicker
+        visible={marketPickerOpen}
+        selected={marketCountry}
+        launchMarketsOnly
+        onClose={() => setMarketPickerOpen(false)}
+        onSelect={(iso) => {
+          Haptics.selectionAsync();
+          setMarketCountry(iso);
+          // Follow the market's currency unless the seller already picked a
+          // cross-border one (USD/EUR stay as chosen) — same rule as before.
+          if (!EXTRA_CURRENCIES.includes(currency as (typeof EXTRA_CURRENCIES)[number])) {
+            setCurrency(currencyForMarket(iso));
+          }
+          setMarketPickerOpen(false);
+        }}
+      />
 
       <LocationPicker
         visible={locationPickerOpen}

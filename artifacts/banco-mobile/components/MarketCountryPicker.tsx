@@ -12,7 +12,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppText } from "@/components/AppText";
 import { PHONE_COUNTRIES } from "@/constants/countryCodes";
-import { CURRENCY_BY_MARKET, MARKET_COUNTRIES } from "@/constants/listingCreateTaxonomy";
+import {
+  CURRENCY_BY_MARKET,
+  EXTRA_CURRENCIES,
+  MARKET_COUNTRIES,
+  currencyForMarket,
+} from "@/constants/listingCreateTaxonomy";
 import { useI18n } from "@/context/LanguageContext";
 import { useColors } from "@/hooks/useColors";
 import { marketCountryLabel } from "@/lib/searchTaxonomy";
@@ -23,6 +28,19 @@ export type MarketCountryOption = {
   ar: string;
   flag?: string;
 };
+
+/** Launch markets only (create/edit listing — same 21 as the old chip cloud). */
+export function buildLaunchMarketOptions(): MarketCountryOption[] {
+  return MARKET_COUNTRIES.map((m) => {
+    const phone = PHONE_COUNTRIES.find((c) => c.iso === m.value);
+    return {
+      value: m.value,
+      en: m.en,
+      ar: m.ar,
+      flag: phone?.flag,
+    };
+  });
+}
 
 /** Searchable world list: launch markets first, then every dial-code country. */
 export function buildMarketCountryOptions(): MarketCountryOption[] {
@@ -51,6 +69,7 @@ export function buildMarketCountryOptions(): MarketCountryOption[] {
   return out;
 }
 
+const LAUNCH_OPTIONS = buildLaunchMarketOptions();
 const ALL_OPTIONS = buildMarketCountryOptions();
 
 interface MarketCountryPickerProps {
@@ -58,6 +77,11 @@ interface MarketCountryPickerProps {
   selected: string;
   onClose: () => void;
   onSelect: (iso: string) => void;
+  /**
+   * Create/edit listing: only the launch markets (matches previous chip set).
+   * Search/Stay keep the full world list (default).
+   */
+  launchMarketsOnly?: boolean;
 }
 
 export function MarketCountryPicker({
@@ -65,6 +89,7 @@ export function MarketCountryPicker({
   selected,
   onClose,
   onSelect,
+  launchMarketsOnly = false,
 }: MarketCountryPickerProps) {
   const colors = useColors();
   const { t, isRTL } = useI18n();
@@ -72,17 +97,18 @@ export function MarketCountryPicker({
   const [query, setQuery] = useState("");
   const rowDir = isRTL ? "row-reverse" : "row";
   const textAlign = isRTL ? "right" : "left";
+  const baseOptions = launchMarketsOnly ? LAUNCH_OPTIONS : ALL_OPTIONS;
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return ALL_OPTIONS;
-    return ALL_OPTIONS.filter(
+    if (!q) return baseOptions;
+    return baseOptions.filter(
       (c) =>
         c.en.toLowerCase().includes(q) ||
         c.ar.includes(query.trim()) ||
         c.value.toLowerCase().includes(q),
     );
-  }, [query]);
+  }, [query, baseOptions]);
 
   const handleClose = () => {
     setQuery("");
@@ -226,11 +252,17 @@ export function MarketCountryPicker({
 export function MarketCountryButton({
   selected,
   onPress,
+  testID = "search-market-country-btn",
+  /** Search/Stay: currency rides in the button. Create/edit: false — currency
+   *  has its own compact control (seller may override to USD/EUR). */
+  showCurrency = true,
   compact = false,
   density = "default",
 }: {
   selected: string;
   onPress: () => void;
+  testID?: string;
+  showCurrency?: boolean;
   /** Dense hit for B-PROPERTIES header — slightly smaller, same content. */
   compact?: boolean;
   /**
@@ -253,6 +285,7 @@ export function MarketCountryButton({
   const currency = CURRENCY_BY_MARKET[selected] ?? "";
   const micro = density === "micro" || compact;
   const showLabel = density !== "micro";
+  const currencyVisible = showCurrency || density === "micro";
 
   return (
     <Pressable
@@ -268,7 +301,7 @@ export function MarketCountryButton({
           borderRadius: colors.radius,
         },
       ]}
-      testID="search-market-country-btn"
+      testID={testID}
       accessibilityLabel={`${t("search.marketCountryTitle")}: ${label}${currency ? ` ${currency}` : ""}`}
     >
       {/* Flag + short country label + chevron — owner visual contract. Do not
@@ -293,7 +326,7 @@ export function MarketCountryButton({
           {label}
         </AppText>
       ) : null}
-      {currency ? (
+      {currencyVisible && currency ? (
         <AppText
           style={[
             styles.triggerCurrency,
@@ -303,16 +336,145 @@ export function MarketCountryButton({
         >
           {currency}
         </AppText>
-      ) : !showLabel ? (
-        <AppText
-          style={[styles.triggerLabel, styles.triggerLabelCompact, { color: colors.foreground }]}
-          numberOfLines={1}
-        >
-          {selected}
-        </AppText>
       ) : null}
       <Feather name="chevron-down" size={micro ? 11 : 14} color={colors.mutedForeground} />
     </Pressable>
+  );
+}
+
+/**
+ * Compact currency control for create/edit listing. Replaces the wrapping chip
+ * cloud (market currency + USD + EUR) with one button that opens a short sheet.
+ * Search must NOT use this — search collapses currency into MarketCountryButton.
+ */
+export function ListingCurrencyButton({
+  value,
+  marketCountry,
+  onChange,
+  testIDPrefix = "listing-currency",
+}: {
+  value: string;
+  marketCountry: string;
+  onChange: (code: string) => void;
+  testIDPrefix?: string;
+}) {
+  const colors = useColors();
+  const { t, isRTL } = useI18n();
+  const insets = useSafeAreaInsets();
+  const [open, setOpen] = useState(false);
+  const rowDir = isRTL ? "row-reverse" : "row";
+  const marketCode = currencyForMarket(marketCountry);
+  const codes = useMemo(() => {
+    const out: string[] = [marketCode];
+    for (const c of EXTRA_CURRENCIES) {
+      if (c !== marketCode) out.push(c);
+    }
+    return out;
+  }, [marketCode]);
+
+  return (
+    <>
+      <Pressable
+        onPress={() => setOpen(true)}
+        style={[
+          styles.trigger,
+          {
+            flexDirection: rowDir,
+            backgroundColor: colors.secondary,
+            borderColor: colors.border,
+            borderRadius: colors.radius,
+            alignSelf: isRTL ? "flex-end" : "flex-start",
+          },
+        ]}
+        testID={`${testIDPrefix}-btn`}
+        accessibilityLabel={t("create.fields.currency")}
+      >
+        <Feather name="credit-card" size={16} color={colors.foreground} />
+        <AppText
+          style={[styles.triggerLabel, { color: colors.foreground }]}
+          numberOfLines={1}
+        >
+          {value}
+        </AppText>
+        <Feather name="chevron-down" size={14} color={colors.mutedForeground} />
+      </Pressable>
+
+      <Modal
+        visible={open}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setOpen(false)}
+      >
+        <View style={styles.backdrop}>
+          <View
+            style={[
+              styles.currencySheet,
+              {
+                backgroundColor: colors.background,
+                paddingBottom: insets.bottom + 16,
+              },
+            ]}
+          >
+            <View style={[styles.header, { flexDirection: rowDir }]}>
+              <View style={styles.headerBtn} />
+              <AppText style={[styles.headerTitle, { color: colors.foreground }]}>
+                {t("create.fields.currency")}
+              </AppText>
+              <Pressable
+                onPress={() => setOpen(false)}
+                hitSlop={10}
+                style={styles.headerBtn}
+              >
+                <Feather name="x" size={22} color={colors.foreground} />
+              </Pressable>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={[
+                styles.currencyRow,
+                { flexDirection: rowDir },
+              ]}
+            >
+              {codes.map((code) => {
+                const active = code === value;
+                return (
+                  <Pressable
+                    key={code}
+                    onPress={() => {
+                      onChange(code);
+                      setOpen(false);
+                    }}
+                    style={[
+                      styles.currencyChip,
+                      {
+                        backgroundColor: active ? colors.primary : colors.card,
+                        borderColor: active ? colors.primary : colors.border,
+                        borderRadius: colors.radius,
+                      },
+                    ]}
+                    testID={`${testIDPrefix}-${code}`}
+                  >
+                    <AppText
+                      style={[
+                        styles.currencyChipText,
+                        {
+                          color: active
+                            ? colors.primaryForeground
+                            : colors.foreground,
+                        },
+                      ]}
+                    >
+                      {code}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -380,34 +542,49 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     maxWidth: 180,
   },
-  triggerCompact: {
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    maxWidth: 148,
-  },
-  triggerMicro: {
-    gap: 3,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    maxWidth: 88,
-    borderRadius: 999,
-  },
   triggerFlag: { fontSize: 16 },
-  triggerFlagCompact: { fontSize: 13 },
   triggerLabel: {
     flexShrink: 1,
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
   },
-  triggerLabelCompact: {
-    fontSize: 11,
-  },
   triggerCurrency: {
     fontSize: 12,
     fontFamily: "Inter_700Bold",
   },
-  triggerCurrencyCompact: {
-    fontSize: 10,
+  triggerCompact: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    maxWidth: 160,
+  },
+  triggerMicro: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    maxWidth: 88,
+    gap: 4,
+  },
+  triggerFlagCompact: { fontSize: 13 },
+  triggerLabelCompact: { fontSize: 11 },
+  triggerCurrencyCompact: { fontSize: 10 },
+  currencySheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  currencyRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
+    alignItems: "center",
+  },
+  currencyChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  currencyChipText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
   },
 });
