@@ -1,50 +1,50 @@
-# URGENT → DIRECT MANAGER — fleet absorb NOW · AUD-70/71 PASS
+# URGENT → DIRECT MANAGER — W8 peer + absorb + Materials DEFECT
 
 **From:** Auditor · https://cursor.com/agents/bc-019fb7f4-92be-7d5b-96d8-17142efbc8f0  
 **To:** Chair · https://cursor.com/agents/bc-019fb7dd-f50e-7a52-9da0-103f76a5e37c  
-**Owner:** اذهب لمديرك وكمل  
-**SoT:** `main` @ **`8cf070b`** · merge `ac0d6fe` (#39)  
-**Stamp:** `2026-07-31T15:25Z`
+**Owner:** كمل وراجع اخر الطلبات  
+**SoT:** `main` @ **`e983863`** (W8-STUDY-02/03 landed)  
+**Stamp:** `2026-07-31T15:29Z`
 
 ---
 
-## 1. Why this ping
+## 1. Latest requests reviewed
 
-Chair metadata still points at `cursor/final-production-acceptance-e37c` (**behind** `main`, no commits ahead). SoT = **`main` only**.  
-#39 merged with **stale AUD-61/65** still on tree. Auditor Wave7 duty **AUD-70 DONE**. Sister REL-00 **DONE** (#40). Absorb still owed.
-
----
-
-## 2. Fleet board (for Chair)
-
-| Seat | Packet | Evidence | Absorb |
-|------|--------|----------|--------|
-| Auditor | AUD-70 PASS · AUD-71 REL-00 peer PASS | **This PR** (clean onto main) · legacy #36 CONFLICTING | **OWED** |
-| Reliability | W7-REL-00 PASS | PR **#40** | **OWED** |
-| Idle | SUP-40 | PR #38 Wave5-era / pending | Chair triage |
+| Request / artifact | Auditor action |
+|--------------------|----------------|
+| W8-STUDY-02 Stay/RE/Materials | **AUD-72 peer** — CONFIRM · **1 DEFECT** Materials origin dual-mount |
+| W8-STUDY-03 Factories/Banks/Import/Accounts | **AUD-72 peer** — CONFIRM · no DEFECT · HOLDs align |
+| Absorb Auditor VERIFY | PR **#41** rebase → current main · CI was green · **merge now** |
+| Absorb REL-00 | PR **#40** still open · merge/absorb |
+| Supersede #36 | still CONFLICTING · **close** |
+| Live Certified | still **NOT_CUTOVER 0/6** |
 
 ---
 
-## 3. Merge this absorb PR (preferred)
+## 2. Named DEFECT (needs your Approve — Auditor will not freestyle)
 
-Branch `cursor/auditor-absorb-main-c8f0` = `main` + overwritten amended Auditor VERIFY only.  
-Fixes docs pollution (61/65) · adds 63/66/67/68/69/70/71 · channels.
+**Materials · MEDIUM** — duplicate `materials-origin-strip`  
+`SectionSearchApp.tsx` **`:1978`** (axis strip) **and** **`:2093-2127`** (legacy row).  
+Repair: remove/gate second block only. Sacred: header · commodity · category lock.
 
-Also merge/absorb **#40** (REL-00).
-
-Legacy **#36** is CONFLICTING vs main — **supersede/close** after this absorb lands (do not fight tip via #36 rebase of 28 commits).
-
----
-
-## 4. Pasteable ACK
+Pasteable Approve (if Owner wants fix):
 
 ```
-ACK W7 fleet: AUD-70/71 (#absorb) + REL-00 (#40).
-Absorb docs onto main. Close conflicting #36 as superseded.
-SoT = main@8cf070b. Finished chrome sacred. NOT_CUTOVER.
-Next product World only if Owner names ONE section.
+APPROVE PLAN — World Materials only.
+REL-XX: remove legacy origin chip row SectionSearchApp.tsx:2093-2127
+(keep axis-strip origin at :1978). No header/commodity/lock edits.
+Auditor peer after land. Zero other Worlds.
 ```
 
-Zero product code. Standing by for absorb confirm.
+---
+
+## 3. Absorb board (NOW)
+
+1. Merge **#41** (`cursor/auditor-absorb-main-c8f0`) — fixes stale AUD-61/65 on main + AUD-70/71/72  
+2. Merge **#40** REL-00  
+3. Close **#36** superseded  
+4. Optional: Approve Materials DEFECT above  
+
+Zero product code from this seat until Approve.
 
 — Auditor

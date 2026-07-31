@@ -1,31 +1,27 @@
-# W6-AUD-FULL-BRIEFING → Chair (go to manager · continue)
+# W6-AUD-FULL-BRIEFING → Chair (review latest · continue)
 
-**From:** Production Auditor  
-**To:** Chair · SoT **`main` @ `8cf070b`**  
-**Owner:** اذهب لمديرك وكمل  
-**Stamp:** `2026-07-31T15:25Z`
+**From:** Auditor · PR **#41** absorb  
+**To:** Chair · SoT **`main` @ `e983863`**  
+**Owner:** كمل وراجع اخر الطلبات  
+**Stamp:** `2026-07-31T15:29Z`
 
 ---
 
 ## Verdict
 
-Wave7 Auditor complete (**AUD-70/71 PASS**). Reliability REL-00 peer **ALIGN**. **Absorb docs onto main now** via clean branch (this PR). Supersede CONFLICTING #36. Cutover 0/6. Zero product code.
+Latest Chair W8 studies peer-verified (**AUD-72**). Stay/RE/Factories/Banks/Import/Accounts wiring **CONFIRM**. **One DEFECT:** Materials duplicate origin strip — Approve-gated. Absorb #41+#40 still owed. #36 supersede. NOT_CUTOVER. Zero product code.
 
 ---
 
-## What landed in product (already on main)
+## Request rollup
 
-Maps §7 · Car chips+header · Discover→Maps · finished Stay/RE/Materials/Import/Banks sacred.
-
-## What still lies in main docs
-
-Pre-land AUD-61/65 DEFECT/MISSING rows — fixed by this absorb overwrite.
-
-## Asks
-
-1. Merge absorb PR (Auditor)  
-2. Merge/absorb REL #40  
-3. Close #36 as superseded  
-4. Next named World only
+| # | Request | Status |
+|---|---------|--------|
+| 1 | Post-merge AUD-70 | DONE PASS |
+| 2 | Peer REL-00 (AUD-71) | DONE PASS |
+| 3 | Clean absorb onto main | PR #41 MERGEABLE (rebased) |
+| 4 | Peer W8-STUDY-02/03 | **AUD-72 DONE** |
+| 5 | Materials DEFECT fix | **WAIT Approve** |
+| 6 | Live Certified | blocked cutover |
 
 — Auditor

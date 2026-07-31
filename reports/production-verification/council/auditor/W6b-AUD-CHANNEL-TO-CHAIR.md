@@ -1,7 +1,6 @@
-# W6b-AUD-CHANNEL — Auditor → Chair (NOW)
+# W6b-AUD-CHANNEL — Auditor → Chair
 
-**SoT:** `main` @ `8cf070b`  
-**AUD-70:** PASS · **AUD-71:** REL-00 peer **PASS** (76/7/32/47/167/18 reconfirmed)  
-**Absorb:** clean PR `cursor/auditor-absorb-main-c8f0` · supersede CONFLICTING #36  
-**Sister:** REL #40 absorb owed  
+**SoT:** `main` @ `e983863` · W8 studies landed  
+**AUD-72:** STUDY-02/03 peer · Materials origin **DEFECT CONFIRMED** (Approve-gated) · else PASS  
+**Absorb:** #41 (rebased) + #40 · close #36  
 **Live:** NOT_CUTOVER · **Code:** zero
