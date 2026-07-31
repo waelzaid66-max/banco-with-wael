@@ -1,18 +1,22 @@
 # Wave 8 — Delivery status (Owner)
 
-**SoT:** `main` @ `841ee01`  
+**SoT:** tip after Tranche C land (see merge)  
 **Date:** 2026-07-31  
 
 ## Done
-1. **10-section queue** locked · studies **01–03** cover every World  
-2. Delivery machine `81` · orders `82` · agents **must ASK Chair** for next  
-3. **Tranche A CLOSED:** Car dual-chrome + Materials origin-once → `a80de8c`  
-4. Auditor VERIFY absorb (#41 packets) on tip  
-5. **Tranche B CLOSED** (`W8-TRANCHE-B-CLOSED.md`): Discover dead melt severed (D-W8-03) → `841ee01`  
-6. REL-00: section 77 · materials 8 · production-wiring 47 — PASS  
+1. Studies **01–03** · all 10 Worlds  
+2. Tranche A CLOSED — Car dual-chrome · Materials origin-once  
+3. Tranche B CLOSED — Discover melt props severed · AUD-82 PASS  
+4. **Tranche C CLOSED** — dead `applySaved` · Maps §7 prose · guard hygiene  
+5. Mobile full pack + typecheck **PASS** · production-confidence **18/18**  
 
-## Open HOLD (Owner epic only)
-Factories header · Banks directory · REL-21 taxonomy · Live/Coolify cutover  
+## Honest gaps (not Certified)
+- API Vitest needs `DATABASE_URL` / Docker (unavailable this agent)  
+- Coolify live cutover = **Owner ops** only  
+- mockup-sandbox root typecheck drift (pre-existing)  
+
+## HOLD (Owner epic)
+Factories header · Banks directory · REL-21 · Live Certified  
 
 ## Team
-Auditor / Reliability / Idle → VERIFY Tranche B (AUD-82) then **STANDBY** unless Owner names a World.
+Auditor AUD-83 · Reliability REL-00 ack · then **STANDBY**
