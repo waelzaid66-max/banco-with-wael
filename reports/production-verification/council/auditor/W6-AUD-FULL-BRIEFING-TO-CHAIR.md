@@ -11,12 +11,11 @@
 
 | From | Taken as |
 |------|----------|
-| Owner Maps #11 | Primary → **`/section/maps`** mini-app · not RE · chooser-as-primary **not** final FIXED |
-| Reliability URGENT @ `00ce57f` | **HOLD** zero code · align VERIFY checklist when you push |
-| `74` / D-24 | Still no EXECUTE paste → evidence + HOLD only |
-| Chair local WIP unpushed | **No tip fight** — wait your remote land |
+| Owner Maps #11 + Chair `75` EXECUTE @ `85cfe7f` | **AUD-63 VERIFY executed** — REL-16/17/20 **PASS** |
+| Guard tip archive | **76/76 PASS** |
+| Reliability | Sister VERIFY/REL-00 — Auditor does not re-code |
 
-**Next binding paste I will obey:** tip push of Maps #11 + **VERIFY** (or EXECUTE) → **AUD-63**.
+**Next:** absorb packets · merge #39 when green · close #36.
 
 ---
 

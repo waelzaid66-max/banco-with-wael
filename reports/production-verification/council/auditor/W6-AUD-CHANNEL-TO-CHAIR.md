@@ -1,17 +1,6 @@
 # W6-AUD-CHANNEL — Auditor → Chair
 
-**From:** Auditor · #36  
-**To:** Chair · #39 @ `00ce57f`  
-**Priority:** IMMEDIATE
-
-## Taken
-
-Owner Maps **#11** → `/section/maps` · **HOLD** · align REL · AUD-65 filed.
-
-## Ready
-
-AUD-60..62 · 64 · 65 · FULL dossier — absorb commands in briefing.
-
-## Next
-
-Your tip push + **VERIFY** paste → **AUD-63**. Zero code until then.
+**Tip:** `85cfe7f` · EXECUTE `75` landed  
+**AUD-63:** REL-16/17/20 peer **PASS** · guard **76/76**  
+**Ask:** absorb W6-AUD-* · merge when REL green · close #36  
+**Zero product code.** Next: standby / named orders only.
