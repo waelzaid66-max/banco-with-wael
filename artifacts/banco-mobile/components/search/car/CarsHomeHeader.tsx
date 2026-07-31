@@ -2,15 +2,18 @@
  * B-oom Car — premium black header (Stay-parity visual shell).
  *
  * Presentational only: back · map · save · BOOM+CAR wordmark · search+filter.
- * Parent (`SectionSearchApp`) owns criteria, engines chips, brand strip, map latch.
+ * Parent (`SectionSearchApp`) owns criteria, engines chips, brand strip, map latch,
+ * and market/sort on the primary strip (unguarded MarketCountryButton SoT).
  * Vehicle-type tabs (REL-21) wait for taxonomy Approve — do not invent.
  * Car Import hub is a different world — never linked from this chrome.
+ *
+ * W8 D-W8-01: market/sort live ONLY on the primary strip — not duplicated here.
  */
 import { Feather, Ionicons } from "@/components/icons";
 import { Image } from "expo-image";
 import { AppTextInput as TextInput } from "@/components/AppTextInput";
 import type { TextInput as RNTextInput } from "react-native";
-import React, { useMemo } from "react";
+import React from "react";
 import {
   Platform,
   Pressable,
@@ -20,10 +23,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppText } from "@/components/AppText";
-import { PHONE_COUNTRIES } from "@/constants/countryCodes";
-import { CURRENCY_BY_MARKET } from "@/constants/listingCreateTaxonomy";
 import { useI18n } from "@/context/LanguageContext";
-import { marketCountryLabel } from "@/lib/searchTaxonomy";
 import { sectionAccent } from "@/lib/sectionTheme";
 
 const BANCO_LOGO = require("../../../assets/images/banco-logo.png");
@@ -40,8 +40,6 @@ type Props = {
   draftQuery: string;
   searchSaved: boolean;
   activeFilterCount: number;
-  marketCountry: string;
-  sort: string;
   inputRef: React.RefObject<RNTextInput | null>;
   onBack: () => void;
   onSaveSearch: () => void;
@@ -52,26 +50,13 @@ type Props = {
   onQueryChange: (text: string) => void;
   onSubmitQuery: () => void;
   onClearQuery: () => void;
-  onOpenMarket: () => void;
-  onCycleSort: () => void;
 };
-
-type FeatherName = React.ComponentProps<typeof Feather>["name"];
-
-function sortIcon(sort: string): FeatherName {
-  if (sort === "price_asc") return "trending-up";
-  if (sort === "price_desc") return "trending-down";
-  if (sort === "newest") return "clock";
-  return "list";
-}
 
 export function CarsHomeHeader({
   searchOpen,
   draftQuery,
   searchSaved,
   activeFilterCount,
-  marketCountry,
-  sort,
   inputRef,
   onBack,
   onSaveSearch,
@@ -82,26 +67,12 @@ export function CarsHomeHeader({
   onQueryChange,
   onSubmitQuery,
   onClearQuery,
-  onOpenMarket,
-  onCycleSort,
 }: Props) {
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
   const topPad = Math.max(insets.top, Platform.OS === "web" ? 12 : 0);
   const rowDir = isRTL ? "row-reverse" : "row";
   const textAlign = isRTL ? "right" : "left";
-  const sortActive = sort !== "recommended";
-
-  const marketMeta = useMemo(() => {
-    const phone = PHONE_COUNTRIES.find((c) => c.iso === marketCountry);
-    const currency = CURRENCY_BY_MARKET[marketCountry] ?? "";
-    const label = marketCountryLabel(marketCountry, isRTL);
-    return {
-      flag: phone?.flag ?? "",
-      caption: currency || label,
-      a11y: `${label}${currency ? ` ${currency}` : ""}`,
-    };
-  }, [marketCountry, isRTL]);
 
   return (
     <View style={[styles.root, { paddingTop: topPad - 1 }]} testID="cars-home-header">
@@ -130,19 +101,6 @@ export function CarsHomeHeader({
           accessibilityLabel={t("search.discover.section.deskMap")}
         >
           <Ionicons name="map" size={20} color={SNOW} />
-        </Pressable>
-        <Pressable
-          onPress={onCycleSort}
-          style={[styles.sortHit, sortActive ? styles.sortHitActive : null]}
-          accessibilityLabel={t(`search.sortOptions.${sort}`)}
-          testID="section-sort-cycle"
-          hitSlop={8}
-        >
-          <Feather
-            name={sortIcon(sort)}
-            size={14}
-            color={sortActive ? SNOW : ASH}
-          />
         </Pressable>
         <Pressable
           onPress={onSaveSearch}
@@ -186,10 +144,10 @@ export function CarsHomeHeader({
 
         <View
           style={[
-            styles.bancoMarketWeld,
+            styles.poweredRow,
             { flexDirection: isRTL ? "row-reverse" : "row" },
           ]}
-          testID="cars-powered-market-row"
+          testID="cars-powered-row"
         >
           <AppText style={styles.poweredLabelInline} numberOfLines={1}>
             {t("booking.poweredBy")}
@@ -200,23 +158,6 @@ export function CarsHomeHeader({
             contentFit="contain"
             tintColor={ACCENT}
           />
-          <Pressable
-            onPress={onOpenMarket}
-            style={[styles.marketWeld, { flexDirection: rowDir }]}
-            accessibilityLabel={marketMeta.a11y}
-            testID="cars-market-beside-banco"
-            hitSlop={8}
-          >
-            {marketMeta.flag ? (
-              <AppText style={styles.marketFlag}>{marketMeta.flag}</AppText>
-            ) : (
-              <Feather name="globe" size={11} color={ASH} />
-            )}
-            <AppText style={styles.marketCaption} numberOfLines={1}>
-              {marketMeta.caption}
-            </AppText>
-            <Feather name="chevron-down" size={10} color={ASH} />
-          </Pressable>
         </View>
       </View>
 
@@ -318,19 +259,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  sortHit: {
-    width: 36,
-    height: 36,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 18,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: HAIRLINE,
-  },
-  sortHitActive: {
-    backgroundColor: "rgba(255,255,255,0.12)",
-    borderColor: SNOW,
-  },
   brandBlock: {
     alignItems: "center",
     gap: 8,
@@ -367,10 +295,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     textTransform: "uppercase",
   },
-  bancoMarketWeld: {
+  poweredRow: {
     alignItems: "center",
     gap: 6,
-    flexWrap: "wrap",
     justifyContent: "center",
   },
   poweredLabelInline: {
@@ -381,22 +308,6 @@ const styles = StyleSheet.create({
   poweredLogo: {
     width: 64,
     height: 16,
-  },
-  marketWeld: {
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: HAIRLINE,
-  },
-  marketFlag: { fontSize: 12 },
-  marketCaption: {
-    color: SNOW,
-    fontSize: 11,
-    fontWeight: "600",
-    maxWidth: 72,
   },
   searchPill: {
     alignItems: "center",
