@@ -13,6 +13,7 @@ import { checkMessageRate, checkConversationRate } from "./AbuseService";
 import { isEmailChannelEnabled, sendNewMessageEmail } from "./EmailService";
 import { publicVisibilityConditions } from "../lib/feedVisibility";
 import { getObjectStorageService } from "../lib/objectStorageProvider";
+import { getOrCreateUser } from "./UserService";
 import {
   assertCallerMayUseUpload,
   consumeUploadClaim,
@@ -97,12 +98,16 @@ function summarizeReactions(
   return { reactions: counts, my_reactions: mine };
 }
 
+/**
+ * Resolve the DB user id for a Clerk principal, auto-creating the row on first
+ * touch so a brand-new Clerk user can open/send a conversation without having
+ * visited any other authenticated endpoint first.
+ *
+ * Soft-deleted accounts still throw ACCOUNT_DELETED — that is intentional and
+ * handled identically by getOrCreateUser.
+ */
 async function getUserId(clerkId: string): Promise<string> {
-  const [user] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(and(eq(users.clerkId, clerkId), isNull(users.deletedAt)))
-    .limit(1);
+  const user = await getOrCreateUser(clerkId);
   if (!user) throw codedError("UNAUTHORIZED", "User not found");
   return user.id;
 }
