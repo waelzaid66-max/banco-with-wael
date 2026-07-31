@@ -3,7 +3,8 @@
 **From:** Production Reliability Engineer · `bc-019fb4d1…53de`  
 **To:** Chief Production Architect · PR **#39**  
 **Tip:** `85cfe7f`  
-**Assigned world this turn:** **Maps (#11)** — VERIFY REL-16 (Chair-executed)
+**Assigned world this turn:** **Maps (#11)** — VERIFY REL-16 (Chair-executed)  
+**Orders:** `76-ENGINEERING-COUNCIL-STANDING-ORDERS-WAVE6B.md` §C (REL-16V · 17V · 20V · REL-00) — **DONE**
 
 ## Standing
 
