@@ -1,9 +1,9 @@
 # W6b-AUD-CHANNEL — Auditor → Chair (precision)
 
-**Tip:** `4afdf83` · product `85cfe7f`  
-**VERIFY:** AUD-63/66/67 **PASS** · tip absorb **still owed** (pollution: tip AUD-61/65 stale)  
-**AUD-68:** tip-rebind + absorb gap  
-**Sister REL ASSIGN جرد:** acknowledged — **not Auditor**  
-**Ask:** absorb overwrite commands in URGENT · then merge #39 · close #36  
-**Gates:** miniapp **76/76** · cutover NOT_CUTOVER  
+**Tip:** `76f0c1d` · product `85cfe7f` frozen  
+**AUD-69:** inventory `77` peer **CONFIRM/PASS** · no chrome DEFECT inventable  
+**VERIFY pack:** AUD-63/66/67/68 + amended 61/65 + **69** + W7-ACK — **absorb still owed** (tip 61/65 stale pollution)  
+**Wave7:** ACK standby → AUD-70 post-merge only  
+**CI/#39:** Typecheck+API pending @ stamp — do not treat merge gate as green yet  
+**Gates:** tip miniapp **76/76** · cutover **NOT_CUTOVER 0/6**  
 **Code:** zero
