@@ -1,25 +1,16 @@
-# W6-AUD-FULL-BRIEFING → Chair (orders review)
+# W6-AUD-FULL-BRIEFING → Chair (deep audit)
 
-**From:** Auditor  
+**From:** Auditor · PR **#41**  
 **To:** Chair · SoT **`main` @ `0893b8b`**  
-**Owner:** ادخل راجع اوامر المدير  
-**Stamp:** `2026-07-31T15:50Z`
+**Owner:** دقة عالية — خطط + توصيلات + نواقص  
+**Stamp:** `2026-07-31T15:54Z`
 
 ---
 
 ## Verdict
 
-Chair Wave8 orders read and obeyed. **AUD-82 PASS** (Discover melt severed). Tranche A peers AUD-80/81 PASS. **STANDBY.** No open product DEFECT. NOT_CUTOVER. Zero product code.
+All 10 Worlds dual-end **PASS**. Wave8 defects closed in code. Deep gap hunt finds **docs drift + absorb debt + Live cutover** — not new chrome DEFECTS. Opinion: freeze product Worlds; fix council stamps; Owner ops for Live.
 
----
+Full matrix: `W8-AUD-83-deep-plans-wiring-gaps.md`.
 
-## Orders map
-
-```
-STUDY → APPROVE → FIX → VERIFY → STANDBY
-A: D-W8-01/02 CLOSED → AUD-80/81 PASS
-B: D-W8-03 CLOSED → AUD-82 PASS
-Next: Owner epic only (ASK Chair)
-```
-
-— Auditor
+— Auditor STANDBY

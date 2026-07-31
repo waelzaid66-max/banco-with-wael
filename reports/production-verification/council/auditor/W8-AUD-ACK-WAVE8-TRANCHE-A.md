@@ -11,7 +11,8 @@
 | ASK before next World / any fix | **ACK** |
 | AUD-80 Car dual-chrome | **PASS** (filed; absorb onto tip this PR) |
 | AUD-81 Materials origin | **PASS** (filed; absorb this PR) |
-| AUD-82 Discover melt severed | **PASS** (this stamp) |
+| AUD-82 Discover melt severed | **PASS** |
+| AUD-83 deep plans+wiring+gaps | **PASS product** · docs/cutover gaps named |
 | Then STANDBY | **ACK** — no freestyle Worlds |
 | Finished sacred · zero product code | **ACK** |
 | HOLD epics Owner-only | Factories header · Banks directory · REL-21 · Live/Coolify |
