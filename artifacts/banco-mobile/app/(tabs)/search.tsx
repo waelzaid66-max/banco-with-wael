@@ -57,7 +57,7 @@ import { labelForValue } from "@/constants/locations";
 import { DEFAULT_MARKET_COUNTRY } from "@/constants/listingCreateTaxonomy";
 import { engineByKey, enginesForCategory } from "@/constants/engines";
 import { useI18n } from "@/context/LanguageContext";
-import { SavedSearch, useSession } from "@/context/SessionContext";
+import { useSession } from "@/context/SessionContext";
 import { useSound } from "@/context/SoundContext";
 import { useAuthGate } from "@/hooks/useAuthGate";
 import { useColors } from "@/hooks/useColors";
@@ -442,33 +442,8 @@ export default function SearchScreen() {
     [requireAuth, cacheFeedItem],
   );
 
-  const applySaved = useCallback(
-    (s: SavedSearch) => {
-      // Prefer the rich criteria snapshot when the save carried one.
-      if (s.criteria) {
-        const next = { ...(s.criteria as SearchCriteria), q: s.q || (s.criteria as SearchCriteria).q };
-        setDraftQuery(next.q);
-        setBrandValue(null);
-        commit({ ...DEFAULT_CRITERIA, ...next });
-        return;
-      }
-      const cat = (CATEGORIES.includes(s.category as FilterCategory)
-        ? s.category
-        : "all") as FilterCategory;
-      setDraftQuery(s.q);
-      setBrandValue(null);
-      commit({
-        ...DEFAULT_CRITERIA,
-        q: s.q,
-        category: cat,
-        minPrice: s.minPrice,
-        maxPrice: s.maxPrice,
-        location: s.location,
-        paymentType: s.paymentType,
-      });
-    },
-    [commit]
-  );
+  // Saved searches re-apply via Saved tab → searchCriteriaToNavParams (not a
+  // Discover melt helper). Do not reintroduce applySaved on this host.
 
   const selectCategory = useCallback((cat: FilterCategory) => {
     // A brand browse shows its term in the search box; clear that display too so
@@ -480,9 +455,11 @@ export default function SearchScreen() {
 
   // Discover section cards MUST NOT filter this tab in place (that melted
   // catalogues into shared Search criteria). They router.push SECTION_ROUTE
-  // inside SearchDiscover — do not reintroduce a Discover→host category bridge.
+  // inside SearchDiscover — do not reintroduce a Discover→host melt bridge
+  // (onBrowseBrand / onApplySaved / onOpenListing / onSearchQuery removed
+  // Wave8 Tranche B; FilterSheet + CarPicker still use browseBrand).
 
-  // Discover "Explore on map" → ENTER Maps mini-app #11 (/section/maps).
+  // Discover "Explore on map" → ENTER Maps mini-app §7 (/section/maps).
   // Never hardcode RE. Never melt Discover into shared Search criteria (MOB-07).
   // Per-section ?map=1 portals remain intentional duplication (Owner law).
   const exploreOnMap = () => {
@@ -608,16 +585,7 @@ export default function SearchScreen() {
   let overlay: React.ReactNode = null;
   if (viewState === "discover") {
     overlay = (
-      <SearchDiscover
-        onBrowseBrand={(b) => browseBrand(b, null)}
-        onApplySaved={applySaved}
-        onOpenListing={handleCardPress}
-        onExploreMap={exploreOnMap}
-        onSearchQuery={(q) => {
-          setDraftQuery(q);
-          commitQueryNow(q);
-        }}
-      />
+      <SearchDiscover onExploreMap={exploreOnMap} />
     );
   } else if (viewState === "loading") {
     overlay = (
@@ -1072,7 +1040,7 @@ export default function SearchScreen() {
           </View>
         ) : null}
 
-        {/* Discover-state map FAB: same Maps mini-app #11 as exploreOnMap /
+        {/* Discover-state map FAB: same Maps mini-app §7 as exploreOnMap /
             discover-explore-map. Must NEVER commit shared Search with
             category:"car" when criteria is "all" — that was the
             «بيفتح قسم السيارات» force path (Phase Zero §9 / #59 P1). */}

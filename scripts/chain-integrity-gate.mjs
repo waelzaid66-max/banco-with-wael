@@ -1028,8 +1028,8 @@ const CHECKS = [
     test: (s) =>
       /parseMobileSearchNavParams/.test(s) &&
       /hasIncomingSearchNavParams/.test(s) &&
-      /s\.criteria/.test(s),
-    why: "Search tab must restore rich criteria from nav params and applySaved",
+      !/const applySaved\s*=/.test(s),
+    why: "Search tab restores rich criteria via nav params (Saved tab emit); Discover applySaved melt removed Wave8 C",
   },
   {
     id: "P-b2b-tombstone-investments",
