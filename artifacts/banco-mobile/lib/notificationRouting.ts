@@ -9,8 +9,8 @@ import type { Notification } from "@workspace/api-client-react";
  *
  * `data` carries typed ids the server attaches (conversation_id, listing_id,
  * rfq_id, etc.); we route off whichever is present for the notification type.
- * Returns null when there is no meaningful destination — callers fall back to
- * the notifications list.
+ * Unknown / incomplete payloads fall back to the notifications feed (NOTIF-09)
+ * so push taps are never a silent drop.
  */
 export function routeForNotification(
   type: string | null | undefined,
@@ -103,7 +103,9 @@ export function routeForNotification(
     return "/notifications";
   }
 
-  return null;
+  // NOTIF-09: unknown / incomplete payload → notifications feed (never null
+  // for push taps — in-app feed already stays put when dest is unused).
+  return "/notifications";
 }
 
 /** Convenience overload for an in-app Notification record. */

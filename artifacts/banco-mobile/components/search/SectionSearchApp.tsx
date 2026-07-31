@@ -409,7 +409,7 @@ export function SectionSearchApp({
     if (!wantMap) return;
     // Open map as soon as results exist — server clusters work even when the
     // current page has no pin coords. Waiting for hasPagePins left ?map=1 /
-    // desk-map latched forever on inventory without client-side coordinates.
+    // Discover "Explore on map" / desk-map latched forever without client pins.
     if (inResultsView) {
       setMapMode(true);
       setWantMap(false);

@@ -3,8 +3,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Alert, Linking, StyleSheet, View } from "react-native";
 
 import { apiCategoryFor } from "@/components/CategoryTabs";
-import { useColors } from "@/hooks/useColors";
 import { useI18n } from "@/context/LanguageContext";
+import { useColors } from "@/hooks/useColors";
 import {
   buildMapClusterParams,
   type MapViewport,
@@ -83,6 +83,15 @@ export function SearchResultsMap({
           border: colors.border,
         },
         marketCountryMapCenter(criteria.marketCountry),
+        criteria.nearMeEnabled &&
+          criteria.nearLat != null &&
+          criteria.nearLng != null
+          ? {
+              lat: criteria.nearLat,
+              lng: criteria.nearLng,
+              radiusKm: criteria.nearRadiusKm,
+            }
+          : undefined,
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
@@ -93,6 +102,10 @@ export function SearchResultsMap({
       colors.foreground,
       colors.border,
       criteria.marketCountry,
+      criteria.nearMeEnabled,
+      criteria.nearLat,
+      criteria.nearLng,
+      criteria.nearRadiusKm,
     ],
   );
 
@@ -151,12 +164,18 @@ export function SearchResultsMap({
           count: c.count,
           listing_id: c.listing_id,
           label:
-            c.count === 1 && c.listing_id ? priceById.get(c.listing_id) : undefined,
+            c.count === 1 && c.listing_id
+              ? c.price_display ?? priceById.get(c.listing_id)
+              : undefined,
           bookable:
-            c.count === 1 && c.listing_id ? bookableById.has(c.listing_id) : false,
+            c.count === 1 && c.listing_id
+              ? c.is_bookable === true || bookableById.has(c.listing_id)
+              : false,
           cat:
             c.count === 1
-              ? (c.listing_id ? catById.get(c.listing_id) : undefined) ?? defaultCat
+              ? (c.category ??
+                  (c.listing_id ? catById.get(c.listing_id) : undefined) ??
+                  defaultCat)
               : undefined,
         }));
         const total = clusters.reduce((sum, c) => sum + c.count, 0);
@@ -213,7 +232,7 @@ export function SearchResultsMap({
           if (hit) setSelectedId(msg.id);
           else onOpenListingId?.(msg.id);
         } else if (msg.type === "locate_error") {
-          // Parity with native SearchResultsMap — never leave locate as a dead tap.
+          // MAP-06: parity with native — surface deny/timeout; offer Settings on deny.
           Alert.alert(
             t("search.locateFailedTitle"),
             msg.reason === "denied"

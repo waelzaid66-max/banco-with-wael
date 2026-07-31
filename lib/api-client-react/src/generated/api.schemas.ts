@@ -1698,6 +1698,10 @@ export interface MapCluster {
   lng: number;
   count: number;
   listing_id: string | null;
+  /** Single-pin price label when the listing is off the loaded page (MAP-04). */
+  price_display?: string | null;
+  is_bookable?: boolean | null;
+  category?: string | null;
 }
 
 /**
@@ -3730,6 +3734,14 @@ export type GetMessages200 = {
   data: Message[];
   error: ApiError | null;
   meta: Meta;
+};
+
+/** Optional page controls for GET /conversations/:id/messages (MSG-07). */
+export type GetMessagesParams = {
+  /** Newest N messages (1–1000). Omit for full history. */
+  limit?: number;
+  /** Load messages strictly older than this message id. */
+  before?: string;
 };
 
 /**

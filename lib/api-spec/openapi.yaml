@@ -2356,6 +2356,8 @@ components:
         One occupied grid cell on the map — its centroid and how many listings it
         aggregates. listing_id is set ONLY when count is 1 (a single tappable pin);
         for multi-listing cells it is null and the client shows a count bubble.
+        Single pins may also carry price_display / is_bookable / category so
+        off-page pins keep labels without waiting for the feed page (MAP-04).
       required:
         - lat
         - lng
@@ -2369,6 +2371,15 @@ components:
         count:
           type: integer
         listing_id:
+          type: string
+          nullable: true
+        price_display:
+          type: string
+          nullable: true
+        is_bookable:
+          type: boolean
+          nullable: true
+        category:
           type: string
           nullable: true
 
@@ -5808,6 +5819,24 @@ paths:
         - name: id
           in: path
           required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: >
+            Newest N messages (1–1000). Omitted = full chronological history.
+            Mobile polls with a page size to avoid unbounded refetch.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+        - name: before
+          in: query
+          required: false
+          description: >
+            Message id cursor — return messages strictly older than this id
+            (same conversation). Used with limit for older-page loads.
           schema:
             type: string
       responses:

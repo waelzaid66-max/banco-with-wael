@@ -91,3 +91,12 @@ test("web SearchResultsMap enables iframe geolocation for locate", () => {
     "web map iframe must allow geolocation (LocateControl parity)",
   );
 });
+
+test("unknown / incomplete notification falls back to /notifications", () => {
+  const fnStart = routing.indexOf("export function routeForNotification(");
+  const fnEnd = routing.indexOf("export function routeForNotificationItem(");
+  const body = routing.slice(fnStart, fnEnd);
+  assert.match(body, /\/\/ NOTIF-09/);
+  assert.match(body, /return "\/notifications";\s*\n\}/);
+  assert.doesNotMatch(body, /return null;/);
+});

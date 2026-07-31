@@ -10,6 +10,7 @@ import {
   getGetListingQueryKey,
   getGetMyListingsQueryKey,
   type Message,
+  type GetMessages200,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import * as Clipboard from "expo-clipboard";
@@ -66,6 +67,8 @@ type PendingMessage = {
   localUri?: string;
   asset?: ImagePicker.ImagePickerAsset;
   status: PendingStatus;
+  /** Preserved so tap-to-retry can re-send a quote (MSG-10). */
+  reply_to_id?: string;
 };
 type Row =
   | { kind: "server"; msg: Message }
@@ -124,14 +127,21 @@ export default function ThreadScreen() {
   const listRef = useRef<FlatList<Row>>(null);
   const lastReadCountRef = useRef(0);
 
-  const query = useGetMessages(conversationId, {
-    query: {
-      queryKey: getGetMessagesQueryKey(conversationId),
-      enabled: !!conversationId,
-      refetchInterval: 3000,
-      refetchOnWindowFocus: true,
+  // MSG-07: page the newest N messages every poll so long threads don't
+  // re-download unbounded history every 3s. Older pages load via before=.
+  const THREAD_PAGE = 400;
+  const query = useGetMessages(
+    conversationId,
+    { limit: THREAD_PAGE },
+    {
+      query: {
+        queryKey: getGetMessagesQueryKey(conversationId, { limit: THREAD_PAGE }),
+        enabled: !!conversationId,
+        refetchInterval: 3000,
+        refetchOnWindowFocus: true,
+      },
     },
-  });
+  );
 
   const messages: Message[] = query.data?.data ?? [];
 
@@ -181,9 +191,9 @@ export default function ThreadScreen() {
     }
   }, [messages.length, markRead, scrollToEnd]);
 
-  // Deliver one optimistic message: render it instantly, then call the API. On
-  // success drop the placeholder (the server echo from refetch replaces it); on
-  // failure flip it to "failed" so the bubble offers tap-to-retry.
+  // Deliver one optimistic message: render it instantly, then POST. MSG-06:
+  // POST success commits the bubble (seed cache + drop pending) even if the
+  // following refetch fails — otherwise tap-to-retry would duplicate the send.
   const deliver = useCallback(
     async (
       tempId: string,
@@ -197,7 +207,7 @@ export default function ThreadScreen() {
     ) => {
       if (!conversationId) return;
       try {
-        await sendMessage(conversationId, {
+        const sent = await sendMessage(conversationId, {
           body: payload.body ?? "",
           ...(payload.media_url ? { media_url: payload.media_url } : {}),
           ...(payload.media_kind ? { media_kind: payload.media_kind } : {}),
@@ -205,9 +215,25 @@ export default function ThreadScreen() {
           ...(payload.listing_ref_id ? { listing_ref_id: payload.listing_ref_id } : {}),
         });
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        await query.refetch();
-        qc.invalidateQueries({ queryKey: getListConversationsQueryKey() });
         setPending((p) => p.filter((m) => m.tempId !== tempId));
+        const echo = sent.data;
+        if (echo) {
+          const key = getGetMessagesQueryKey(conversationId, { limit: THREAD_PAGE });
+          qc.setQueryData<GetMessages200>(key, (prev) => {
+            const existing = prev?.data ?? [];
+            if (existing.some((m) => m.id === echo.id)) return prev;
+            const data = [...existing, echo];
+            return {
+              data,
+              error: null,
+              meta: { ...(prev?.meta ?? {}), total: data.length },
+            };
+          });
+        }
+        void query.refetch().catch(() => {
+          // Soft refresh only — message already committed above.
+        });
+        qc.invalidateQueries({ queryKey: getListConversationsQueryKey() });
       } catch {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         setPending((p) =>
@@ -225,7 +251,10 @@ export default function ThreadScreen() {
     const replyId = replyTo?.id;
     setReplyTo(null);
     const tempId = `t-${Date.now()}`;
-    setPending((p) => [...p, { tempId, body, status: "sending" }]);
+    setPending((p) => [
+      ...p,
+      { tempId, body, status: "sending", ...(replyId ? { reply_to_id: replyId } : {}) },
+    ]);
     scrollToEnd(true);
     void deliver(tempId, { body, ...(replyId ? { reply_to_id: replyId } : {}) });
   };
@@ -254,7 +283,10 @@ export default function ThreadScreen() {
       ? t("messages.offer.acceptBody")
       : t("messages.offer.declineBody");
     const tempId = `t-${Date.now()}`;
-    setPending((p) => [...p, { tempId, body, status: "sending" }]);
+    setPending((p) => [
+      ...p,
+      { tempId, body, status: "sending", reply_to_id: offerMsgId },
+    ]);
     scrollToEnd(true);
     void deliver(tempId, { body, reply_to_id: offerMsgId });
   };
@@ -315,7 +347,10 @@ export default function ThreadScreen() {
           }
         })();
       } else {
-        void deliver(m.tempId, { body: m.body });
+        void deliver(m.tempId, {
+          body: m.body,
+          ...(m.reply_to_id ? { reply_to_id: m.reply_to_id } : {}),
+        });
       }
     },
     [deliver]
@@ -742,6 +777,25 @@ export default function ThreadScreen() {
           <View style={styles.centered}>
             <ActivityIndicator color={colors.primary} />
           </View>
+        ) : query.isError && !query.data ? (
+          <View style={styles.empty}>
+            <Feather name="wifi-off" size={48} color={colors.mutedForeground} />
+            <AppText style={[styles.emptyText, { color: colors.foreground }]}>
+              {t("messages.errorTitle")}
+            </AppText>
+            <Pressable
+              onPress={() => void query.refetch()}
+              style={[
+                styles.retryBtn,
+                { backgroundColor: colors.primary, borderRadius: colors.radius },
+              ]}
+              testID="thread-retry"
+            >
+              <AppText style={{ color: colors.primaryForeground, fontWeight: "700" }}>
+                {t("common.retry")}
+              </AppText>
+            </Pressable>
+          </View>
         ) : (
           <FlatList
             ref={listRef}
@@ -884,6 +938,7 @@ export default function ThreadScreen() {
               },
             ]}
             multiline
+            maxLength={4000}
             testID="message-input"
           />
           <Pressable
@@ -1233,6 +1288,7 @@ const styles = StyleSheet.create({
   },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, paddingTop: 80 },
   emptyText: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
+  retryBtn: { marginTop: 8, paddingHorizontal: 18, paddingVertical: 10 },
   inputBar: {
     alignItems: "flex-end",
     gap: 8,
