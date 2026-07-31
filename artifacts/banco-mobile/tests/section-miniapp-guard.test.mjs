@@ -882,6 +882,12 @@ test("B-PROPERTIES header filter lives inside search pill (Stay-parity)", () => 
   assert.match(header, /MarketCountryButton/);
   assert.match(header, /density="micro"/);
   assert.match(header, /sortNearBanco|section-sort-cycle/);
+  assert.match(
+    header,
+    /testID="re-offer-strip"/,
+    "RE header must expose compact offer strip (sale/rent P0)",
+  );
+  assert.match(header, /onSelectOffer/);
   // Market must NOT live in the type strip anymore (owner: above search, by BANCO).
   assert.doesNotMatch(
     header,

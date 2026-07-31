@@ -123,10 +123,11 @@ function isReOfferEngine(engine: EngineDef): boolean {
   return engine.params.offer_type === "sale" || engine.params.offer_type === "rent";
 }
 
-/** FilterSheet refinements only — never offer/type (those live on strips). */
+/** FilterSheet engines for RE: offer (sale/rent) + refinements.
+ *  Property-type engines stay out — Band D / propertyType owns those. */
 function isReSheetEngine(engine: EngineDef): boolean {
   if (engine.key === "all") return true;
-  if (engine.params.offer_type || engine.params.property_type) return false;
+  if (engine.params.property_type) return false;
   return true;
 }
 
@@ -1218,6 +1219,7 @@ export function SectionSearchApp({
           searchSaved={searchSaved}
           activeFilterCount={activeFilterCount}
           activePropertyType={reHeaderActiveType}
+          activeOfferKey={activeOfferKey ?? "all"}
           typeTabs={reHeaderTypeTabs}
           marketCountry={criteria.marketCountry}
           sort={criteria.sort}
@@ -1237,6 +1239,11 @@ export function SectionSearchApp({
             playSound("tap");
             Haptics.selectionAsync();
             selectRePropertyType(value);
+          }}
+          onSelectOffer={(engineKey) => {
+            playSound("tap");
+            Haptics.selectionAsync();
+            selectEngine(engineKey);
           }}
           onOpenMarket={() => {
             playSound("tap");

@@ -3,7 +3,7 @@
  *
  * Stay-parity bands (A–D): back/save · wordmark · search+filter pill · type tabs.
  * Country/currency (micro) + sort sit next to BANCO above the search pill.
- * Type tabs stay clean (All / Apartments / …). No wasted primary-strip row.
+ * Compact offer chips restore تمليك/إيجار (P0). Type tabs stay clean.
  * Presentational only — parent owns criteria and sheets. RE-only.
  */
 import { Feather, Ionicons } from "@/components/icons";
@@ -46,6 +46,8 @@ type PropertyHomeHeaderProps = {
   searchSaved: boolean;
   activeFilterCount: number;
   activePropertyType: string;
+  /** Offer axis: "all" | "sale" | "rent" */
+  activeOfferKey: string;
   typeTabs: PropertyTypeTab[];
   marketCountry: string;
   sort: string;
@@ -59,6 +61,7 @@ type PropertyHomeHeaderProps = {
   onSubmitQuery: () => void;
   onClearQuery: () => void;
   onSelectType: (value: string) => void;
+  onSelectOffer: (engineKey: string) => void;
   onOpenMarket: () => void;
   onCycleSort: () => void;
 };
@@ -94,6 +97,7 @@ export function PropertyHomeHeader({
   searchSaved,
   activeFilterCount,
   activePropertyType,
+  activeOfferKey,
   typeTabs,
   marketCountry,
   sort,
@@ -107,6 +111,7 @@ export function PropertyHomeHeader({
   onSubmitQuery,
   onClearQuery,
   onSelectType,
+  onSelectOffer,
   onOpenMarket,
   onCycleSort,
 }: PropertyHomeHeaderProps) {
@@ -118,6 +123,11 @@ export function PropertyHomeHeader({
   const rowDir = isRTL ? "row-reverse" : "row";
   const textAlign = isRTL ? "right" : "left";
   const sortActive = sort !== "recommended";
+  const offerTabs = [
+    { value: "all", label: t("search.listingModeAll") },
+    { value: "sale", label: t("home.engines.sale") },
+    { value: "rent", label: t("home.engines.rent") },
+  ] as const;
 
   return (
     <View style={[styles.root, { paddingTop: topPad - 1 }]} testID="re-property-header">
@@ -305,6 +315,31 @@ export function PropertyHomeHeader({
         </View>
       )}
 
+      {/* Offer axis — تمليك / إيجار (P0 restore; was unreachable after header merge). */}
+      <View
+        style={[styles.offerRow, { flexDirection: rowDir }]}
+        testID="re-offer-strip"
+      >
+        {offerTabs.map((tab) => {
+          const active = activeOfferKey === tab.value;
+          return (
+            <Pressable
+              key={tab.value}
+              onPress={() => onSelectOffer(tab.value)}
+              style={[styles.offerChip, active ? styles.offerChipActive : null]}
+              testID={`re-offer-${tab.value}`}
+            >
+              <AppText
+                style={[styles.offerChipText, { color: active ? SNOW : ASH }]}
+                numberOfLines={1}
+              >
+                {tab.label}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </View>
+
       {/* Band D — primary types only (market lives next to BANCO above search). */}
       <ScrollView
         horizontal
@@ -486,6 +521,30 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     fontFamily: "Inter_700Bold",
     color: SNOW,
+  },
+  offerRow: {
+    marginTop: 8,
+    gap: 6,
+    alignItems: "center",
+  },
+  offerChip: {
+    flex: 1,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: HAIRLINE,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    paddingHorizontal: 8,
+  },
+  offerChipActive: {
+    backgroundColor: ACCENT,
+    borderColor: ACCENT,
+  },
+  offerChipText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
   },
   tabsScroll: {
     marginTop: 6,
