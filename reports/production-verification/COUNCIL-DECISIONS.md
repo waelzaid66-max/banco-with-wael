@@ -216,6 +216,28 @@
 
 ---
 
+## D-2026-07-31-20 — Approve + execute REL-12 (MOB-C-10 AuthGate)
+
+| | |
+|--|--|
+| **Decision** | Chair **Approves** Reliability REL-12 plan and **force-executes** on tip. |
+| **Adopted** | Unsigned walls on `listings/mine` + `listings/edit/[id]`; no managed-list/edit hydrate while unsigned; i18n + guard `MOB-C-10 / REL-12`. |
+| **Rejected** | Weakening API ownership; app-wide AuthGate redesign; MSG thread reopen; currency/markets churn. |
+| **Evidence** | `W4b-REL-ASK-CHAIR-REL12-AUTHGATE.md` · `W5-REL-12-CHAIR-EXECUTE.md` |
+
+---
+
+## D-2026-07-31-21 — Production Hard Wave 5 + cutover upload_claims
+
+| | |
+|--|--|
+| **Decision** | Issue Production Hard Truth Map + Wave 5 standing orders. Tighten live cutover to require `/readyz` `upload_claims=ok`. Fix Coolify deploy-order §4 (banco-web profile). |
+| **Adopted** | `70-PRODUCTION-HARD-TRUTH-MAP.md` · `71-ENGINEERING-COUNCIL-STANDING-ORDERS-WAVE5.md` · ops-live-cutover upload_claims · COOLIFY-DEPLOY-ORDER §4. |
+| **Rejected** | Claiming Live Certified from CI/confidence; Dockerfile/service renames; deleting working features; CAR IMPORT W4/5; MSG-05. |
+| **Why** | Owner mandate: real Coolify/ASB/Expo/CI/journey precision without weak-model recklessness. |
+
+---
+
 ## Template for future disputes
 
 ```markdown

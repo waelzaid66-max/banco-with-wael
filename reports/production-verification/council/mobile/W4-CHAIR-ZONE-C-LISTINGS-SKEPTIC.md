@@ -117,9 +117,10 @@
 
 ## MOB-C-10
 
-- **Status:** RISK
-- **Severity:** LOW–MEDIUM (UX / opaque failure)
-- **Evidence:** `edit/[id].tsx` and `mine.tsx` have **no** `useUser` / authGate. Mine calls `getMyManagedListings` immediately (`mine.tsx:111-123`). Edit loads by id with no owner check client-side (relies on API). Detail **does** gate guests (`listing/[id].tsx:589+`).
+- **Status:** **FIXED REL-12** (Chair D-20) — was RISK
+- **Severity:** was LOW–MEDIUM (UX / opaque failure)
+- **Evidence (pre-fix):** `edit/[id].tsx` and `mine.tsx` had **no** client auth gate. Mine called `getMyManagedListings` immediately.
+- **Repair:** `useAuth` walls + no managed-list/edit hydrate while unsigned; guards in section-miniapp-guard. API ownership unchanged.
 - **What prior agents might have missed:** Inconsistency across listing surfaces; “API will 401” ≠ product auth UX.
 - **Fix risk:** Adding Clerk gates is low blast radius. Do not weaken API ownership checks as a substitute.
 

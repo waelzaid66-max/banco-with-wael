@@ -1578,6 +1578,31 @@ test("MOB-C-09 / REL-11: edit skips price gate for buyer requests", () => {
   );
 });
 
+test("MOB-C-10 / REL-12: mine + edit gate unsigned (no managed-list call)", () => {
+  const mine = fs.readFileSync(
+    path.join(APP_ROOT, "app", "listings", "mine.tsx"),
+    "utf8",
+  );
+  const edit = fs.readFileSync(
+    path.join(APP_ROOT, "app", "listings", "edit", "[id].tsx"),
+    "utf8",
+  );
+  assert.match(mine, /useAuth/, "mine must use Clerk auth");
+  assert.match(
+    mine,
+    /if \(!isSignedIn\)/,
+    "mine load must refuse unsigned managed-list fetch",
+  );
+  assert.match(mine, /my-listings-signin/, "mine must expose sign-in CTA");
+  assert.match(edit, /useAuth/, "edit must use Clerk auth");
+  assert.match(
+    edit,
+    /enabled: !!id && !!isSignedIn/,
+    "edit must not hydrate listing for guests",
+  );
+  assert.match(edit, /edit-listing-signin/, "edit must expose sign-in CTA");
+});
+
 test("Section horizontal chip ScrollViews use flexGrow:0 (no black void)", () => {
   const section = fs.readFileSync(SECTION_APP, "utf8");
   assert.match(

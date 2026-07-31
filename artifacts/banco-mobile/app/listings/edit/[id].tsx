@@ -1,5 +1,6 @@
 import { Feather } from "@/components/icons";
 import { AppTextInput as TextInput } from "@/components/AppTextInput";
+import { useAuth } from "@clerk/expo";
 import {
   getGetListingQueryKey,
   getListing,
@@ -51,6 +52,7 @@ export default function EditListingScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
   const { t, isRTL } = useI18n();
+  const { isSignedIn } = useAuth();
   const { bumpListings } = useSession();
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
@@ -61,7 +63,8 @@ export default function EditListingScreen() {
   const listingQ = useQuery({
     queryKey: getGetListingQueryKey(id ?? ""),
     queryFn: () => getListing(id ?? ""),
-    enabled: !!id,
+    // REL-12: do not hydrate edit chrome for guests (MOB-C-10).
+    enabled: !!id && !!isSignedIn,
   });
 
   const listing = listingQ.data?.data;
@@ -163,7 +166,7 @@ export default function EditListingScreen() {
   };
 
   const onSave = () => {
-    if (!id || !title.trim() || !listing) return;
+    if (!isSignedIn || !id || !title.trim() || !listing) return;
     // Buyer requests carry no sale price (parity with create): do not require
     // or PATCH base_price_cash. Sending 0 would risk price-drop notify side
     // effects on the API update path (MOB-C-09 / REL-11).
@@ -222,7 +225,7 @@ export default function EditListingScreen() {
         </AppText>
         <Pressable
           onPress={onSave}
-          disabled={isPending || listingQ.isLoading}
+          disabled={!isSignedIn || isPending || listingQ.isLoading}
           style={styles.iconBtn}
           hitSlop={12}
           testID="edit-listing-save"
@@ -237,7 +240,26 @@ export default function EditListingScreen() {
         </Pressable>
       </View>
 
-      {listingQ.isLoading ? (
+      {!isSignedIn ? (
+        <View style={styles.centered}>
+          <Feather name="lock" size={56} color={colors.mutedForeground} />
+          <AppText style={{ color: colors.foreground, fontWeight: "700", marginTop: 16, textAlign: "center" }}>
+            {t("editListing.signInTitle")}
+          </AppText>
+          <AppText style={{ color: colors.mutedForeground, marginTop: 8, textAlign: "center", paddingHorizontal: 24 }}>
+            {t("editListing.signInHint")}
+          </AppText>
+          <Pressable
+            onPress={() => router.push("/(tabs)/profile")}
+            style={{ marginTop: 18, paddingHorizontal: 28, paddingVertical: 13, backgroundColor: colors.primary, borderRadius: colors.radius }}
+            testID="edit-listing-signin"
+          >
+            <AppText style={{ color: colors.primaryForeground, fontWeight: "600" }}>
+              {t("editListing.signInCta")}
+            </AppText>
+          </Pressable>
+        </View>
+      ) : listingQ.isLoading ? (
         <View style={styles.centered}>
           <ActivityIndicator color={colors.primary} />
         </View>

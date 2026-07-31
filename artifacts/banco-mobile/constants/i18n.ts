@@ -85,6 +85,9 @@ const en = {
     reactivateConfirm: "Reactivate",
     reactivateFailedTitle: "Couldn't reactivate",
     reactivateFailedBody: "Please try again in a moment.",
+    signInTitle: "Sign in to manage your listings",
+    signInHint: "Your published listings, renewals, and edits live here.",
+    signInCta: "Go to Profile",
   },
   notFound: {
     title: "Oops!",
@@ -1159,6 +1162,9 @@ const en = {
     priceRequired: "Enter a valid price.",
     lockedType:
       "Category and rental type can't be changed here. Create a new listing for a different offer.",
+    signInTitle: "Sign in to edit this listing",
+    signInHint: "Only the owner can change listing details.",
+    signInCta: "Go to Profile",
   },
   saved: {
     title: "Saved",
@@ -2362,6 +2368,9 @@ const ar: typeof en = {
     reactivateConfirm: "إعادة تفعيل",
     reactivateFailedTitle: "تعذّرت إعادة التفعيل",
     reactivateFailedBody: "من فضلك حاول تاني بعد لحظات.",
+    signInTitle: "سجّل الدخول لإدارة إعلاناتك",
+    signInHint: "إعلاناتك المنشورة والتجديد والتعديل موجودين هنا.",
+    signInCta: "الذهاب إلى الحساب",
   },
   notFound: {
     title: "عذرًا!",
@@ -3431,6 +3440,9 @@ const ar: typeof en = {
     priceRequired: "أدخل سعراً صحيحاً.",
     lockedType:
       "لا يمكن تغيير الفئة أو نوع الإيجار من هنا. أنشئ إعلاناً جديداً لعرض مختلف.",
+    signInTitle: "سجّل الدخول لتعديل هذا الإعلان",
+    signInHint: "صاحب الإعلان فقط يقدر يغيّر التفاصيل.",
+    signInCta: "الذهاب إلى الحساب",
   },
   saved: {
     title: "المحفوظات",
