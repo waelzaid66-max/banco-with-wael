@@ -298,6 +298,16 @@
 
 ---
 
+## D-2026-07-31-28 — Wave 8 Tranche A REL-00 VERIFY
+
+| | |
+|--|--|
+| **Decision** | Chair landed D-W8-01/02 on `main`. Reliability VERIFY + REL-00 only (no product code). Owner ordered seat → Chair immediately. |
+| **Adopted** | `W8-REL-00-tranche-a-reverify.md` · `W8-REL-URGENT-TO-CHAIR.md` · `W8-REL-CHANNEL-TO-CHAIR.md`. Gates 77/8/4/7/32/47/167/18 @ `f3b9911`. |
+| **Rejected** | Freelancing next World · invent taxonomy · Banks directory · Live Certified. |
+
+---
+
 ## Template for future disputes
 
 ```markdown
