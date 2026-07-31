@@ -22,6 +22,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { CurrencySelect } from "@/components/currency-select";
 import {
   Loader2, Globe, MapPin, Package, Users, ShieldCheck, ShieldAlert, CheckCircle2, Building2,
 } from "lucide-react";
@@ -212,7 +213,11 @@ function GlobalSupplyDetailSheet({ requestId, onClose }: { requestId: string; on
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs">Currency</Label>
-                        <Input value={currency} onChange={(e) => setCurrency(e.target.value)} className="bg-input border-border" data-testid="resp-currency" />
+                        <CurrencySelect
+                          value={currency}
+                          onValueChange={setCurrency}
+                          testId="resp-currency"
+                        />
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs">MOQ</Label>

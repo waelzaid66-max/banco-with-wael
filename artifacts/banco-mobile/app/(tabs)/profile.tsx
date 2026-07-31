@@ -874,7 +874,7 @@ export default function ProfileScreen() {
                 fontFamily: "Inter_500Medium",
               }}
             >
-              {isRTL ? "تخطى" : "Skip"}
+              {t("profile.skipRole")}
             </AppText>
           </Pressable>
         </View>

@@ -495,6 +495,57 @@ test("REL-03: staging smoke exits incomplete when auth skipped", () => {
   assert.match(smoke, /INCOMPLETE: CLERK_BEARER_TOKEN/);
 });
 
+test("REL-04: profile Skip uses i18n key (no hardcoded EN/AR ternary)", () => {
+  const profile = fs.readFileSync(
+    path.join(root, "app/(tabs)/profile.tsx"),
+    "utf8",
+  );
+  const i18n = fs.readFileSync(path.join(root, "constants/i18n.ts"), "utf8");
+  assert.match(profile, /t\("profile\.skipRole"\)/);
+  assert.doesNotMatch(profile, /isRTL \? "تخطى" : "Skip"/);
+  assert.match(i18n, /skipRole:\s*"Skip"/);
+  assert.match(i18n, /skipRole:\s*"تخطى"/);
+});
+
+test("REL-05: dealer currency writes use allowlist Select + API zod", () => {
+  const select = fs.readFileSync(
+    path.join(root, "../dealer-os/src/components/currency-select.tsx"),
+    "utf8",
+  );
+  assert.match(select, /listingCurrencyAllowlist/);
+  for (const rel of [
+    "components/investment-form-sheet.tsx",
+    "pages/rfqs.tsx",
+    "pages/global-supply.tsx",
+  ]) {
+    const src = fs.readFileSync(path.join(root, `../dealer-os/src/${rel}`), "utf8");
+    assert.match(src, /CurrencySelect/);
+  }
+  assert.doesNotMatch(
+    fs.readFileSync(
+      path.join(root, "../dealer-os/src/components/investment-form-sheet.tsx"),
+      "utf8",
+    ),
+    /data-testid="form-currency"[\s\S]{0,40}<Input/,
+  );
+  const schemas = fs.readFileSync(
+    path.join(root, "../api-server/src/validators/schemas.ts"),
+    "utf8",
+  );
+  const currencies = fs.readFileSync(
+    path.join(root, "../api-server/src/lib/supportedCurrencies.ts"),
+    "utf8",
+  );
+  assert.match(currencies, /listingCurrencyInputZ/);
+  const currencyFieldHits = [
+    ...schemas.matchAll(/currency:\s*listingCurrencyInputZ/g),
+  ];
+  assert.ok(
+    currencyFieldHits.length >= 4,
+    "expect listingCurrencyInputZ on offer/investment/supply write schemas",
+  );
+});
+
 test("CTO: production skips auto-seed spawn without demo escape hatch", () => {
   const boot = fs.readFileSync(
     path.join(root, "../api-server/src/lib/bootstrap.ts"),
