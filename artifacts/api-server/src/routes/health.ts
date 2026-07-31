@@ -98,8 +98,25 @@ router.get("/readyz", async (_req, res) => {
       healthy = false;
       logger.error({ err }, "Readiness check failed: money schema incomplete");
     }
+
+    // REL-02: upload ownership claims are required for media promote/IDOR.
+    // Money-ok alone must not mark the API ready if upload_claims is missing.
+    try {
+      await Promise.race([
+        db.execute(sql`SELECT 1 FROM upload_claims LIMIT 0`),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("upload_claims check timed out")), DB_CHECK_TIMEOUT_MS),
+        ),
+      ]);
+      checks.upload_claims = "ok";
+    } catch (err) {
+      checks.upload_claims = "down";
+      healthy = false;
+      logger.error({ err }, "Readiness check failed: upload_claims missing");
+    }
   } else {
     checks.money_schema = "down";
+    checks.upload_claims = "down";
   }
 
   res.status(healthy ? 200 : 503).json({

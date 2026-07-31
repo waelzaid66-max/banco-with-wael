@@ -48,3 +48,29 @@ export function normalizeListingCurrency(
     ? (code as SupportedListingCurrency)
     : "EGP";
 }
+
+/**
+ * Write-path enforcement for listing specs.currency (REL-01).
+ * - missing/blank → default EGP (legacy rows / requests)
+ * - present but unknown → INVALID_DATA (never store garbage codes)
+ * - present and known → normalized uppercase ISO code
+ */
+export function enforceListingCurrencySpec(
+  specs: Record<string, unknown>,
+): Record<string, unknown> {
+  const raw = specs.currency;
+  if (raw == null || raw === "") {
+    return { ...specs, currency: "EGP" };
+  }
+  const code = String(raw).trim().toUpperCase();
+  if (!SUPPORTED_LISTING_CURRENCY_SET.has(code)) {
+    throw Object.assign(
+      new Error(
+        `Unsupported currency "${code}". Use a BANCO market currency (e.g. EGP, SAR, AED).`,
+      ),
+      { code: "INVALID_DATA" },
+    );
+  }
+  if (specs.currency === code) return specs;
+  return { ...specs, currency: code };
+}

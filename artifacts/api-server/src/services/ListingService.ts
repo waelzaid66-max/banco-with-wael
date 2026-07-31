@@ -29,7 +29,7 @@ import {
   servingWildcardToObjectPath,
 } from "../lib/uploadClaims";
 import { MEDIA_VERIFY_RETRYABLE } from "../lib/mediaVerify";
-import { normalizeListingCurrency } from "../lib/supportedCurrencies";
+import { normalizeListingCurrency, enforceListingCurrencySpec } from "../lib/supportedCurrencies";
 import type { CreateListingSchema } from "../validators/schemas";
 import type { z } from "zod";
 
@@ -236,6 +236,13 @@ export async function createListing(
   userId: string,
   meta?: { ip?: string }
 ): Promise<{ id: string }> {
+  // REL-01: refuse unknown pricing currencies at write time (display allowlist
+  // alone still left garbage codes in specs JSON).
+  input = {
+    ...input,
+    specs: enforceListingCurrencySpec(input.specs ?? {}),
+  };
+
   // Buyer "request/wanted" posts only say WHAT the buyer is looking for — they
   // carry no seller-side category specs (mileage/condition/area/rooms/capacity)
   // and photos are optional. The CreateListingSchema already relaxes price +
@@ -1222,10 +1229,16 @@ export async function updateListing(
         }))
       : mediaRows.map((m) => ({ type: m.type as "image" | "video", url: m.url }));
 
-  const mergedSpecs = {
+  const mergedSpecsRaw = {
     ...((existingAttr?.specs as Record<string, unknown>) ?? {}),
     ...(updates.specs ?? {}),
   };
+  // REL-01: validate when the client patches specs (incl. currency). Do not
+  // 400 unrelated edits on legacy rows that already stored an unknown code.
+  const mergedSpecs =
+    updates.specs !== undefined
+      ? enforceListingCurrencySpec(mergedSpecsRaw)
+      : mergedSpecsRaw;
 
   const normalized = await normalizeListing(
     {

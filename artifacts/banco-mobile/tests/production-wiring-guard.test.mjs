@@ -440,6 +440,39 @@ test("CTO: message/conversation/comment rates fail closed on counter outage", ()
   );
 });
 
+test("REL-01: create/update enforce listing currency allowlist", () => {
+  const currencies = fs.readFileSync(
+    path.join(root, "../api-server/src/lib/supportedCurrencies.ts"),
+    "utf8",
+  );
+  const listing = fs.readFileSync(
+    path.join(root, "../api-server/src/services/ListingService.ts"),
+    "utf8",
+  );
+  assert.match(currencies, /enforceListingCurrencySpec/);
+  assert.match(currencies, /Unsupported currency/);
+  assert.match(listing, /enforceListingCurrencySpec/);
+});
+
+test("REL-02: readyz checks upload_claims", () => {
+  const health = fs.readFileSync(
+    path.join(root, "../api-server/src/routes/health.ts"),
+    "utf8",
+  );
+  assert.match(health, /upload_claims/);
+  assert.match(health, /FROM upload_claims/);
+});
+
+test("REL-03: staging smoke exits incomplete when auth skipped", () => {
+  const smoke = fs.readFileSync(
+    path.join(root, "../../scripts/staging-p0-smoke.mjs"),
+    "utf8",
+  );
+  assert.match(smoke, /skippedAuth/);
+  assert.match(smoke, /process\.exit\(2\)/);
+  assert.match(smoke, /INCOMPLETE: CLERK_BEARER_TOKEN/);
+});
+
 test("CTO: production skips auto-seed spawn without demo escape hatch", () => {
   const boot = fs.readFileSync(
     path.join(root, "../api-server/src/lib/bootstrap.ts"),

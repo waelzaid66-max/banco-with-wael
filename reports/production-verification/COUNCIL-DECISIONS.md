@@ -38,6 +38,17 @@
 
 ---
 
+## D-2026-07-31-04 — Wave 1b repairs (AUD → Approve → REL)
+
+| | |
+|--|--|
+| **Decision** | Execute REL-01/02/03 on governing tip after Auditor packets. |
+| **Adopted** | Write-time currency enforce; readyz `upload_claims`; staging smoke exit 2 if auth skipped. |
+| **Rejected** | Wave 1 shared `MARKET_COUNTRIES` package move (AUD-02 deferred); forcing boot-fatal `ensureSchemaPatches` (broader than readyz). |
+| **Evidence** | `council/auditor/W1-AUD-01*`, `W1-AUD-11*`, `W1-AUD-12*`; `council/reliability/W1-CHAIR-APPROVE-PLAN.md` |
+
+---
+
 ## Template for future disputes
 
 ```markdown
