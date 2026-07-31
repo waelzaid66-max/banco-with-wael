@@ -43,12 +43,58 @@ const apiSearch = fs.readFileSync(
 );
 
 test("section map latch opens on results without requiring page pins", () => {
-  assert.match(section, /if \(inResultsView\) \{\s*setMapMode\(true\)/);
+  const latch = fs.readFileSync(path.join(root, "lib/mapLatch.ts"), "utf8");
+  assert.match(
+    latch,
+    /if \(opts\.inResultsView\) \{\s*opts\.setMapMode\(true\)/,
+    "mapLatch must open on results without hasPagePins",
+  );
+  assert.match(section, /resolveMapLatch/);
+  assert.match(section, /wantsMapFromParam/);
   assert.doesNotMatch(
     section,
     /if \(inResultsView && hasPagePins\)/,
     "Discover ?map=1 must not wait for hasPagePins",
   );
+});
+
+test("MAP-05 web near-me uses browser geolocation", () => {
+  const nearMe = fs.readFileSync(path.join(root, "lib/nearMe.ts"), "utf8");
+  assert.match(nearMe, /navigator\.geolocation/);
+  assert.match(nearMe, /Platform\.OS === "web"/);
+  assert.doesNotMatch(
+    nearMe,
+    /if \(Platform\.OS === "web"\) return null/,
+    "web must not hard-null near-me coords (MAP-05)",
+  );
+});
+
+test("Stay map overlay uses StayCard preview", () => {
+  const booking = fs.readFileSync(
+    path.join(root, "components/search/BookingStaysApp.tsx"),
+    "utf8",
+  );
+  assert.match(
+    booking,
+    /SearchResultsMap[\s\S]*?CardComponent=\{StayCard\}/,
+    "Booking map must pass StayCard into SearchResultsMap overlay",
+  );
+  const overlay = fs.readFileSync(
+    path.join(root, "components/search/MapOverlayChrome.tsx"),
+    "utf8",
+  );
+  assert.match(overlay, /CardComponent/);
+});
+
+test("edit listing wires MapPinPicker + update lat/lng (MAP-09)", () => {
+  const edit = fs.readFileSync(
+    path.join(root, "app/listings/edit/[id].tsx"),
+    "utf8",
+  );
+  assert.match(edit, /MapPinPicker/);
+  assert.match(edit, /testID="edit-pick-on-map"/);
+  assert.match(edit, /latitude:\s*pin\.lat/);
+  assert.match(edit, /longitude:\s*pin\.lng/);
 });
 
 test("message notifications forward stamped role (mark-sold chrome)", () => {

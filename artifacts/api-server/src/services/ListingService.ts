@@ -1127,6 +1127,9 @@ export async function updateListing(
     description?: string;
     base_price_cash?: number;
     location?: string;
+    // Optional precise pin (MAP-09). Both axes required to store; omit to leave.
+    latitude?: number;
+    longitude?: number;
     // Lifecycle status patch (Task #71): seller marks the deal closed/hidden.
     status?: "active" | "sold" | "archived";
     specs?: Record<string, unknown>;
@@ -1265,6 +1268,14 @@ export async function updateListing(
   // Atomic edit: the listings row and its 1:1 attributes sidecar are written in a
   // single transaction so a mid-edit failure can never leave them inconsistent
   // (e.g. a new title with stale specs/taxonomy). Mirrors createListing.
+  const pinPatch =
+    updates.latitude !== undefined && updates.longitude !== undefined
+      ? {
+          latitude: String(updates.latitude),
+          longitude: String(updates.longitude),
+        }
+      : {};
+
   await db.transaction(async (tx) => {
     await tx
       .update(listings)
@@ -1281,6 +1292,7 @@ export async function updateListing(
         flagReason: normalized.flagReason,
         // Only patch status when the caller provided it (mark sold / archive).
         ...(updates.status ? { status: updates.status } : {}),
+        ...pinPatch,
         updatedAt: new Date(),
       })
       .where(eq(listings.id, id));

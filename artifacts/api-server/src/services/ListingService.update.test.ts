@@ -130,4 +130,22 @@ describe("ListingService.updateListing — edit journey", () => {
     const republished = await searchListings({ search_term: token }, undefined, 50);
     expect(republished.items.map((i) => i.id)).toContain(id);
   });
+
+  it("stores seller pin when latitude+longitude are patched (MAP-09)", async () => {
+    const ownerClerk = await seedOwner();
+    const id = await mkListing(ownerClerk, uniq("PIN").toUpperCase());
+
+    await updateListing(id, ownerClerk, {
+      latitude: 30.0444,
+      longitude: 31.2357,
+    });
+
+    const [row] = await db
+      .select({ latitude: listings.latitude, longitude: listings.longitude })
+      .from(listings)
+      .where(eq(listings.id, id))
+      .limit(1);
+    expect(Number(row!.latitude)).toBeCloseTo(30.0444, 4);
+    expect(Number(row!.longitude)).toBeCloseTo(31.2357, 4);
+  });
 });

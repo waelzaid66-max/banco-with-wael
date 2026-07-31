@@ -58,6 +58,7 @@ export function SearchResultsMap({
   onOpenListingId,
   onSave,
   isSaved,
+  CardComponent,
 }: SearchResultsMapProps) {
   const colors = useColors();
   const { t } = useI18n();
@@ -284,6 +285,7 @@ export function SearchResultsMap({
         onOpenListing={onOpenListing}
         onSave={onSave}
         isSaved={isSaved}
+        CardComponent={CardComponent}
       />
     </View>
   );

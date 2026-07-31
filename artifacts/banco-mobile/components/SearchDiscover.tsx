@@ -273,8 +273,9 @@ export function SearchDiscover({
       </Pressable>
 
       {/* Explore on map — ALWAYS present on the Discover home (owner request).
-          Routes to /section/real-estate?map=1; the host falls back to the list
-          when a browse has no coordinates, so it never lands on an empty map. */}
+          Primary CTA → RE ?map=1; secondary chips produce map latches for the
+          other catalogues (cars / materials / factories / stays) so every
+          section has a Discover map producer (MAP inventory gap). */}
       <Pressable
         onPress={onExploreMap}
         style={styles.mapCtaWrap}
@@ -313,6 +314,68 @@ export function SearchDiscover({
             </View>
           </LinearGradient>
         </Pressable>
+
+      <AppText
+        style={[styles.mapPortalHint, { color: colors.mutedForeground, textAlign }]}
+      >
+        {t("search.discover.exploreMapPortals")}
+      </AppText>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={[styles.mapPortalRow, { flexDirection: rowDir }]}
+        testID="discover-map-portals"
+      >
+        {(
+          [
+            {
+              id: "car",
+              href: "/section/car?map=1" as Href,
+              label: t("search.discover.exploreMapCar"),
+              testID: "discover-map-car",
+            },
+            {
+              id: "materials",
+              href: "/section/materials?map=1" as Href,
+              label: t("search.discover.exploreMapMaterials"),
+              testID: "discover-map-materials",
+            },
+            {
+              id: "factories",
+              href: "/section/factories?map=1" as Href,
+              label: t("search.discover.exploreMapFactories"),
+              testID: "discover-map-factories",
+            },
+            {
+              id: "booking",
+              href: "/section/booking?map=1" as Href,
+              label: t("search.discover.exploreMapStays"),
+              testID: "discover-map-stays",
+            },
+          ] as const
+        ).map((portal) => (
+          <Pressable
+            key={portal.id}
+            onPress={() => router.push(portal.href)}
+            style={[
+              styles.mapPortalChip,
+              {
+                borderColor: colors.border,
+                backgroundColor: colors.card,
+                flexDirection: rowDir,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={portal.label}
+            testID={portal.testID}
+          >
+            <Feather name="map-pin" size={13} color={colors.primary} />
+            <AppText style={[styles.mapPortalChipText, { color: colors.foreground }]}>
+              {portal.label}
+            </AppText>
+          </Pressable>
+        ))}
+      </ScrollView>
 
       {/* Car import — ENTER the CAR IMPORT mini-app hub (/import). Browsing
           imported cars stays one tap away: the hub's "Search Cars" card pushes
@@ -616,6 +679,30 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: "rgba(255,255,255,0.78)",
     marginTop: 2,
+  },
+  mapPortalHint: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  mapPortalRow: {
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 2,
+  },
+  mapPortalChip: {
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  mapPortalChipText: {
+    fontSize: 12.5,
+    fontFamily: "Inter_600SemiBold",
   },
   bookingCardWrap: {
     marginHorizontal: 16,

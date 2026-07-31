@@ -51,6 +51,8 @@ interface StayCardProps {
   onPress?: (item: FeedItem) => void;
   onSave?: (item: FeedItem) => void;
   isSaved?: boolean;
+  /** Accepted for MapOverlayChrome parity with SmartAssetCard; layout unchanged. */
+  compact?: boolean;
 }
 
 /**

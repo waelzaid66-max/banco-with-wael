@@ -585,6 +585,8 @@ export const UpdateListingBody = zod.object({
   "description": zod.string().optional(),
   "base_price_cash": zod.number().optional(),
   "location": zod.string().optional(),
+  "latitude": zod.number().optional().describe('Optional precise pin (send with longitude). Overrides the area centroid for near-me search + map display.\n'),
+  "longitude": zod.number().optional().describe('Optional precise pin (send with latitude).\n'),
   "status": zod.enum(['active', 'sold', 'archived']).optional().describe('Lifecycle status. Sellers set \"sold\" to mark the deal closed or \"archived\" to hide the listing.\n'),
   "specs": zod.record(zod.string(), zod.unknown()).optional(),
   "logistics": zod.object({
