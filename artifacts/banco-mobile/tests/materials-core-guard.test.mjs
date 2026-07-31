@@ -65,7 +65,7 @@ test("filters compressed not erased — axis strip + commodities + FilterSheet",
   );
   // Smart horizontal wrap strip under header
   assert.match(section, /testID="materials-type-strip"/);
-  assert.match(section, /materialsAxisStrip|flexWrap/);
+  assert.match(section, /materialsAxisStrip/);
   assert.match(section, /industrial-type-\$/);
   assert.match(section, /testID="materials-origin-strip"/);
   assert.match(section, /selectOrigin/);

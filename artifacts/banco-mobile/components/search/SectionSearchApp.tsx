@@ -1636,12 +1636,17 @@ export function SectionSearchApp({
         </ScrollView>
       ) : null}
 
-      {/* ── Materials smart axis strip: types + origin WRAP horizontally.
-          Same contract as section primary strip (flexGrow:0) — never eat results.
-          FilterSheet (sliders) keeps listingMode + refinements. ── */}
+      {/* ── Materials smart axis strip: types + origin ONE horizontal scroll.
+          flexGrow:0 via hScroll — never eat results. FilterSheet = refinements. ── */}
       {showMaterialsAxisStrip ? (
-        <View
-          style={[styles.materialsAxisStrip, { flexDirection: rowDir }]}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={[styles.hScroll, { flexGrow: 0 }]}
+          contentContainerStyle={[
+            styles.materialsAxisStrip,
+            { flexDirection: rowDir },
+          ]}
           testID="materials-type-strip"
         >
           {materialsAxisTabs.map((tab) => {
@@ -1716,7 +1721,7 @@ export function SectionSearchApp({
               );
             })}
           </View>
-        </View>
+        </ScrollView>
       ) : null}
 
       {/* ── Materials commodities (Steel / Aluminum / …) — horizontal scroll ── */}
@@ -2124,11 +2129,9 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 18,
   },
-  // Materials smart axis — types + origin wrap (flexGrow:0 like primary strip).
+  // Materials smart axis — types + origin one horizontal scroll row.
   materialsAxisStrip: {
     alignItems: "center",
-    flexWrap: "wrap",
-    flexGrow: 0,
     gap: 6,
     paddingHorizontal: 12,
     paddingTop: 8,
@@ -2153,7 +2156,6 @@ const styles = StyleSheet.create({
   materialsOriginCluster: {
     alignItems: "center",
     gap: 6,
-    flexWrap: "wrap",
   },
   // Materials commodities strip rhythm
   materialsLayer2Strip: {
