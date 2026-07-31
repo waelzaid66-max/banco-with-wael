@@ -368,6 +368,26 @@
 
 ---
 
+## D-2026-07-31-35 — Strict orders 85 REL-00 ACK (Owner heart)
+
+| | |
+|--|--|
+| **Decision** | Owner ordered seat to Chair with full force / Owner heart. Chair issued `85` all-seats strict + `86` inventory. Reliability EXECUTE REL-00 re-ack then STANDBY. |
+| **Adopted** | `W8-REL-00-STRICT-ACK.md` (85 §3 format) · channel. Tip `9cb903c` · floors OK · gates 85/167/18. RED_LOGS queue armed. |
+| **Rejected** | Product freestyle · 5cf0 merge · Replit code fix · HOLD invent · Live Certified. |
+
+---
+
+## D-2026-07-31-36 — Tip 5229c89 REL-00 re-ack + absorb #40 force ASK
+
+| | |
+|--|--|
+| **Decision** | Owner again: go to Chair · work with force · Owner heart. Tip moved to `5229c89` (SoT bind). Reliability re-ran REL-00 on tip; incomplete = #40 still unabsorbed. |
+| **Adopted** | STRICT-ACK refresh @ `5229c89` · channel force-packet · floors OK · gates 85/167/18 · tsc PASS · Live NOT_CUTOVER honest. |
+| **Rejected** | Tranche E invent · Replit product fix · 5cf0 · Live Certified · HOLD freestyle. |
+
+---
+
 ## Template for future disputes
 
 ```markdown
