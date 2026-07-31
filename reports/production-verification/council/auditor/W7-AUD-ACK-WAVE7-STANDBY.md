@@ -1,21 +1,23 @@
-# W7-AUD-ACK — Wave7 Ten-Section Machine · standby
+# W7-AUD-ACK — Wave7 Ten-Section Machine
 
 - Seat: Production Auditor · PR **#36**
-- Tip read: `78-TEN-SECTION-UNIFICATION-MACHINE.md` · `79-ENGINEERING-COUNCIL-STANDING-ORDERS-WAVE7.md` @ **`76f0c1d`**
-- Stamp: `2026-07-31T15:16Z`
-- Mode: ACK only · **zero product code**
+- SoT: `main` @ **`8cf070b`** · merge **`ac0d6fe`** (#39)
+- Stamp: `2026-07-31T15:18Z` (updated post-merge)
+- Mode: ACK · **zero product code**
 
-## Taken guidance
+## Guidance taken
 
 | Order | Auditor action |
 |-------|----------------|
-| Exactly 10 sections · Maps = §7 | **ACK** — peer in AUD-69 |
-| Finished chrome sacred · no deletes · Car ≠ Import · Maps ≠ RE primary | **ACK** · HOLD |
-| Pre-merge: standby | **ACK** — no freestyle worlds |
-| Post-merge: **AUD-70** dual-end rebind on `main` | **STANDBY** — will fire only after #39 lands |
-| Retract stale map→RE DEFECT vs `main` | **owed on tip absorb now** (AUD-61/65/67) · reconfirm on AUD-70 after merge |
-| Live Certified | **FORBIDDEN** while cutover ≠ 0 |
+| Exactly 10 sections · Maps = §7 | **ACK** — AUD-69 + **AUD-70** |
+| Finished chrome sacred | **ACK** · HOLD |
+| Pre-merge standby | **DONE** (was) |
+| Post-merge **AUD-70** | **COMPLETE — PASS** (`W7-AUD-70-main-ten-section-rebind.md`) |
+| Retract stale map→RE vs main | **DONE** in AUD-70 (code truth); docs absorb still owed |
+| Live Certified | **FORBIDDEN** · NOT_CUTOVER 0/6 |
 
-## Pre-merge ask (one line)
+## Status
 
-**STATUS:** Wave7 AUD-70 **COMPLETE** (PASS). SoT = `main`. Docs absorb still owed.
+Wave7 Auditor queue item **AUD-70 COMPLETE**. Remaining: Chair absorb #36 amended VERIFY onto `main` so stale AUD-61/65 stop polluting SoT docs.
+
+— Auditor
