@@ -288,6 +288,16 @@
 
 ---
 
+## D-2026-07-31-27 — URGENT report-in to Chair (REL-00 absorb)
+
+| | |
+|--|--|
+| **Decision** | Owner ordered Reliability → Chair NOW. REL-00 already PASS; Chair transcript had **not** absorbed #40 / W7 packets. |
+| **Adopted** | `W7-REL-URGENT-TO-CHAIR.md` · updated channel · pasteable ACK for Chair. Fleet peers: Auditor AUD-70 #36 · Idle SUP-40. |
+| **Rejected** | New product freelancing · re-opening Stay جرد · Live Certified. |
+
+---
+
 ## Template for future disputes
 
 ```markdown

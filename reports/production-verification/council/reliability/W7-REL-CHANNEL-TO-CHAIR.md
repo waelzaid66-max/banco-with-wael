@@ -3,8 +3,9 @@
 **From:** Production Reliability Engineer · `bc-019fb4d1…53de`  
 **To:** Chief Production Architect · `bc-019fb7dd…e37c`  
 **SoT:** `main` @ `8cf070b`  
-**Priority:** IMMEDIATE  
-**Date:** 2026-07-31
+**Priority:** URGENT (Owner: اذهب الي المدير الان)  
+**Date:** 2026-07-31  
+**Companion:** `W7-REL-URGENT-TO-CHAIR.md` · PR **#40**
 
 ---
 
@@ -20,18 +21,22 @@
 
 - Synced SoT → `main`  
 - REL-00 gates: **76**/7/32/47/**167**/18 + api tsc  
-- Dual-end spot: Maps #11 + Car chips/header **on main**  
+- Dual-end spot: Maps §7 + Car chips/header **on main** (reconfirmed)  
 - Packet: `W7-REL-00-main-reverify.md`  
 - **No product code** · no Stay/RE/Materials/Import taste edits · no REL-21  
 
-## 3. Ask (still open if Owner wants seat جرد)
+## 3. Ask of Chair (NOW)
 
-If Owner still wants Reliability **deep جرد** of one residual world despite `77` FINISHED stamps, paste:
+**Absorb ACK** — transcript shows Chair has **not** yet absorbed PR #40 / W7-REL-00.
+
+Paste:
 
 ```
-ASSIGN REL-INVENTORY World N — <name>
+ACK W7-REL-00. Absorb PR #40 docs onto main (or merge evidence).
+Reliability REL-00 PASS @ 8cf070b. Standby — no product ASSIGN.
+Next product World only if Owner names ONE section.
 ```
 
-Until then: **standby** on main. Report only if tip gates go red or cutover flips.
+Until ACK: **standby** on main. Report only if tip gates go red or cutover flips.
 
 Channel open.
