@@ -1262,6 +1262,18 @@ export function SectionSearchApp({
             playSound("tap");
             router.push("/listings/create?request=1" as Href);
           }}
+          onOpenMap={() => {
+            playSound("tap");
+            Haptics.selectionAsync();
+            // Latch map like Discover ?map=1 — open now if results ready,
+            // otherwise wait for inResultsView (MOB-07).
+            if (inResultsView) {
+              setMapMode(true);
+              setWantMap(false);
+            } else {
+              setWantMap(true);
+            }
+          }}
           onOpenFilters={() => {
             playSound("tap");
             setShowFilters(true);

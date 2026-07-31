@@ -87,6 +87,8 @@ type PropertyHomeHeaderProps = {
   onSaveSearch: () => void;
   onOpenStays: () => void;
   onOpenRequest: () => void;
+  /** Open / latch map (FAB parity after desks map retirement). */
+  onOpenMap: () => void;
   onOpenFilters: () => void;
   onOpenSearch: () => void;
   onCloseSearch: () => void;
@@ -145,6 +147,7 @@ export function PropertyHomeHeader({
   onSaveSearch,
   onOpenStays,
   onOpenRequest,
+  onOpenMap,
   onOpenFilters,
   onOpenSearch,
   onCloseSearch,
@@ -218,6 +221,16 @@ export function PropertyHomeHeader({
           />
         </Pressable>
         <View style={styles.topSpacer} />
+        <Pressable
+          onPress={onOpenMap}
+          style={styles.iconHit}
+          hitSlop={12}
+          testID="re-header-map"
+          accessibilityRole="button"
+          accessibilityLabel={t("search.discover.section.deskMap")}
+        >
+          <Ionicons name="map" size={18} color={SNOW} />
+        </Pressable>
         <Pressable
           onPress={onOpenStays}
           style={styles.iconHit}

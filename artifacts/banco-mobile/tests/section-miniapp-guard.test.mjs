@@ -1037,7 +1037,7 @@ test("RE Commercial Band D opens subtype picker (honest API enums)", () => {
   );
 });
 
-test("RE Wanted + Stays + Request are reachable from PropertyHomeHeader (P1/P2)", () => {
+test("RE Wanted + Stays + Request + Map are reachable from PropertyHomeHeader", () => {
   const section = fs.readFileSync(SECTION_APP, "utf8");
   const header = fs.readFileSync(
     path.join(APP_ROOT, "components", "search", "property", "PropertyHomeHeader.tsx"),
@@ -1049,6 +1049,8 @@ test("RE Wanted + Stays + Request are reachable from PropertyHomeHeader (P1/P2)"
   assert.match(header, /onOpenStays/);
   assert.match(header, /testID="re-header-request"/);
   assert.match(header, /onOpenRequest/);
+  assert.match(header, /testID="re-header-map"/);
+  assert.match(header, /onOpenMap/);
   assert.match(
     section,
     /onToggleWanted=\{[\s\S]*?selectListingMode/,
@@ -1063,6 +1065,11 @@ test("RE Wanted + Stays + Request are reachable from PropertyHomeHeader (P1/P2)"
     section,
     /onOpenRequest=\{[\s\S]*?\/listings\/create\?request=1/,
     "Request header hit must push create RFQ route",
+  );
+  assert.match(
+    section,
+    /onOpenMap=\{[\s\S]*?setWantMap|onOpenMap=\{[\s\S]*?setMapMode/,
+    "Map header hit must latch or open mapMode",
   );
   assert.doesNotMatch(
     section,
@@ -1101,7 +1108,7 @@ test("RE chrome does not remount retired ReServiceDesks; bottom tabs untouched",
   assert.doesNotMatch(
     section,
     /ReServiceDesks/,
-    "SectionSearchApp must not remount retired ReServiceDesks (header owns offer/types)",
+    "SectionSearchApp must not remount ReServiceDesks (header owns map/offer/types)",
   );
   const desksPath = path.join(
     APP_ROOT,
@@ -1109,10 +1116,11 @@ test("RE chrome does not remount retired ReServiceDesks; bottom tabs untouched",
     "search",
     "ReServiceDesks.tsx",
   );
+  // File kept on disk (no delete) — must remain unmounted from first paint.
   assert.equal(
     fs.existsSync(desksPath),
-    false,
-    "ReServiceDesks.tsx must be deleted — logic lives in PropertyHomeHeader",
+    true,
+    "ReServiceDesks.tsx must remain in repo (owner: no silent deletes)",
   );
   const tabsLayout = fs.readFileSync(
     path.join(APP_ROOT, "app", "(tabs)", "_layout.tsx"),
