@@ -1,7 +1,7 @@
 # W8-STUDY-02 — Stay · B-PROPERTIES · Materials (sacred finished)
 
 **Seat:** Production Reliability (study)  
-**SoT:** `main` @ `8cf070b`  
+**SoT:** `main` @ `4a3e106` (wiring evidence unchanged from post-merge tip)  
 **Date:** 2026-07-31  
 **Scope:** Worlds **4 BOOM STAY** · **3 B-PROPERTIES** · **5 Materials** only  
 **Law:** ZERO product code · finished chrome sacred · no taste rewrites · dual-end only · suspect miswires need `path:line`  
