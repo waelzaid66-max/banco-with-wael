@@ -398,6 +398,16 @@
 
 ---
 
+## D-2026-07-31-38 — Precision review to Director (immediate)
+
+| | |
+|--|--|
+| **Decision** | Owner: complete with precision · review Director immediately. Tip moved (`64b28ff` banco-status · `3d4773b` Director closed DIR-01). |
+| **Adopted** | Precision packet ACK Director DIR-01 close · re-verify CI @ `64b28ff` SUCCESS · REL-00 90/8/4/47 · DIR-02 AGREE Auditor #45 · SEC-01/02 still OPEN · banco-status isolated outside workspace. |
+| **Rejected** | Tip fight on `88` · product freestyle · 5cf0 · Live Certified. |
+
+---
+
 ## Template for future disputes
 
 ```markdown
