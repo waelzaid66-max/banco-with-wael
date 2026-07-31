@@ -123,12 +123,24 @@ EXPO_PUBLIC_PUBLIC_APP_URL = "https://banco.today"
 OPENAI_MODEL = "gpt-4o-mini"
 OPENAI_MAX_COMPLETION_TOKENS = "4096"
 CLERK_TELEMETRY_DISABLED = "true"
+PUBLIC_OBJECT_SEARCH_PATHS = "/public"
+PRIVATE_OBJECT_DIR = "/private"
+OBJECT_STORAGE_PROVIDER = "s3"
+OPENAI_API_KEY = "_DUMMY_API_KEY_"
+VITE_ADMIN_URL = "https://d6193e5e-9f22-436d-b29b-b52f98f6e66d-00-2ijdcga1saq1d.riker.replit.dev/admin/"
+VITE_MARKET_URL = "https://d6193e5e-9f22-436d-b29b-b52f98f6e66d-00-2ijdcga1saq1d.riker.replit.dev/market/"
+VITE_WEB_URL = "https://d6193e5e-9f22-436d-b29b-b52f98f6e66d-00-2ijdcga1saq1d.riker.replit.dev"
+NEXT_PUBLIC_ADMIN_URL = "https://d6193e5e-9f22-436d-b29b-b52f98f6e66d-00-2ijdcga1saq1d.riker.replit.dev/admin/"
+NEXT_PUBLIC_MARKET_URL = "https://d6193e5e-9f22-436d-b29b-b52f98f6e66d-00-2ijdcga1saq1d.riker.replit.dev/market/"
+NEXT_PUBLIC_SITE_URL = "https://d6193e5e-9f22-436d-b29b-b52f98f6e66d-00-2ijdcga1saq1d.riker.replit.dev"
+NEXT_PUBLIC_SITE_URL_EN = "https://d6193e5e-9f22-436d-b29b-b52f98f6e66d-00-2ijdcga1saq1d.riker.replit.dev/en"
+WEB_PLUG_ENABLED = "false"
+PAYMENT_CONFIG_ENCRYPTION_KEY = "e929a55ca830b501e01705967d525e66430f2402f73ce56bc92f599297995f3b"
 
 # SEC-01/02: secrets MUST live in Replit Secrets / Coolify — never commit.
 # Required in Secrets: PAYMENT_CONFIG_ENCRYPTION_KEY, CLERK_SECRET_KEY,
 # matching CLERK_PUBLISHABLE_KEY (pk_test for dev / pk_live only on true prod).
 [userenv.development]
-AI_INTEGRATIONS_OPENAI_BASE_URL = "http://localhost:1106/modelfarm/openai"
 CLERK_PUBLISHABLE_KEY = "pk_test_ZXZvbHZpbmctbWFncGllLTQzLmNsZXJrLmFjY291bnRzLmRldiQ"
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = "pk_test_ZXZvbHZpbmctbWFncGllLTQzLmNsZXJrLmFjY291bnRzLmRldiQ"
 VITE_CLERK_PUBLISHABLE_KEY = "pk_test_ZXZvbHZpbmctbWFncGllLTQzLmNsZXJrLmFjY291bnRzLmRldiQ"
