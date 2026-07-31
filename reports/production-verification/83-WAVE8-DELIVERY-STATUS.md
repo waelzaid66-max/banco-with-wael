@@ -1,20 +1,20 @@
-# Wave 8 — Delivery status (Owner)
+# Wave 8+ — Delivery status (Owner)
 
-**SoT:** `main` @ `3420aec` (Tranche D product land `a05190e` ⊂ tip)  
+**SoT:** `main` @ `6999915`  
 **Date:** 2026-07-31  
 
 ## Done
-1. Studies 01–03 · 10 Worlds  
-2. A+B+C CLOSED  
-3. **Tranche D CLOSED** — CI chain fix + per-World map/identity guards  
-4. Auditor AUD-80…85 absorbed  
-5. **CI tip GREEN** — Mobile · Production gates · API · Typecheck · ESLint · GCP  
+1. Wave8 A–D على `main` · CI أخضر (Mobile · Gates · API · Typecheck)  
+2. 10 عوالم محمية بالخرائط/الهوية (حراس 85)  
+3. **توحيد مع Replit:** أمر لصق `PASTE-REPLIT-WAVE8-UNIFY-MAIN-AR.md` · خريطة `84`  
 
-## Local REL-00
-section-guard **85/85** · chain **167/167** · mobile pack PASS  
+## فهم التشغيل (مختصر)
+- فراغ الشاشة كان **env** (CORS/Clerk) لا نقص ميني-آبات  
+- الداتا متصلة بعد الإصلاح · المحتوى العربي في الـ seed **ضعيف** (محتوى لا عطل API)  
+- Live Certified ما زال Owner/Coolify  
 
-## HOLD
-Factories header · Banks directory · REL-21 · Live Certified / Coolify cutover  
+## Replit الآن
+`git reset --hard origin/main` @ `6999915` · شوتات · بلاغ · **ممنوع صيانة/5cf0**
 
 ## Team
-AUD-86 · REL-00 · **STANDBY**
+Replit execute PASTE · Auditor AUD-86 · Reliability queue logs · **STANDBY** product
