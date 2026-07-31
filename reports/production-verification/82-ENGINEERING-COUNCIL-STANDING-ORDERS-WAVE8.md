@@ -6,7 +6,7 @@
 **Approve:** `council/chair/W8-APPROVE-PLAN-TRANCHE-B.md` (A CLOSED)  
 **SoT:** `main`  
 
-**STATUS:** Studies **DONE** all 10 Worlds · Tranche A **CLOSED** · Tranche B **EXECUTE** (D-W8-03) · seats VERIFY · then **STANDBY**  
+**STATUS:** Studies **DONE** all 10 Worlds · Tranche A **CLOSED** · Tranche B **CLOSED** @ `main`/`841ee01` · seats VERIFY (AUD-82) · then **STANDBY**  
 
 ---
 
