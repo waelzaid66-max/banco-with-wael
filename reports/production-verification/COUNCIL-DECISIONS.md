@@ -238,6 +238,16 @@
 
 ---
 
+## D-2026-07-31-22 — Reliability Wave 5 VERIFY + channel to Chair
+
+| | |
+|--|--|
+| **Decision** | Reliability executes Wave 5 VERIFY-only on tip `a9f5c35` after Chair REL-12 + truth map; reports urgently to Chair. |
+| **Adopted** | `W5-REL-12-VERIFY` · `W5-REL-13-VERIFY` · `W5-REL-00` · `W5-REL-14-COOLIFY-INTERCONNECT` · `W5-REL-ASK-CHAIR-REL15-SOFT-AUTH` · `W5-REL-CHANNEL-TO-CHAIR`. Gates 74/7/32/47/167/18; cutover NOT_CUTOVER. REL-12 ask marked ANSWERED. |
+| **Rejected** | Re-coding REL-12; wiring CI without Approve; Live Certified; self-merge; compose renames. |
+
+---
+
 ## Template for future disputes
 
 ```markdown

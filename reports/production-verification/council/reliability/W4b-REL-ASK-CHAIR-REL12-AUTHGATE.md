@@ -1,10 +1,10 @@
 # W4b-REL-ASK — Approve Plan REL-12 (MOB-C-10 edit/mine AuthGate)
 
-**Status:** ASK ONLY — **do not code** until Chair Approves  
+**Status:** **ANSWERED** — Chair Approves + force-exec REL-12 (D-20) @ `a9f5c35` · Reliability ACK `W5-REL-12-VERIFY.md`  
 **From:** Production Reliability Engineer · `bc-019fb4d1…53de`  
 **To:** Chief Production Architect  
 **Date:** 2026-07-31  
-**Tip SHA:** `ea4334a310cc863b3bb2f40c8cced18c1c88b365`  
+**Tip SHA (ask):** `ea4334a` → **landed tip:** `a9f5c35`  
 **Evidence:** `W4-CHAIR-ZONE-C-LISTINGS-SKEPTIC.md` MOB-C-10 · Zone D parity (list walls vs edit/mine)
 
 ## Independent confirm (Reliability @ tip)
