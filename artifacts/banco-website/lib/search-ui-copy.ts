@@ -40,6 +40,7 @@ export type SearchUiCopy = {
   nearMeActive: string;
   nearMePending: string;
   nearMeDenied: string;
+  nearestNeedsNearMe: string;
   viewToggleAria: string;
   viewList: string;
   viewMap: string;
@@ -146,6 +147,8 @@ const COPY: Record<SiteLocale, SearchUiCopy> = {
     nearMeActive: "قريب مني (مفعّل)",
     nearMePending: "جاري تحديد الموقع...",
     nearMeDenied: "يلزم السماح بالموقع للبحث بالقرب منك.",
+    nearestNeedsNearMe:
+      "فعّل «بالقرب مني» أولاً حتى نرتّب النتائج حسب المسافة من موقعك.",
     viewToggleAria: "طريقة عرض النتائج",
     viewList: "قائمة",
     viewMap: "خريطة",
@@ -234,6 +237,8 @@ const COPY: Record<SiteLocale, SearchUiCopy> = {
     nearMeActive: "Near me (on)",
     nearMePending: "Getting location…",
     nearMeDenied: "Location permission is required for near-me search.",
+    nearestNeedsNearMe:
+      "Turn on Near me first so we can sort by distance from your location.",
     viewToggleAria: "Results view mode",
     viewList: "List",
     viewMap: "Map",

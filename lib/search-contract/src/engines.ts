@@ -49,8 +49,7 @@ export interface EngineDef {
    * When true the chip only renders after /facets confirms it has live
    * inventory (fail-CLOSED). Core chips leave this falsy so they fail OPEN —
    * a transient facet error must never hide real, long-standing inventory.
-   * Fine real-estate facets (property types, etc.) use this; car fuel /
-   * transmission are FilterSheet-only and are not engines.
+   * Fine real-estate facets and car fuel/transmission quick chips use this.
    */
   requiresFacet?: boolean;
 }
@@ -61,9 +60,8 @@ const ALL_ENGINE: EngineDef = {
   params: {},
 };
 
-// Cars: journey engines only (condition / import / financing).
-// Fuel + transmission live in FilterSheet alone — one button family = one app;
-// duplicating them as engines mixed chrome with attribute refine.
+// Cars: journey engines (condition / import / financing) plus facet-gated
+// transmission and fuel quick chips (parity with mobile Discover strip).
 const CAR_ENGINES: EngineDef[] = [
   ALL_ENGINE,
   { key: "new", i18nKey: "home.engines.new", params: { condition: "new" } },
@@ -78,6 +76,42 @@ const CAR_ENGINES: EngineDef[] = [
     key: "islamic",
     i18nKey: "home.engines.islamic",
     params: { payment_plan: "islamic" },
+  },
+  {
+    key: "automatic",
+    i18nKey: "home.engines.automatic",
+    params: { transmission: "automatic" },
+    requiresFacet: true,
+  },
+  {
+    key: "manual",
+    i18nKey: "home.engines.manual",
+    params: { transmission: "manual" },
+    requiresFacet: true,
+  },
+  {
+    key: "petrol",
+    i18nKey: "home.engines.petrol",
+    params: { fuel_type: "petrol" },
+    requiresFacet: true,
+  },
+  {
+    key: "diesel",
+    i18nKey: "home.engines.diesel",
+    params: { fuel_type: "diesel" },
+    requiresFacet: true,
+  },
+  {
+    key: "hybrid",
+    i18nKey: "home.engines.hybrid",
+    params: { fuel_type: "hybrid" },
+    requiresFacet: true,
+  },
+  {
+    key: "electric",
+    i18nKey: "home.engines.electric",
+    params: { fuel_type: "electric" },
+    requiresFacet: true,
   },
 ];
 

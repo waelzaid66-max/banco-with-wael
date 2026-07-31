@@ -68,6 +68,7 @@ import {
   DEFAULT_MARKET_COUNTRY,
   MATERIAL_TYPES,
   PROPERTY_TYPES,
+  sectionEmptyPostRequestCategory,
 } from "@/constants/listingCreateTaxonomy";
 import {
   loadPreferredMarketCountry,
@@ -763,7 +764,12 @@ export function SectionSearchApp({
 
   const toggleNearMe = useCallback(async () => {
     if (criteria.nearMeEnabled) {
-      update({ nearMeEnabled: false, nearLat: null, nearLng: null });
+      update({
+        nearMeEnabled: false,
+        nearLat: null,
+        nearLng: null,
+        ...(criteria.sort === "nearest" ? { sort: "recommended" as const } : {}),
+      });
       return;
     }
     const coords = await requestNearMeCoords();
@@ -777,7 +783,7 @@ export function SectionSearchApp({
       nearLng: coords.lng,
       nearRadiusKm: DEFAULT_NEAR_RADIUS_KM,
     });
-  }, [criteria.nearMeEnabled, t, update]);
+  }, [criteria.nearMeEnabled, criteria.sort, t, update]);
 
   const openSearch = () => {
     playSound("tap");
@@ -1200,13 +1206,18 @@ export function SectionSearchApp({
           </Pressable>
         ) : null}
         {/* Demand bridges — an empty result must never dead-end. Every section
-            offers "post what you're looking for" (buyer request); the supply
-            sections additionally bridge into the B2B RFQ flow (Alibaba model:
-            unmet demand becomes a quote request to suppliers). */}
+            offers "post what you're looking for" (buyer request) locked to THIS
+            section's create category (REL-07); supply sections additionally
+            bridge into the B2B RFQ flow. */}
         <Pressable
           onPress={() => {
             playSound("tap");
-            router.push("/listings/create?request=1&category=real_estate" as Href);
+            const createCategory = sectionEmptyPostRequestCategory(
+              category as "car" | "real_estate" | "facilities" | "materials",
+            );
+            router.push(
+              `/listings/create?request=1&category=${createCategory}` as Href,
+            );
           }}
           style={[
             styles.emptyCta,

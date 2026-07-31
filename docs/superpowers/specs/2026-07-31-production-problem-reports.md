@@ -229,7 +229,7 @@ Each item below is a standing problem report. **Nothing listed is deleted from t
 
 **Symptom:** Video/audio `media_url` forced through `<Image>`.  
 **Fix:** Openable attachment chip via `Linking.openURL` (+ EN/AR copy).  
-**Status:** Fixed (picker remains images-only → MSG-14b)
+**Status:** Fixed (picker → MSG-14b also Fixed)
 
 ---
 
@@ -257,6 +257,38 @@ Each item below is a standing problem report. **Nothing listed is deleted from t
 
 ---
 
+## Wave 5 — precision audit
+
+**MSG-07b scroll yank:** Autoscroll only when near bottom; clear prepend gate on content-size (Android).  
+**MSG-07b cursor:** `before` uses `(created_at, id)` tie-break + stable orderBy.  
+**NOTIF-04 prune:** Only `DeviceNotRegistered` (never `InvalidCredentials`).  
+**MSG-08 hide copy:** `chat.hideTitle` / `hideBody` instead of delete dialog.  
+**MSG-14b:** Gallery `images`+`videos`, `uploadMediaAsset`, explicit `media_kind`, duration/size via `partitionPickedAssets`.  
+**Status:** Fixed
+
+---
+
+## Wave 6 — higher precision + maps
+
+**MSG-07b P1:** Do not arm `readyForOlder` on contentSizeChange; clear prepend on all-dupe pages; missing `before` anchor returns `[]`.  
+**MAP-07:** Leaflet 1.9.4 + MarkerCluster inlined (`mapVendorInline.ts`); browse map + pin picker; OSM tiles remain network.  
+**MAP-08:** Real `sort=nearest` (Haversine) when near_lat/lng present.  
+**MAP-10:** Guards for locate_error / viewport / BANCO_MAP bridge.  
+**Status:** Fixed
+
+---
+
+## Wave 7 — honesty + website parity
+
+**MSG-08c:** Mobile inbox long-press uses `chat.hide*` (not Delete); website inbox copy says Hide.  
+**MAP-08 gate:** FilterSheet refuses `nearest` without Near me (Alert → enable Near me); turning off Near me resets sort from nearest → recommended.  
+**MSG-11b:** Website `MessageThreadPanel` opens media links, marks read by newest id, seeds cache on send (MSG-06 parity), `maxLength={4000}`, listing_ref chrome.  
+**Hygiene:** Offer composer state hoisted with other `useState` in mobile thread.  
+**Docs:** Inventory §C Discover chips corrected; delivery ledger for sibling agent.  
+**Status:** Fixed
+
+---
+
 ## Still open
 
-MSG-05 / MSG-08b / MSG-13 / MSG-14b · NOTIF-02 / NOTIF-04b / NOTIF-10 · MAP-07 / MAP-08 / MAP-10
+MSG-05 / MSG-08b / MSG-13 / MSG-14c · NOTIF-02 / NOTIF-04b / NOTIF-10 · MAP-07b / MAP-08b

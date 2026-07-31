@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { listingCurrencyInputZ } from "../lib/supportedCurrencies";
 
 /* ── Global Response Shape ─────────────────────────────── */
 
@@ -885,6 +886,7 @@ export const SearchSortValues = [
   "price_asc",
   "price_desc",
   "popular",
+  "nearest",
 ] as const;
 
 export const FeedQuerySchema = z.object({
@@ -2674,7 +2676,8 @@ export const AttachImportOrderDocumentSchema = z
 export const SubmitOfferSchema = z
   .object({
     price_quote: z.number().positive().max(1_000_000_000),
-    currency: z.string().trim().min(1).max(8).default("EGP"),
+    // REL-05 / D-07 — same allowlist as listings (taxonomy markets + USD/EUR)
+    currency: listingCurrencyInputZ,
     lead_time_days: z.number().int().min(0).max(3650).optional(),
     moq: z.number().positive().max(1_000_000_000).optional(),
     message: z.string().trim().max(2000).optional(),
@@ -2770,7 +2773,8 @@ export const CreateInvestmentSchema = z
     industry: industryEnumZ.optional(),
     location: z.string().trim().min(2).max(100),
     total_value_amount: z.number().positive().max(1_000_000_000_000),
-    currency: z.string().trim().min(1).max(8).default("EGP"),
+    // REL-05 / D-07
+    currency: listingCurrencyInputZ,
     expected_roi_pct: z.number().min(0).max(1000).nullable().optional(),
     payback_years: z.number().min(0).max(100).nullable().optional(),
     revenue_range_min: z.number().min(0).max(1_000_000_000_000).nullable().optional(),
@@ -2952,7 +2956,8 @@ export const CreateGlobalSupplySchema = z
     unit: z.string().trim().max(40).nullable().optional(),
     destination_country: z.string().trim().min(2).max(80),
     budget_max: z.number().positive().max(1_000_000_000_000).nullable().optional(),
-    currency: z.string().trim().min(1).max(8).default("EGP"),
+    // REL-05 / D-07
+    currency: listingCurrencyInputZ,
     incoterms: IncotermsEnumZ.nullable().optional(),
     notes: z.string().trim().max(2000).nullable().optional(),
   })
@@ -2968,7 +2973,8 @@ export const RespondGlobalSupplySchema = z
     incoterms: IncotermsEnumZ.nullable().optional(),
     delivery_estimate: z.string().trim().max(200).nullable().optional(),
     price_quote: z.number().positive().max(1_000_000_000_000).nullable().optional(),
-    currency: z.string().trim().min(1).max(8).default("EGP"),
+    // REL-05 / D-07
+    currency: listingCurrencyInputZ,
     message: z.string().trim().max(2000).nullable().optional(),
   })
   .strict();

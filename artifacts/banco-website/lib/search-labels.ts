@@ -30,6 +30,7 @@ const SORT_LABEL_AR: Record<SearchSort, string> = {
   price_asc: "السعر: من الأقل",
   price_desc: "السعر: من الأعلى",
   popular: "الأكثر شعبية",
+  nearest: "الأقرب",
 };
 
 export const INDUSTRIAL_SUBTYPE_AR: Record<IndustrialSubtype, string> = {
@@ -100,6 +101,7 @@ const SORT_LABEL_EN: Record<SearchSort, string> = {
   price_asc: "Price: low to high",
   price_desc: "Price: high to low",
   popular: "Most popular",
+  nearest: "Nearest",
 };
 
 export const ENGINE_LABEL_EN: Record<string, string> = {

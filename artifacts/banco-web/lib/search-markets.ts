@@ -1,26 +1,18 @@
 /**
- * Web search market + rental-term catalog — mirrors mobile
- * `listingCreateTaxonomy` markets without importing RN app code.
- * Growing a country = one row here; API already treats rental_term as free string.
+ * Web search market + rental-term helpers.
+ * Market catalog SoT: `@workspace/taxonomy/markets` (AUD-02).
+ * Labels for rental terms stay local (web copy surface).
  */
 
-export const DEFAULT_MARKET_COUNTRY = "EG";
+import {
+  DEFAULT_MARKET_COUNTRY,
+  MARKET_COUNTRIES,
+} from "@workspace/taxonomy/markets";
 
-export const WEB_MARKET_COUNTRIES: {
-  value: string;
-  en: string;
-  ar: string;
-  rentalTerms: string[];
-}[] = [
-  { value: "EG", en: "Egypt", ar: "مصر", rentalTerms: ["furnished_daily", "new_law", "old_law"] },
-  { value: "SA", en: "Saudi Arabia", ar: "السعودية", rentalTerms: ["furnished_daily", "annual_contract"] },
-  { value: "AE", en: "UAE", ar: "الإمارات", rentalTerms: ["furnished_daily", "annual_contract"] },
-  { value: "KW", en: "Kuwait", ar: "الكويت", rentalTerms: ["furnished_daily", "annual_contract"] },
-  { value: "QA", en: "Qatar", ar: "قطر", rentalTerms: ["furnished_daily", "annual_contract"] },
-  { value: "JO", en: "Jordan", ar: "الأردن", rentalTerms: ["furnished_daily", "annual_contract"] },
-  { value: "OM", en: "Oman", ar: "عُمان", rentalTerms: ["furnished_daily", "annual_contract"] },
-  { value: "LY", en: "Libya", ar: "ليبيا", rentalTerms: ["furnished_daily", "annual_contract"] },
-];
+export { DEFAULT_MARKET_COUNTRY };
+
+/** Alias kept for existing SearchControls imports. */
+export const WEB_MARKET_COUNTRIES = MARKET_COUNTRIES;
 
 const RENTAL_TERM_LABELS: Record<string, { en: string; ar: string }> = {
   furnished_daily: {

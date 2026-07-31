@@ -74,6 +74,7 @@ import {
   UI_CATEGORIES,
   apiCategoryForUi,
   requiredSpecKeysFor,
+  resolveCreateDeepLinkCategory,
   type UiListingCategory,
   DEFAULT_MARKET_COUNTRY,
   currencyForMarket,
@@ -190,21 +191,16 @@ export default function CreateListingScreen() {
       : null;
 
   // Deep links may open the form in request mode and/or lock a category
-  // (?request=1&category=real_estate from B-PROPERTIES). Explicit intent
-  // outranks a stale draft for these axes.
+  // (?request=1&category=… from section empty CTAs). Explicit intent
+  // outranks a stale draft for these axes (MOB-C-03 when request=1).
   const { request: requestParam, category: categoryParam } = useLocalSearchParams<{
     request?: string;
     category?: string;
   }>();
   const startAsRequest = requestParam === "1";
-  const deepCategory =
-    categoryParam === "real_estate" ||
-    categoryParam === "car" ||
-    categoryParam === "facilities" ||
-    categoryParam === "materials" ||
-    categoryParam === "raw_materials"
-      ? (categoryParam as UiListingCategory)
-      : null;
+  const deepCategory = resolveCreateDeepLinkCategory(
+    Array.isArray(categoryParam) ? categoryParam[0] : categoryParam,
+  );
 
   const [step, setStep] = useState(0);
   const [category, setCategory] = useState<UiListingCategory | null>(deepCategory);
@@ -377,8 +373,15 @@ export default function CreateListingScreen() {
         // Clamp: drafts saved before the photos+pricing merge may point past
         // the (now shorter) step list.
         setStep(Math.min(d.step, TOTAL_STEPS - 1));
-        if (d.category) setCategory(d.category as UiListingCategory);
-        else if (deepCategory) setCategory(deepCategory);
+        // Section empty-CTA (?request=1&category=…) must not be overwritten by a
+        // stale draft category (MOB-C-03). Sale deep-links still prefer draft.
+        if (deepCategory && startAsRequest) {
+          setCategory(deepCategory);
+        } else if (d.category) {
+          setCategory(d.category as UiListingCategory);
+        } else if (deepCategory) {
+          setCategory(deepCategory);
+        }
         setTitle(d.title);
         setDescription(d.description);
         setLocation(d.location);
@@ -432,7 +435,7 @@ export default function CreateListingScreen() {
     return () => {
       cancelled = true;
     };
-  }, [draftKey, user?.id, startAsRequest]);
+  }, [draftKey, user?.id, startAsRequest, deepCategory]);
 
   // Debounced persist of the resumable fields — after the restore pass, and never
   // on the success screen or mid-submit. Photos/upload state are intentionally out.

@@ -1,4 +1,5 @@
 import { Feather } from "@/components/icons";
+import { useAuth } from "@clerk/expo";
 import {
   getMyManagedListings,
   deleteListing,
@@ -77,6 +78,7 @@ function statusLabel(
 export default function MyListingsScreen() {
   const colors = useColors();
   const { t, lang } = useI18n();
+  const { isSignedIn } = useAuth();
   const { bumpListings } = useSession();
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
@@ -109,6 +111,12 @@ export default function MyListingsScreen() {
   );
 
   const load = useCallback(async () => {
+    // REL-12: never hit managed-list API while unsigned (MOB-C-10).
+    if (!isSignedIn) {
+      setItems([]);
+      setState("ready");
+      return;
+    }
     try {
       const res = await getMyManagedListings();
       setItems(res.data ?? []);
@@ -116,7 +124,7 @@ export default function MyListingsScreen() {
     } catch {
       setState("error");
     }
-  }, []);
+  }, [isSignedIn]);
 
   useEffect(() => {
     load();
@@ -306,26 +314,56 @@ export default function MyListingsScreen() {
           {t("mine.title")}
         </AppText>
         <View style={styles.headerActions}>
-          <Pressable
-            onPress={() => router.push("/business/requests")}
-            style={styles.backBtn}
-            hitSlop={12}
-            testID="my-listings-requests"
-          >
-            <Feather name="bell" size={22} color={colors.foreground} />
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/listings/create")}
-            style={styles.backBtn}
-            hitSlop={12}
-            testID="my-listings-create"
-          >
-            <Feather name="plus" size={24} color={colors.primary} />
-          </Pressable>
+          {isSignedIn ? (
+            <>
+              <Pressable
+                onPress={() => router.push("/business/requests")}
+                style={styles.backBtn}
+                hitSlop={12}
+                testID="my-listings-requests"
+              >
+                <Feather name="bell" size={22} color={colors.foreground} />
+              </Pressable>
+              <Pressable
+                onPress={() => router.push("/listings/create")}
+                style={styles.backBtn}
+                hitSlop={12}
+                testID="my-listings-create"
+              >
+                <Feather name="plus" size={24} color={colors.primary} />
+              </Pressable>
+            </>
+          ) : (
+            <View style={styles.backBtn} />
+          )}
         </View>
       </View>
 
-      {state === "loading" ? (
+      {!isSignedIn ? (
+        <View style={styles.stateWrap}>
+          <Feather name="lock" size={56} color={colors.mutedForeground} />
+          <AppText style={[styles.stateTitle, { color: colors.foreground }]}>
+            {t("mine.signInTitle")}
+          </AppText>
+          <AppText style={[styles.stateText, { color: colors.mutedForeground }]}>
+            {t("mine.signInHint")}
+          </AppText>
+          <Pressable
+            onPress={() => router.push("/(tabs)/profile")}
+            style={[
+              styles.retryBtn,
+              { backgroundColor: colors.primary, borderRadius: colors.radius },
+            ]}
+            testID="my-listings-signin"
+          >
+            <AppText
+              style={[styles.retryText, { color: colors.primaryForeground }]}
+            >
+              {t("mine.signInCta")}
+            </AppText>
+          </Pressable>
+        </View>
+      ) : state === "loading" ? (
         <View style={styles.centered}>
           <ActivityIndicator color={colors.primary} />
         </View>

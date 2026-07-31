@@ -93,8 +93,10 @@ test("edit listing wires MapPinPicker + update lat/lng (MAP-09)", () => {
   );
   assert.match(edit, /MapPinPicker/);
   assert.match(edit, /testID="edit-pick-on-map"/);
+  assert.match(edit, /testID="edit-pin-tools"/);
   assert.match(edit, /latitude:\s*pin\.lat/);
   assert.match(edit, /longitude:\s*pin\.lng/);
+  assert.match(edit, /pinTouched/);
 });
 
 test("message notifications forward stamped role (mark-sold chrome)", () => {
@@ -192,7 +194,6 @@ test("NOTIF-09 unknown notification routes to /notifications", () => {
 
 // ── Wave 3 ──────────────────────────────────────────────────────────────
 
-const nearMe = fs.readFileSync(path.join(root, "lib/nearMe.ts"), "utf8");
 const inbox = fs.readFileSync(path.join(root, "app/(tabs)/messages.tsx"), "utf8");
 const importOrder = fs.readFileSync(
   path.join(root, "app/import/order/[id].tsx"),
@@ -201,10 +202,6 @@ const importOrder = fs.readFileSync(
 const importHub = fs.readFileSync(path.join(root, "app/import/index.tsx"), "utf8");
 const pushHook = fs.readFileSync(
   path.join(root, "hooks/usePushNotifications.tsx"),
-  "utf8",
-);
-const editListing = fs.readFileSync(
-  path.join(root, "app/listings/edit/[id].tsx"),
   "utf8",
 );
 const emailSvc = fs.readFileSync(
@@ -268,6 +265,7 @@ test("MSG-07b absorbs vacated poll ids and gates older load", () => {
   assert.match(thread, /newestId/);
   assert.match(thread, /maintainVisibleContentPosition/);
   assert.match(thread, /prevPollMsgsRef\.current = \[\]/);
+  assert.match(thread, /nearBottomRef/);
 });
 
 test("MSG-14 non-image media renders openable attachment", () => {
@@ -276,11 +274,28 @@ test("MSG-14 non-image media renders openable attachment", () => {
   assert.match(thread, /Linking\.openURL/);
 });
 
+test("MSG-14b chat picker accepts videos with media_kind", () => {
+  assert.match(thread, /mediaTypes:\s*\["images",\s*"videos"\]/);
+  assert.match(thread, /uploadMediaAsset/);
+  assert.match(thread, /media_kind:\s*uploaded\.type === "video"/);
+  assert.match(thread, /partitionPickedAssets/);
+  assert.match(thread, /uploading\) return/);
+});
+
 test("MSG-08 report uses support tickets; hide uses deleteConversation", () => {
   assert.match(thread, /createSupportTicket/);
   assert.match(thread, /category: "abuse"/);
   assert.match(thread, /deleteConversation/);
   assert.match(thread, /action-report/);
+  assert.match(thread, /chat\.hideTitle/);
+});
+
+test("MSG-08 inbox soft-hide uses hide copy (not delete)", () => {
+  assert.match(inbox, /handleHide/);
+  assert.match(inbox, /chat\.hideTitle/);
+  assert.match(inbox, /chat\.hideThread/);
+  assert.doesNotMatch(inbox, /messages\.deleteTitle/);
+  assert.doesNotMatch(inbox, /handleDelete/);
 });
 
 test("NOTIF-08 settings label discloses push is gated with in-app", () => {
@@ -296,4 +311,263 @@ test("NOTIF-04 push schedules Expo receipt processing", () => {
   assert.match(push, /getReceipts/);
   assert.match(push, /processPushReceipts/);
   assert.match(push, /scheduleReceiptCheck/);
+  const deadFnAt = push.indexOf("function isDeadDeviceError");
+  const deadFn = push.slice(deadFnAt, deadFnAt + 280);
+  assert.match(deadFn, /DeviceNotRegistered/);
+  assert.doesNotMatch(
+    deadFn,
+    /return error === "DeviceNotRegistered" \|\| error === "InvalidCredentials"/,
+    "InvalidCredentials must not prune device tokens",
+  );
+  assert.match(deadFn, /return error === "DeviceNotRegistered";/);
+});
+
+test("MSG-07b before cursor uses created_at + id tie-break", () => {
+  assert.match(apiConv, /lt\(messages\.id, anchor\.id\)/);
+  assert.match(apiConv, /orderBy\(desc\(messages\.createdAt\), desc\(messages\.id\)\)/);
+  assert.match(apiConv, /if \(!anchor\?\.createdAt\) return \[\]/);
+});
+
+test("MSG-07b does not arm older-load on contentSizeChange", () => {
+  assert.match(thread, /nearBottomRef/);
+  assert.match(thread, /Do NOT arm readyForOlder here/);
+  assert.match(thread, /unique\.length === 0/);
+});
+
+test("MAP-07 Leaflet is vendored inline (no unpkg)", () => {
+  const mapHtml = fs.readFileSync(
+    path.join(root, "components/search/mapHtml.ts"),
+    "utf8",
+  );
+  const pinPicker = fs.readFileSync(
+    path.join(root, "components/MapPinPicker.tsx"),
+    "utf8",
+  );
+  assert.match(mapHtml, /mapVendorInline/);
+  assert.match(mapHtml, /LEAFLET_JS/);
+  assert.doesNotMatch(mapHtml, /unpkg\.com\/leaflet/);
+  assert.doesNotMatch(pinPicker, /unpkg\.com\/leaflet/);
+  assert.ok(
+    fs.existsSync(path.join(root, "components/search/mapVendorInline.ts")),
+  );
+});
+
+test("MAP-08 nearest sort is a real API sort value", () => {
+  const searchSvc = fs.readFileSync(
+    path.join(root, "../api-server/src/services/SearchService.ts"),
+    "utf8",
+  );
+  const filterSheet = fs.readFileSync(
+    path.join(root, "components/search/FilterSheet.tsx"),
+    "utf8",
+  );
+  assert.match(searchSvc, /"nearest"/);
+  assert.match(searchSvc, /nearMeDistanceKmSql/);
+  assert.match(filterSheet, /"nearest"/);
+  assert.match(filterSheet, /nearestNeedsNearMe/);
+  assert.match(filterSheet, /!criteria\.nearMeEnabled/);
+});
+
+test("MAP-10 map Html still posts locate_error + viewport bridge", () => {
+  const mapHtml = fs.readFileSync(
+    path.join(root, "components/search/mapHtml.ts"),
+    "utf8",
+  );
+  assert.match(mapHtml, /locate_error/);
+  assert.match(mapHtml, /type:\s*"viewport"/);
+  assert.match(mapHtml, /BANCO_MAP/);
+});
+
+test("MSG-11b website thread: media links + newest-id mark-read + soft send", () => {
+  const webThread = fs.readFileSync(
+    path.join(root, "../banco-website/components/workspace/MessageThreadPanel.tsx"),
+    "utf8",
+  );
+  assert.match(webThread, /lastNewestIdRef/);
+  assert.match(webThread, /newestId/);
+  assert.match(webThread, /media_url/);
+  assert.match(webThread, /messagesMediaVideo/);
+  assert.match(webThread, /setQueryData/);
+  assert.match(webThread, /Soft refresh only/);
+  assert.match(webThread, /maxLength=\{4000\}/);
+});
+
+test("CTO: listing currencies cover mobile market map (no silent EGP rewrite)", () => {
+  const currencies = fs.readFileSync(
+    path.join(root, "../api-server/src/lib/supportedCurrencies.ts"),
+    "utf8",
+  );
+  const markets = fs.readFileSync(
+    path.join(root, "../../lib/taxonomy/src/markets.ts"),
+    "utf8",
+  );
+  const taxonomyBridge = fs.readFileSync(
+    path.join(root, "constants/listingCreateTaxonomy.ts"),
+    "utf8",
+  );
+  assert.match(
+    taxonomyBridge,
+    /@workspace\/taxonomy\/markets/,
+    "mobile must re-export markets from taxonomy (AUD-02)",
+  );
+  assert.match(
+    currencies,
+    /listingCurrencyAllowlist/,
+    "server must derive allowlist from taxonomy (AUD-02)",
+  );
+  const marketCodes = [
+    ...markets.matchAll(
+      /:\s*"(EGP|SAR|AED|KWD|QAR|BHD|IQD|LBP|MAD|TND|SDG|TRY|GBP|USD|EUR|JOD|OMR|LYD|DZD|ILS|SYP|YER)"/g,
+    ),
+  ].map((m) => m[1]);
+  assert.ok(new Set(marketCodes).size >= 20, "taxonomy markets currency map too small");
+  assert.match(markets, /listingCurrencyAllowlist/);
+  assert.match(currencies, /normalizeListingCurrency/);
+});
+
+test("AUD-02: web search-markets re-exports taxonomy MARKET_COUNTRIES", () => {
+  for (const app of ["banco-web", "banco-website"]) {
+    const markets = fs.readFileSync(
+      path.join(root, `../${app}/lib/search-markets.ts`),
+      "utf8",
+    );
+    assert.match(markets, /@workspace\/taxonomy\/markets/);
+    assert.match(markets, /WEB_MARKET_COUNTRIES = MARKET_COUNTRIES/);
+  }
+});
+
+test("CTO: mobile searchParams gates car/industry/origin like search-contract", () => {
+  const sp = fs.readFileSync(path.join(root, "lib/searchParams.ts"), "utf8");
+  assert.match(sp, /category === "car"/);
+  assert.match(sp, /allowIndustry/);
+  assert.match(sp, /category === "facilities"/);
+  assert.match(sp, /delete \(sp as \{ origin_type\?: string \}\)\.origin_type/);
+  assert.match(
+    sp,
+    /paymentType === "installment"[\s\S]*category === "car"[\s\S]*real_estate/,
+  );
+});
+
+test("CTO: message/conversation/comment rates fail closed on counter outage", () => {
+  const abuse = fs.readFileSync(
+    path.join(root, "../api-server/src/services/AbuseService.ts"),
+    "utf8",
+  );
+  assert.match(abuse, /Message rate counter unavailable — failing closed/);
+  assert.match(abuse, /Comment rate counter unavailable — failing closed/);
+  assert.match(abuse, /Conversation rate counter unavailable — failing closed/);
+  assert.doesNotMatch(
+    abuse,
+    /Message rate counter unavailable — failing open/,
+  );
+});
+
+test("REL-01: create/update enforce listing currency allowlist", () => {
+  const currencies = fs.readFileSync(
+    path.join(root, "../api-server/src/lib/supportedCurrencies.ts"),
+    "utf8",
+  );
+  const listing = fs.readFileSync(
+    path.join(root, "../api-server/src/services/ListingService.ts"),
+    "utf8",
+  );
+  assert.match(currencies, /enforceListingCurrencySpec/);
+  assert.match(currencies, /Unsupported currency/);
+  assert.match(listing, /enforceListingCurrencySpec/);
+});
+
+test("REL-02: readyz checks upload_claims", () => {
+  const health = fs.readFileSync(
+    path.join(root, "../api-server/src/routes/health.ts"),
+    "utf8",
+  );
+  assert.match(health, /upload_claims/);
+  assert.match(health, /FROM upload_claims/);
+});
+
+test("REL-03: staging smoke exits incomplete when auth skipped", () => {
+  const smoke = fs.readFileSync(
+    path.join(root, "../../scripts/staging-p0-smoke.mjs"),
+    "utf8",
+  );
+  assert.match(smoke, /skippedAuth/);
+  assert.match(smoke, /process\.exit\(2\)/);
+  assert.match(smoke, /INCOMPLETE: CLERK_BEARER_TOKEN/);
+});
+
+test("REL-04: profile Skip uses i18n key (no hardcoded EN/AR ternary)", () => {
+  const profile = fs.readFileSync(
+    path.join(root, "app/(tabs)/profile.tsx"),
+    "utf8",
+  );
+  const i18n = fs.readFileSync(path.join(root, "constants/i18n.ts"), "utf8");
+  assert.match(profile, /t\("profile\.skipRole"\)/);
+  assert.doesNotMatch(profile, /isRTL \? "تخطى" : "Skip"/);
+  assert.match(i18n, /skipRole:\s*"Skip"/);
+  assert.match(i18n, /skipRole:\s*"تخطى"/);
+});
+
+test("REL-05: dealer currency writes use allowlist Select + API zod", () => {
+  const select = fs.readFileSync(
+    path.join(root, "../dealer-os/src/components/currency-select.tsx"),
+    "utf8",
+  );
+  assert.match(select, /listingCurrencyAllowlist/);
+  for (const rel of [
+    "components/investment-form-sheet.tsx",
+    "pages/rfqs.tsx",
+    "pages/global-supply.tsx",
+  ]) {
+    const src = fs.readFileSync(path.join(root, `../dealer-os/src/${rel}`), "utf8");
+    assert.match(src, /CurrencySelect/);
+  }
+  assert.doesNotMatch(
+    fs.readFileSync(
+      path.join(root, "../dealer-os/src/components/investment-form-sheet.tsx"),
+      "utf8",
+    ),
+    /data-testid="form-currency"[\s\S]{0,40}<Input/,
+  );
+  const schemas = fs.readFileSync(
+    path.join(root, "../api-server/src/validators/schemas.ts"),
+    "utf8",
+  );
+  const currencies = fs.readFileSync(
+    path.join(root, "../api-server/src/lib/supportedCurrencies.ts"),
+    "utf8",
+  );
+  assert.match(currencies, /listingCurrencyInputZ/);
+  const currencyFieldHits = [
+    ...schemas.matchAll(/currency:\s*listingCurrencyInputZ/g),
+  ];
+  assert.ok(
+    currencyFieldHits.length >= 4,
+    "expect listingCurrencyInputZ on offer/investment/supply write schemas",
+  );
+});
+
+test("CTO: production skips auto-seed spawn without demo escape hatch", () => {
+  const boot = fs.readFileSync(
+    path.join(root, "../api-server/src/lib/bootstrap.ts"),
+    "utf8",
+  );
+  assert.match(boot, /BANCO_ALLOW_DEMO_SEED/);
+  assert.match(boot, /skipping auto-seed/);
+  assert.match(boot, /NODE_ENV === "production"/);
+});
+
+test("CTO: web nearest sort gated on Near me (banco-web + website)", () => {
+  for (const app of ["banco-web", "banco-website"]) {
+    const controls = fs.readFileSync(
+      path.join(root, `../${app}/components/SearchControls.tsx`),
+      "utf8",
+    );
+    const near = fs.readFileSync(
+      path.join(root, `../${app}/components/SearchNearMeControl.tsx`),
+      "utf8",
+    );
+    assert.match(controls, /"nearest"/);
+    assert.match(controls, /nearestNeedsNearMe/);
+    assert.match(near, /sort"\) === "nearest"/);
+  }
 });

@@ -43,6 +43,10 @@ export function SearchNearMeControl() {
       params.delete("near_lat");
       params.delete("near_lng");
       params.delete("radius_km");
+      // MAP-08: nearest without coords is meaningless — reset sort honesty.
+      if (params.get("sort") === "nearest") {
+        params.delete("sort");
+      }
       trackSearchEvent("search_near_me_disable", {});
       router.replace(`${pathname}?${params.toString()}`);
       return;

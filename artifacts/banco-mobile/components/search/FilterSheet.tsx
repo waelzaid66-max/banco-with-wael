@@ -1,6 +1,7 @@
 import { Feather, Ionicons } from "@/components/icons";
 import React, { useEffect, useState } from "react";
 import {
+  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -52,6 +53,7 @@ const SORTS: SearchSort[] = [
   "price_asc",
   "price_desc",
   "popular",
+  "nearest",
 ];
 const PAYMENTS: PaymentType[] = ["any", "installment"];
 
@@ -277,13 +279,33 @@ export function FilterSheet({
                 return (
                   <Pressable
                     key={s}
-                    onPress={() => onUpdate({ sort: s })}
+                    onPress={() => {
+                      // MAP-08 honesty: nearest without coords silently fell
+                      // back to recommended on the server — gate the chip.
+                      if (s === "nearest" && !criteria.nearMeEnabled) {
+                        Alert.alert(
+                          t("search.sortOptions.nearest"),
+                          t("search.nearestNeedsNearMe"),
+                          [
+                            { text: t("common.cancel"), style: "cancel" },
+                            {
+                              text: t("search.nearMe"),
+                              onPress: () => onToggleNearMe(),
+                            },
+                          ],
+                        );
+                        return;
+                      }
+                      onUpdate({ sort: s });
+                    }}
                     style={[
                       styles.chip,
                       {
                         backgroundColor: active
                           ? colors.primary
                           : colors.secondary,
+                        opacity:
+                          s === "nearest" && !criteria.nearMeEnabled ? 0.55 : 1,
                       },
                     ]}
                     testID={`sort-${s}`}

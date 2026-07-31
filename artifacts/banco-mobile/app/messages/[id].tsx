@@ -44,7 +44,12 @@ import { PermissionRationaleModal } from "@/components/PermissionRationaleModal"
 import { useI18n } from "@/context/LanguageContext";
 import { useSession } from "@/context/SessionContext";
 import { useColors } from "@/hooks/useColors";
-import { uploadImageAsset } from "@/lib/upload";
+import { uploadMediaAsset, isVideoAsset } from "@/lib/upload";
+import {
+  MAX_VIDEO_MB,
+  MAX_VIDEO_SECONDS,
+  partitionPickedAssets,
+} from "@/lib/listingMedia";
 
 // Allowlisted emojis for message reactions — MUST mirror the server's
 // REACTION_EMOJIS (ConversationService) so toggles aren't rejected.
@@ -70,6 +75,8 @@ type PendingMessage = {
   body: string;
   localUri?: string;
   asset?: ImagePicker.ImagePickerAsset;
+  /** Optimistic media kind so pending video doesn't render as a broken image. */
+  media_kind?: "image" | "video" | "audio";
   status: PendingStatus;
   /** Preserved so tap-to-retry can re-send a quote (MSG-10). */
   reply_to_id?: string;
@@ -124,6 +131,9 @@ export default function ThreadScreen() {
   const [previewAsset, setPreviewAsset] =
     useState<ImagePicker.ImagePickerAsset | null>(null);
   const [viewerUri, setViewerUri] = useState<string | null>(null);
+  // Negotiation: compose + send a structured price offer (listing chats only).
+  const [offerOpen, setOfferOpen] = useState(false);
+  const [offerAmount, setOfferAmount] = useState("");
   // The message a long-press opened the reaction/reply sheet for; and the
   // message the composer is currently quoting in a reply.
   const [actionFor, setActionFor] = useState<Message | null>(null);
@@ -139,8 +149,11 @@ export default function ThreadScreen() {
   // (otherwise long threads land at the top of the newest page).
   const readyForOlderRef = useRef(false);
   const lastNewestIdRef = useRef<string | null>(null);
+  // Only auto-follow new messages / layout growth when the user is near the end.
+  const nearBottomRef = useRef(true);
   // Snapshot of the previous poll page — absorb vacated ids when the window slides.
   const prevPollMsgsRef = useRef<Message[]>([]);
+  const NEAR_BOTTOM_PX = 140;
 
   // MSG-07: page the newest N messages every poll so long threads don't
   // re-download unbounded history every 3s. Older pages load via before=.
@@ -169,8 +182,17 @@ export default function ThreadScreen() {
     isPrependingRef.current = false;
     readyForOlderRef.current = false;
     lastNewestIdRef.current = null;
+    nearBottomRef.current = true;
     prevPollMsgsRef.current = [];
   }, [conversationId]);
+
+  // First page shorter than THREAD_PAGE ⇒ no older history to fetch.
+  useEffect(() => {
+    if (!query.isFetched) return;
+    if (older.length === 0 && messages.length < THREAD_PAGE) {
+      setHasMoreOlder(false);
+    }
+  }, [query.isFetched, messages.length, older.length]);
 
   // When the sliding poll window advances, messages that left the newest page
   // must stay visible — absorb them into `older` (P0 MSG-07b audit).
@@ -206,13 +228,17 @@ export default function ThreadScreen() {
   }, [conversationId, qc, t]);
 
   // Dedupe by id — older may overlap the poll page briefly during absorb.
+  // Poll page wins on conflict so reactions/read_at stay fresh.
   const serverMessages: Message[] = (() => {
+    const byId = new Map<string, Message>();
+    for (const m of older) byId.set(m.id, m);
+    for (const m of messages) byId.set(m.id, m);
     const seen = new Set<string>();
     const out: Message[] = [];
     for (const m of [...older, ...messages]) {
       if (seen.has(m.id)) continue;
       seen.add(m.id);
-      out.push(m);
+      out.push(byId.get(m.id)!);
     }
     return out;
   })();
@@ -239,6 +265,7 @@ export default function ThreadScreen() {
   const scrollToEnd = useCallback((animated: boolean) => {
     requestAnimationFrame(() => {
       listRef.current?.scrollToEnd({ animated });
+      nearBottomRef.current = true;
       // Allow older-page loads only after we've settled at the bottom once.
       readyForOlderRef.current = true;
     });
@@ -252,7 +279,10 @@ export default function ThreadScreen() {
     const isFirst = lastNewestIdRef.current === null;
     lastNewestIdRef.current = newestId;
     markRead();
-    if (!isPrependingRef.current) scrollToEnd(!isFirst);
+    // Never yank the user away from reading history when a poll lands.
+    if (!isPrependingRef.current && (isFirst || nearBottomRef.current)) {
+      scrollToEnd(!isFirst);
+    }
   }, [newestId, markRead, scrollToEnd]);
 
   const loadOlder = useCallback(async () => {
@@ -270,24 +300,26 @@ export default function ThreadScreen() {
       });
       const page = res.data ?? [];
       if (page.length < THREAD_PAGE) setHasMoreOlder(false);
-      if (page.length > 0) {
-        setOlder((prev) => {
-          const seen = new Set(prev.map((m) => m.id));
-          for (const m of messages) seen.add(m.id);
-          const unique = page.filter((m) => !seen.has(m.id));
-          return [...unique, ...prev];
-        });
-      } else {
+      const seen = new Set(older.map((m) => m.id));
+      for (const m of messages) seen.add(m.id);
+      const unique = page.filter((m) => !seen.has(m.id));
+      if (unique.length === 0) {
+        // All-dupe / empty — no layout growth; clear prepend gate now.
         setHasMoreOlder(false);
+        isPrependingRef.current = false;
+      } else {
+        setOlder((prev) => [...unique, ...prev]);
+        // Safety: if onContentSizeChange never fires, release the gate.
+        setTimeout(() => {
+          isPrependingRef.current = false;
+        }, 450);
       }
     } catch {
       // Keep hasMore so the user can retry by scrolling again.
+      isPrependingRef.current = false;
     } finally {
       setLoadingOlder(false);
       loadingOlderRef.current = false;
-      requestAnimationFrame(() => {
-        isPrependingRef.current = false;
-      });
     }
   }, [conversationId, hasMoreOlder, older, messages]);
 
@@ -359,9 +391,6 @@ export default function ThreadScreen() {
     void deliver(tempId, { body, ...(replyId ? { reply_to_id: replyId } : {}) });
   };
 
-  // Negotiation: compose + send a structured price offer (listing chats only).
-  const [offerOpen, setOfferOpen] = useState(false);
-  const [offerAmount, setOfferAmount] = useState("");
   const sendOffer = () => {
     const n = Number(offerAmount.replace(/[^\d]/g, ""));
     if (!conversationId || !Number.isFinite(n) || n <= 0) return;
@@ -463,10 +492,10 @@ export default function ThreadScreen() {
   // Soft-hide this thread for the current user (same API as inbox long-press).
   const hideThread = useCallback(() => {
     if (!conversationId) return;
-    Alert.alert(t("messages.deleteTitle"), t("messages.deleteBody"), [
+    Alert.alert(t("chat.hideTitle"), t("chat.hideBody"), [
       { text: t("common.cancel"), style: "cancel" },
       {
-        text: t("common.delete"),
+        text: t("chat.hideThread"),
         style: "destructive",
         onPress: () => {
           void (async () => {
@@ -509,11 +538,15 @@ export default function ThreadScreen() {
       );
       if (m.asset) {
         const asset = m.asset;
+        const kind = m.media_kind ?? (isVideoAsset(asset) ? "video" : "image");
         void (async () => {
           try {
             setUploading(true);
-            const url = await uploadImageAsset(asset);
-            await deliver(m.tempId, { media_url: url });
+            const uploaded = await uploadMediaAsset(asset);
+            await deliver(m.tempId, {
+              media_url: uploaded.url,
+              media_kind: uploaded.type === "video" ? "video" : kind,
+            });
           } catch {
             setPending((p) =>
               p.map((x) =>
@@ -534,8 +567,8 @@ export default function ThreadScreen() {
     [deliver]
   );
 
-  // Step 1 of image send: in-app disclosure THEN OS gallery prompt (Play/iOS).
-  const handleAttachImage = async () => {
+  // Step 1: in-app disclosure THEN OS gallery (images + videos — MSG-14b).
+  const handleAttachMedia = async () => {
     setShowAttachRationale(false);
     if (uploading || !conversationId) return;
     try {
@@ -545,32 +578,61 @@ export default function ThreadScreen() {
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
+        mediaTypes: ["images", "videos"],
         quality: 0.7,
+        videoMaxDuration: MAX_VIDEO_SECONDS,
       });
       if (result.canceled || !result.assets?.[0]) return;
-      setPreviewAsset(result.assets[0]);
+      const { accepted, rejectedLong, rejectedBig } = partitionPickedAssets(
+        result.assets,
+      );
+      if (rejectedLong) {
+        Alert.alert(
+          t("chat.uploadFailTitle"),
+          t("create.errVideoTooLong", { seconds: MAX_VIDEO_SECONDS }),
+        );
+        return;
+      }
+      if (rejectedBig) {
+        Alert.alert(
+          t("chat.uploadFailTitle"),
+          t("create.errVideoTooLarge", { mb: MAX_VIDEO_MB }),
+        );
+        return;
+      }
+      if (!accepted[0]) return;
+      setPreviewAsset(accepted[0]);
     } catch {
       Alert.alert(t("chat.uploadFailTitle"), t("chat.uploadFailBody"));
     }
   };
 
-  // Step 2: confirm the previewed image — upload, then send optimistically with
-  // an in-flight bubble showing the local image + spinner.
-  const confirmSendImage = async () => {
+  // Step 2: confirm preview — upload image or video with explicit media_kind.
+  const confirmSendMedia = async () => {
     const asset = previewAsset;
-    if (!asset || !conversationId) return;
+    if (!asset || !conversationId || uploading) return;
     setPreviewAsset(null);
+    const kind = isVideoAsset(asset) ? "video" : "image";
     const tempId = `t-${Date.now()}`;
     setPending((p) => [
       ...p,
-      { tempId, body: "", localUri: asset.uri, asset, status: "sending" },
+      {
+        tempId,
+        body: "",
+        localUri: asset.uri,
+        asset,
+        media_kind: kind,
+        status: "sending",
+      },
     ]);
     scrollToEnd(true);
     try {
       setUploading(true);
-      const url = await uploadImageAsset(asset);
-      await deliver(tempId, { media_url: url });
+      const uploaded = await uploadMediaAsset(asset);
+      await deliver(tempId, {
+        media_url: uploaded.url,
+        media_kind: uploaded.type === "video" ? "video" : "image",
+      });
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setPending((p) =>
@@ -614,7 +676,15 @@ export default function ThreadScreen() {
     const mediaUrl =
       row.kind === "pending" ? row.msg.localUri : row.msg.media_url ?? undefined;
     const mediaKind =
-      row.kind === "pending" ? "image" : row.msg.media_kind ?? "image";
+      row.kind === "pending"
+        ? row.msg.media_kind ??
+          (row.msg.asset && isVideoAsset(row.msg.asset) ? "video" : "image")
+        : row.msg.media_kind ??
+          (mediaUrl && /\.(mp4|mov|m4v|webm|3gp)(\?|$)/i.test(mediaUrl)
+            ? "video"
+            : mediaUrl && /\.(mp3|m4a|wav|ogg|aac)(\?|$)/i.test(mediaUrl)
+              ? "audio"
+              : "image");
     const body = row.msg.body;
     const isPending = row.kind === "pending";
     const failed = isPending && row.msg.status === "failed";
@@ -1029,20 +1099,34 @@ export default function ThreadScreen() {
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
             onContentSizeChange={() => {
-              if (!isPrependingRef.current) {
-                listRef.current?.scrollToEnd({ animated: false });
-                readyForOlderRef.current = true;
+              if (isPrependingRef.current) {
+                // Prepend layout settled — safe to clear the gate (Android).
+                requestAnimationFrame(() => {
+                  isPrependingRef.current = false;
+                });
+                return;
               }
+              if (nearBottomRef.current) {
+                listRef.current?.scrollToEnd({ animated: false });
+              }
+              // Do NOT arm readyForOlder here — first layout is often still at
+              // y≈0 before scrollToEnd; arm only from scrollToEnd itself.
             }}
             onScroll={(e) => {
+              const { contentOffset, contentSize, layoutMeasurement } =
+                e.nativeEvent;
+              const fromBottom =
+                contentSize.height - layoutMeasurement.height - contentOffset.y;
+              nearBottomRef.current = fromBottom < NEAR_BOTTOM_PX;
               if (!readyForOlderRef.current) return;
-              if (e.nativeEvent.contentOffset.y < 80) {
+              if (!hasMoreOlder) return;
+              if (contentOffset.y < 80) {
                 void loadOlder();
               }
             }}
             scrollEventThrottle={200}
             maintainVisibleContentPosition={
-              Platform.OS === "ios"
+              Platform.OS !== "web"
                 ? { minIndexForVisible: 1, autoscrollToTopThreshold: 20 }
                 : undefined
             }
@@ -1173,7 +1257,7 @@ export default function ThreadScreen() {
             {uploading ? (
               <ActivityIndicator color={colors.primary} size="small" />
             ) : (
-              <Feather name="image" size={20} color={colors.mutedForeground} />
+              <Feather name="paperclip" size={20} color={colors.mutedForeground} />
             )}
           </Pressable>
           <AppTextInput
@@ -1225,7 +1309,7 @@ export default function ThreadScreen() {
       <PermissionRationaleModal
         visible={showAttachRationale}
         onAcknowledge={() => {
-          void handleAttachImage();
+          void handleAttachMedia();
         }}
         onCancel={() => setShowAttachRationale(false)}
         config={{
@@ -1240,8 +1324,7 @@ export default function ThreadScreen() {
         }}
       />
 
-      {/* Image preview-before-send: confirm the exact photo (or cancel) instead
-          of firing it off the moment it's picked. */}
+      {/* Preview-before-send: photo or video — confirm before upload. */}
       <Modal
         visible={!!previewAsset}
         transparent
@@ -1256,14 +1339,31 @@ export default function ThreadScreen() {
             ]}
           >
             <AppText style={[styles.previewTitle, { color: colors.foreground }]}>
-              {t("chat.previewTitle")}
+              {previewAsset && isVideoAsset(previewAsset)
+                ? t("chat.previewVideoTitle")
+                : t("chat.previewTitle")}
             </AppText>
             {previewAsset ? (
-              <Image
-                source={{ uri: previewAsset.uri }}
-                style={styles.previewImage}
-                contentFit="contain"
-              />
+              isVideoAsset(previewAsset) ? (
+                <View
+                  style={[
+                    styles.previewImage,
+                    styles.previewVideo,
+                    { backgroundColor: colors.secondary },
+                  ]}
+                >
+                  <Feather name="play-circle" size={48} color={colors.primary} />
+                  <AppText style={{ color: colors.mutedForeground, marginTop: 8 }}>
+                    {t("chat.mediaVideo")}
+                  </AppText>
+                </View>
+              ) : (
+                <Image
+                  source={{ uri: previewAsset.uri }}
+                  style={styles.previewImage}
+                  contentFit="contain"
+                />
+              )
             ) : null}
             <View
               style={[
@@ -1286,7 +1386,7 @@ export default function ThreadScreen() {
                 </AppText>
               </Pressable>
               <Pressable
-                onPress={confirmSendImage}
+                onPress={confirmSendMedia}
                 style={[styles.previewBtn, { backgroundColor: colors.primary }]}
                 testID="preview-send"
               >
@@ -1640,6 +1740,10 @@ const styles = StyleSheet.create({
     height: 300,
     borderRadius: 14,
     backgroundColor: "rgba(0,0,0,0.1)",
+  },
+  previewVideo: {
+    alignItems: "center",
+    justifyContent: "center",
   },
   previewActions: { gap: 10 },
   previewBtn: {

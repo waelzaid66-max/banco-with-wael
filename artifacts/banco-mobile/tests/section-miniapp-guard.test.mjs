@@ -1486,6 +1486,123 @@ test("Section + Stays empty CTAs set flexDirection from rowDir (RTL)", () => {
   );
 });
 
+test("REL-07: SectionSearchApp empty post-request derives create category (AUD-SEC-01)", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  const taxonomy = fs.readFileSync(
+    path.join(APP_ROOT, "constants", "listingCreateTaxonomy.ts"),
+    "utf8",
+  );
+  assert.match(
+    taxonomy,
+    /function sectionEmptyPostRequestCategory/,
+    "SoT helper must live in listingCreateTaxonomy",
+  );
+  assert.match(
+    taxonomy,
+    /function resolveCreateDeepLinkCategory/,
+    "create consumer must share deep-link remap SoT",
+  );
+  assert.match(
+    section,
+    /sectionEmptyPostRequestCategory/,
+    "empty CTA must call shared SoT helper",
+  );
+  assert.doesNotMatch(
+    section,
+    /testID="section-empty-post-request"[\s\S]{0,200}category=real_estate/,
+    "empty post-request must not hardcode real_estate for all sections",
+  );
+  // RE header request remains intentionally real_estate-locked
+  assert.match(
+    section,
+    /onOpenRequest=\{[\s\S]*?\/listings\/create\?request=1&category=real_estate/,
+    "RE header onOpenRequest may stay real_estate",
+  );
+  // Materials → raw_materials (seller UI), facilities → industrial
+  assert.match(
+    taxonomy,
+    /section === "materials"\) return "raw_materials"/,
+  );
+  assert.match(
+    taxonomy,
+    /case "industrial":[\s\S]*?case "facilities":[\s\S]*?return "industrial"/,
+  );
+});
+
+test("MOB-C: create deep-link accepts industrial + remaps browse slugs", () => {
+  const create = fs.readFileSync(
+    path.join(APP_ROOT, "app", "listings", "create.tsx"),
+    "utf8",
+  );
+  assert.match(
+    create,
+    /resolveCreateDeepLinkCategory/,
+    "create must consume shared deep-link remap (not cast browse slugs)",
+  );
+  assert.doesNotMatch(
+    create,
+    /categoryParam === "facilities"[\s\S]{0,80}as UiListingCategory/,
+    "must not cast facilities/materials as UiListingCategory",
+  );
+  assert.match(
+    create,
+    /deepCategory && startAsRequest/,
+    "request deep-link category must outrank stale draft (MOB-C-03)",
+  );
+});
+
+test("MOB-C-09 / REL-11: edit skips price gate for buyer requests", () => {
+  const edit = fs.readFileSync(
+    path.join(APP_ROOT, "app", "listings", "edit", "[id].tsx"),
+    "utf8",
+  );
+  assert.match(
+    edit,
+    /const isRequest = !!listing\.is_request/,
+    "edit onSave must branch on listing.is_request",
+  );
+  assert.match(
+    edit,
+    /base_price_cash !== undefined \? \{ base_price_cash \}/,
+    "requests must omit base_price_cash from PATCH (no zero price-drop)",
+  );
+  assert.match(
+    edit,
+    /!listing\.is_request \?[\s\S]*?edit-listing-price/,
+    "price field hidden for is_request listings",
+  );
+  assert.doesNotMatch(
+    edit,
+    /const base_price_cash = digitsToNumber\(price\);\s*if \(base_price_cash <= 0\)/,
+    "must not unconditionally require price > 0",
+  );
+});
+
+test("MOB-C-10 / REL-12: mine + edit gate unsigned (no managed-list call)", () => {
+  const mine = fs.readFileSync(
+    path.join(APP_ROOT, "app", "listings", "mine.tsx"),
+    "utf8",
+  );
+  const edit = fs.readFileSync(
+    path.join(APP_ROOT, "app", "listings", "edit", "[id].tsx"),
+    "utf8",
+  );
+  assert.match(mine, /useAuth/, "mine must use Clerk auth");
+  assert.match(
+    mine,
+    /if \(!isSignedIn\)/,
+    "mine load must refuse unsigned managed-list fetch",
+  );
+  assert.match(mine, /my-listings-signin/, "mine must expose sign-in CTA");
+  assert.match(edit, /useAuth/, "edit must use Clerk auth");
+  assert.match(
+    edit,
+    /enabled: !!id && !!isSignedIn/,
+    "edit must not hydrate listing for guests",
+  );
+  assert.match(edit, /edit-listing-signin/, "edit must expose sign-in CTA");
+});
+
 test("Section horizontal chip ScrollViews use flexGrow:0 (no black void)", () => {
   const section = fs.readFileSync(SECTION_APP, "utf8");
   assert.match(

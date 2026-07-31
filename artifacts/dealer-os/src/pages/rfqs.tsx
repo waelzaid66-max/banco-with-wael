@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
 } from "@/components/ui/sheet";
+import { CurrencySelect } from "@/components/currency-select";
 import {
   Loader2, Car, Home, Factory, Package, MapPin, Calendar, Users, CheckCircle2, ShieldCheck,
 } from "lucide-react";
@@ -169,9 +170,10 @@ function RfqDetailSheet({ rfqId, onClose }: { rfqId: string; onClose: () => void
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs">Currency</Label>
-                        <Input
-                          value={currency} onChange={(e) => setCurrency(e.target.value)}
-                          className="bg-input border-border" data-testid="offer-currency"
+                        <CurrencySelect
+                          value={currency}
+                          onValueChange={setCurrency}
+                          testId="offer-currency"
                         />
                       </div>
                       <div className="space-y-1">

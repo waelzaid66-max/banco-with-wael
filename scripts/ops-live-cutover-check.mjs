@@ -180,15 +180,19 @@ async function main() {
           "apex /api/readyz",
           `HTTP ${readyz.status} checks=${JSON.stringify(body.checks || body)} — migrate / secrets / postgres?`,
         );
-      } else if (body.checks?.database !== "ok" || body.checks?.money_schema !== "ok") {
+      } else if (
+        body.checks?.database !== "ok" ||
+        body.checks?.money_schema !== "ok" ||
+        body.checks?.upload_claims !== "ok"
+      ) {
         fail(
           "apex /api/readyz checks",
-          `database=${body.checks?.database} money_schema=${body.checks?.money_schema}`,
+          `database=${body.checks?.database} money_schema=${body.checks?.money_schema} upload_claims=${body.checks?.upload_claims}`,
         );
       } else {
         pass(
           "apex /api/readyz",
-          `200 database=ok money_schema=ok${body.gitSha ? ` gitSha=${body.gitSha}` : ""}`,
+          `200 database=ok money_schema=ok upload_claims=ok${body.gitSha ? ` gitSha=${body.gitSha}` : ""}`,
         );
       }
     }
