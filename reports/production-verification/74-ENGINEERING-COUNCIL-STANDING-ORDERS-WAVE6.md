@@ -6,7 +6,7 @@
 **Audit:** `reports/production-verification/73-SECTION-WIRING-TRUTH-AUDIT.md`  
 **Binding:** `68` distrust · **no deletes** · ads E2E · Car ≠ Import · Maps ≠ RE  
 
-**STATUS:** Owner locked **Maps = mini-app #11 / Opt B** (`/section/maps`). EXECUTE REL-16/17/20 on tip. Intentional map-feed duplication is law.
+**STATUS:** REL-16/17/20 **LANDED** on tip. Seats follow **`76-ENGINEERING-COUNCIL-STANDING-ORDERS-WAVE6B.md`** VERIFY. Maps = mini-app #11. Intentional map-feed duplication is law.
 
 ---
 
