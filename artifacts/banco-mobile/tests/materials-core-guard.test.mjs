@@ -41,6 +41,9 @@ test("upper header is B-CORE bands with Filters inside search pill", () => {
   assert.match(header, /materialsBrand|materialsHubLabel/);
   assert.match(header, /section-filter-toggle/);
   assert.match(header, /testID="materials-type-strip"/);
+  // Industrial type is a compressed circle above search — not strip-wrecking tabs.
+  assert.match(header, /materials-type-circle/);
+  assert.match(header, /industrial-type-\$\{tab\.value\}/);
   // Market welded as micro caption beside BANCO — not a fat mid-brand pill.
   assert.match(header, /materials-market-beside-banco|materials-powered-market-row/);
   assert.match(header, /bancoMarketWeld|marketWeld/);
@@ -65,12 +68,11 @@ test("filters not erased — layered: header + material/origin strips + FilterSh
     /showMaterialChrome\s*=\s*\n?\s*isMaterialsSection/,
   );
   assert.match(section, /testID="materials-material-strip"/);
-  // Origin welded into header type strip (Band D) — still wired
+  // Origin under search; type circle above search — both wired
   assert.match(header, /testID="materials-origin-strip"/);
   assert.match(header, /onSelectOrigin/);
   assert.match(section, /onSelectOrigin/);
   assert.match(section, /selectOrigin/);
-  assert.match(header, /industrial-type-\$\{tab\.value\}/);
   assert.match(header, /materials-core-seal|categories\/materials\.jpg/);
 });
 

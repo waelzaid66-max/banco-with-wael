@@ -1,11 +1,12 @@
 /**
  * B-CORE Industrial Hub — upper header only (materials).
  *
- * Stay method: brand stays clean; chrome welds into utility, not the wordmark.
- * - Market/currency: micro caption welded TO the BANCO mark (not a fat mid-brand pill)
- * - Origin (All/Local/Imported): compressed INTO the type strip (Band D) — no wasted row
- * - Type strip stays types + origin only (stable)
- * Filters still open FilterSheet; commodities stay under header when raw/all.
+ * Stay method: brand stays clean; chrome does not fight the wordmark.
+ * - Market: micro 🇪🇬 EGP caption welded beside BANCO
+ * - Industrial type: ONE compressed circle in the black space ABOVE search
+ *   (removed from the under-search strip — it wrecked the row)
+ * - Origin (All/Local/Imported): clean strip under search only
+ * - Commodities stay under header when raw/all
  * Does NOT touch MiniAppBottomNav. No vanity counts. No fake hub.
  */
 import { Feather, Ionicons, MaterialCommunityIcons } from "@/components/icons";
@@ -18,7 +19,6 @@ import React, { useMemo } from "react";
 import {
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   View,
 } from "react-native";
@@ -139,8 +139,6 @@ export function MaterialsHomeHeader({
     return {
       flag: phone?.flag ?? "",
       currency,
-      // Short weld: flag + ISO currency (country name lives in the picker).
-      // Avoids a fat "Egypt EGP" pill fighting the BANCO wordmark.
       caption: currency || label,
       a11y: `${label}${currency ? ` ${currency}` : ""}`,
     };
@@ -152,12 +150,24 @@ export function MaterialsHomeHeader({
     { value: "imported", label: t("create.opts.imported") },
   ];
 
+  const activeTypeTab =
+    typeTabs.find((tab) => tab.value === activeIndustrialType) ?? typeTabs[0];
+  const activeIcon = tabIcon(activeIndustrialType);
+  const typeActive = activeIndustrialType !== "all";
+
+  const cycleIndustrialType = () => {
+    if (typeTabs.length === 0) return;
+    const idx = typeTabs.findIndex((tab) => tab.value === activeIndustrialType);
+    const next = typeTabs[(idx < 0 ? 0 : idx + 1) % typeTabs.length];
+    onSelectType(next.value);
+  };
+
   return (
     <View
       style={[styles.root, { paddingTop: Math.max(0, topPad - 2) }]}
       testID="materials-core-header"
     >
-      {/* Band A — back · sort · save (utility; brand stays clean like Stay) */}
+      {/* Band A */}
       <View style={[styles.topBar, { flexDirection: rowDir }]}>
         <Pressable
           onPress={onBack}
@@ -200,7 +210,7 @@ export function MaterialsHomeHeader({
         </Pressable>
       </View>
 
-      {/* Band B — identity; BANCO mark + micro market welded as ONE unit */}
+      {/* Band B — brand + type circle in black space above search (trailing) */}
       <View style={styles.brandBlock} testID="materials-core-brand">
         <View
           style={[
@@ -237,40 +247,86 @@ export function MaterialsHomeHeader({
           <View style={styles.taglineRule} />
         </View>
 
-        <AppText style={styles.poweredLabel} numberOfLines={1}>
-          {t("booking.poweredBy")}
-        </AppText>
+        {/* BANCO + market (center) · industrial type circle (black space, trailing) */}
         <View
           style={[
-            styles.bancoMarketWeld,
+            styles.aboveSearchRow,
             { flexDirection: isRTL ? "row-reverse" : "row" },
           ]}
-          testID="materials-powered-market-row"
         >
-          <Image
-            source={BANCO_LOGO}
-            style={styles.poweredLogo}
-            contentFit="contain"
-            tintColor={ACCENT}
-          />
-          {/* Micro market: caption under/beside BANCO — not a third brand pill */}
-          <Pressable
-            onPress={onOpenMarket}
-            style={[styles.marketWeld, { flexDirection: rowDir }]}
-            accessibilityLabel={marketMeta.a11y}
-            testID="materials-market-beside-banco"
-            hitSlop={8}
+          <View style={styles.aboveSearchSpacer} />
+          <View
+            style={[
+              styles.bancoMarketWeld,
+              { flexDirection: isRTL ? "row-reverse" : "row" },
+            ]}
+            testID="materials-powered-market-row"
           >
-            {marketMeta.flag ? (
-              <AppText style={styles.marketFlag}>{marketMeta.flag}</AppText>
-            ) : (
-              <Feather name="globe" size={11} color={ASH} />
-            )}
-            <AppText style={styles.marketCaption} numberOfLines={1}>
-              {marketMeta.caption}
+            <AppText style={styles.poweredLabelInline} numberOfLines={1}>
+              {t("booking.poweredBy")}
             </AppText>
-            <Feather name="chevron-down" size={10} color={ASH} />
-          </Pressable>
+            <Image
+              source={BANCO_LOGO}
+              style={styles.poweredLogo}
+              contentFit="contain"
+              tintColor={ACCENT}
+            />
+            <Pressable
+              onPress={onOpenMarket}
+              style={[styles.marketWeld, { flexDirection: rowDir }]}
+              accessibilityLabel={marketMeta.a11y}
+              testID="materials-market-beside-banco"
+              hitSlop={8}
+            >
+              {marketMeta.flag ? (
+                <AppText style={styles.marketFlag}>{marketMeta.flag}</AppText>
+              ) : (
+                <Feather name="globe" size={11} color={ASH} />
+              )}
+              <AppText style={styles.marketCaption} numberOfLines={1}>
+                {marketMeta.caption}
+              </AppText>
+              <Feather name="chevron-down" size={10} color={ASH} />
+            </Pressable>
+          </View>
+          <View style={[styles.aboveSearchSpacer, styles.aboveSearchTrailing]}>
+            {/* Compressed type circle — was wrecking the under-search strip */}
+            <Pressable
+              onPress={cycleIndustrialType}
+              style={[
+                styles.typeCircle,
+                typeActive ? styles.typeCircleActive : null,
+              ]}
+              accessibilityLabel={activeTypeTab?.label ?? t("home.industrialTypes.all")}
+              accessibilityHint={t("home.industrialTypes.all")}
+              testID="materials-type-circle"
+            >
+              {activeIcon.set === "mci" ? (
+                <MaterialCommunityIcons
+                  name={activeIcon.name}
+                  size={16}
+                  color={typeActive ? SNOW : ACCENT}
+                />
+              ) : (
+                <Feather
+                  name={activeIcon.name}
+                  size={16}
+                  color={typeActive ? SNOW : ACCENT}
+                />
+              )}
+            </Pressable>
+            {/* Keep per-type testIDs wired for guards / e2e without bloating UI */}
+            {typeTabs.map((tab) => (
+              <Pressable
+                key={tab.value}
+                onPress={() => onSelectType(tab.value)}
+                style={styles.typeHitGhost}
+                testID={`industrial-type-${tab.value}`}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+              />
+            ))}
+          </View>
         </View>
       </View>
 
@@ -352,12 +408,9 @@ export function MaterialsHomeHeader({
         </View>
       )}
 
-      {/* Band D — origin welded into type strip (no separate wasted row) */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={[styles.tabsRow, { flexDirection: rowDir }]}
-        style={styles.tabsScroll}
+      {/* Band D — origin only (types left the strip; circle lives above search) */}
+      <View
+        style={[styles.originRow, { flexDirection: rowDir }]}
         testID="materials-type-strip"
       >
         <View
@@ -386,43 +439,7 @@ export function MaterialsHomeHeader({
             );
           })}
         </View>
-        <View style={styles.tabDivider} />
-        {typeTabs.map((tab, index) => {
-          const active = activeIndustrialType === tab.value;
-          const tint = active ? SNOW : ASH;
-          const icon = tabIcon(tab.value);
-          return (
-            <React.Fragment key={tab.value}>
-              {index > 0 ? <View style={styles.tabDivider} /> : null}
-              <Pressable
-                onPress={() => onSelectType(tab.value)}
-                style={[styles.tabItem, active ? styles.tabItemActive : null]}
-                testID={`industrial-type-${tab.value}`}
-              >
-                {icon.set === "mci" ? (
-                  <MaterialCommunityIcons
-                    name={icon.name}
-                    size={18}
-                    color={active ? SNOW : ACCENT}
-                  />
-                ) : (
-                  <Feather
-                    name={icon.name}
-                    size={18}
-                    color={active ? SNOW : ACCENT}
-                  />
-                )}
-                <AppText
-                  style={[styles.tabLabel, { color: active ? SNOW : tint }]}
-                  numberOfLines={1}
-                >
-                  {tab.label}
-                </AppText>
-              </Pressable>
-            </React.Fragment>
-          );
-        })}
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -495,7 +512,7 @@ const styles = StyleSheet.create({
     gap: 6,
     maxWidth: "100%",
     paddingHorizontal: 8,
-    marginBottom: 1,
+    marginBottom: 2,
   },
   taglineRule: {
     flex: 1,
@@ -511,20 +528,32 @@ const styles = StyleSheet.create({
     textAlign: "center",
     flexShrink: 1,
   },
-  poweredLabel: {
+  aboveSearchRow: {
+    width: "100%",
+    alignItems: "center",
+    minHeight: 36,
+    marginBottom: 2,
+  },
+  aboveSearchSpacer: { flex: 1, minWidth: 36 },
+  aboveSearchTrailing: {
+    alignItems: "flex-end",
+    justifyContent: "center",
+    position: "relative",
+  },
+  bancoMarketWeld: {
+    alignItems: "center",
+    gap: 5,
+    justifyContent: "center",
+    flexShrink: 1,
+  },
+  poweredLabelInline: {
     fontSize: 7,
     fontFamily: "Inter_500Medium",
     color: ASH,
     letterSpacing: 1,
     textTransform: "uppercase",
-    marginBottom: 1,
   },
-  bancoMarketWeld: {
-    alignItems: "center",
-    gap: 6,
-    justifyContent: "center",
-  },
-  poweredLogo: { width: 60, height: 14 },
+  poweredLogo: { width: 56, height: 13 },
   marketWeld: {
     alignItems: "center",
     gap: 3,
@@ -537,6 +566,27 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: ASH,
     letterSpacing: 0.4,
+  },
+  typeCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: ACCENT,
+    backgroundColor: "rgba(168,42,28,0.12)",
+  },
+  typeCircleActive: {
+    backgroundColor: ACCENT,
+    borderColor: ACCENT,
+  },
+  typeHitGhost: {
+    position: "absolute",
+    width: 1,
+    height: 1,
+    opacity: 0,
+    overflow: "hidden",
   },
   searchPill: {
     height: 42,
@@ -584,12 +634,11 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: SNOW,
   },
-  tabsScroll: { marginTop: 6, marginHorizontal: -16 },
-  tabsRow: {
+  originRow: {
+    marginTop: 6,
+    marginBottom: 2,
     alignItems: "center",
-    paddingHorizontal: 12,
-    gap: 0,
-    minHeight: 46,
+    justifyContent: "flex-start",
   },
   originSeg: {
     alignItems: "center",
@@ -598,33 +647,15 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.05)",
     borderRadius: 12,
     paddingVertical: 3,
-    marginInlineEnd: 2,
   },
   originSegChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 10,
   },
   originSegChipActive: { backgroundColor: ACCENT },
   originSegText: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: "Inter_600SemiBold",
-  },
-  tabItem: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 10,
-    minWidth: 64,
-    gap: 2,
-    borderRadius: 12,
-    paddingVertical: 5,
-  },
-  tabItemActive: { backgroundColor: ACCENT, paddingHorizontal: 10 },
-  tabLabel: { fontSize: 9.5, fontFamily: "Inter_600SemiBold" },
-  tabDivider: {
-    width: StyleSheet.hairlineWidth,
-    alignSelf: "center",
-    height: 22,
-    backgroundColor: HAIRLINE,
   },
 });
