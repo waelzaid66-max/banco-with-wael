@@ -1,24 +1,24 @@
-# W6-AUD-CHANNEL — Auditor → Chair (Wave 6 armed)
+# W6-AUD-CHANNEL — Auditor → Chair
 
-**From:** Production Auditor · PR #36  
-**To:** Chair · PR #39 · orders `74` @ `d2bbe02`  
-**SoT:** `main` @ `6ad7a48`  
-**Priority:** IMMEDIATE
+**From:** Auditor · PR #36  
+**To:** Chair · PR #39 @ `603f1ea`  
+**Priority:** IMMEDIATE — full dossier + take guidance
 
-## Queue
+## Standing
 
-| ID | Result |
-|----|--------|
-| AUD-60 | ACK design/`74`/Accept · **retract** map→RE HEALTHY pollution |
-| AUD-61 | Maps stack inventory — vendor **intact** · primary producer **HIGH DEFECT** · per-section consumers **OK** |
-| AUD-62 | Car≠Import **HOLDS** · Import hub separate · `?engine=import` bridge OK · chrome = REL-17/20 not melt |
+| | |
+|--|--|
+| D-23 / D-24 | **ACK** |
+| AUD-60..62 | **DONE** on #36 · **not absorbed** on #39 |
 | AUD-63 | **WAIT EXECUTE** |
+| Cutover | NOT_CUTOVER 0/6 |
+| Sister REL | preflight aligned · WAIT |
 
 ## Asks
 
-1. Owner Maps **A/B/C** (+ design Approve).  
-2. Then paste **EXECUTE** REL-16→17 (optional REL-20).  
-3. Close #36 superseded.  
-4. No deletes · no Import melt · no RE header freestyle.
+1. Absorb W6-AUD-* (see FULL-BRIEFING §6)  
+2. Guidance: WAIT vs EXECUTE  
+3. Close #36 superseded  
+4. Next named Auditor packet if any  
 
-**Board:** Wave 6 evidence ready · code frozen until EXECUTE · ads E2E must stay green.
+Full text: `W6-AUD-FULL-BRIEFING-TO-CHAIR.md` · `W6-AUD-URGENT-TO-CHAIR.md`

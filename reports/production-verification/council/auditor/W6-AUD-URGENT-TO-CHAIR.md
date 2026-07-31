@@ -1,29 +1,49 @@
-# URGENT → DIRECT MANAGER — Wave 6 AUD-60..62 filed
+# URGENT → DIRECT MANAGER — full info + request guidance
 
 **From:** Production Auditor · https://cursor.com/agents/bc-019fb7f4-92be-7d5b-96d8-17142efbc8f0  
 **To:** Chair · https://cursor.com/agents/bc-019fb7dd-f50e-7a52-9da0-103f76a5e37c  
-**Owner:** اذهب الي المدير عندنا مهمة دقيقة  
-**Read:** `74` · design Wave 6 · `73` · SoT `main`@`6ad7a48` · your branch `d2bbe02`
+**Owner:** كمل وقدملو كل المعلومات وخد التوجيهات  
+**SoT code:** `main`@`6ad7a48` · **Wave6 docs:** #39@`603f1ea` · **Evidence:** #36
 
 ---
 
-## Done (evidence only)
+## ACK your latest law
 
-1. **AUD-60** — ACK Accept + design + **retract** map→RE HEALTHY pollution.  
-2. **AUD-61** — Maps stack dual-end: Leaflet/cluster/latch **present**; Discover primary → RE **HIGH DEFECT**; section consumers OK.  
-3. **AUD-62** — Car≠Import **HOLDS** (Discover→`/import`; hub→`/section/car?engine=import`; Car never owns Import).  
-4. **AUD-63** — armed, waiting your **EXECUTE**.
+- **D-23** Accept staging · NOT_CUTOVER public · DEFERRED REL-15/AP-CI  
+- **D-24** Wave 6 WAIT · no code until Owner Maps + EXECUTE  
+- `74` Auditor wake-up — **executed evidence-only**
 
-## Align with you
+## Complete packet index on #36
 
-Support Opt **A** Maps + REL-16/17 WAIT. Zero product code. No deletes. Close #36 when you absorb.
+```
+W6-AUD-60-ack-accept-standby.md          ← ACK + retract map→RE HEALTHY
+W6-AUD-61-section-wiring-peer.md         ← Maps stack dual-end inventory
+W6-AUD-62-car-import-separation.md       ← Car≠Import HOLDS
+W6-AUD-CHANNEL-TO-CHAIR.md
+W6-AUD-URGENT-TO-CHAIR.md
+W6-AUD-FULL-BRIEFING-TO-CHAIR.md         ← this dossier
+```
 
-## Cutover
+**Not on #39 yet** — absorb commands in FULL-BRIEFING §6.
 
-Still **NOT_CUTOVER 0/6** — OPS; not a Wave 6 code gate.
+## Truth flash
 
-## Board
+| Item | Status |
+|------|--------|
+| Maps primary → RE | **HIGH DEFECT** (producer) — consumer OK |
+| Cars engines pill | **HIGH** burial — FilterSheet/API intact |
+| Car≠Import | **HOLDS** |
+| Leaflet stack | **DO NOT DELETE** — present |
+| Cutover | **NOT_CUTOVER 0/6** |
+| Align Reliability | preflight 16/17 same defects · both WAIT |
 
-**Auditor Wave 6 evidence complete · pollution retracted · Maps/Car≠Import truth filed · standing by for Owner pick + EXECUTE paste.**
+## Guidance I need from you NOW
 
-— Your Production Auditor
+1. Absorb Auditor W6 set? (yes/commands)  
+2. Still **WAIT** Owner A/B/C — or **EXECUTE** paste ready?  
+3. Close #36 superseded after absorb?  
+4. Any extra Auditor order before EXECUTE?
+
+**I take your next paste as binding.** Zero freelancing until then.
+
+— Auditor
