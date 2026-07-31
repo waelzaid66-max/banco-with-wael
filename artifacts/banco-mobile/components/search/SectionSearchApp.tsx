@@ -89,6 +89,7 @@ import {
   SearchCriteria,
   mapAnchorKey,
 } from "@/lib/searchParams";
+import { openOrLatchMap, resolveMapLatch, wantsMapFromParam } from "@/lib/mapLatch";
 import { DEFAULT_NEAR_RADIUS_KM, requestNearMeCoords } from "@/lib/nearMe";
 import {
   MarketCountryButton,
@@ -383,11 +384,8 @@ export function SectionSearchApp({
   // Expo Router may deliver query values as string | string[] — normalize so
   // ?map=1 always latches (MOB-07 must not silently no-op on web/native).
   const [mapMode, setMapMode] = useState(false);
-  // Discover "Explore on map" pushes /section/real-estate?map=1 — latch until
-  // mappable results arrive (or the browse resolves empty/error).
-  const [wantMap, setWantMap] = useState(
-    () => mapParam === "1" || mapParam === "true",
-  );
+  // Discover "Explore on map" / section ?map=1 — latch until results arrive.
+  const [wantMap, setWantMap] = useState(() => wantsMapFromParam(mapParam));
   const [marketPickerOpen, setMarketPickerOpen] = useState(false);
   const mappableItems = useMemo(
     () =>
@@ -407,16 +405,13 @@ export function SectionSearchApp({
   }, [inResultsView, mapMode]);
 
   useEffect(() => {
-    if (!wantMap) return;
-    // Open map as soon as results exist — server clusters work even when the
-    // current page has no pin coords. Waiting for hasPagePins left ?map=1 /
-    // Discover "Explore on map" / desk-map latched forever without client pins.
-    if (inResultsView) {
-      setMapMode(true);
-      setWantMap(false);
-    } else if (viewState === "empty" || viewState === "error") {
-      setWantMap(false);
-    }
+    resolveMapLatch({
+      wantMap,
+      inResultsView,
+      viewState,
+      setMapMode,
+      setWantMap,
+    });
   }, [wantMap, inResultsView, viewState]);
 
   const mapSectionKey = mapAnchorKey(criteria);
@@ -1289,14 +1284,7 @@ export function SectionSearchApp({
           onOpenMap={() => {
             playSound("tap");
             Haptics.selectionAsync();
-            // Latch map like Discover ?map=1 — open now if results ready,
-            // otherwise wait for inResultsView (MOB-07).
-            if (inResultsView) {
-              setMapMode(true);
-              setWantMap(false);
-            } else {
-              setWantMap(true);
-            }
+            openOrLatchMap({ inResultsView, setMapMode, setWantMap });
           }}
           onOpenFilters={() => {
             playSound("tap");
@@ -1345,6 +1333,11 @@ export function SectionSearchApp({
           inputRef={inputRef}
           onBack={goBack}
           onSaveSearch={handleSaveSearch}
+          onOpenMap={() => {
+            playSound("tap");
+            Haptics.selectionAsync();
+            openOrLatchMap({ inResultsView, setMapMode, setWantMap });
+          }}
           onOpenFilters={() => {
             playSound("tap");
             setShowFilters(true);

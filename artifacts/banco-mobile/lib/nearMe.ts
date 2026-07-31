@@ -10,15 +10,39 @@ export const DEFAULT_NEAR_RADIUS_KM = 25;
  */
 export const NEAR_RADIUS_OPTIONS_KM = [5, 10, 25, 50, 100] as const;
 
+type NearCoords = { lat: number; lng: number };
+
+/**
+ * Browser Geolocation API path for Expo web (MAP-05). expo-location's web
+ * path is unreliable in iframe / PWA hosts — navigator.geolocation is honest.
+ */
+function requestBrowserCoords(): Promise<NearCoords | null> {
+  if (typeof navigator === "undefined" || !navigator.geolocation) {
+    return Promise.resolve(null);
+  }
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        resolve({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        });
+      },
+      () => resolve(null),
+      { enableHighAccuracy: false, timeout: 12_000, maximumAge: 60_000 },
+    );
+  });
+}
+
 /**
  * Requests foreground location permission and returns the device coordinates.
- * Returns null on web, denied permission, or any runtime error — callers show UX.
+ * Returns null on denied permission or any runtime error — callers show UX.
+ * Web uses `navigator.geolocation` so FilterSheet near-me works on Expo web.
  */
-export async function requestNearMeCoords(): Promise<{
-  lat: number;
-  lng: number;
-} | null> {
-  if (Platform.OS === "web") return null;
+export async function requestNearMeCoords(): Promise<NearCoords | null> {
+  if (Platform.OS === "web") {
+    return requestBrowserCoords();
+  }
   try {
     const Location = await import("expo-location");
     let { status } = await Location.getForegroundPermissionsAsync();

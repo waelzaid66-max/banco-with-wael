@@ -3089,6 +3089,10 @@ export type UpdateListingBody = {
   description?: string;
   base_price_cash?: number;
   location?: string;
+  /** Optional precise pin (send with longitude). Overrides the area centroid for near-me search + map display. */
+  latitude?: number;
+  /** Optional precise pin (send with latitude). */
+  longitude?: number;
   /** Lifecycle status. Sellers set "sold" to mark the deal closed or "archived" to hide the listing. */
   status?: UpdateListingBodyStatus;
   specs?: UpdateListingBodySpecs;

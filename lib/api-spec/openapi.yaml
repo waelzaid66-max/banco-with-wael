@@ -4529,6 +4529,14 @@ paths:
                   type: number
                 location:
                   type: string
+                latitude:
+                  type: number
+                  description: >
+                    Optional precise pin (send with longitude). Overrides the area
+                    centroid for near-me search + map display.
+                longitude:
+                  type: number
+                  description: Optional precise pin (send with latitude).
                 status:
                   type: string
                   enum: [active, sold, archived]

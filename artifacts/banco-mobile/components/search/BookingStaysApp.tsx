@@ -51,6 +51,7 @@ import {
   SearchCriteria,
   mapAnchorKey,
 } from "@/lib/searchParams";
+import { openOrLatchMap, resolveMapLatch, wantsMapFromParam } from "@/lib/mapLatch";
 import { requestNearMeCoords, DEFAULT_NEAR_RADIUS_KM } from "@/lib/nearMe";
 import {
   MarketCountryButton,
@@ -310,9 +311,7 @@ export function BookingStaysApp() {
   const params = useLocalSearchParams<{ map?: string | string[] }>();
   const mapParam = Array.isArray(params.map) ? params.map[0] : params.map;
   const [mapMode, setMapMode] = useState(false);
-  const [wantMap, setWantMap] = useState(
-    () => mapParam === "1" || mapParam === "true",
-  );
+  const [wantMap, setWantMap] = useState(() => wantsMapFromParam(mapParam));
   const [marketPickerOpen, setMarketPickerOpen] = useState(false);
   const mappableItems = useMemo(
     () =>
@@ -331,15 +330,13 @@ export function BookingStaysApp() {
   }, [inResultsView, mapMode]);
 
   useEffect(() => {
-    if (!wantMap) return;
-    // Stay map can open once results exist — server clusters fill gaps even
-    // when the loaded page has few pins (do not hard-require hasPagePins).
-    if (inResultsView) {
-      setMapMode(true);
-      setWantMap(false);
-    } else if (viewState === "empty" || viewState === "error") {
-      setWantMap(false);
-    }
+    resolveMapLatch({
+      wantMap,
+      inResultsView,
+      viewState,
+      setMapMode,
+      setWantMap,
+    });
   }, [wantMap, inResultsView, viewState]);
 
   const mapSectionKey = mapAnchorKey(criteria);
@@ -702,12 +699,7 @@ export function BookingStaysApp() {
         onOpenMap={() => {
           playSound("tap");
           Haptics.selectionAsync();
-          if (inResultsView) {
-            setMapMode(true);
-            setWantMap(false);
-          } else {
-            setWantMap(true);
-          }
+          openOrLatchMap({ inResultsView, setMapMode, setWantMap });
         }}
         onOpenFilters={() => {
           playSound("tap");
@@ -945,6 +937,7 @@ export function BookingStaysApp() {
             onOpenListingId={(id) => router.push(`/listing/${id}?focus=booking`)}
             onSave={toggleSave}
             isSaved={isSaved}
+            CardComponent={StayCard}
           />
         ) : null}
 

@@ -48,6 +48,7 @@ type Props = {
   onBack: () => void;
   onSaveSearch: () => void;
   onOpenFilters: () => void;
+  onOpenMap: () => void;
   onOpenSearch: () => void;
   onCloseSearch: () => void;
   onQueryChange: (text: string) => void;
@@ -77,6 +78,7 @@ export function MaterialsHomeHeader({
   onBack,
   onSaveSearch,
   onOpenFilters,
+  onOpenMap,
   onOpenSearch,
   onCloseSearch,
   onQueryChange,
@@ -124,6 +126,16 @@ export function MaterialsHomeHeader({
           />
         </Pressable>
         <View style={styles.topSpacer} />
+        <Pressable
+          onPress={onOpenMap}
+          style={styles.iconHit}
+          hitSlop={12}
+          testID="materials-header-map"
+          accessibilityRole="button"
+          accessibilityLabel={t("search.discover.section.deskMap")}
+        >
+          <Ionicons name="map" size={16} color={SNOW} />
+        </Pressable>
         <Pressable
           onPress={onCycleSort}
           style={[styles.sortHit, sortActive ? styles.sortHitActive : null]}
