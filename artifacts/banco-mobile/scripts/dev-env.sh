@@ -26,6 +26,7 @@ if [[ -n "${REPL_ID:-}" ]]; then
   export EXPO_PUBLIC_REPL_ID="$REPL_ID"
 fi
 
-export CI="${CI:-1}"
+# Do NOT set CI=1 here — that disables Metro hot-reload and collapses the
+# interactive dev menu. expo start handles non-TTY environments gracefully.
 
 exec pnpm exec expo start --localhost --port "${PORT:-8081}" "$@"
