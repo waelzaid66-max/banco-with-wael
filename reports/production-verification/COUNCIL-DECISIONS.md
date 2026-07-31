@@ -358,6 +358,16 @@
 
 ---
 
+## D-2026-07-31-34 — High-precision REL-00 stamp + typed-routes false-positive
+
+| | |
+|--|--|
+| **Decision** | Owner ordered higher precision. Full dual-end + CI + clean mobile tsc. Local TS2345 `/section/maps` = stale gitignored `.expo/types`, not tip DEFECT. |
+| **Adopted** | `W8-REL-00-PRECISION-STAMP.md` · Replit SoT card · D-W8-01 Opt A KEEP recommend. Gates 85/167 · CI #40 SUCCESS · clean tsc PASS. |
+| **Rejected** | Tranche E invent · freestyle typed-route hacks · Live Certified · blind Replit branch merge. |
+
+---
+
 ## Template for future disputes
 
 ```markdown

@@ -2,12 +2,16 @@
 
 **From:** Reliability · `bc-019fb4d1…53de`  
 **To:** Chair  
-**SoT:** `main` @ `6999915` (D floor `3420aec`)  
-**Owner:** لسا تاني اذهب الي مديرك  
-**Companion:** `W8-REL-PING-CHAIR-AGAIN.md` · `W8-REL-00-tranche-d-reack.md`
+**SoT:** `main` @ `6999915c7dccaed69735ff2f6284656e226738c5`  
+**Owner:** كمل بدقة اعلي  
+**Primary:** `W8-REL-00-PRECISION-STAMP.md`
 
-## Done
-REL-00 Tranche D PASS · re-spot 85/167 green · zero product · STANDBY.
+## Done (higher precision)
+- Full dual-end A–D matrix with file:line  
+- Gates 85/167/18 · clean mobile tsc PASS · CI #40 SUCCESS  
+- Closed false-positive typed-routes scare (stale gitignored `.expo`)  
+- D-W8-01 → recommend Opt A KEEP (Idle SUP-52 aligned)  
+- Replit unify SoT card for Chair mid-turn  
 
-## Blocker
-Chair has **not** absorbed PR **#40** yet. Paste ACK above.
+## Waiting
+Merge absorb **#40** · stamp D-W8-01 Opt A · Replit import main tip only · STANDBY.
