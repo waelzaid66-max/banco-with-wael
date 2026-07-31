@@ -211,3 +211,18 @@ gh run view 30629495505                # prior docker SUCCESS @ b9d5f13
 ```
 
 **Seat status:** Standing by for Chair Accept on #32 and/or named Approve Plan (REL-06 / post-merge verify). Will not self-merge.
+
+---
+
+## Addendum — Wave 3 (same hour, tip `31fbbc0`+)
+
+Chair absorbed Auditor Wave 2, flipped AUD-22/23 FIXED, executed **REL-07** (section empty CTA category), issued `66-…WAVE3.md` + Accept criteria §E, and independently classified website Docker red as **Docker Hub timeout** — same conclusion as this briefing §F1.
+
+| Item | Reliability action |
+|------|--------------------|
+| REL-07 | **ACK** — `W3-REL-07-VERIFY.md` (no re-implement) |
+| REL-00 | **TIP_HEALTHY** — `W3-REL-00-tip-reverify.md` (47 wiring · 71 section · 167 chain · 18 confidence) |
+| FI brochure (D-11) | Endorsed — not a merge blocker |
+| Accept criteria §E | Engineering items met; CI flake needs re-run/waiver; OPS cutover still blocks **public** GO only |
+
+**Updated recommendation:** Still **Option A** — Chair Accept / merge #32 as SoT when Docker re-run green or waived. Wave 3 does not change OPS DNS reality.
