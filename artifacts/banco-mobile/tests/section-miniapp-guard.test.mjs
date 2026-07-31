@@ -1285,6 +1285,11 @@ test("Materials (toridat) restores material strip + origin + market matrix", () 
     /testID="materials-origin-strip"/,
     "Materials must expose origin strip (local/imported)",
   );
+  assert.match(
+    section,
+    /testID="materials-type-strip"/,
+    "Materials must expose industrial type strip",
+  );
   // Owner 2026-07-27: same collapse as RE — one compact button, not 21 cells.
   assert.doesNotMatch(
     section,

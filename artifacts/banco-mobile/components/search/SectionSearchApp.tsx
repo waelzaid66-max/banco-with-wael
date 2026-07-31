@@ -42,6 +42,7 @@ import {
   RE_MORE_TAB,
   RE_MORE_TYPES,
 } from "@/components/search/property/PropertyHomeHeader";
+import { MaterialsHomeHeader } from "@/components/search/materials/MaterialsHomeHeader";
 import { axisShape, type SectionChrome } from "@/components/search/sectionChrome";
 import { MiniAppBottomNav } from "@/components/MiniAppBottomNav";
 import {
@@ -821,13 +822,17 @@ export function SectionSearchApp({
       ? criteria.originType
       : "all";
   const isMaterialsSection = criteria.category === "materials";
+  // B-CORE upper header: identity + search/Filters + market beside BANCO.
+  // Smart horizontal strip under header: industrial types + origin (wrap, flexGrow:0).
+  // Commodity strip when raw/all. listingMode + refinements stay in FilterSheet
+  // (sliders in search). Never erase strips.
   const showOriginChrome = isMaterialsSection;
-  // Commodity material strip: materials + (all | raw_material) — same gate as
-  // FilterSheet showMaterial. Machine/production_line clear material upstream.
   const showMaterialChrome =
     isMaterialsSection &&
     (criteria.industrialType === "all" ||
       criteria.industrialType === "raw_material");
+  const showMaterialsAxisStrip = showOriginChrome;
+  const showMaterialsLayer2 = showMaterialChrome;
   const showCarOriginChrome = criteria.category === "car" && !lockedEngine;
   const showCarBrandStrip = criteria.category === "car" && !lockedEngine;
   const showRentalTerms =
@@ -835,6 +840,8 @@ export function SectionSearchApp({
     (activeOfferKey === "rent" ||
       engineByKey(criteria.category, criteria.engineKey)?.params.offer_type ===
         "rent");
+  const showIndustrialChipsInStrip =
+    showIndustrialChips && !isMaterialsSection;
   // Keep engine chips visible during facet load — visibleEngines already
   // fails open when scopedFacets are undefined. Hiding on facetsLoading made
   // every section entry flash an empty strip then repaint.
@@ -843,10 +850,10 @@ export function SectionSearchApp({
     !lockedEngine &&
     stripEngineList.length > 1 &&
     !showIndustrialChips &&
-    !isRealEstateSection;
+    !isRealEstateSection && !isMaterialsSection;
   // listingMode "For sale / Wanted" collides with RE offer sale/rent labels —
   // keep it for cars; RE uses offer engines + type strip (+ FilterSheet for مطلوب).
-  const showListingMode = !lockedEngine && !isRealEstateSection;
+  const showListingMode = !lockedEngine && !isRealEstateSection && !isMaterialsSection;
   // Types live in PropertyHomeHeader Band D (mock-aligned primary set).
   const showReTypeStrip = false;
   /** Band D tabs — All / Apartments / Villas / Commercial / Land / More.
@@ -887,6 +894,23 @@ export function SectionSearchApp({
     }
     return RE_TYPE_ALL;
   }, [criteria.propertyType]);
+  const materialsHeaderTypeTabs = useMemo(() => {
+    if (!isMaterialsSection) return [] as { value: IndustrialType; label: string }[];
+    return [
+      { value: "all" as IndustrialType, label: t("home.industrialTypes.all") },
+      { value: "machine" as IndustrialType, label: t("home.industrialTypes.machine") },
+      {
+        value: "raw_material" as IndustrialType,
+        label: t("home.industrialTypes.raw_material"),
+      },
+      {
+        value: "production_line" as IndustrialType,
+        label: t("home.industrialTypes.production_line"),
+      },
+    ];
+  }, [isMaterialsSection, t]);
+  // Smart materials axis strip uses the same tab list (horizontal wrap chips).
+  const materialsAxisTabs = materialsHeaderTypeTabs;
   // Country + currency live in ONE compact MarketCountryButton on the primary
   // strip — every section, no exception (owner 2026-07-20, completed for RE +
   // materials 2026-07-27). The old spread matrix laid 21 country cells in a
@@ -1310,6 +1334,38 @@ export function SectionSearchApp({
             update({ sort: next });
           }}
         />
+      ) : isMaterialsSection ? (
+        <MaterialsHomeHeader
+          searchOpen={searchOpen}
+          draftQuery={draftQuery}
+          searchSaved={searchSaved}
+          activeFilterCount={activeFilterCount}
+          marketCountry={criteria.marketCountry}
+          sort={criteria.sort}
+          inputRef={inputRef}
+          onBack={goBack}
+          onSaveSearch={handleSaveSearch}
+          onOpenFilters={() => {
+            playSound("tap");
+            setShowFilters(true);
+          }}
+          onOpenSearch={openSearch}
+          onCloseSearch={closeSearch}
+          onQueryChange={handleQueryChange}
+          onSubmitQuery={() => commitQueryNow(draftQuery)}
+          onClearQuery={clearQuery}
+          onOpenMarket={() => {
+            playSound("tap");
+            setMarketPickerOpen(true);
+          }}
+          onCycleSort={() => {
+            playSound("tap");
+            const cycle = ["recommended", "newest", "price_asc", "price_desc"] as const;
+            const next =
+              cycle[(cycle.indexOf(criteria.sort as (typeof cycle)[number]) + 1) % cycle.length];
+            update({ sort: next });
+          }}
+        />
       ) : (
       <>
       {/* ── Section header: back + title/subtitle + section icon ── */}
@@ -1408,8 +1464,8 @@ export function SectionSearchApp({
       </>
       )}
 
-      {/* ── Collapsible search bar — non-RE only (RE search lives in PropertyHomeHeader) ── */}
-      {!isRealEstateSection && searchOpen && (
+      {/* ── Collapsible search bar — non-RE/materials (those search live in home headers) ── */}
+      {!isRealEstateSection && !isMaterialsSection && searchOpen && (
         <View
           style={[
             styles.searchBar,
@@ -1452,7 +1508,8 @@ export function SectionSearchApp({
           </Pressable>
         </View>
       )}
-      {/* Inline autocomplete — renders just below the search bar / PropertyHomeHeader */}
+
+      {/* Inline autocomplete — below search bar / section home headers */}
       {searchOpen && showSuggestions && suggestions.length > 0 && (
         <View
           style={[
@@ -1498,7 +1555,7 @@ export function SectionSearchApp({
       {/* ── Primary chip strip: country/currency · sort · mode/engines.
           RE: country + sort live inside PropertyHomeHeader (no wasted strip row).
           Other sections keep this strip unchanged. ── */}
-      {!isRealEstateSection ? (
+      {!isRealEstateSection && !isMaterialsSection ? (
       <View
         style={[styles.chipStrip, { flexDirection: rowDir }]}
         testID="section-primary-strip"
@@ -1827,13 +1884,105 @@ export function SectionSearchApp({
         </ScrollView>
       ) : null}
 
-      {/* ── Materials commodity strip (حديد / ألومنيوم / …) ── */}
-      {showMaterialChrome ? (
+      {/* ── Materials smart axis strip: types + origin ONE horizontal scroll.
+          flexGrow:0 via hScroll — never eat results. FilterSheet = refinements. ── */}
+      {showMaterialsAxisStrip ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={[styles.hScroll, { flexGrow: 0 }]}
+          contentContainerStyle={[
+            styles.materialsAxisStrip,
+            { flexDirection: rowDir },
+          ]}
+          testID="materials-type-strip"
+        >
+          {materialsAxisTabs.map((tab) => {
+            const active = criteria.industrialType === tab.value;
+            return (
+              <Pressable
+                key={tab.value}
+                onPress={() => {
+                  playSound("tap");
+                  Haptics.selectionAsync();
+                  selectIndustrialType(tab.value);
+                }}
+                style={[
+                  styles.materialsAxisChip,
+                  {
+                    backgroundColor: active ? accent : colors.secondary,
+                    borderColor: active ? accent : colors.border,
+                  },
+                ]}
+                testID={`industrial-type-${tab.value}`}
+              >
+                <AppText
+                  style={[
+                    styles.materialsAxisChipText,
+                    { color: active ? "#FFFFFF" : colors.mutedForeground },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {tab.label}
+                </AppText>
+              </Pressable>
+            );
+          })}
+          <View
+            style={[styles.materialsAxisDivider, { backgroundColor: colors.border }]}
+          />
+          <View
+            style={[styles.materialsOriginCluster, { flexDirection: rowDir }]}
+            testID="materials-origin-strip"
+          >
+            {(["all", "local", "imported"] as const).map((o) => {
+              const active = originKey === o;
+              return (
+                <Pressable
+                  key={o}
+                  onPress={() => {
+                    playSound("tap");
+                    Haptics.selectionAsync();
+                    selectOrigin(o);
+                  }}
+                  style={[
+                    styles.materialsAxisChip,
+                    {
+                      backgroundColor: active ? accent : colors.secondary,
+                      borderColor: active ? accent : colors.border,
+                    },
+                  ]}
+                  testID={`section-origin-${o}`}
+                >
+                  <AppText
+                    style={[
+                      styles.materialsAxisChipText,
+                      { color: active ? "#FFFFFF" : colors.mutedForeground },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {o === "all"
+                      ? t("home.engines.all")
+                      : t(`create.opts.${o}`)}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+        </ScrollView>
+      ) : null}
+
+      {/* ── Materials commodities (Steel / Aluminum / …) — horizontal scroll ── */}
+      {showMaterialsLayer2 ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.hScroll}
-          contentContainerStyle={[styles.reTypeStrip, { flexDirection: rowDir }]}
+          contentContainerStyle={[
+            styles.reTypeStrip,
+            styles.materialsLayer2Strip,
+            { flexDirection: rowDir },
+          ]}
           testID="materials-material-strip"
         >
           <Pressable
@@ -1844,6 +1993,7 @@ export function SectionSearchApp({
             }}
             style={[
               styles.stripChip,
+              styles.materialsCommodityChip,
               {
                 backgroundColor: !criteria.material ? accent : colors.card,
                 borderWidth: 1,
@@ -1875,6 +2025,7 @@ export function SectionSearchApp({
                 }}
                 style={[
                   styles.stripChip,
+                  styles.materialsCommodityChip,
                   {
                     backgroundColor: active ? accent : colors.card,
                     borderWidth: 1,
@@ -2337,6 +2488,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 18,
+  },
+  // Materials smart axis — types + origin one horizontal scroll row (~3mm lifted).
+  materialsAxisStrip: {
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingTop: 4,
+    paddingBottom: 1,
+  },
+  materialsAxisChip: {
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  materialsAxisChipText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+  },
+  materialsAxisDivider: {
+    width: StyleSheet.hairlineWidth,
+    height: 18,
+    opacity: 0.7,
+    marginHorizontal: 2,
+  },
+  materialsOriginCluster: {
+    alignItems: "center",
+    gap: 6,
+  },
+  // Materials commodities strip rhythm
+  materialsLayer2Strip: {
+    alignItems: "center",
+    gap: 6,
+    paddingTop: 3,
+    paddingBottom: 1,
+  },
+  materialsCommodityChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
   },
   carBrandBtn: {
     alignItems: "center",
