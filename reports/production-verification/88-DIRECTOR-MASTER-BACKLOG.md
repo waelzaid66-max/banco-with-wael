@@ -170,7 +170,25 @@ Director may **reject** any PR that: invents features · merges `*-5cf0` · dele
 - `85` / `86` council orders + where-we-are  
 - `70` Hard Truth Map  
 - `reports/replit-env/2026-07-31-ALL-ISSUES-MASTER-REPORT.md` (normalized; 5cf0 advice rejected; ENV “fixed” claim overturned)  
+- `reports/intelligence/2026-07-31-PRODUCTION-INTELLIGENCE-REPORT.md` (READ ONLY — mapped below)  
 - Local mobile test evidence on Wave9 E  
 - CI run history on `main`
+
+### 6.1 Intelligence report mapping (2026-07-31)
+
+| Intel ID | Maps to Master ID | Director note |
+|----------|-------------------|---------------|
+| ISSUE-001 Clerk secret invalid / Next blank | **SEC-02** + **AUTH-01** | Runtime VERIFIED on Replit — Owner must set matching sk/pk; no bulk branch merge |
+| ISSUE-002 Expo web blank | **SEC-02** + **DIR-03** | Product vs env unknown — shots+console required; do not invent mobile rewrite |
+| ISSUE-003 Dead Google OAuth Admin/Dealer | **AUTH-01** / ACC-00 | Hide or disable buttons when tenant `social` empty — Approve Plan |
+| Architecture banco-web vs website | **DEP-01** | Coolify already profiles `banco-web` legacy; Replit still runs frozen twin — cutover Owner+EXECUTE |
+| 50 unmerged / `*-5cf0` | **REJECTED** | See `DIR-REJECT-5CF0-BULK-MERGE.md` — cherry-pick via Approve Plan only |
+| Release readiness NOT READY | Aligns Director Sign-Off **NO** | Correct |
+
+### 6.2 Director answers to Intelligence DECISIONS
+
+1. **Clerk keys:** Authoritative pair = Owner Clerk Dashboard for the active tenant. Tip must not embed `pk_live` / placeholders in `.replit` shared. Rotate if mismatch persists. Owner ops + SEC-02.  
+2. **Web canonical:** **`banco-website`** is canonical; `banco-web` remains **FROZEN** / profile `legacy-banco-web`. DEP-01 EXECUTE aligns Replit preview away from frozen twin.  
+3. **Merge sequence for 50 branches:** **None.** Tip-only. Diff→Approve Plan→PR. No `*-5cf0` bulk merge.
 
 — Chief Production Delivery Director
