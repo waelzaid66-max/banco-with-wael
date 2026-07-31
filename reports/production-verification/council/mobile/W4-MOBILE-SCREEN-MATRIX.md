@@ -1,22 +1,23 @@
 # W4 — Mobile screen matrix (master)
 
-**Tip:** PR #32 · Waves `67`/`69`/`71`  
+**Tip:** PR #32 @ `46e82c1`+absorb · Waves `67`/`69`/`71`  
 **Protocol:** `68` · Truth map `70`  
-**Legend:** PENDING · HEALTHY · RISK · DEFECT · UNVERIFIED_VISUAL · FIXED · SUPERSEDED · HYPOTHESIS
+**Legend:** PENDING · HEALTHY · RISK · DEFECT · UNVERIFIED_VISUAL · FIXED · SUPERSEDED · HYPOTHESIS · CONFIRMED
 
 | Zone | Screen / surface | Status | Packet |
 |------|------------------|--------|--------|
-| A | Tabs / Feed / Search / Messages / Saved / Profile | HEALTHY / RISK LOW Saved / FIXED REL-09 Profile | Zone A + REL-09 |
-| B | /section/* (5) | HEALTHY emit · create FIXED REL-10 | Zone B amended |
-| C | listing/[id] | HYPOTHESIS→Wave5 rebind | C-01 |
-| C | listings/create | FIXED REL-10 | REL-10 + peers |
-| C | listings/edit | FIXED REL-11 + **REL-12** | REL-11/12 execute |
-| C | listings/mine | FIXED **REL-12** | REL-12 execute |
-| D | thread / notif / auth | CONFIRMED rebind @ tip (RISK LOW thread) | W4b-REL-ZONE-D-REBIND |
-| E | business/* | HYPOTHESIS → **AUD-53** | E packets |
-| F | import/industry/wallet/settings/legal | HYPOTHESIS → **SUP-20** | Zone F |
-| G | deep links | PENDING | |
+| A | Tabs / Feed / Search / Messages / Saved / Profile | HEALTHY / RISK LOW Saved / FIXED REL-09 | Zone A |
+| B | /section/* (5) | HEALTHY emit · create FIXED REL-10 | Zone B |
+| C | listing/[id] | CONFIRMED static (device UNVERIFIED) | C skeptic + peers |
+| C | listings/create | FIXED REL-10 | REL-10 |
+| C | listings/edit | FIXED REL-11 + REL-12 | REL-11/12 |
+| C | listings/mine | FIXED REL-12 | REL-12 |
+| D | thread / notif / auth | CONFIRMED (RISK LOW thread unsigned) | W4b-REL-ZONE-D-REBIND |
+| E | business/* | **CONFIRMED** dual-end @ tip (AUD-53) | W5-AUD-53 |
+| F | import/industry/wallet/settings/legal | **CONFIRMED** (7H/7R LOW) SUP-20 | W5-SUP-20 |
+| G | deep links | PENDING shared | |
 | * | Device / ASB | UNVERIFIED | Owner device |
 
-**Open:** Zone E/F rebind · OPS cutover · soft-auth optional · visuals.  
-**Non-goals:** Live Certified fiction · CAR IMPORT W4/5 · MSG-05.
+**Accept blockers (code):** none CRITICAL/HIGH.  
+**Public Live:** NOT_CUTOVER (OPS).  
+**Deferred past Accept:** REL-15 soft-auth · AP-CI-01/02.
