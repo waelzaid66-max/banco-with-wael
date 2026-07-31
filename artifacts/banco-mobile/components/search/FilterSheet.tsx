@@ -108,10 +108,16 @@ interface FilterSheetProps {
    */
   lockCategory?: boolean;
   /**
-   * Hide the payment type (cash / installment) row entirely.
+   * Hide payment type (cash / installment) row entirely.
    * Used by rental-locked pages where installment is irrelevant.
    */
   hidePaymentType?: boolean;
+  /**
+   * When the section chrome already owns the materials origin strip, hide the
+   * duplicate origin axis inside the sheet (Wave9 D-W9-03). Material commodity
+   * chips remain available as refinements.
+   */
+  hideOriginAxis?: boolean;
   /**
    * Optional restrict of RE property-type chips (Stay passes studio/apartment/
    * villa/chalet only — never land/commercial in a stays browse).
@@ -148,6 +154,7 @@ export function FilterSheet({
   onClearAll,
   lockCategory = false,
   hidePaymentType = false,
+  hideOriginAxis = false,
   propertyTypeOptions,
 }: FilterSheetProps) {
   const colors = useColors();
@@ -211,7 +218,8 @@ export function FilterSheet({
         criteria.industrialType === "raw_material")
     );
   // Local/imported logistics: materials company only — facilities are sites.
-  const showOrigin = criteria.category === "materials";
+  // Strip may own origin (Materials axis) — then hideOriginAxis suppresses dual seat.
+  const showOrigin = criteria.category === "materials" && !hideOriginAxis;
   // Commodity material chips: materials company, especially raw_material browse
   // (create writes specs.material). Shown for materials+all too so shoppers can
   // refine the group without picking a subtype first.

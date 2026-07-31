@@ -1017,120 +1017,9 @@ const styles = StyleSheet.create({
     borderBottomColor: "rgba(255,255,255,0.08)",
   },
 
-  // ── Stays hero (G2: slight trim — same options, less chrome height) ──────
-  hero: {
-    paddingHorizontal: 14,
-    paddingBottom: 8,
-    borderBottomLeftRadius: 22,
-    borderBottomRightRadius: 22,
-    overflow: "hidden",
-    backgroundColor: "#650E36",
-  },
-  heroTopRow: { alignItems: "center", gap: 8, marginBottom: 6 },
-  heroBackBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  // Title band shrinks; action buttons stay inside the rose hero (no escape).
-  heroTitleWrap: { flex: 1, minWidth: 0 },
-  heroTitle: {
-    fontSize: 18,
-    fontFamily: "Inter_700Bold",
-    color: "#FFFFFF",
-    letterSpacing: 0.2,
-  },
-  heroSub: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: "rgba(255,255,255,0.78)",
-    marginTop: 1,
-  },
-  wordmarkRow: {
-    alignItems: "center",
-    gap: 5,
-  },
-  wordmarkBoom: {
-    width: 64,
-    height: 22,
-  },
-  wordmarkStay: {
-    fontSize: 17,
-    fontFamily: "Inter_700Bold",
-    color: "#FFFFFF",
-    letterSpacing: 2.2,
-  },
-  poweredRow: {
-    alignItems: "center",
-    gap: 4,
-    marginTop: 1,
-  },
-  poweredText: {
-    fontSize: 9.5,
-    fontFamily: "Inter_500Medium",
-    color: "rgba(255,255,255,0.7)",
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-  },
-  poweredLogo: {
-    width: 42,
-    height: 11,
-    opacity: 0.9,
-  },
-  heroActionBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    flexShrink: 0,
-  },
-  heroActionBtnActive: { backgroundColor: "#FFFFFF" },
-  filterBadge: {
-    position: "absolute",
-    top: 3,
-    right: 3,
-    minWidth: 15,
-    height: 15,
-    borderRadius: 8,
-    backgroundColor: STAYS_ACCENT,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 3,
-  },
-  filterBadgeText: {
-    fontSize: 9.5,
-    fontFamily: "Inter_700Bold",
-    color: "#FFFFFF",
-  },
-  heroSearch: {
-    height: 44,
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "rgba(255,255,255,0.16)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.24)",
-  },
-  heroSearchText: {
-    flex: 1,
-    fontSize: 14.5,
-    fontFamily: "Inter_500Medium",
-  },
-  heroSearchInput: {
-    flex: 1,
-    fontSize: 14.5,
-    fontFamily: "Inter_400Regular",
-    color: "#FFFFFF",
-    padding: 0,
-  },
+  // W9 D-W9-04: retired unused rose hero StyleSheet — chrome lives in
+  // StaysHomeHeader (black identity). Dead hero* keys removed; no taste rewrite.
+
   // Type tabs; country + currency ride in the compact MarketCountryButton.
   controlsRow: {
     alignItems: "center",
@@ -1151,16 +1040,6 @@ const styles = StyleSheet.create({
     width: StyleSheet.hairlineWidth,
     height: 22,
     alignSelf: "center",
-  },
-  heroWatermarkWrap: {
-    position: "absolute",
-    top: 12,
-    right: 12,
-  },
-  heroWatermark: {
-    width: 64,
-    height: 22,
-    opacity: 0.55,
   },
   termTab: {
     paddingHorizontal: 10,

@@ -33,6 +33,7 @@ import {
   DEFAULT_CRITERIA,
   type SearchCriteria,
 } from "@/lib/searchParams";
+import { sectionAccent } from "@/lib/sectionTheme";
 import type { FeedItem } from "@workspace/api-client-react";
 
 const BANCO_LOGO = require("../../../assets/images/banco-logo.png");
@@ -41,7 +42,8 @@ const VOID = "#000000";
 const SNOW = "#FFFFFF";
 const ASH = "#8E8E93";
 const HAIRLINE = "rgba(255,255,255,0.16)";
-const ACCENT = "#C4A35A";
+// W9 D-W9-01: Maps hub stays in BANCO red-family (logo red). Gold was identity break.
+const ACCENT = sectionAccent("all");
 const BODY_BG = "#0C0D10";
 
 type MapsWorld =
@@ -241,6 +243,7 @@ export function MapsHubApp() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
+          style={{ flexGrow: 0 }}
           contentContainerStyle={[styles.tabsRow, { flexDirection: rowDir }]}
           testID="maps-hub-world-tabs"
         >
