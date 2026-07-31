@@ -13,3 +13,9 @@
 **Open for Chair:** MOB-C-09 MEDIUM · absorb packets · Accept §E with NOT_CUTOVER.
 
 Standing by.
+
+---
+
+## Tip advance note (same cycle)
+
+Tip moved `7d49cbd` → `9c748eb` (**D-17** Reliability REL-10 VERIFY-only). Mobile product code unchanged vs REL-10 land. Auditor packets remain valid dual-end evidence; cite tip **`9c748eb`** going forward. Matrix still shows Zone E PENDING — Chair absorb of Auditor E/C peer still requested.
