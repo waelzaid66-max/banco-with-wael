@@ -1,6 +1,6 @@
 # Wave 8 — Delivery status (Owner)
 
-**SoT:** tip after Tranche C land (see merge)  
+**SoT:** `main` @ `db0d329`  
 **Date:** 2026-07-31  
 
 ## Done
