@@ -1,5 +1,6 @@
-// Production wiring wave — map latch + notification role + web geolocation.
-// Additive guards; do not delete prior notification-routing tests.
+// Production wiring wave — map latch + notification role + web geolocation
+// + wave-2 messenger/map/notif completions (MSG-06/07/09/10, MAP-03/04/06,
+// NOTIF-03/09). Additive guards; do not delete prior tests.
 //
 // Run: node --test tests/production-wiring-guard.test.mjs
 
@@ -22,8 +23,22 @@ const mapWeb = fs.readFileSync(
   path.join(root, "components/search/SearchResultsMap.web.tsx"),
   "utf8",
 );
+const mapHtml = fs.readFileSync(
+  path.join(root, "components/search/mapHtml.ts"),
+  "utf8",
+);
+const mapNative = fs.readFileSync(
+  path.join(root, "components/search/SearchResultsMap.tsx"),
+  "utf8",
+);
+const thread = fs.readFileSync(path.join(root, "app/messages/[id].tsx"), "utf8");
+const layout = fs.readFileSync(path.join(root, "app/_layout.tsx"), "utf8");
 const apiConv = fs.readFileSync(
   path.join(root, "../api-server/src/services/ConversationService.ts"),
+  "utf8",
+);
+const apiSearch = fs.readFileSync(
+  path.join(root, "../api-server/src/services/SearchService.ts"),
   "utf8",
 );
 
@@ -60,4 +75,71 @@ test("web SearchResultsMap enables iframe geolocation for locate", () => {
     /allow="geolocation"/,
     "web map iframe must allow geolocation (LocateControl parity)",
   );
+});
+
+test("MSG-06 deliver commits on POST before soft refetch", () => {
+  assert.match(thread, /setQueryData/);
+  assert.match(thread, /void query\.refetch\(\)\.catch/);
+  const deliverAt = thread.indexOf("const deliver = useCallback");
+  const deliver = thread.slice(deliverAt, deliverAt + 1800);
+  assert.match(deliver, /setPending\(\(p\) => p\.filter/);
+  assert.ok(
+    deliver.indexOf("setPending((p) => p.filter") <
+      deliver.indexOf("void query.refetch().catch"),
+    "pending must drop before soft refetch so retry cannot duplicate",
+  );
+});
+
+test("MSG-07 thread polls with limit page size", () => {
+  assert.match(thread, /limit:\s*THREAD_PAGE/);
+  assert.match(apiConv, /opts:\s*\{\s*limit\?:/);
+  assert.match(apiConv, /Math\.min\(Math\.floor\(opts\.limit\),\s*1000\)/);
+});
+
+test("MSG-09 thread surfaces isError with retry", () => {
+  assert.match(thread, /query\.isError && !query\.data/);
+  assert.match(thread, /testID="thread-retry"/);
+});
+
+test("MSG-10 pending preserves reply_to_id for retry", () => {
+  assert.match(thread, /reply_to_id\?: string/);
+  assert.match(
+    thread,
+    /\.\.\.\(m\.reply_to_id \? \{\s*reply_to_id:\s*m\.reply_to_id\s*\} : \{\}\)/,
+  );
+});
+
+test("MAP-03 near-me radius circle restored in mapHtml + hosts", () => {
+  assert.match(mapHtml, /near\?: \{ lat: number; lng: number; radiusKm: number \}/);
+  assert.match(mapHtml, /L\.circle\(\[/);
+  assert.match(mapNative, /criteria\.nearMeEnabled/);
+  assert.match(mapNative, /radiusKm:\s*criteria\.nearRadiusKm/);
+  assert.match(mapWeb, /criteria\.nearMeEnabled/);
+});
+
+test("MAP-04 mapClusters emit price_display / is_bookable for singles", () => {
+  assert.match(apiSearch, /price_display/);
+  assert.match(apiSearch, /is_bookable/);
+  assert.match(mapNative, /c\.price_display \?\? priceById/);
+  assert.match(mapWeb, /c\.price_display \?\? priceById/);
+});
+
+test("MAP-06 web locate_error shows Alert", () => {
+  assert.match(mapWeb, /locate_error/);
+  assert.match(mapWeb, /Alert\.alert/);
+  assert.match(mapWeb, /search\.locateFailedTitle/);
+});
+
+test("NOTIF-03 soft ACCOUNT_DELETED unregisters push before signOut", () => {
+  assert.match(layout, /ACCOUNT_DELETED/);
+  assert.match(layout, /unregisterCachedPushTokenBestEffort/);
+});
+
+test("NOTIF-09 unknown notification routes to /notifications", () => {
+  const fnStart = routing.indexOf("export function routeForNotification(");
+  const fnEnd = routing.indexOf("export function routeForNotificationItem(");
+  const body = routing.slice(fnStart, fnEnd);
+  assert.match(body, /\/\/ NOTIF-09/);
+  assert.match(body, /return "\/notifications";\s*\n\}/);
+  assert.doesNotMatch(body, /return null;/);
 });

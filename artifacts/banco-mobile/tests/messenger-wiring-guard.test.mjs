@@ -87,3 +87,9 @@ test("mobile chat stays poll-only (G47 — no WebSocket client)", () => {
   assert.match(thread, /refetchInterval:\s*3000/, "thread poll interval contract");
   assert.match(inbox, /refetchInterval:\s*8000/, "inbox poll interval contract");
 });
+
+test("MSG-06/10 deliver seeds cache and preserves reply on retry", () => {
+  assert.match(thread, /setQueryData/);
+  assert.match(thread, /reply_to_id\?: string/);
+  assert.match(thread, /maxLength=\{4000\}/);
+});

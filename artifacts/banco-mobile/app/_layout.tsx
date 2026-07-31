@@ -118,10 +118,21 @@ function AuthTokenBridge() {
 
   useEffect(() => {
     // Soft-deleted accounts reject with 401 ACCOUNT_DELETED while Clerk JWT
-    // may still exist — clear the local session once so the user is not stuck.
+    // may still exist — unregister push while auth may still work, then clear
+    // the local session so the user is not stuck (NOTIF-03).
     setAuthFailureHandler(({ code }) => {
       if (code !== "ACCOUNT_DELETED") return;
-      void signOut().catch(() => {});
+      void (async () => {
+        try {
+          const { unregisterCachedPushTokenBestEffort } = await import(
+            "@/lib/unregisterPushBestEffort"
+          );
+          await unregisterCachedPushTokenBestEffort();
+        } catch {
+          // Best-effort — still sign out.
+        }
+        await signOut().catch(() => {});
+      })();
     });
     return () => setAuthFailureHandler(null);
   }, [signOut]);

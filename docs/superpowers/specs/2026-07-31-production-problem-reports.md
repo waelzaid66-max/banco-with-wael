@@ -10,7 +10,71 @@ Each item below is a standing problem report. **Nothing listed is deleted from t
 **Cause:** `router.push` dropped `listingId`/`role` while inbox passed them.  
 **Fix:** Forward `res.data.listing_id` + `viewer_role` from `createConversation`.  
 **Files:** `listing/[id].tsx`, `company/[id].tsx`, `messages/[id].tsx`  
-**Test:** `test:messenger-wiring`
+**Test:** `test:messenger-wiring`  
+**Status:** Fixed
+
+---
+
+## MSG-03 — Assistant→chat listingId
+
+**Symptom:** Assistant open-chat ignored optional listing context.  
+**Fix:** Forward `listingId` only; never invent role.  
+**Status:** Fixed
+
+---
+
+## MSG-04 — False WebSocket docs
+
+**Symptom:** Deploy docs claimed REST+WebSocket.  
+**Fix:** Document poll-only / G47 in `DEPLOY_COOLIFY.md`.  
+**Status:** Fixed
+
+---
+
+## MSG-06 — Duplicate send on refetch failure
+
+**Symptom:** Message POSTed, refetch threw → bubble marked failed → retry POSTed again.  
+**Cause:** `deliver()` coupled POST success to `await query.refetch()`.  
+**Fix:** On POST success: drop pending, seed React Query cache from `sendMessage` response, soft-refetch (errors ignored).  
+**Files:** `app/messages/[id].tsx`  
+**Status:** Fixed
+
+---
+
+## MSG-07 — Unbounded history every poll
+
+**Symptom:** Every 3s poll re-downloaded the entire thread.  
+**Cause:** `getMessages` had no limit/cursor.  
+**Fix:** Optional `limit` + `before` query params (OpenAPI + service + controller); mobile polls with `limit=400`. Website keeps full history (no limit).  
+**Follow-up MSG-07b:** scroll-up older-page UI using `before=`.  
+**Files:** `ConversationService.ts`, `conversationController.ts`, `openapi.yaml`, `api-client-react`, `messages/[id].tsx`  
+**Status:** Fixed (page API); load-more UI tracked as MSG-07b
+
+---
+
+## MSG-09 — Thread error looks empty
+
+**Symptom:** Failed thread load showed “Say hello…”.  
+**Cause:** Only `isLoading` branched; error → empty list.  
+**Fix:** Mirror inbox — `isError && !data` → error + Retry.  
+**Status:** Fixed
+
+---
+
+## MSG-10 — Reply retry drops quote
+
+**Symptom:** Failed quoted reply retried as bare body.  
+**Cause:** `PendingMessage` omitted `reply_to_id`.  
+**Fix:** Store + pass `reply_to_id` on send/retry (offers too).  
+**Status:** Fixed
+
+---
+
+## MSG-16 — Client maxLength
+
+**Symptom:** Typing past 4k failed only on server validation.  
+**Fix:** `maxLength={4000}` on composer.  
+**Status:** Fixed
 
 ---
 
@@ -20,7 +84,28 @@ Each item below is a standing problem report. **Nothing listed is deleted from t
 **Cause:** Notification `data` had conversation + listing only.  
 **Fix:** Server stamps `role: isBuyer ? "seller" : "buyer"`; mobile router forwards buyer|seller only (never invents).  
 **Files:** `ConversationService.ts`, `notificationRouting.ts`  
-**Test:** `test:production-wiring` + notification-routing append
+**Test:** `test:production-wiring` + notification-routing append  
+**Status:** Fixed
+
+---
+
+## NOTIF-03 — Soft sign-out left push token
+
+**Symptom:** ACCOUNT_DELETED soft path signed out without unregistering Expo token.  
+**Cause:** `_layout` AuthTokenBridge called `signOut` only; bridge clears local cache after auth dies.  
+**Fix:** `unregisterCachedPushTokenBestEffort()` then `signOut`. Profile/settings paths already correct.  
+**Files:** `app/_layout.tsx`  
+**Status:** Fixed
+
+---
+
+## NOTIF-09 — Unknown tap dead
+
+**Symptom:** Push with incomplete/unknown payload did nothing.  
+**Cause:** `routeForNotification` returned `null`; `handleResponse` early-returned.  
+**Fix:** Final fallback `/notifications` (typed routes unchanged).  
+**Files:** `lib/notificationRouting.ts`  
+**Status:** Fixed
 
 ---
 
@@ -30,7 +115,8 @@ Each item below is a standing problem report. **Nothing listed is deleted from t
 **Cause:** Latch required `hasPagePins` though server clusters need only results.  
 **Fix:** Open map when `inResultsView`; clear latch on empty/error.  
 **Files:** `SectionSearchApp.tsx`  
-**Affects:** Cars, RE, Facilities, Materials (Stay already correct)
+**Affects:** Cars, RE, Facilities, Materials (Stay already correct)  
+**Status:** Fixed
 
 ---
 
@@ -38,17 +124,47 @@ Each item below is a standing problem report. **Nothing listed is deleted from t
 
 **Symptom:** Locate control on web map ineffective.  
 **Cause:** iframe missing `allow="geolocation"`.  
-**Fix:** Add attribute on `SearchResultsMap.web.tsx`.
+**Fix:** Add attribute on `SearchResultsMap.web.tsx`.  
+**Status:** Fixed
 
 ---
 
-## MSG-04 — False WebSocket docs
+## MAP-03 — Near-me radius circle missing
 
-**Symptom:** Deploy docs claimed REST+WebSocket.  
-**Fix:** Document poll-only / G47 in `DEPLOY_COOLIFY.md`.
+**Symptom:** Docs/MASTER-TRACKER claimed radius circle; map showed none.  
+**Cause:** Removed in market-center restore (`a7a4b78`) while FilterSheet radius chips remained.  
+**Fix:** Restore optional `near` arg on `buildMapHtml` + `L.circle`/`circleMarker`; pass from native+web hosts when near-me enabled.  
+**Files:** `mapHtml.ts`, `SearchResultsMap.tsx`, `SearchResultsMap.web.tsx`  
+**Status:** Fixed
 
 ---
 
-## Open tracked (next waves — reports only here)
+## MAP-04 — Off-page cluster pins blank
 
-See inventory §A–C for MSG-05…MSG-16, NOTIF-02…10, MAP-03…10. Highest next code wave: MSG-06, MSG-07, MAP-03, MAP-04, NOTIF-03, NOTIF-09.
+**Symptom:** Zoomed-in single pins off the loaded page had no price / bookable tint.  
+**Cause:** `MapCluster` was geo-only; client enriched only from current feed page.  
+**Fix:** Server emits `price_display` / `is_bookable` / `category` for count===1; client prefers server fields, page lookup as fallback.  
+**Files:** `SearchService.ts`, schemas, OpenAPI, client types, both map hosts  
+**Status:** Fixed
+
+---
+
+## MAP-06 — Web locate silent fail
+
+**Symptom:** Web locate deny/timeout only `console.warn`.  
+**Fix:** `Alert.alert` parity with native copy.  
+**Status:** Fixed
+
+---
+
+## Open tracked (next waves)
+
+| ID | Notes |
+|----|-------|
+| MSG-05 | WS/typing — Owner decision (G47 poll-only) |
+| MSG-07b | Older-page scroll UI |
+| MSG-08 | Block / report message |
+| MSG-11–15 | Email deep-link, import support context, mute, media kinds, empty CTA |
+| NOTIF-02/10 | Ops: EAS/APNs/FCM + env |
+| NOTIF-04–08 | Receipts, unread cap, badge payload, retry register, in-app label |
+| MAP-05/07–10 | Web near-me coords, CDN, draw-area, edit MapPinPicker, E2E |

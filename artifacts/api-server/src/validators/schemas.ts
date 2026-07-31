@@ -989,6 +989,9 @@ export const MapClusterSchema = z
     lng: z.number(),
     count: z.number(),
     listing_id: z.string().nullable(),
+    price_display: z.string().nullable().optional(),
+    is_bookable: z.boolean().nullable().optional(),
+    category: z.string().nullable().optional(),
   })
   .strict();
 

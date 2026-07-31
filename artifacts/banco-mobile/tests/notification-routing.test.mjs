@@ -30,3 +30,12 @@ test("message notifications forward stamped role (mark-sold chrome)", () => {
   );
   assert.match(routing, /role:\s*d\.role/);
 });
+
+test("unknown / incomplete notification falls back to /notifications", () => {
+  const fnStart = routing.indexOf("export function routeForNotification(");
+  const fnEnd = routing.indexOf("export function routeForNotificationItem(");
+  const body = routing.slice(fnStart, fnEnd);
+  assert.match(body, /\/\/ NOTIF-09/);
+  assert.match(body, /return "\/notifications";\s*\n\}/);
+  assert.doesNotMatch(body, /return null;/);
+});

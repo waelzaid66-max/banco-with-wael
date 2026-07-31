@@ -85,8 +85,17 @@ export function SearchResultsMap({
           border: colors.border,
         },
         marketCountryMapCenter(criteria.marketCountry),
+        criteria.nearMeEnabled &&
+          criteria.nearLat != null &&
+          criteria.nearLng != null
+          ? {
+              lat: criteria.nearLat,
+              lng: criteria.nearLng,
+              radiusKm: criteria.nearRadiusKm,
+            }
+          : undefined,
       ),
-    // Rebuild when plotted set, theme, or market country (map center) changes.
+    // Rebuild when plotted set, theme, market country, or near-me area changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       sig,
@@ -96,6 +105,10 @@ export function SearchResultsMap({
       colors.foreground,
       colors.border,
       criteria.marketCountry,
+      criteria.nearMeEnabled,
+      criteria.nearLat,
+      criteria.nearLng,
+      criteria.nearRadiusKm,
     ],
   );
 
@@ -170,12 +183,18 @@ export function SearchResultsMap({
           count: c.count,
           listing_id: c.listing_id,
           label:
-            c.count === 1 && c.listing_id ? priceById.get(c.listing_id) : undefined,
+            c.count === 1 && c.listing_id
+              ? c.price_display ?? priceById.get(c.listing_id)
+              : undefined,
           bookable:
-            c.count === 1 && c.listing_id ? bookableById.has(c.listing_id) : false,
+            c.count === 1 && c.listing_id
+              ? c.is_bookable === true || bookableById.has(c.listing_id)
+              : false,
           cat:
             c.count === 1
-              ? (c.listing_id ? catById.get(c.listing_id) : undefined) ?? defaultCat
+              ? (c.category ??
+                  (c.listing_id ? catById.get(c.listing_id) : undefined) ??
+                  defaultCat)
               : undefined,
         }));
         const total = clusters.reduce((sum, c) => sum + c.count, 0);
