@@ -1,23 +1,15 @@
-# ENGINEERING COUNCIL — Standing Orders (Unify Wave)
+# ENGINEERING COUNCIL — Standing Orders (STRICT · team inbound)
 
 **Chair** · 2026-07-31  
-**SoT:** `main` @ `6999915`  
-**Replit paste:** `audit/handoff/PASTE-REPLIT-WAVE8-UNIFY-MAIN-AR.md`  
-**Unify map:** `84-UNIFIED-SOT-REPLIT-CURSOR.md`
+**SoT:** `main` @ `aa62473`  
+**Master packet:** `85-ENGINEERING-COUNCIL-STRICT-ORDERS-ALL-SEATS.md`  
+**Where we are:** `86-INVENTORY-WHERE-WE-ARE-AR.md`  
+**Replit:** `PASTE-REPLIT-WAVE8-UNIFY-MAIN-AR.md`
 
-**STATUS:** Wave8 A–D **CLOSED** · CI green · **UNIFY** مع Replit (سحب+شوتات فقط) · seats STANDBY على المنتج  
+**STATUS:** A–D CLOSED · CI green · UNIFY packet live · **ALL SEATS execute 85 §2 then STANDBY** unless Chair names a World  
 
-## Machine rule
-ASK Chair قبل أي World/fix. Replit لا يصون. نسخة واحدة = `main`.
+## Absolute
+ASK Chair · one World · no 5cf0 · no invent · Replit no code · finished sacred  
 
-## Seats now
-| Seat | Job |
-|------|-----|
-| Chair | SoT + PASTE Replit + absorb runtime reports |
-| Replit | Pull CANONICAL · shots R01–R12 · report |
-| Auditor | AUD-86 peer paste/tip |
-| Reliability | Queue Replit RED_LOGS → Chair |
-| Idle | Board sync |
-
-## HOLD
-Factories header · Banks directory · REL-21 · Coolify Live · Arabic seed epic (Owner)
+## Pasteables
+See **85 §2** for Auditor · Reliability · Idle · Replit · Chair.

@@ -1,20 +1,14 @@
 # Wave 8+ — Delivery status (Owner)
 
-**SoT:** `main` (floors `a05190e` + `6999915` · tip ≥ unify paste)  
+**SoT:** `main` @ `aa62473`  
 **Date:** 2026-07-31  
 
 ## Done
-1. Wave8 A–D · CI أخضر  
-2. 10 عوالم محمية  
-3. **توحيد Replit:** `PASTE-REPLIT-WAVE8-UNIFY-MAIN-AR.md` · `84` · role lock  
+Wave8 A–D · 10 Worlds protected · CI green · Replit PASTE ready · **Strict orders `85` + inventory `86` issued for full team**
 
-## فهم التشغيل
-- فراغ الشاشة = env (CORS/Clerk) لا نقص ميني-آبات  
-- الداتا متصلة · المحتوى العربي في seed ضعيف  
-- Live Certified = Owner/Coolify  
+## Next
+Team lands → each seat runs **85 §2** → Replit shots → Auditor/REL VERIFY → **STANDBY**  
+Product World only if Owner names HOLD or Replit proves ProductBug
 
-## Replit الآن
-نفّذ PASTE · `reset --hard origin/main` · floors OK · شوتات R01–R12 · بلاغ · **ممنوع صيانة/5cf0**
-
-## Team
-Replit PASTE · AUD-86 · REL queue logs · STANDBY product
+## HOLD
+Factories header · Banks directory · REL-21 · Arabic seed · Coolify Live
