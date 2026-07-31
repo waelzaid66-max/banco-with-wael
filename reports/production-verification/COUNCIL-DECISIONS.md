@@ -308,6 +308,16 @@
 
 ---
 
+## D-2026-07-31-29 — Reliability review of Chair (post–Tranche A)
+
+| | |
+|--|--|
+| **Decision** | Owner ordered seat to review Chair. Chair SoT healthy @ `f3b9911`; Tranche A closed; seat VERIFY PRs not yet absorbed. |
+| **Adopted** | `W8-REL-CHAIR-REVIEW.md` · pasteable absorb ACK for #40/#41/#38 · fleet STANDBY. |
+| **Rejected** | Inventing Tranche B · tip fight on stale Chair branch · Live Certified. |
+
+---
+
 ## Template for future disputes
 
 ```markdown
