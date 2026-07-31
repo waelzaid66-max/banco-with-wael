@@ -23,12 +23,12 @@
 
 | Order | # | World | Owner | Study packet | Status |
 |------|---|-------|-------|--------------|--------|
-| 1 | 1 | Discover | Auditor | W8-STUDY-01 | STUDY DONE |
-| 2 | 7 | Maps | Reliability | W8-STUDY-01 | STUDY DONE |
-| 3 | 2 | B-oom Car | Reliability | W8-STUDY-01 | STUDY DONE · **DEFECT open** |
+| 1 | 1 | Discover | Auditor | W8-STUDY-01 | STUDY DONE · **D-W8-03 Tranche B** |
+| 2 | 7 | Maps | Reliability | W8-STUDY-01 | STUDY DONE · PASS (hub on main) |
+| 3 | 2 | B-oom Car | Reliability | W8-STUDY-01 | STUDY DONE · **D-W8-01 CLOSED** |
 | 4 | 4 | BOOM STAY | Auditor | W8-STUDY-02 | STUDY DONE · PASS |
 | 5 | 3 | B-PROPERTIES | Reliability | W8-STUDY-02 | STUDY DONE · PASS |
-| 6 | 5 | Materials | Idle+Aud | W8-STUDY-02 | STUDY DONE · **DEFECT open** |
+| 6 | 5 | Materials | Idle+Aud | W8-STUDY-02 | STUDY DONE · **D-W8-02 CLOSED** |
 | 7 | 6 | Factories | Idle | W8-STUDY-03 | STUDY DONE · PASS |
 | 8 | 9 | Car Import | Auditor | W8-STUDY-03 | STUDY DONE · PASS |
 | 9 | 8 | Banks | Reliability | W8-STUDY-03 | STUDY DONE · PASS/HOLD |
@@ -40,12 +40,13 @@ Full inventory: `77` · Studies: `council/chair/W8-STUDY-01..03`.
 
 ## 2. Proven DEFECT register (fix tranche only)
 
-| ID | World | Defect | Evidence | Fix policy |
-|----|-------|--------|----------|------------|
-| **D-W8-01** | §2 Car | Market+sort dual-seat (header + primary strip) · duplicate `section-sort-cycle` | STUDY-01 · `SectionSearchApp` strip + `CarsHomeHeader` | Header drops market/sort UI; **strip remains SoT** (guard: MarketCountryButton ungated) |
-| **D-W8-02** | §5 Materials | Origin axis mounted twice · duplicate `materials-origin-strip` | STUDY-02 · lines ~1978 and ~2097 | Remove **legacy** second origin row only; keep axis strip cluster |
+| ID | World | Defect | Evidence | Fix policy | Status |
+|----|-------|--------|----------|------------|--------|
+| **D-W8-01** | §2 Car | Market+sort dual-seat (header + primary strip) · duplicate `section-sort-cycle` | STUDY-01 · `SectionSearchApp` strip + `CarsHomeHeader` | Header drops market/sort UI; **strip remains SoT** | **CLOSED** Tranche A |
+| **D-W8-02** | §5 Materials | Origin axis mounted twice · duplicate `materials-origin-strip` | STUDY-02 | Remove **legacy** second origin row only; keep axis strip cluster | **CLOSED** Tranche A |
+| **D-W8-03** | §1 Discover | Dead melt props still wired from host (`onBrowseBrand` et al unused in Discover) | STUDY-01 · `_on*` prefixes | Drop melt props; keep `onExploreMap` + FilterSheet `browseBrand` | **Tranche B** |
 
-**Non-defects (HOLD — do not freestyle):** Factories premium header · Banks directory · REL-21 taxonomy · Discover dormant `onBrowseBrand` · Live Certified / Coolify.
+**Non-defects (HOLD — do not freestyle):** Factories premium header · Banks directory · REL-21 taxonomy · Live Certified / Coolify.
 
 ---
 
@@ -64,18 +65,18 @@ STUDY(world) → ASK Chair → APPROVE PLAN → FIX(narrow) → REL-00 guards
 
 ## 4. Seat assignments (rotation)
 
-### Now — Tranche A (Chair EXECUTE after this plan lands)
+### Now — Tranche B (Chair EXECUTE · Owner «التالي»)
 
 | Seat | Job |
 |------|-----|
-| **Chair** | Own D-W8-01 + D-W8-02 Approve Plan + land fixes · lead |
-| **Auditor** | Peer VERIFY after land (AUD-80 Car dual-chrome · AUD-81 Materials origin) |
-| **Reliability** | REL-00 gates after land · standby for Tranche B ASK |
-| **Idle** | SUP-50: maintain World queue board from this doc · zero product code |
+| **Chair** | Own D-W8-03 Approve Plan + land · absorb Auditor docs |
+| **Auditor** | Peer VERIFY (AUD-82 Discover melt severed · AUD-80/81 Tranche A if not done) |
+| **Reliability** | REL-00 gates after land · then STANDBY |
+| **Idle** | SUP-50: maintain World queue board · zero product code |
 
-### Next — after Tranche A VERIFY green
+### Next — after Tranche B VERIFY green
 
-Seats ASK Chair for **one** next World if any residual HOLD becomes Owner-approved epic. Default = **STANDBY** (studies complete; no more open DEFECT).
+Default = **STANDBY**. Seats ASK Chair only if Owner names a HOLD epic World.
 
 ---
 
@@ -95,25 +96,25 @@ Seats ASK Chair for **one** next World if any residual HOLD becomes Owner-approv
 
 ### Auditor
 ```
-WAVE 8 SECTION MACHINE. SoT=main. Read 81 + W8-STUDY-01..03.
+WAVE 8 SECTION MACHINE. SoT=main. Read 81 + W8-STUDY-01..03 + W8-APPROVE-PLAN-TRANCHE-B.
 One World per packet. ASK Chair before next World or any fix.
-After Chair lands Tranche A: AUD-80 Car dual-chrome peer · AUD-81 Materials origin peer.
-Zero product code unless Chair EXECUTE names your World. No Stay/RE rewrite.
+VERIFY: AUD-82 Discover melt severed (SearchDiscover Props = onExploreMap only).
+AUD-80/81 Tranche A peers if not filed. Zero product code. No Stay/RE rewrite. Then STANDBY.
 ```
 
 ### Reliability
 ```
-WAVE 8. SoT=main. STUDIES DONE for your Worlds (Maps/Car/RE/Banks in 01-03).
-Tranche A Chair fixes D-W8-01/02 — then REL-00 full mobile pack.
-ASK Chair before any new World fix. Forbidden: invent taxonomy · Banks directory · tip fight.
+WAVE 8. SoT=main. Tranche A CLOSED. Tranche B Discover dead melt.
+REL-00 full mobile pack after land. ASK Chair before any new World fix.
+Forbidden: invent taxonomy · Banks directory · tip fight. Then STANDBY.
 ```
 
 ### Idle
 ```
 WAVE 8. SUP-50 docs: keep 10-World queue board synced to 81. Zero product code.
-Ask Chair what is next — do not pick a World alone.
+Ask Chair what is next — do not pick a World alone. Default STANDBY after Tranche B.
 ```
 
 ---
 
-**Verdict:** Studies complete across all 10. Only two chrome dual-seat DEFECTS open. Machine proceeds Tranche A → VERIFY → standby for Owner epics.
+**Verdict:** Studies complete across all 10. Tranche A CLOSED. Tranche B = Discover dead melt only → VERIFY → STANDBY for Owner epics.

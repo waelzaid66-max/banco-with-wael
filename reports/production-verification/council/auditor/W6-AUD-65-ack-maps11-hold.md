@@ -1,41 +1,29 @@
-# W6-AUD-65 — ACK Owner Maps #11 law + HOLD (take guidance)
+# W6-AUD-65 — ACK Owner Maps #11 law (historical HOLD → CLOSED)
 
-- Seat: Production Auditor
-- Chair/Reliability tip: `00ce57f21b5067b5fa90cca05ec3abc182f14be5` (PR #39)
-- Code SoT: `main` @ `6ad7a48` · Maps product land: **not on remote yet**
-- Stamp: `2026-07-31T15:00:30Z`
-- Sister: Reliability `W6-REL-CHANNEL` / `W6-REL-PREFLIGHT-16` amended — **ALIGN**
+- Seat: Production Auditor  
+- **Historical tip at write:** `00ce57f` (pre-land HOLD)  
+- **CURRENT tip:** `4afdf839ad998cc4e9be251b2e40b576ab24dab9` · land `85cfe7f` · EXECUTE `75` · VERIFY `76`  
+- Stamp amend: `2026-07-31T15:12:00Z`
 
-## Guidance taken (binding)
+> **AUD-67 / tip-rebind:** HOLD posture and “route MISSING / primary→RE DEFECT” evidence below are **SUPERSEDED** by land + **AUD-63 PASS**. Kept as timeline only.
 
-| Signal | Auditor reading |
-|--------|-----------------|
-| Owner Maps correction | Maps = **independent mini-app #11** → Discover primary must open **`/section/maps`**, not RE and not chooser-only as final identity |
-| Chair local WIP | Force-exec toward `/section/maps` hub — **not pushed** (per REL channel) |
-| Seat disk orders `74` | Still WAIT EXECUTE — **no EXECUTE paste to Auditor** |
-| Opt A chooser-as-primary | **SUPERSEDED** as Owner end-state (may remain hub UX *inside* `/section/maps`) |
+## Guidance taken (still binding law)
 
-## Dual-end reconfirm @ remote `00ce57f` / `main`
+| Signal | Auditor |
+|--------|---------|
+| Maps = mini-app **#11** `/section/maps` | **ACK** — landed |
+| Opt A chooser-as-primary ≠ final FIXED | **ACK** — Opt B locked |
+| No tip fight · no deletes | **ACK** |
 
-| Claim | Evidence | Verdict |
-|-------|----------|---------|
-| Primary → RE | `search.tsx:491` | **DEFECT HIGH** (unchanged) |
-| Route `/section/maps` | no `app/section/maps.tsx` | **MISSING** (Owner-required) |
-| Leaflet stack | vendor + SearchResultsMap + mapLatch | **PRESENT — do not delete** |
-| Cars pill burial | `car.tsx:22` | **DEFECT** (REL-17 still owed) |
+## Dual-end @ CURRENT tip (replaces HOLD table)
 
-## Auditor posture (taken)
+| Claim | Verdict @ `4afdf83` |
+|-------|---------------------|
+| Primary → `/section/maps` | **PASS** (`search.tsx:491`) |
+| Route `maps.tsx` | **PRESENT** |
+| Leaflet | **PRESENT** |
+| Cars chips + CarsHomeHeader | **PASS** (REL-17/20) |
 
-**HOLD — zero product code.**  
-Will not implement chooser Opt A as “FIXED Maps.”  
-Will not tip-fight Chair unpushed WIP.  
-When you **push** `/section/maps` + paste **VERIFY** (or EXECUTE): run **AUD-63** peer dual-end (producer→`/section/maps` · hub feeds sections · guard ≠ RE primary · copy not property-only).
+## Posture NOW
 
-## Asks (guidance ack)
-
-1. Push Maps #11 land when ready.  
-2. Paste **VERIFY** for Auditor AUD-63 (+ Reliability).  
-3. Absorb full Auditor dossier (#36) including this ACK.  
-4. Update design §1 world 7 route to `/section/maps` when you document it.
-
-**Channel open. Standing by for tip push + VERIFY paste.**
+**VERIFY complete** (AUD-63/66/67). Zero product code. Absorb missing packets · merge #39 when Owner OK.
