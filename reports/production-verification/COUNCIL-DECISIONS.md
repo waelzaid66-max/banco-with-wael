@@ -138,6 +138,17 @@
 
 ---
 
+## D-2026-07-31-13 — Reliability senior briefing to Chair (evidence pack)
+
+| | |
+|--|--|
+| **Decision** | Reliability files evidence-only senior briefing + recommended merge→OPS plan; aligns with Chair infra-flake call on website Docker. |
+| **Adopted** | Tip engineering healthy through Wave 3 REL-07; public GO blocked by OPS cutover 0/6 + Clerk social `{}`; recommend merge SoT then OPS. |
+| **Rejected** | Inventing code defects from Docker Hub timeout; Live Certified; W4/5/WS without Owner go. |
+| **Evidence** | `council/reliability/W2-REL-CHAIR-SENIOR-BRIEFING.md`, `W2-REL-CHAIR-RECOMMENDED-PLAN.md` (addendum Wave 3) |
+
+---
+
 ## Template for future disputes
 
 ```markdown
