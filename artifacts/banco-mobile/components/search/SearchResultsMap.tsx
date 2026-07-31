@@ -19,7 +19,7 @@ import {
   type MapBridgeMessage,
   type MapClusterMarker,
 } from "./mapHtml";
-import { MapOverlayChrome } from "./MapOverlayChrome";
+import { MapOverlayChrome, type MapPreviewCardProps } from "./MapOverlayChrome";
 
 const CLUSTER_DEBOUNCE_MS = 300;
 const CLUSTER_CACHE_MAX = 24;
@@ -38,6 +38,8 @@ export interface SearchResultsMapProps {
   onOpenListingId?: (id: string) => void;
   onSave?: (item: FeedItem) => void;
   isSaved: (id: string) => boolean;
+  /** Map pin preview card; Stay passes StayCard so overlay matches the list. */
+  CardComponent?: React.ComponentType<MapPreviewCardProps>;
 }
 
 /**
@@ -55,6 +57,7 @@ export function SearchResultsMap({
   onOpenListingId,
   onSave,
   isSaved,
+  CardComponent,
 }: SearchResultsMapProps) {
   const colors = useColors();
   const { t } = useI18n();
@@ -321,6 +324,7 @@ export function SearchResultsMap({
         onOpenListing={onOpenListing}
         onSave={onSave}
         isSaved={isSaved}
+        CardComponent={CardComponent}
       />
     </View>
   );

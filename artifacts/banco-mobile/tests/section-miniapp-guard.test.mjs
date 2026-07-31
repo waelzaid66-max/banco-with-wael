@@ -878,8 +878,8 @@ test("Real-estate section mounts B-PROPERTIES PropertyHomeHeader (Stay-parity)",
   );
   assert.match(
     section,
-    /if \(inResultsView\) \{\s*setMapMode\(true\)/,
-    "RE map latch must open on results (not wait for page pins only)",
+    /resolveMapLatch|openOrLatchMap/,
+    "RE map latch must open on results via shared mapLatch (not wait for page pins only)",
   );
   // Owner 2026-07-27: RE joins Stay/cars/facilities — country + currency collapse
   // into the ONE compact MarketCountryButton. The spread 21-cell matrix (~6
@@ -1375,6 +1375,19 @@ test("Discover map CTA is always present (owner) with honest RE-map destination"
     /mapAvailable/,
     "explore-on-map card must not be gated (owner: always present on main search)",
   );
+});
+
+test("Discover map producers cover car/materials/factories/stays", () => {
+  const src = fs.readFileSync(DISCOVER, "utf8");
+  assert.match(src, /testID="discover-map-portals"/);
+  assert.match(src, /\/section\/car\?map=1/);
+  assert.match(src, /\/section\/materials\?map=1/);
+  assert.match(src, /\/section\/factories\?map=1/);
+  assert.match(src, /\/section\/booking\?map=1/);
+  assert.match(src, /discover-map-car/);
+  assert.match(src, /discover-map-materials/);
+  assert.match(src, /discover-map-factories/);
+  assert.match(src, /discover-map-stays/);
 });
 
 test("Search / section / stays suggestion text uses RTL textAlign", () => {

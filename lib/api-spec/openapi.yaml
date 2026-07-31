@@ -4533,7 +4533,9 @@ paths:
                   type: number
                   minimum: -90
                   maximum: 90
-                  description: Optional precise pin (send with longitude).
+                  description: >
+                    Optional precise pin (send with longitude). Overrides the area
+                    centroid for near-me search + map display.
                 longitude:
                   type: number
                   minimum: -180

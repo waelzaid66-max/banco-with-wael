@@ -161,8 +161,8 @@ Each item below is a standing problem report. **Nothing listed is deleted from t
 
 ## MSG-07b — Older messages page
 
-**Symptom:** Threads longer than 400 only showed the newest page.  
-**Fix:** Local `older[]` + `getMessages(..., { before })` on scroll-top / Load earlier; poll cache untouched.  
+**Symptom:** Threads longer than 400 only showed the newest page; sliding poll window could drop the bridge between `older[]` and the newest page; mark-read keyed on length stuck at 400.  
+**Fix:** Local `older[]` + `getMessages(..., { before })`; absorb vacated poll ids; gate loadOlder until first scroll-to-end; mark-read/scroll on newest message id; iOS `maintainVisibleContentPosition`.  
 **Status:** Fixed
 
 ---
@@ -178,7 +178,7 @@ Each item below is a standing problem report. **Nothing listed is deleted from t
 ## MSG-12 — Import support generic inbox
 
 **Symptom:** Support CTA opened empty messenger inbox.  
-**Fix:** `createSupportTicket` with order context (order detail) / import category (hub).  
+**Fix:** `createSupportTicket` with order context (order detail) / import category (hub). Hub copy uses `supportSentBodyHub`.  
 **Status:** Fixed
 
 ---
@@ -225,6 +225,38 @@ Each item below is a standing problem report. **Nothing listed is deleted from t
 
 ---
 
+## MSG-14 — Non-image media as broken image
+
+**Symptom:** Video/audio `media_url` forced through `<Image>`.  
+**Fix:** Openable attachment chip via `Linking.openURL` (+ EN/AR copy).  
+**Status:** Fixed (picker remains images-only → MSG-14b)
+
+---
+
+## MSG-08 — Report / hide
+
+**Symptom:** No report-message or thread hide from chat sheet.  
+**Fix:** Report → `createSupportTicket` category `abuse`; Hide chat → existing soft-hide `deleteConversation`.  
+**Status:** Fixed (hard block-user → MSG-08b)
+
+---
+
+## NOTIF-04 — Expo receipts
+
+**Symptom:** Only send-ticket `DeviceNotRegistered` pruned; APNs/FCM receipt failures ignored.  
+**Fix:** Schedule `getReceipts` ~15s after ok tickets; prune dead devices.  
+**Status:** Fixed (durable retry queue → NOTIF-04b)
+
+---
+
+## NOTIF-08 — Label honesty
+
+**Symptom:** Toggle labeled “In-app” also muted push.  
+**Fix:** Label “Alerts (in-app + push)” + settings hint; semantics unchanged by design.  
+**Status:** Fixed
+
+---
+
 ## Still open
 
-MSG-05/08/13/14 · NOTIF-02/04/08/10 · MAP-07/08/10
+MSG-05 / MSG-08b / MSG-13 / MSG-14b · NOTIF-02 / NOTIF-04b / NOTIF-10 · MAP-07 / MAP-08 / MAP-10

@@ -41,6 +41,8 @@ test("upper header is B-CORE identity + search Filters only (no type-circle poll
   assert.match(header, /section-filter-toggle/);
   assert.match(header, /materials-market-beside-banco|materials-powered-market-row/);
   assert.match(header, /materials-core-seal|categories\/materials\.jpg/);
+  assert.match(header, /testID="materials-header-map"/);
+  assert.match(header, /onOpenMap/);
   // Pollution bans
   assert.doesNotMatch(header, /materials-type-circle/);
   assert.doesNotMatch(header, /typeHitGhost/);
@@ -48,6 +50,14 @@ test("upper header is B-CORE identity + search Filters only (no type-circle poll
   assert.doesNotMatch(header, /\b2450\b|\b18400\b|\b930\b/);
   assert.doesNotMatch(header, /@expo\/vector-icons|Marketplace|collapseInline/);
   assert.match(header, /@\/components\/icons/);
+});
+
+test("materials map header latches via SectionSearchApp (same MOB-07 contract)", () => {
+  assert.match(
+    section,
+    /MaterialsHomeHeader[\s\S]*?onOpenMap=\{[\s\S]*?openOrLatchMap|MaterialsHomeHeader[\s\S]*?onOpenMap=\{[\s\S]*?setWantMap/,
+    "Materials onOpenMap must latch or open mapMode",
+  );
 });
 
 test("filters compressed not erased — axis strip + commodities + FilterSheet", () => {

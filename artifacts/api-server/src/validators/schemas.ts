@@ -1395,6 +1395,9 @@ export const UpdateListingSchema = z
     description: z.string().max(2000).optional(),
     base_price_cash: z.number().positive().optional(),
     location: z.string().min(2).max(100).optional(),
+    // Optional precise pin (MAP-09). Both axes or neither — same contract as create.
+    latitude: z.number().min(-90).max(90).optional(),
+    longitude: z.number().min(-180).max(180).optional(),
     // Lifecycle status patch (Task #71). Sellers mark a deal closed ("sold")
     // or hide a listing ("archived").
     status: z.enum(["active", "sold", "archived"]).optional(),
@@ -1411,12 +1414,17 @@ export const UpdateListingSchema = z
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field must be provided for update",
   })
-  .refine(
-    (data) =>
-      (data.latitude === undefined && data.longitude === undefined) ||
-      (data.latitude !== undefined && data.longitude !== undefined),
-    { message: "latitude and longitude must be sent together" },
-  );
+  .superRefine((data, ctx) => {
+    const hasLat = data.latitude !== undefined;
+    const hasLng = data.longitude !== undefined;
+    if (hasLat !== hasLng) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: hasLat ? ["longitude"] : ["latitude"],
+        message: "latitude and longitude must be sent together",
+      });
+    }
+  });
 
 export const UpdateListingResultSchema = z
   .object({ id: z.string(), updated: z.boolean() })

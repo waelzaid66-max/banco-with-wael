@@ -3089,7 +3089,7 @@ export type UpdateListingBody = {
   description?: string;
   base_price_cash?: number;
   location?: string;
-  /** Optional precise pin (send with longitude). */
+  /** Optional precise pin (send with longitude). Overrides the area centroid for near-me search + map display. */
   latitude?: number;
   /** Optional precise pin (send with latitude). */
   longitude?: number;

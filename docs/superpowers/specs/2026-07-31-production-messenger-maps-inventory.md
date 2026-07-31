@@ -76,12 +76,12 @@ Guards: `test:messenger-wiring` · `test:production-wiring` · existing `test:no
 
 | Section | Map | Latch | Sync filters | Features shown | Gaps |
 |---------|-----|-------|--------------|----------------|------|
-| Cars | Yes (shared) | Fixed MAP-01 | Yes | Pins, clusters, locate, near circle, filters | No Discover map producer |
+| Cars | Yes (shared) | Fixed MAP-01 | Yes | Pins, clusters, locate, near circle, filters | Discover map chip `?map=1` |
 | Real estate | Yes + Discover Explore | Fixed MAP-01 | Yes | Same + Discover CTA | Off-page open always `?focus=booking` |
-| Booking/Stays | Yes (best latch) | OK | Yes | Rent filters + bookable emerald pins + near circle | — |
-| Facilities | Yes | Fixed MAP-01 | Yes | Industrial tint | No map-first CTA |
-| Materials | Yes | Fixed MAP-01 | Yes | Industrial tint | No map-first CTA |
-| Car Import hub | Indirect via cars+import engine | N/A | Via cars | Cars map when `?engine=import` | No shipment geo map; no `map=1` producer |
+| Booking/Stays | Yes (best latch) | OK | Yes | Rent filters + bookable emerald pins + near circle + StayCard overlay | — |
+| Facilities | Yes | Fixed MAP-01 | Yes | Industrial tint | Discover map chip `?map=1` |
+| Materials | Yes + header map | Fixed MAP-01 | Yes | Industrial tint + header map | Discover map chip `?map=1` |
+| Car Import hub | Indirect via cars+import engine | N/A | Via cars | Cars map when `?engine=import` | No shipment geo map |
 
 ### Shared map gaps (tracked, not erased)
 
@@ -126,3 +126,5 @@ Guards: `test:messenger-wiring` · `test:production-wiring` · existing `test:no
 - Per-section browse maps · market-country framing · locate-me · near-me radius chips + **circle**  
 - Page pins + server clusters · price/bookable on singles · FilterSheet sync  
 - Create + edit MapPinPicker (MAP-09)  
+- Discover multi-section map producers (RE primary + car/materials/factories/stays chips)  
+- Shared `lib/mapLatch.ts` + web near-me (`lib/nearMe.ts`)  
