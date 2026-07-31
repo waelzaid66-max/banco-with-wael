@@ -136,8 +136,5 @@ Stack registration: `app/_layout.tsx` names `section/car`, `section/real-estate`
 | MOB-B-06 | SectionSearchApp | HEALTHY |
 | MOB-B-07 | BookingStaysApp | HEALTHY |
 
-**Defects found:** none (static).  
-**Risks:** none for category melt / empty CTA / map latch wiring.  
-**UNVERIFIED_VISUAL:** map overlay paint, pin density, and latch timing on device/web — out of static scope.
-
-**Chair note:** REL-07 mapping confirmed present and correct; do not re-implement.
+**Defects found (static emit path):** none for category melt at `router.push`.  
+**Chair amendment (D-15 / distrust):** Emit-only HEALTHY was **insufficient**. Create consumer dropped `industrial` until **REL-10**. Zone B remains healthy on locks/map; empty-CTA **end-to-end** requires Zone C REL-10.
