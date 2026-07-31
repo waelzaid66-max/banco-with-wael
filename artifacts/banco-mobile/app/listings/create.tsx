@@ -3,6 +3,7 @@ import { Feather, Ionicons } from "@/components/icons";
 import { AppTextInput as TextInput } from "@/components/AppTextInput";
 import {
   createListing,
+  updateMe,
   useGetMe,
   getGetMeQueryKey,
   useGetMySubscription,
@@ -58,6 +59,12 @@ import {
 } from "@/components/ImageCropModal";
 import { KeyboardAwareScrollViewCompat } from "@/components/KeyboardAwareScrollViewCompat";
 import { LocationPicker } from "@/components/LocationPicker";
+import {
+  ListingCurrencyButton,
+  MarketCountryButton,
+  MarketCountryPicker,
+} from "@/components/MarketCountryPicker";
+import { MapPinPicker } from "@/components/MapPinPicker";
 import { PermissionRationaleModal } from "@/components/PermissionRationaleModal";
 import { SmartAssetCard } from "@/components/SmartAssetCard";
 import { type CarBrand, brandLabel, CAR_BRANDS } from "@/constants/cars";
@@ -68,10 +75,8 @@ import {
   apiCategoryForUi,
   requiredSpecKeysFor,
   type UiListingCategory,
-  MARKET_COUNTRIES,
   DEFAULT_MARKET_COUNTRY,
   currencyForMarket,
-  EXTRA_CURRENCIES,
 } from "@/constants/listingCreateTaxonomy";
 import { loadPreferredMarketCountry } from "@/lib/marketPreference";
 import { buildPreviewFeedItem } from "@/constants/listingPreview";
@@ -184,8 +189,25 @@ export default function CreateListingScreen() {
       ? Math.max(0, usage.listing_quota - usage.listings_this_month)
       : null;
 
+  // Deep links may open the form in request mode and/or lock a category
+  // (?request=1&category=real_estate from B-PROPERTIES). Explicit intent
+  // outranks a stale draft for these axes.
+  const { request: requestParam, category: categoryParam } = useLocalSearchParams<{
+    request?: string;
+    category?: string;
+  }>();
+  const startAsRequest = requestParam === "1";
+  const deepCategory =
+    categoryParam === "real_estate" ||
+    categoryParam === "car" ||
+    categoryParam === "facilities" ||
+    categoryParam === "materials" ||
+    categoryParam === "raw_materials"
+      ? (categoryParam as UiListingCategory)
+      : null;
+
   const [step, setStep] = useState(0);
-  const [category, setCategory] = useState<UiListingCategory | null>(null);
+  const [category, setCategory] = useState<UiListingCategory | null>(deepCategory);
   const [photos, setPhotos] = useState<ImagePicker.ImagePickerAsset[]>([]);
   const [captions, setCaptions] = useState<Record<string, string>>({});
   const [specs, setSpecs] = useState<Record<string, string>>({});
@@ -202,9 +224,11 @@ export default function CreateListingScreen() {
   const [location, setLocation] = useState("");
   const [locationValue, setLocationValue] = useState<string | null>(null);
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
-  // Optional precise GPS pin for the listing (#4). null until the seller taps
-  // "use my location"; sent as latitude/longitude so near-me uses the exact
-  // point instead of the area centroid. Never blocks publishing.
+  const [marketPickerOpen, setMarketPickerOpen] = useState(false);
+  const [mapPinPickerOpen, setMapPinPickerOpen] = useState(false);
+  // Optional precise map/GPS pin for the listing. null until the seller picks
+  // on the map or taps GPS; sent as latitude/longitude so near-me uses the
+  // exact point instead of the area centroid. Never blocks publishing.
   const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
   const [pinBusy, setPinBusy] = useState(false);
   const [cashPrice, setCashPrice] = useState("");
@@ -212,11 +236,6 @@ export default function CreateListingScreen() {
   // price becomes optional, payment plans are hidden, and a description is
   // required. Mirrors the server contract (base_price_cash optional + the
   // bilingual "طلب سعر / Price requested" line).
-  // Deep links may open the form directly in request mode (?request=1 — the
-  // empty-search "post what you're looking for" bridge); that explicit intent
-  // outranks whatever a stale draft says.
-  const { request: requestParam } = useLocalSearchParams<{ request?: string }>();
-  const startAsRequest = requestParam === "1";
   const [isRequest, setIsRequest] = useState(startAsRequest);
 
   // Multi-market: the listing's market country (stamped into
@@ -359,6 +378,7 @@ export default function CreateListingScreen() {
         // the (now shorter) step list.
         setStep(Math.min(d.step, TOTAL_STEPS - 1));
         if (d.category) setCategory(d.category as UiListingCategory);
+        else if (deepCategory) setCategory(deepCategory);
         setTitle(d.title);
         setDescription(d.description);
         setLocation(d.location);
@@ -1154,6 +1174,11 @@ export default function CreateListingScreen() {
 
       setPhase("saving");
       const res = await createListing(body);
+      // Keep profile phone SoT in sync so Call/WhatsApp lead reveal works after
+      // publish when the seller never saved a phone on /me (best-effort).
+      if (cleanPhones[0] && !accountPhone) {
+        void updateMe({ phone: cleanPhones[0] }).catch(() => {});
+      }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setCreatedId(res.data?.id);
       setDone(true);
@@ -1689,35 +1714,71 @@ export default function CreateListingScreen() {
         <Feather name="chevron-down" size={18} color={colors.mutedForeground} />
       </Pressable>
 
-      {/* Optional precise GPS pin (#4) — never required to publish. */}
-      <Pressable
-        onPress={captureLocation}
-        disabled={pinBusy}
-        style={[...inputStyle, styles.pickerBtn, { flexDirection: rowDir, marginTop: 8 }]}
-        testID="create-use-location"
+      {/* Optional precise pin tools — co-located compact row (map + GPS).
+          Never required to publish; both write the same `pin` state. */}
+      <View
+        style={[styles.pinToolsRow, { flexDirection: rowDir, marginTop: 8 }]}
+        testID="create-pin-tools"
       >
-        <Feather
-          name={pin ? "check-circle" : "map-pin"}
-          size={18}
-          color={pin ? "#16a34a" : colors.mutedForeground}
-        />
-        <AppText
-          style={{
-            color: pin ? colors.foreground : colors.mutedForeground,
-            textAlign,
-            flex: 1,
-            fontFamily: "Inter_400Regular",
-            fontSize: 14,
-            marginHorizontal: 8,
+        <Pressable
+          onPress={() => {
+            Haptics.selectionAsync();
+            setMapPinPickerOpen(true);
           }}
+          style={[
+            styles.pinToolBtn,
+            {
+              backgroundColor: colors.card,
+              borderColor: pin ? "#16a34a" : colors.border,
+              borderRadius: colors.radius,
+              flexDirection: rowDir,
+            },
+          ]}
+          testID="create-pick-on-map"
         >
-          {pinBusy
-            ? t("create.locationCapturing")
-            : pin
-              ? t("create.locationCaptured")
-              : t("create.useMyLocation")}
-        </AppText>
-      </Pressable>
+          <Feather
+            name="map"
+            size={16}
+            color={pin ? "#16a34a" : colors.foreground}
+          />
+          <AppText
+            style={[
+              styles.pinToolText,
+              { color: pin ? colors.foreground : colors.mutedForeground },
+            ]}
+            numberOfLines={1}
+          >
+            {pin ? t("create.locationCaptured") : t("create.pickOnMap")}
+          </AppText>
+        </Pressable>
+        <Pressable
+          onPress={captureLocation}
+          disabled={pinBusy}
+          style={[
+            styles.pinToolBtn,
+            {
+              backgroundColor: colors.card,
+              borderColor: colors.border,
+              borderRadius: colors.radius,
+              flexDirection: rowDir,
+              opacity: pinBusy ? 0.6 : 1,
+            },
+          ]}
+          testID="create-use-location"
+        >
+          {pinBusy ? (
+            <ActivityIndicator color={colors.foreground} size="small" />
+          ) : (
+            <Feather name="map-pin" size={16} color={colors.foreground} />
+          )}
+          <AppText
+            style={[styles.pinToolText, { color: colors.mutedForeground }]}
+            numberOfLines={1}
+          >
+            {pinBusy ? t("create.locationCapturing") : t("create.useMyLocation")}
+          </AppText>
+        </Pressable>
+      </View>
 
       {category && !isRequest && (
         <>
@@ -1760,48 +1821,25 @@ export default function CreateListingScreen() {
               </Pressable>
             </View>
           )}
-          {/* Multi-market: which country this listing sells in (scopes every
-              browse surface) + its pricing currency. Smart default = saved
-              market preference → market currency; both manually overridable. */}
+          {/* Multi-market: compact MarketCountryButton + picker (same chrome as
+              Search/Stay) — never dump the 21 launch markets as a chip cloud.
+              Currency is a separate compact control so sellers can still override
+              to USD/EUR (search collapses currency into the country button). */}
           <View>
             <FieldLabel
               label={t("create.fields.marketCountry")}
               colors={colors}
               rowDir={rowDir}
             />
-            <View style={[styles.optionRow, { flexDirection: rowDir, flexWrap: "wrap" }]}>
-              {MARKET_COUNTRIES.map((m) => {
-                const active = marketCountry === m.value;
-                return (
-                  <Pressable
-                    key={m.value}
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      marketTouched.current = true;
-                      setMarketCountry(m.value);
-                    }}
-                    style={[
-                      styles.optionChip,
-                      {
-                        backgroundColor: active ? colors.primary : colors.card,
-                        borderColor: active ? colors.primary : colors.border,
-                        borderRadius: colors.radius,
-                      },
-                    ]}
-                    testID={`create-market-${m.value}`}
-                  >
-                    <AppText
-                      style={[
-                        styles.optionChipText,
-                        { color: active ? colors.primaryForeground : colors.foreground },
-                      ]}
-                    >
-                      {isRTL ? m.ar : m.en}
-                    </AppText>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <MarketCountryButton
+              selected={marketCountry}
+              showCurrency={false}
+              testID="create-market-country-btn"
+              onPress={() => {
+                Haptics.selectionAsync();
+                setMarketPickerOpen(true);
+              }}
+            />
           </View>
 
           {!isRequest ? (
@@ -1811,40 +1849,17 @@ export default function CreateListingScreen() {
                 colors={colors}
                 rowDir={rowDir}
               />
-              <View style={[styles.optionRow, { flexDirection: rowDir, flexWrap: "wrap" }]}>
-                {[currencyForMarket(marketCountry), ...EXTRA_CURRENCIES].map((code) => {
-                  const active = listingCurrency === code;
-                  return (
-                    <Pressable
-                      key={code}
-                      onPress={() => {
-                        Haptics.selectionAsync();
-                        setCurrencyOverride(
-                          code === currencyForMarket(marketCountry) ? null : code,
-                        );
-                      }}
-                      style={[
-                        styles.optionChip,
-                        {
-                          backgroundColor: active ? colors.primary : colors.card,
-                          borderColor: active ? colors.primary : colors.border,
-                          borderRadius: colors.radius,
-                        },
-                      ]}
-                      testID={`create-currency-${code}`}
-                    >
-                      <AppText
-                        style={[
-                          styles.optionChipText,
-                          { color: active ? colors.primaryForeground : colors.foreground },
-                        ]}
-                      >
-                        {code}
-                      </AppText>
-                    </Pressable>
+              <ListingCurrencyButton
+                value={listingCurrency}
+                marketCountry={marketCountry}
+                testIDPrefix="create-currency"
+                onChange={(code) => {
+                  Haptics.selectionAsync();
+                  setCurrencyOverride(
+                    code === currencyForMarket(marketCountry) ? null : code,
                   );
-                })}
-              </View>
+                }}
+              />
             </View>
           ) : null}
 
@@ -2875,6 +2890,31 @@ export default function CreateListingScreen() {
         onCancel={() => setShowPhotoRationale(false)}
       />
 
+      <MarketCountryPicker
+        visible={marketPickerOpen}
+        selected={marketCountry}
+        launchMarketsOnly
+        onClose={() => setMarketPickerOpen(false)}
+        onSelect={(iso) => {
+          Haptics.selectionAsync();
+          marketTouched.current = true;
+          setMarketCountry(iso);
+          setMarketPickerOpen(false);
+        }}
+      />
+
+      <MapPinPicker
+        visible={mapPinPickerOpen}
+        marketCountry={marketCountry}
+        initial={pin}
+        onClose={() => setMapPinPickerOpen(false)}
+        onConfirm={(next) => {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          setPin(next);
+          setMapPinPickerOpen(false);
+        }}
+      />
+
       <LocationPicker
         visible={locationPickerOpen}
         selectedValue={locationValue ?? undefined}
@@ -3174,6 +3214,20 @@ const styles = StyleSheet.create({
   },
   textArea: { height: 110, paddingTop: 12 },
   pickerBtn: { alignItems: "center", justifyContent: "space-between" },
+  pinToolsRow: { gap: 8 },
+  pinToolBtn: {
+    flex: 1,
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  pinToolText: {
+    flexShrink: 1,
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+  },
   optionRow: { flexWrap: "wrap", gap: 8 },
   optionChip: {
     paddingHorizontal: 16,
@@ -3363,11 +3417,14 @@ const styles = StyleSheet.create({
   boostTextWrap: { flex: 1, gap: 2 },
   boostTitle: { fontSize: 15, fontFamily: "Inter_700Bold" },
   boostBody: { fontSize: 12.5, fontFamily: "Inter_400Regular", lineHeight: 18 },
+  // Hug content (rfq/investments pattern) — not a full-bleed bar. Wizard
+  // Next/Publish stays on footerNextBtn { flex: 1 } beside Back.
   primaryBtn: {
-    alignSelf: "stretch",
+    alignSelf: "center",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 15,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
     marginTop: 18,
   },
   primaryBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },

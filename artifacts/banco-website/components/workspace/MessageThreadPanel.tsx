@@ -88,7 +88,7 @@ export function MessageThreadPanel({ conversationId }: MessageThreadPanelProps) 
   const [draft, setDraft] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
 
-  const messagesQuery = useGetMessages(conversationId, {
+  const messagesQuery = useGetMessages(conversationId, undefined, {
     query: {
       queryKey: getGetMessagesQueryKey(conversationId),
       enabled: !!conversationId,

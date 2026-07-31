@@ -168,14 +168,25 @@ export function validateAttributes(
   };
 
   const requiredKeys = [...(required[category] ?? [])];
-  // Real-estate: a room count is meaningful for built units but not for raw land
-  // or bare commercial plots — require `rooms` for everything EXCEPT those, so a
-  // land listing is never forced to invent one. Mirrors the mobile gate
-  // (requiredSpecKeysFor / REAL_ESTATE_NO_ROOMS_TYPES).
+  // Real-estate: room count is meaningful for built units but not for raw land
+  // or bare commercial plots — require `rooms` for everything EXCEPT those.
+  // Also require offer_type + property_type so B-PROPERTIES sale/rent/type
+  // strips can see the listing (KEEP IN SYNC with mobile requiredSpecKeysFor).
   if (category === "real_estate") {
-    const noRooms = ["land", "shop", "office", "clinic"];
+    const noRooms = [
+      "land",
+      "shop",
+      "office",
+      "clinic",
+      "warehouse",
+      "commercial_land",
+    ];
     const pt = typeof specs.property_type === "string" ? specs.property_type : "";
+    const offer =
+      typeof specs.offer_type === "string" ? specs.offer_type : "";
+    requiredKeys.push("offer_type", "property_type");
     if (!noRooms.includes(pt)) requiredKeys.push("rooms");
+    if (offer === "rent") requiredKeys.push("rental_term");
   }
   for (const key of requiredKeys) {
     if (!(key in specs) || specs[key] === null || specs[key] === undefined || specs[key] === "") {
@@ -1076,6 +1087,8 @@ export async function getPublicListings(options: {
       user_name: users.name,
       user_role: users.role,
       quality_score: users.qualityScore,
+      // Required so photo-less Wanted rows keep the BFF request placeholder.
+      is_request: listings.isRequest,
     })
     .from(listings)
     .leftJoin(users, eq(listings.userId, users.id))
@@ -1114,6 +1127,10 @@ export async function updateListing(
     description?: string;
     base_price_cash?: number;
     location?: string;
+    // Optional precise pin (MAP-09). Both axes required to store; omit to leave.
+    // Schema enforces both-or-neither.
+    latitude?: number;
+    longitude?: number;
     // Lifecycle status patch (Task #71): seller marks the deal closed/hidden.
     status?: "active" | "sold" | "archived";
     specs?: Record<string, unknown>;
@@ -1252,6 +1269,14 @@ export async function updateListing(
   // Atomic edit: the listings row and its 1:1 attributes sidecar are written in a
   // single transaction so a mid-edit failure can never leave them inconsistent
   // (e.g. a new title with stale specs/taxonomy). Mirrors createListing.
+  const pinPatch =
+    updates.latitude !== undefined && updates.longitude !== undefined
+      ? {
+          latitude: String(updates.latitude),
+          longitude: String(updates.longitude),
+        }
+      : {};
+
   await db.transaction(async (tx) => {
     await tx
       .update(listings)
@@ -1268,6 +1293,8 @@ export async function updateListing(
         flagReason: normalized.flagReason,
         // Only patch status when the caller provided it (mark sold / archive).
         ...(updates.status ? { status: updates.status } : {}),
+        // MAP-09: only overwrite pin when both axes are provided.
+        ...pinPatch,
         updatedAt: new Date(),
       })
       .where(eq(listings.id, id));

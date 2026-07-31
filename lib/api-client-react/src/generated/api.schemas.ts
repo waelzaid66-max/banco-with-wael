@@ -1698,6 +1698,10 @@ export interface MapCluster {
   lng: number;
   count: number;
   listing_id: string | null;
+  /** Single-pin price label when the listing is off the loaded page (MAP-04). */
+  price_display?: string | null;
+  is_bookable?: boolean | null;
+  category?: string | null;
 }
 
 /**
@@ -1896,6 +1900,40 @@ export interface ImportOrderListItem {
   listing_title?: string | null;
   created_at: string | null;
   updated_at?: string | null;
+}
+
+/**
+ * Fixed paperwork checklist for a car import — mirrors the mobile Import Documents screen. New kinds are additive.
+ */
+export type ImportDocumentKind = typeof ImportDocumentKind[keyof typeof ImportDocumentKind];
+
+
+export const ImportDocumentKind = {
+  invoice: 'invoice',
+  export: 'export',
+  passport: 'passport',
+  id: 'id',
+  poa: 'poa',
+  insurance: 'insurance',
+  shipping: 'shipping',
+  customs: 'customs',
+} as const;
+
+/**
+ * One buyer-uploaded file attached to an import order.
+ */
+export interface ImportOrderDocument {
+  id: string;
+  order_id: string;
+  kind: ImportDocumentKind;
+  url: string;
+  created_at: string;
+}
+
+export interface AttachImportOrderDocumentBody {
+  kind: ImportDocumentKind;
+  /** Servable URL returned by the presigned-upload flow. */
+  url: string;
 }
 
 export type PromoCampaignViewStatus = typeof PromoCampaignViewStatus[keyof typeof PromoCampaignViewStatus];
@@ -3051,6 +3089,10 @@ export type UpdateListingBody = {
   description?: string;
   base_price_cash?: number;
   location?: string;
+  /** Optional precise pin (send with longitude). Overrides the area centroid for near-me search + map display. */
+  latitude?: number;
+  /** Optional precise pin (send with latitude). */
+  longitude?: number;
   /** Lifecycle status. Sellers set "sold" to mark the deal closed or "archived" to hide the listing. */
   status?: UpdateListingBodyStatus;
   specs?: UpdateListingBodySpecs;
@@ -3163,6 +3205,28 @@ export type CancelImportOrder200 = {
   data?: ImportOrder;
   error?: ApiError | null;
   meta?: Meta;
+};
+
+export type ListImportOrderDocuments200 = {
+  data?: ImportOrderDocument[];
+  error?: ApiError | null;
+  meta?: Meta;
+};
+
+export type AttachImportOrderDocument201 = {
+  data?: ImportOrderDocument;
+  error?: ApiError | null;
+  meta?: Meta;
+};
+
+export type DeleteImportOrderDocument200Data = {
+  deleted: boolean;
+};
+
+export type DeleteImportOrderDocument200 = {
+  data: DeleteImportOrderDocument200Data;
+  error: ApiError | null;
+  meta: Meta;
 };
 
 export type BumpListing200Data = {
@@ -3730,6 +3794,14 @@ export type GetMessages200 = {
   data: Message[];
   error: ApiError | null;
   meta: Meta;
+};
+
+/** Optional page controls for GET /conversations/:id/messages (MSG-07). */
+export type GetMessagesParams = {
+  /** Newest N messages (1–1000). Omit for full history. */
+  limit?: number;
+  /** Load messages strictly older than this message id. */
+  before?: string;
 };
 
 /**

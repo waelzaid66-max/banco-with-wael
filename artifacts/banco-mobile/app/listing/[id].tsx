@@ -497,7 +497,10 @@ export default function ListingDetailScreen() {
         });
         phone = res.data?.phone ?? undefined;
       }
-      if (!phone) return;
+      if (!phone) {
+        Alert.alert(t("listing.contactFailTitle"), t("listing.contactUnavailable"));
+        return;
+      }
 
       if (action === "whatsapp") {
         await openWhatsApp(phone);
@@ -535,16 +538,21 @@ export default function ListingDetailScreen() {
       const res = await createConversation({ listing_id: id });
       const conversationId = res.data?.id;
       if (!conversationId) throw new Error("missing conversation");
+      // Forward listingId + viewer_role so offer / share / mark-sold chrome
+      // unlocks in the thread (same contract as inbox → /messages/[id]).
+      // createConversation always returns both on the buyer path.
       router.push({
         pathname: "/messages/[id]",
         params: {
           id: conversationId,
           name: res.data?.counterparty_name ?? listing?.seller?.name ?? "",
+          listingId: res.data?.listing_id ?? id,
+          role: res.data?.viewer_role ?? "buyer",
         },
       });
     } catch {
-      // Fall back to WhatsApp handoff if the in-app conversation can't start
-      // (e.g. listing has no linked seller account).
+      // Fall back to WhatsApp handoff if the in-app conversation can't start.
+      // handleCTA alerts when phone is missing — never silent.
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       await handleCTA("chat");
     } finally {

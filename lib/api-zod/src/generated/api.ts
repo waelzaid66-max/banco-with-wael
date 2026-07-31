@@ -585,6 +585,8 @@ export const UpdateListingBody = zod.object({
   "description": zod.string().optional(),
   "base_price_cash": zod.number().optional(),
   "location": zod.string().optional(),
+  "latitude": zod.number().optional().describe('Optional precise pin (send with longitude). Overrides the area centroid for near-me search + map display.\n'),
+  "longitude": zod.number().optional().describe('Optional precise pin (send with latitude).\n'),
   "status": zod.enum(['active', 'sold', 'archived']).optional().describe('Lifecycle status. Sellers set \"sold\" to mark the deal closed or \"archived\" to hide the listing.\n'),
   "specs": zod.record(zod.string(), zod.unknown()).optional(),
   "logistics": zod.object({
@@ -1054,6 +1056,91 @@ export const CancelImportOrderResponse = zod.object({
   "has_next": zod.boolean().optional(),
   "total": zod.number().optional()
 }).optional()
+})
+
+
+/**
+ * Matches Express `GET /api/v1/import-orders/:id/documents`.
+ * @summary List the paperwork attached to an import order (owner only)
+ */
+export const ListImportOrderDocumentsParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ListImportOrderDocumentsResponse = zod.object({
+  "data": zod.array(zod.object({
+  "id": zod.string(),
+  "order_id": zod.string(),
+  "kind": zod.enum(['invoice', 'export', 'passport', 'id', 'poa', 'insurance', 'shipping', 'customs']).describe('Fixed paperwork checklist for a car import — mirrors the mobile Import Documents screen. New kinds are additive.'),
+  "url": zod.string(),
+  "created_at": zod.string()
+}).describe('One buyer-uploaded file attached to an import order.')).optional(),
+  "error": zod.object({
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
+  "message": zod.string()
+}).nullish(),
+  "meta": zod.object({
+  "cursor": zod.string().optional(),
+  "has_next": zod.boolean().optional(),
+  "total": zod.number().optional()
+}).optional()
+})
+
+
+/**
+ * The file must already be uploaded through the shared presigned-URL flow; this records its servable URL under a checklist kind. Matches Express `POST /api/v1/import-orders/:id/documents`.
+ * @summary Attach an uploaded file to an import order (owner only)
+ */
+export const AttachImportOrderDocumentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const AttachImportOrderDocumentBody = zod.object({
+  "kind": zod.enum(['invoice', 'export', 'passport', 'id', 'poa', 'insurance', 'shipping', 'customs']).describe('Fixed paperwork checklist for a car import — mirrors the mobile Import Documents screen. New kinds are additive.'),
+  "url": zod.string().describe('Servable URL returned by the presigned-upload flow.')
+})
+
+export const AttachImportOrderDocumentResponse = zod.object({
+  "data": zod.object({
+  "id": zod.string(),
+  "order_id": zod.string(),
+  "kind": zod.enum(['invoice', 'export', 'passport', 'id', 'poa', 'insurance', 'shipping', 'customs']).describe('Fixed paperwork checklist for a car import — mirrors the mobile Import Documents screen. New kinds are additive.'),
+  "url": zod.string(),
+  "created_at": zod.string()
+}).optional().describe('One buyer-uploaded file attached to an import order.'),
+  "error": zod.object({
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
+  "message": zod.string()
+}).nullish(),
+  "meta": zod.object({
+  "cursor": zod.string().optional(),
+  "has_next": zod.boolean().optional(),
+  "total": zod.number().optional()
+}).optional()
+})
+
+
+/**
+ * @summary Remove an attached document from an import order (owner only)
+ */
+export const DeleteImportOrderDocumentParams = zod.object({
+  "id": zod.coerce.string(),
+  "documentId": zod.coerce.string()
+})
+
+export const DeleteImportOrderDocumentResponse = zod.object({
+  "data": zod.object({
+  "deleted": zod.boolean()
+}),
+  "error": zod.object({
+  "code": zod.enum(['INVALID_DATA', 'NOT_FOUND', 'UNAUTHORIZED', 'INTERNAL_ERROR', 'FORBIDDEN', 'RATE_LIMITED', 'INVALID_TOKEN', 'CONFLICT', 'ACCOUNT_DELETED', 'SERVICE_UNAVAILABLE']),
+  "message": zod.string()
+}).nullable(),
+  "meta": zod.object({
+  "cursor": zod.string().optional(),
+  "has_next": zod.boolean().optional(),
+  "total": zod.number().optional()
+})
 })
 
 

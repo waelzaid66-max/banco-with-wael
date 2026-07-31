@@ -25,12 +25,19 @@ import { useColors } from "@/hooks/useColors";
 // shopper picks between). Each card pushes a dedicated section mini-app —
 // never filters the shared Search tab in place (that melt collapsed every
 // catalogue into one melted search surface).
-const SECTIONS: Category[] = ["car", "real_estate", "facilities", "materials"];
+// "all" is a Search-tab filter chip only — it is NOT a Discover portal and must
+// never resolve to /section/car (owner: «بيفتح قسم السيارات»).
+type BrowseSection = Exclude<Category, "all">;
+const SECTIONS: BrowseSection[] = [
+  "car",
+  "real_estate",
+  "facilities",
+  "materials",
+];
 
 // Dedicated section mini-app routes. Must stay registered in app/_layout.tsx
-// as Stack.Screen entries or router.push 404s.
-const SECTION_ROUTE: Record<Category, Href> = {
-  all: "/section/car",
+// as Stack.Screen entries or router.push 404s. No entry for "all".
+const SECTION_ROUTE: Record<BrowseSection, Href> = {
   car: "/section/car",
   real_estate: "/section/real-estate",
   facilities: "/section/factories",
@@ -41,8 +48,7 @@ const SECTION_ROUTE: Record<Category, Href> = {
 // staying in the BANCO red/charcoal family.
 // Red-family fallback fills behind the section photos (identity rule: logo red
 // + derivatives only — aligned with lib/sectionTheme's corrected palette).
-const SECTION_GRADIENT: Record<Category, [string, string]> = {
-  all: ["#7A0C12", "#1C0507"],
+const SECTION_GRADIENT: Record<BrowseSection, [string, string]> = {
   car: ["#8A0E14", "#1C0507"],
   real_estate: ["#7A1226", "#190509"],
   facilities: ["#7E1F14", "#140505"],
@@ -95,7 +101,7 @@ export function SearchDiscover({
   const rowDir = isRTL ? "row-reverse" : "row";
   const textAlign = isRTL ? "right" : "left";
 
-  const handleSectionPress = (cat: Category) => {
+  const handleSectionPress = (cat: BrowseSection) => {
     // ENTER dedicated section mini-app — never show engine strips on Discover
     // and never melt into shared Search criteria (Owner screenshot regression).
     router.push(SECTION_ROUTE[cat]);
@@ -267,8 +273,9 @@ export function SearchDiscover({
       </Pressable>
 
       {/* Explore on map — ALWAYS present on the Discover home (owner request).
-          Routes to /section/real-estate?map=1; the host falls back to the list
-          when a browse has no coordinates, so it never lands on an empty map. */}
+          Primary CTA → RE ?map=1; secondary chips produce map latches for the
+          other catalogues (cars / materials / factories / stays) so every
+          section has a Discover map producer (MAP inventory gap). */}
       <Pressable
         onPress={onExploreMap}
         style={styles.mapCtaWrap}
@@ -308,12 +315,75 @@ export function SearchDiscover({
           </LinearGradient>
         </Pressable>
 
-      {/* Car import — ENTER Cars mini-app with import engine seeded (never melts
-          into shared Search). Strips/filters live inside SectionSearchApp. */}
+      <AppText
+        style={[styles.mapPortalHint, { color: colors.mutedForeground, textAlign }]}
+      >
+        {t("search.discover.exploreMapPortals")}
+      </AppText>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={[styles.mapPortalRow, { flexDirection: rowDir }]}
+        testID="discover-map-portals"
+      >
+        {(
+          [
+            {
+              id: "car",
+              href: "/section/car?map=1" as Href,
+              label: t("search.discover.exploreMapCar"),
+              testID: "discover-map-car",
+            },
+            {
+              id: "materials",
+              href: "/section/materials?map=1" as Href,
+              label: t("search.discover.exploreMapMaterials"),
+              testID: "discover-map-materials",
+            },
+            {
+              id: "factories",
+              href: "/section/factories?map=1" as Href,
+              label: t("search.discover.exploreMapFactories"),
+              testID: "discover-map-factories",
+            },
+            {
+              id: "booking",
+              href: "/section/booking?map=1" as Href,
+              label: t("search.discover.exploreMapStays"),
+              testID: "discover-map-stays",
+            },
+          ] as const
+        ).map((portal) => (
+          <Pressable
+            key={portal.id}
+            onPress={() => router.push(portal.href)}
+            style={[
+              styles.mapPortalChip,
+              {
+                borderColor: colors.border,
+                backgroundColor: colors.card,
+                flexDirection: rowDir,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={portal.label}
+            testID={portal.testID}
+          >
+            <Feather name="map-pin" size={13} color={colors.primary} />
+            <AppText style={[styles.mapPortalChipText, { color: colors.foreground }]}>
+              {portal.label}
+            </AppText>
+          </Pressable>
+        ))}
+      </ScrollView>
+
+      {/* Car import — ENTER the CAR IMPORT mini-app hub (/import). Browsing
+          imported cars stays one tap away: the hub's "Search Cars" card pushes
+          SECTION_ROUTE.car with ?engine=import seeded, so the anti-melt
+          contract (dedicated mini-app entry, never shared-Search filters)
+          holds end to end. */}
       <Pressable
-        onPress={() =>
-          router.push(`${SECTION_ROUTE.car}?engine=import` as Href)
-        }
+        onPress={() => router.push("/import" as Href)}
         style={styles.hubCtaWrap}
         accessibilityRole="button"
         accessibilityLabel={t("search.discover.carImport")}
@@ -609,6 +679,30 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: "rgba(255,255,255,0.78)",
     marginTop: 2,
+  },
+  mapPortalHint: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  mapPortalRow: {
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 2,
+  },
+  mapPortalChip: {
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  mapPortalChipText: {
+    fontSize: 12.5,
+    fontFamily: "Inter_600SemiBold",
   },
   bookingCardWrap: {
     marginHorizontal: 16,

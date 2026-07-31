@@ -21,8 +21,12 @@ import { notFoundHandler, errorHandler } from "./middlewares/errorHandler";
 
 const app: Express = express();
 
-// Trust reverse proxy (Replit / load balancers forward X-Forwarded-For)
-app.set("trust proxy", 1);
+// Trust reverse proxy hops (Coolify Traefik → nginx → api = 2).
+// Override with TRUST_PROXY_HOPS when the edge topology differs (Replit=1).
+{
+  const hops = Number(process.env.TRUST_PROXY_HOPS ?? 2);
+  app.set("trust proxy", Number.isFinite(hops) && hops >= 1 ? hops : 2);
+}
 
 // Never advertise the framework.
 app.disable("x-powered-by");

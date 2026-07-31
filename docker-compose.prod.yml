@@ -106,18 +106,22 @@ services:
       PAYMOB_SECRET_KEY: ${PAYMOB_SECRET_KEY:-}
       PAYMOB_HMAC_SECRET: ${PAYMOB_HMAC_SECRET:-}
       PAYMOB_INTEGRATION_IDS: ${PAYMOB_INTEGRATION_IDS:-}
-      OBJECT_STORAGE_PROVIDER: ${OBJECT_STORAGE_PROVIDER:-}
-      AWS_REGION: ${AWS_REGION:-}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
-      S3_BUCKET: ${S3_BUCKET:-}
-      PUBLIC_OBJECT_SEARCH_PATHS: ${PUBLIC_OBJECT_SEARCH_PATHS:-}
-      PRIVATE_OBJECT_DIR: ${PRIVATE_OBJECT_DIR:-}
+      # Object storage — REQUIRED in production (API throws if unset / replit on Coolify markers).
+      OBJECT_STORAGE_PROVIDER: ${OBJECT_STORAGE_PROVIDER:?OBJECT_STORAGE_PROVIDER is required (use s3)}
+      AWS_REGION: ${AWS_REGION:?AWS_REGION is required for S3}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?AWS_ACCESS_KEY_ID is required for S3}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?AWS_SECRET_ACCESS_KEY is required for S3}
+      S3_BUCKET: ${S3_BUCKET:?S3_BUCKET is required for S3}
+      PUBLIC_OBJECT_SEARCH_PATHS: ${PUBLIC_OBJECT_SEARCH_PATHS:?PUBLIC_OBJECT_SEARCH_PATHS is required}
+      PRIVATE_OBJECT_DIR: ${PRIVATE_OBJECT_DIR:?PRIVATE_OBJECT_DIR is required}
       GIT_SHA: ${GIT_SHA:-${SOURCE_COMMIT:-}}
       BUILD_ID: ${BUILD_ID:-${SOURCE_COMMIT:-}}
       ERROR_ALERT_WEBHOOK: ${ERROR_ALERT_WEBHOOK:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       CRON_TIMEZONE: ${CRON_TIMEZONE:-Africa/Cairo}
+      DB_POOL_MAX: ${DB_POOL_MAX:-20}
+      # Edge proxy → nginx → api = 2 hops (override if topology differs).
+      TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-2}
     healthcheck:
       test: ["CMD", "node", "-e",
         "fetch('http://127.0.0.1:8080/api/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
@@ -137,8 +141,8 @@ services:
         # where the `api` hostname is not resolvable from the Next.js container.
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://api:8080}
         NEXT_PUBLIC_SITE_URL: ${BANCO_WEB_URL:-http://localhost:3000}
-        NEXT_PUBLIC_MARKET_URL: ${BANCO_WEB_MARKET_URL:-}
-        NEXT_PUBLIC_ADMIN_URL: ${BANCO_WEB_ADMIN_URL:-}
+        NEXT_PUBLIC_MARKET_URL: ${BANCO_WEB_MARKET_URL:-/market/}
+        NEXT_PUBLIC_ADMIN_URL: ${BANCO_WEB_ADMIN_URL:-/admin/}
         NEXT_PUBLIC_APP_ANDROID_URL: ${NEXT_PUBLIC_APP_ANDROID_URL:-}
         NEXT_PUBLIC_APP_IOS_URL: ${NEXT_PUBLIC_APP_IOS_URL:-}
         NEXT_PUBLIC_WEB_SEARCH_LIVE: ${NEXT_PUBLIC_WEB_SEARCH_LIVE:-false}
@@ -182,8 +186,8 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://api:8080}
         NEXT_PUBLIC_SITE_URL: ${BANCO_WEBSITE_URL:-http://localhost:3001}
         # Parity with Coolify + banco-web bake — site-env already reads these.
-        NEXT_PUBLIC_MARKET_URL: ${BANCO_WEB_MARKET_URL:-}
-        NEXT_PUBLIC_ADMIN_URL: ${BANCO_WEB_ADMIN_URL:-}
+        NEXT_PUBLIC_MARKET_URL: ${BANCO_WEB_MARKET_URL:-/market/}
+        NEXT_PUBLIC_ADMIN_URL: ${BANCO_WEB_ADMIN_URL:-/admin/}
         NEXT_PUBLIC_APP_ANDROID_URL: ${NEXT_PUBLIC_APP_ANDROID_URL:-}
         NEXT_PUBLIC_APP_IOS_URL: ${NEXT_PUBLIC_APP_IOS_URL:-}
         NEXT_PUBLIC_WEB_SEARCH_LIVE: ${NEXT_PUBLIC_WEB_SEARCH_LIVE:-false}
@@ -223,9 +227,10 @@ services:
       args:
         VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:-}
         VITE_CLERK_PROXY_URL: ${VITE_CLERK_PROXY_URL:-}
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
-        VITE_MARKET_URL: ${VITE_MARKET_URL:-}
-        VITE_ADMIN_URL: ${VITE_ADMIN_URL:-}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+        VITE_MARKET_URL: ${VITE_MARKET_URL:-/market/}
+        VITE_ADMIN_URL: ${VITE_ADMIN_URL:-/admin/}
+        VITE_WEB_URL: ${VITE_WEB_URL:-}
         VITE_APP_ANDROID_URL: ${VITE_APP_ANDROID_URL:-}
         VITE_APP_IOS_URL: ${VITE_APP_IOS_URL:-}
     image: banco-web-static:latest

@@ -198,6 +198,10 @@ export const MARKET_COUNTRIES: {
   { value: "MA", en: "Morocco", ar: "المغرب", rentalTerms: ["furnished_daily", "annual_contract"] },
   { value: "TN", en: "Tunisia", ar: "تونس", rentalTerms: ["furnished_daily", "annual_contract"] },
   { value: "SD", en: "Sudan", ar: "السودان", rentalTerms: ["furnished_daily", "annual_contract"] },
+  { value: "DZ", en: "Algeria", ar: "الجزائر", rentalTerms: ["furnished_daily", "annual_contract"] },
+  { value: "PS", en: "Palestine", ar: "فلسطين", rentalTerms: ["furnished_daily", "annual_contract"] },
+  { value: "SY", en: "Syria", ar: "سوريا", rentalTerms: ["furnished_daily", "annual_contract"] },
+  { value: "YE", en: "Yemen", ar: "اليمن", rentalTerms: ["furnished_daily", "annual_contract"] },
   { value: "TR", en: "Turkey", ar: "تركيا", rentalTerms: ["furnished_daily", "annual_contract"] },
   { value: "GB", en: "United Kingdom", ar: "المملكة المتحدة", rentalTerms: ["furnished_daily", "annual_contract"] },
   { value: "US", en: "United States", ar: "الولايات المتحدة", rentalTerms: ["furnished_daily", "annual_contract"] },
@@ -236,6 +240,10 @@ export const CURRENCY_BY_MARKET: Record<string, string> = {
   JO: "JOD",
   OM: "OMR",
   LY: "LYD",
+  DZ: "DZD",
+  PS: "ILS",
+  SY: "SYP",
+  YE: "YER",
 };
 
 export const EXTRA_CURRENCIES = ["USD", "EUR"] as const;
@@ -366,13 +374,21 @@ export const requiredSpecFieldsFor = (ui: UiListingCategory): SpecField[] => {
  * land has no room count, no finishing level). Mirrors the server floor in
  * validateAttributes so the mobile gate and the API never disagree.
  */
-export const REAL_ESTATE_NO_ROOMS_TYPES = ["land", "shop", "office", "clinic"] as const;
+export const REAL_ESTATE_NO_ROOMS_TYPES = [
+  "land",
+  "shop",
+  "office",
+  "clinic",
+  "warehouse",
+  "commercial_land",
+] as const;
 
 /**
  * Effective required spec keys given the CURRENT field values — most are static
  * (REQUIRED_SPEC_KEYS) but a few only apply to a sub-type, so a listing is never
  * forced to invent a value that doesn't fit reality:
- * - real_estate: rooms + finishing are dropped for land/shop/office/clinic.
+ * - real_estate: rooms + finishing are dropped for land/shop/office/clinic/
+ *   warehouse/commercial_land; rental_term required when offer_type=rent.
  * - raw_materials: `industry` (a manufacturing-sector concept) is never required
  *   — a raw material is defined by its `material`, not by a factory industry.
  * KEEP IN SYNC with the server floors (api-server validateAttributes).
@@ -384,10 +400,14 @@ export function requiredSpecKeysFor(
   const base = [...REQUIRED_SPEC_KEYS[ui]];
   if (ui === "real_estate") {
     const pt = specs.property_type ?? "";
+    let keys = base;
     if ((REAL_ESTATE_NO_ROOMS_TYPES as readonly string[]).includes(pt)) {
-      return base.filter((k) => k !== "rooms" && k !== "finishing");
+      keys = keys.filter((k) => k !== "rooms" && k !== "finishing");
     }
-    return base;
+    if (specs.offer_type === "rent" && !keys.includes("rental_term")) {
+      keys = [...keys, "rental_term"];
+    }
+    return keys;
   }
   if (ui === "raw_materials") {
     return base.filter((k) => k !== "industry");

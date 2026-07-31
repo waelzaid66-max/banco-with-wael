@@ -9,8 +9,8 @@ import type { Notification } from "@workspace/api-client-react";
  *
  * `data` carries typed ids the server attaches (conversation_id, listing_id,
  * rfq_id, etc.); we route off whichever is present for the notification type.
- * Returns null when there is no meaningful destination — callers fall back to
- * the notifications list.
+ * Unknown / incomplete payloads fall back to the notifications feed (NOTIF-09)
+ * so push taps are never a silent drop.
  */
 export function routeForNotification(
   type: string | null | undefined,
@@ -19,9 +19,9 @@ export function routeForNotification(
   const d = (data ?? {}) as Record<string, unknown>;
 
   if (type === "message" && typeof d.conversation_id === "string") {
-    // Pass listingId when the server stamped it (ConversationService always
-    // does). Thread still opens with id alone; listingId unlocks seller chrome
-    // later if role is also present — never invent role here.
+    // Pass listingId + role when the server stamped them (ConversationService).
+    // Thread still opens with id alone; listingId unlocks offer/share; role
+    // unlocks seller mark-sold — never invent role when absent.
     return {
       pathname: "/messages/[id]",
       params: {
@@ -29,6 +29,7 @@ export function routeForNotification(
         ...(typeof d.listing_id === "string"
           ? { listingId: d.listing_id }
           : {}),
+        ...(d.role === "buyer" || d.role === "seller" ? { role: d.role } : {}),
       },
     };
   }
@@ -71,8 +72,13 @@ export function routeForNotification(
     return "/billing" as Href;
   }
 
-  // A car-import lifecycle ping → the buyer's import-tracking screen (live stages).
+  // A car-import lifecycle ping → the order's own detail screen when the server
+  // stamped the id (all new notifications do); older rows without it fall back
+  // to the tracking overview.
   if (type === "car_import") {
+    if (typeof d.import_order_id === "string") {
+      return { pathname: "/import/order/[id]", params: { id: d.import_order_id } };
+    }
     return "/import-tracking" as Href;
   }
 
@@ -97,7 +103,9 @@ export function routeForNotification(
     return "/notifications";
   }
 
-  return null;
+  // NOTIF-09: unknown / incomplete payload → notifications feed (never null
+  // for push taps — in-app feed already stays put when dest is unused).
+  return "/notifications";
 }
 
 /** Convenience overload for an in-app Notification record. */

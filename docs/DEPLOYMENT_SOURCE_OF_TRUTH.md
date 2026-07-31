@@ -17,6 +17,7 @@
 | **OPS go-live checklist** | **`OPS_GO_LIVE_CHECKLIST.md`** (tick boxes after merge) |
 | **Production inventory (harmony)** | **`reports/production-verification/57-PRODUCTION-INVENTORY-HARMONY.md`** |
 | **OpenAPI codegen harmony** | **`reports/production-verification/58-OPENAPI-CODEGEN-HARMONY.md`** |
+| **Mobile full-product audit (no fixes)** | **`reports/production-verification/59-MOBILE-FULL-PRODUCT-AUDIT.md`** |
 | **Live cutover proof** | `pnpm ops:live-cutover` |
 | **Package manager** | `pnpm@11.9.0` |
 | **Node (Docker)** | **24** |

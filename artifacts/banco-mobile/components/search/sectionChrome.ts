@@ -48,7 +48,11 @@ export interface SectionChrome {
    * Materials: production line / raw material / machine.
    */
   engines?: AxisShape;
-  /** Real-estate property type (16 values). */
+  /**
+   * Real-estate property type (16 values). B-PROPERTY declares "pill" so types
+   * do not steal a full chip row before the first listing; chips remain available
+   * for any section that still wants the horizontal strip.
+   */
   propertyType?: AxisShape;
   /** Materials commodity (13 values). */
   material?: AxisShape;

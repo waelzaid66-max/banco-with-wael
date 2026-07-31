@@ -1176,12 +1176,14 @@ export default function ProfileScreen() {
         },
       },
       {
+        // Front door of the CAR IMPORT mini-app hub; tracking is one card away
+        // inside it (and each order opens its own live detail screen).
         key: "import-track",
         icon: "package" as const,
-        label: t("search.discover.importTrackCta"),
+        label: t("importHub.title"),
         onPress: () => {
           setShowMenu(false);
-          router.push("/import-tracking" as any);
+          router.push("/import" as any);
         },
       },
       {
@@ -1744,7 +1746,11 @@ export default function ProfileScreen() {
                 {
                   backgroundColor: "#1668B5",
                   borderRadius: colors.radius,
-                  width: "100%",
+                  // Single CTA in a column — don't stretch full card width
+                  // (businessBtn.flex:1 is for dual-button businessActions rows).
+                  flex: 0,
+                  alignSelf: "flex-start",
+                  paddingHorizontal: 16,
                 },
               ]}
               testID="profile-open-banks"

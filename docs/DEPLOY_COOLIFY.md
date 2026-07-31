@@ -13,10 +13,10 @@ This guide explains how to deploy the entire Banco monorepo on
 | Service | Image name | Type | Container Port | Description |
 |---------|------------|------|---------------|-------------|
 | `postgres` | `postgres:16` | Postgres 16 | 5432 (internal) | Persistent database |
-| `api` | `banco-api` | Node.js Express | 8080 | REST + WebSocket — health **`/api/readyz`** |
-| `banco-web` | `banco-web` | Next.js standalone | 3000 | Consumer Next app |
-| `banco-website` | `banco-website` | Next.js standalone | 3000 (→ 3001 host) | Marketing / consumer twin |
-| `web` | **`banco-web-static`** | Nginx + Vite SPAs | 80 | Landing + dealer-os + admin-os + well-known + `/api/` proxy |
+| `api` | `banco-api` | Node.js Express | 8080 | REST (chat is poll-only — G47; no WebSocket) — health **`/api/readyz`** |
+| `banco-web` | `banco-web` | Next.js standalone | 3000 | **Optional** frozen twin — profile `legacy-banco-web` (off by default) |
+| `banco-website` | `banco-website` | Next.js standalone | 3000 (→ 3001 host) | Canonical Next marketing/consumer |
+| `web` | **`banco-web-static`** | Nginx + Vite SPAs | 80 | Landing + `/market/` + `/admin/` + SEO + well-known + `/api/` proxy |
 
 The Expo mobile app (`artifacts/banco-mobile`) runs on iOS/Android via EAS — it is **not** deployed as a server container.
 
@@ -63,8 +63,12 @@ Service `web` is **Nginx** (image `banco-web-static`). It already serves:
 | `/market/` | Dealer OS |
 | `/admin/` | Admin OS |
 | `/api/` | Reverse proxy → compose service `api:8080` |
+| `/l/` `/listing/` `/sitemap.xml` `/robots.txt` | Reverse proxy → API (share/SEO — must not hit SPA) |
 | `/.well-known/` | Universal / App Links templates |
 | `/nginx-health` | Liveness |
+
+**Default deploy services:** `postgres` + `api` + `banco-website` + `web`.  
+Enable frozen `banco-web` only with `COMPOSE_PROFILES=legacy-banco-web`.
 
 This avoids putting the marketing Next app on the apex by accident.
 
@@ -103,16 +107,20 @@ Click **Deploy** in Coolify. Coolify will:
 | `CLERK_SECRET_KEY` | Clerk backend secret key (`sk_live_...`) |
 | `SESSION_SECRET` | Random 32+ character string for session signing |
 | `PAYMENT_CONFIG_ENCRYPTION_KEY` | Random 32+ character hex string for payment config AES encryption |
+| `OBJECT_STORAGE_PROVIDER` | Must be **`s3`** on Coolify (compose fails closed if unset) |
+| `AWS_REGION` / `S3_BUCKET` / `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | S3 (or S3-compatible) credentials — required on Hostinger VPS |
+| `PUBLIC_OBJECT_SEARCH_PATHS` / `PRIVATE_OBJECT_DIR` | Key prefixes inside `S3_BUCKET` |
 
 ### Important build-time variables (set before first deploy)
 
 | Variable | Used by | Description |
 |----------|---------|-------------|
-| `BANCO_WEB_URL` | `banco-web` build | Public URL of the consumer app (e.g. `https://app.yourdomain.com`) |
-| `BANCO_WEBSITE_URL` | `banco-website` build | Public URL of the marketing website (e.g. `https://yourdomain.com`) |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | `banco-web`, `banco-website` builds | Clerk publishable key (`pk_live_...`) |
-| `VITE_CLERK_PUBLISHABLE_KEY` | `web` (Vite SPAs) build | Same Clerk publishable key for admin-os / dealer-os |
-| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | `banco-web` build | Google Maps API key for map search |
+| `BANCO_WEBSITE_URL` | `banco-website` build | **Required** public URL of the canonical Next site |
+| `BANCO_WEB_URL` | `banco-web` build (legacy profile) | Public URL if you enable `legacy-banco-web` |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | `banco-website` (+ legacy `banco-web`) | Clerk publishable key (`pk_live_...`) — **required** |
+| `VITE_CLERK_PUBLISHABLE_KEY` | `web` (Vite SPAs) build | Same Clerk publishable key for admin-os / dealer-os — **required** |
+| `VITE_WEB_URL` | `web` (landing) build | Absolute HTTPS apex for DomainRouter hops (optional but recommended) |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Next builds | Google Maps API key for map search |
 
 > **Why is `NEXT_PUBLIC_API_URL` hardcoded to `http://api:8080`?**
 >
@@ -147,13 +155,8 @@ Click **Deploy** in Coolify. Coolify will:
 | `PAYMOB_SECRET_KEY` | — | Paymob secret key |
 | `PAYMOB_HMAC_SECRET` | — | Paymob HMAC secret |
 | `PAYMOB_INTEGRATION_IDS` | — | Paymob integration IDs (JSON) |
-| `OBJECT_STORAGE_PROVIDER` | — (must set explicitly) | `s3` or `replit` — **NOT `gcs`** (the API rejects `gcs`: "Unsupported OBJECT_STORAGE_PROVIDER … Supported: s3, replit"). For Coolify/Hostinger VPS set **`s3`** with static AWS keys. Do **not** leave unset and do **not** use `replit` when `COOLIFY_URL`/`COOLIFY_FQDN` are present (API refuses start). |
-| `S3_BUCKET` | — | S3 bucket name |
-| `AWS_REGION` | — | AWS region |
-| `AWS_ACCESS_KEY_ID` | — | **Required on Coolify/Hostinger VPS** (no IAM role). Optional on EC2/ECS when an instance role is attached. |
-| `AWS_SECRET_ACCESS_KEY` | — | Pair with `AWS_ACCESS_KEY_ID` on VPS |
-| `PUBLIC_OBJECT_SEARCH_PATHS` | — | Public S3 path prefix for listing images |
-| `PRIVATE_OBJECT_DIR` | — | Private S3 dir for internal assets |
+| `TRUST_PROXY_HOPS` | `2` | Express trust-proxy hops (Traefik → nginx → api). Set `1` on single-hop edges. |
+| `DB_POOL_MAX` | `20` | Postgres pool size per API process — keep replicas × pool under `max_connections` |
 | `GIT_SHA` | — | Deploy pin for `/api/readyz` (Coolify may also inject `SOURCE_COMMIT`) |
 | `BUILD_ID` | — | Optional build id surfaced on health/readyz |
 | `COOLIFY_URL` / `COOLIFY_FQDN` | — | Coolify markers — forbids `OBJECT_STORAGE_PROVIDER=replit` in-container |
@@ -171,11 +174,12 @@ Click **Deploy** in Coolify. Coolify will:
 
 | Variable | Description |
 |----------|-------------|
-| `VITE_CLERK_PUBLISHABLE_KEY` | Clerk publishable key for admin-os / dealer-os |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Clerk publishable key for admin-os / dealer-os (**required** on Coolify) |
 | `VITE_CLERK_PROXY_URL` | Clerk proxy URL if using Clerk auth proxy |
-| `VITE_API_BASE_URL` | API base URL referenced inside the SPAs |
-| `VITE_MARKET_URL` | URL for the market/dealer surface |
-| `VITE_ADMIN_URL` | URL for the admin surface |
+| `VITE_API_BASE_URL` | API base URL referenced inside the SPAs (default `/api`) |
+| `VITE_MARKET_URL` | Market/dealer surface (default `/market/`) |
+| `VITE_ADMIN_URL` | Admin surface (default `/admin/`) |
+| `VITE_WEB_URL` | Absolute HTTPS site URL for landing DomainRouter |
 | `VITE_APP_ANDROID_URL` | Android app store URL |
 | `VITE_APP_IOS_URL` | iOS app store URL |
 
@@ -259,11 +263,12 @@ Coolify Traefik (HTTPS/TLS)
     │                                 ├── /market/       dealer-os
     │                                 ├── /admin/        admin-os
     │                                 ├── /api/          → api:8080
+    │                                 ├── /l/ /listing/ /sitemap.xml /robots.txt → api (SEO)
     │                                 └── /.well-known/  AASA + assetlinks
     │
     │  Optional split origins (advanced — do NOT put apex on Next by accident):
-    ├──── app.yourdomain.com       →  banco-web:3000      (Next.js consumer)
-    ├──── marketing.yourdomain.com →  banco-website:3000  (Next.js twin)
+    ├──── app.yourdomain.com       →  banco-web:3000      (only with profile legacy-banco-web)
+    ├──── marketing.yourdomain.com →  banco-website:3000  (canonical Next)
     └──── api.yourdomain.com       →  api:8080            (only if separate API host)
 
 Internal Docker network (banco_net):

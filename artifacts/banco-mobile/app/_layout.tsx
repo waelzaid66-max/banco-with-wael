@@ -118,10 +118,21 @@ function AuthTokenBridge() {
 
   useEffect(() => {
     // Soft-deleted accounts reject with 401 ACCOUNT_DELETED while Clerk JWT
-    // may still exist — clear the local session once so the user is not stuck.
+    // may still exist — unregister push while auth may still work, then clear
+    // the local session so the user is not stuck (NOTIF-03).
     setAuthFailureHandler(({ code }) => {
       if (code !== "ACCOUNT_DELETED") return;
-      void signOut().catch(() => {});
+      void (async () => {
+        try {
+          const { unregisterCachedPushTokenBestEffort } = await import(
+            "@/lib/unregisterPushBestEffort"
+          );
+          await unregisterCachedPushTokenBestEffort();
+        } catch {
+          // Best-effort — still sign out.
+        }
+        await signOut().catch(() => {});
+      })();
     });
     return () => setAuthFailureHandler(null);
   }, [signOut]);
@@ -306,6 +317,33 @@ function RootLayoutNav() {
       />
       <Stack.Screen
         name="import-tracking"
+        options={{ headerShown: false, animation: "slide_from_right" }}
+      />
+      {/* CAR IMPORT mini-app — hub + tools pushed above (tabs), same pattern as
+          the section mini-apps. The request form was already file-routed; it is
+          registered here so the whole import stack shares one animation set. */}
+      <Stack.Screen
+        name="import/index"
+        options={{ headerShown: false, animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="import/request"
+        options={{ headerShown: false, animation: "slide_from_bottom" }}
+      />
+      <Stack.Screen
+        name="import/calculator"
+        options={{ headerShown: false, animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="import/auctions"
+        options={{ headerShown: false, animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="import/documents"
+        options={{ headerShown: false, animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="import/order/[id]"
         options={{ headerShown: false, animation: "slide_from_right" }}
       />
       <Stack.Screen

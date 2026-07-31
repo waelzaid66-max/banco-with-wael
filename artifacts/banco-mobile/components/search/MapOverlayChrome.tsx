@@ -9,6 +9,14 @@ import { SmartAssetCard } from "@/components/SmartAssetCard";
 import { useColors } from "@/hooks/useColors";
 import { useI18n } from "@/context/LanguageContext";
 
+export type MapPreviewCardProps = {
+  item: FeedItem;
+  onPress?: (item: FeedItem) => void;
+  onSave?: (item: FeedItem) => void;
+  isSaved?: boolean;
+  compact?: boolean;
+};
+
 interface MapOverlayChromeProps {
   /** How many results are actually plotted (the honest mapped count). */
   count: number;
@@ -18,13 +26,18 @@ interface MapOverlayChromeProps {
   onOpenListing: (item: FeedItem) => void;
   onSave?: (item: FeedItem) => void;
   isSaved: (id: string) => boolean;
+  /**
+   * Preview card override. Defaults to SmartAssetCard; Booking & Stays passes
+   * StayCard so map taps match the stay list surface.
+   */
+  CardComponent?: React.ComponentType<MapPreviewCardProps>;
 }
 
 /**
  * The native-RN chrome drawn on top of the map surface (shared by the WebView
  * and the web <iframe> hosts): a top-left honest "N on the map" caption and,
- * when a pin is tapped, a bottom preview card reusing the same SmartAssetCard
- * as the list so tapping it opens the listing exactly like a list row would.
+ * when a pin is tapped, a bottom preview card reusing the same card as the list
+ * so tapping it opens the listing exactly like a list row would.
  */
 export function MapOverlayChrome({
   count,
@@ -33,11 +46,13 @@ export function MapOverlayChrome({
   onOpenListing,
   onSave,
   isSaved,
+  CardComponent = SmartAssetCard,
 }: MapOverlayChromeProps) {
   const colors = useColors();
   const { t, isRTL } = useI18n();
   const insets = useSafeAreaInsets();
   const closeSide = isRTL ? { left: 4 } : { right: 4 };
+  const Preview = CardComponent;
 
   return (
     <>
@@ -73,7 +88,7 @@ export function MapOverlayChrome({
           >
             <Feather name="x" size={15} color={colors.foreground} />
           </Pressable>
-          <SmartAssetCard
+          <Preview
             item={selected}
             onPress={onOpenListing}
             onSave={onSave}

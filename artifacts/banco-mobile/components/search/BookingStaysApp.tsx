@@ -51,6 +51,7 @@ import {
   SearchCriteria,
   mapAnchorKey,
 } from "@/lib/searchParams";
+import { openOrLatchMap, resolveMapLatch, wantsMapFromParam } from "@/lib/mapLatch";
 import { requestNearMeCoords, DEFAULT_NEAR_RADIUS_KM } from "@/lib/nearMe";
 import {
   MarketCountryButton,
@@ -310,9 +311,7 @@ export function BookingStaysApp() {
   const params = useLocalSearchParams<{ map?: string | string[] }>();
   const mapParam = Array.isArray(params.map) ? params.map[0] : params.map;
   const [mapMode, setMapMode] = useState(false);
-  const [wantMap, setWantMap] = useState(
-    () => mapParam === "1" || mapParam === "true",
-  );
+  const [wantMap, setWantMap] = useState(() => wantsMapFromParam(mapParam));
   const [marketPickerOpen, setMarketPickerOpen] = useState(false);
   const mappableItems = useMemo(
     () =>
@@ -331,15 +330,13 @@ export function BookingStaysApp() {
   }, [inResultsView, mapMode]);
 
   useEffect(() => {
-    if (!wantMap) return;
-    // Stay map can open once results exist — server clusters fill gaps even
-    // when the loaded page has few pins (do not hard-require hasPagePins).
-    if (inResultsView) {
-      setMapMode(true);
-      setWantMap(false);
-    } else if (viewState === "empty" || viewState === "error") {
-      setWantMap(false);
-    }
+    resolveMapLatch({
+      wantMap,
+      inResultsView,
+      viewState,
+      setMapMode,
+      setWantMap,
+    });
   }, [wantMap, inResultsView, viewState]);
 
   const mapSectionKey = mapAnchorKey(criteria);
@@ -347,10 +344,10 @@ export function BookingStaysApp() {
   useEffect(() => {
     if (prevMapSectionKey.current === mapSectionKey) return;
     prevMapSectionKey.current = mapSectionKey;
-    // Keep map open across filter tweaks only when user is already in map;
-    // section-key change from market/type still drops to list for clarity.
-    setMapMode(false);
-  }, [mapSectionKey]);
+    // Preserve Discover/?map=1 latch across market hydrate (MOB-07 parity with
+    // SectionSearchApp). Drop map only when the shopper was not mid-latch.
+    if (!wantMap) setMapMode(false);
+  }, [mapSectionKey, wantMap]);
 
   // ── Text query + autocomplete (real_estate-scoped) ──
   const [draftQuery, setDraftQuery] = useState("");
@@ -661,7 +658,7 @@ export function BookingStaysApp() {
         <Pressable
           onPress={() => {
             playSound("tap");
-            router.push("/listings/create?request=1" as Href);
+            router.push("/listings/create?request=1&category=real_estate" as Href);
           }}
           style={[
             styles.emptyCta,
@@ -699,6 +696,11 @@ export function BookingStaysApp() {
         inputRef={inputRef}
         onBack={goBack}
         onSaveSearch={handleSaveSearch}
+        onOpenMap={() => {
+          playSound("tap");
+          Haptics.selectionAsync();
+          openOrLatchMap({ inResultsView, setMapMode, setWantMap });
+        }}
         onOpenFilters={() => {
           playSound("tap");
           setShowFilters((v) => !v);
@@ -935,6 +937,7 @@ export function BookingStaysApp() {
             onOpenListingId={(id) => router.push(`/listing/${id}?focus=booking`)}
             onSave={toggleSave}
             isSaved={isSaved}
+            CardComponent={StayCard}
           />
         ) : null}
 

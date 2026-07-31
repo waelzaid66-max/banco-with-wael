@@ -31,9 +31,9 @@
 | `postgres` | `postgres:16` | Database | internal only |
 | `migrate` | (build, profile `migrate`) | One-off schema push — **not** auto-started | — |
 | `api` | `banco-api:latest` | Node API | **8080** · health **`/api/readyz`** |
-| `banco-web` | `banco-web:latest` | Next.js consumer | **3000** |
-| `banco-website` | `banco-website:latest` | Next.js marketing/consumer twin | **3001** host |
-| `web` | `banco-web-static:latest` | **Nginx** = landing + `/market/` + `/admin/` + `/.well-known/` + `/api/` proxy | **80** |
+| `banco-web` | `banco-web:latest` | Frozen Next twin (**profile `legacy-banco-web`**, off by default) | **3000** |
+| `banco-website` | `banco-website:latest` | Canonical Next marketing/consumer | **3001** host |
+| `web` | `banco-web-static:latest` | **Nginx** = landing + `/market/` + `/admin/` + SEO + `/.well-known/` + `/api/` proxy | **80** |
 
 **Critical:** service `web` ≠ image name containing “web” in a vague sense.
 `web` = nginx static front. `banco-web` = Next.js. Different things.
@@ -54,8 +54,12 @@ That one origin gives you:
 | `/market/` | Dealer OS |
 | `/admin/` | Admin OS |
 | `/api/` | Proxied to `api:8080` |
+| `/l/` `/listing/` `/sitemap.xml` `/robots.txt` | Proxied to API (share/SEO — not the SPA) |
 | `/.well-known/` | AASA + assetlinks (replace `REPLACE_*` later) |
 | `/nginx-health` | Liveness |
+
+**Default services on Deploy:** `postgres` + `api` + `banco-website` + `web`.  
+Frozen twin `banco-web` is **profile-gated** (`legacy-banco-web`) — do not enable unless you still need the old Next twin.
 
 Optional later (split origins):
 
@@ -63,7 +67,7 @@ Optional later (split origins):
 |---------|----------------|
 | `api` | `api.banco.today` |
 | `banco-website` | marketing host |
-| `banco-web` | app host |
+| `banco-web` | only with `COMPOSE_PROFILES=legacy-banco-web` |
 
 Do **not** start by putting the apex on `banco-website` and `web` on a random static subdomain unless you already understand Traefik path routing — that caused past confusion.
 
@@ -97,16 +101,19 @@ Notes:
 ```
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...
 VITE_CLERK_PUBLISHABLE_KEY=pk_live_...   # same publishable key for Vite SPAs
-BANCO_WEB_URL=https://<your-apex-or-app-host>
 BANCO_WEBSITE_URL=https://<your-apex-or-marketing-host>
+VITE_WEB_URL=https://<your-apex>         # recommended — landing DomainRouter absolute hops
+# Only if COMPOSE_PROFILES includes legacy-banco-web:
+# BANCO_WEB_URL=https://<legacy-next-host>
 ```
 
-Recommended for CORS / Paymob later:
+Recommended for CORS / Paymob / proxy later:
 
 ```
 CORS_ALLOWED_ORIGINS=https://banco.today,https://www.banco.today
 PUBLIC_API_BASE_URL=https://banco.today
 PUBLIC_APP_URL=https://banco.today
+TRUST_PROXY_HOPS=2
 ```
 
 Full reference: `docs/DEPLOY_COOLIFY.md`.

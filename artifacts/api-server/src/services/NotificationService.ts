@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { notifications, users, notificationPreferences } from "@workspace/db/schema";
-import { eq, and, desc, isNull } from "drizzle-orm";
+import { eq, and, desc, isNull, sql } from "drizzle-orm";
 import { sendPushToUser } from "./PushService";
 
 export type NotificationType =
@@ -111,7 +111,12 @@ export async function listNotifications(
     created_at: n.createdAt ? n.createdAt.toISOString() : new Date().toISOString(),
   }));
 
-  const unread = items.filter((i) => i.read_at === null).length;
+  // NOTIF-05: unread is a full-table count — not capped to the newest 100 feed page.
+  const [unreadRow] = await db
+    .select({ c: sql<number>`count(*)::int` })
+    .from(notifications)
+    .where(and(eq(notifications.userId, user.id), isNull(notifications.readAt)));
+  const unread = Number(unreadRow?.c ?? 0);
   return { items, unread };
 }
 

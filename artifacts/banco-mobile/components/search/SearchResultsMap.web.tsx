@@ -1,8 +1,9 @@
 import { FeedItem, getMapClusters } from "@workspace/api-client-react";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Alert, Linking, StyleSheet, View } from "react-native";
 
 import { apiCategoryFor } from "@/components/CategoryTabs";
+import { useI18n } from "@/context/LanguageContext";
 import { useColors } from "@/hooks/useColors";
 import {
   buildMapClusterParams,
@@ -57,8 +58,10 @@ export function SearchResultsMap({
   onOpenListingId,
   onSave,
   isSaved,
+  CardComponent,
 }: SearchResultsMapProps) {
   const colors = useColors();
+  const { t } = useI18n();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [serverTotal, setServerTotal] = useState<number | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -81,6 +84,15 @@ export function SearchResultsMap({
           border: colors.border,
         },
         marketCountryMapCenter(criteria.marketCountry),
+        criteria.nearMeEnabled &&
+          criteria.nearLat != null &&
+          criteria.nearLng != null
+          ? {
+              lat: criteria.nearLat,
+              lng: criteria.nearLng,
+              radiusKm: criteria.nearRadiusKm,
+            }
+          : undefined,
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
@@ -91,6 +103,10 @@ export function SearchResultsMap({
       colors.foreground,
       colors.border,
       criteria.marketCountry,
+      criteria.nearMeEnabled,
+      criteria.nearLat,
+      criteria.nearLng,
+      criteria.nearRadiusKm,
     ],
   );
 
@@ -149,12 +165,18 @@ export function SearchResultsMap({
           count: c.count,
           listing_id: c.listing_id,
           label:
-            c.count === 1 && c.listing_id ? priceById.get(c.listing_id) : undefined,
+            c.count === 1 && c.listing_id
+              ? c.price_display ?? priceById.get(c.listing_id)
+              : undefined,
           bookable:
-            c.count === 1 && c.listing_id ? bookableById.has(c.listing_id) : false,
+            c.count === 1 && c.listing_id
+              ? c.is_bookable === true || bookableById.has(c.listing_id)
+              : false,
           cat:
             c.count === 1
-              ? (c.listing_id ? catById.get(c.listing_id) : undefined) ?? defaultCat
+              ? (c.category ??
+                  (c.listing_id ? catById.get(c.listing_id) : undefined) ??
+                  defaultCat)
               : undefined,
         }));
         const total = clusters.reduce((sum, c) => sum + c.count, 0);
@@ -211,7 +233,26 @@ export function SearchResultsMap({
           if (hit) setSelectedId(msg.id);
           else onOpenListingId?.(msg.id);
         } else if (msg.type === "locate_error") {
-          console.warn("[map] locate_error", msg.reason);
+          // MAP-06: parity with native — surface deny/timeout; offer Settings on deny.
+          Alert.alert(
+            t("search.locateFailedTitle"),
+            msg.reason === "denied"
+              ? t("search.locateDeniedBody")
+              : t("search.locateFailedBody"),
+            [
+              { text: t("common.cancel"), style: "cancel" },
+              ...(msg.reason === "denied"
+                ? [
+                    {
+                      text: t("profile.photoPermissionSettings"),
+                      onPress: () => {
+                        void Linking.openSettings();
+                      },
+                    },
+                  ]
+                : []),
+            ],
+          );
         }
       } catch {
         // Ignore non-map messages on the shared web message channel.
@@ -219,7 +260,7 @@ export function SearchResultsMap({
     };
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, [scheduleFetchClusters, onOpenListingId]);
+  }, [scheduleFetchClusters, onOpenListingId, t]);
 
   const selected = useMemo(
     () => items.find((item) => item.id === selectedId) ?? null,
@@ -234,6 +275,7 @@ export function SearchResultsMap({
         title="search-map"
         srcDoc={html}
         sandbox="allow-scripts allow-same-origin"
+        allow="geolocation"
         style={{ border: "none", width: "100%", height: "100%" }}
       />
       <MapOverlayChrome
@@ -243,6 +285,7 @@ export function SearchResultsMap({
         onOpenListing={onOpenListing}
         onSave={onSave}
         isSaved={isSaved}
+        CardComponent={CardComponent}
       />
     </View>
   );

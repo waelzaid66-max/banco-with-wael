@@ -4,7 +4,7 @@
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
-    "dev": "CI=1 EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=$CLERK_PUBLISHABLE_KEY EXPO_PUBLIC_CLERK_PROXY_URL=$CLERK_PROXY_URL EXPO_PACKAGER_PROXY_URL=https://$REPLIT_EXPO_DEV_DOMAIN EXPO_PUBLIC_DOMAIN=$REPLIT_DEV_DOMAIN EXPO_PUBLIC_REPL_ID=$REPL_ID REACT_NATIVE_PACKAGER_HOSTNAME=$REPLIT_DEV_DOMAIN pnpm exec expo start --localhost --port ${PORT:-8081}",
+    "dev": "bash scripts/dev-env.sh",
     "build": "node scripts/build.js",
     "serve": "node server/serve.js",
     "typecheck": "tsc -b ../../lib/api-client-react ../../lib/search-contract --force && tsc -p tsconfig.json --noEmit",
@@ -14,12 +14,19 @@
     "test:universal-links": "node --test tests/universal-links-config.test.mjs",
     "test:session-restore": "node --test tests/session-restore.test.mjs",
     "test:section-guard": "node --test tests/section-miniapp-guard.test.mjs",
+    "test:materials-core": "node --test tests/materials-core-guard.test.mjs",
     "test:i18n": "node --test tests/i18n-usage.test.mjs",
     "test:accounts": "node --test tests/accounts-clerk-journey.test.mjs",
     "test:notification-routing": "node --test tests/notification-routing.test.mjs",
+    "test:create-market": "node --test tests/create-listing-market-guard.test.mjs",
+    "test:ui-density": "node --test tests/ui-density-guard.test.mjs",
+    "test:stay-honesty": "node --test tests/stay-honesty-guard.test.mjs",
+    "test:messenger-wiring": "node --test tests/messenger-wiring-guard.test.mjs",
+    "test:production-wiring": "node --test tests/production-wiring-guard.test.mjs",
+    "test:import-docs": "node --test tests/import-order-documents-guard.test.mjs",
     "test:scale": "node --test tests/scale-readiness.test.mjs",
     "test:cdn": "node --test tests/cdn-readiness.test.mjs",
-    "test": "pnpm run test:icons && pnpm run test:lib && pnpm run test:resilience && pnpm run test:universal-links && pnpm run test:session-restore && pnpm run test:section-guard && pnpm run test:i18n && pnpm run test:accounts && pnpm run test:notification-routing && pnpm run test:scale && pnpm run test:cdn"
+    "test": "pnpm run test:icons && pnpm run test:lib && pnpm run test:resilience && pnpm run test:universal-links && pnpm run test:session-restore && pnpm run test:section-guard && pnpm run test:materials-core && pnpm run test:i18n && pnpm run test:accounts && pnpm run test:notification-routing && pnpm run test:create-market && pnpm run test:ui-density && pnpm run test:stay-honesty && pnpm run test:messenger-wiring && pnpm run test:production-wiring && pnpm run test:import-docs && pnpm run test:scale && pnpm run test:cdn"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
@@ -52,6 +59,7 @@
     "@workspace/search-contract": "workspace:*",
     "@workspace/taxonomy": "workspace:*",
     "expo": "~54.0.36",
+    "expo-apple-authentication": "~8.0.8",
     "expo-asset": "~12.0.13",
     "expo-audio": "1.1.1",
     "expo-auth-session": "~7.0.11",

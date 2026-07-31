@@ -141,16 +141,32 @@ export function PushNotificationsBridge() {
     let cancelled = false;
 
     if (isSignedIn && notificationsEnabled) {
-      obtainExpoPushToken()
-        .then((token) => {
-          if (cancelled || !token) return;
-          tokenRef.current = token;
-          setCachedPushToken(token);
-          return registerPushToken({ token, platform: platformTag() });
-        })
-        .catch((err) => {
-          console.warn("[Push] registration skipped:", err);
-        });
+      // NOTIF-07: retry register with backoff — single-shot was dropping cold starts.
+      void (async () => {
+        const delays = [0, 2000, 5000, 15000];
+        let token: string | null = null;
+        for (let i = 0; i < delays.length; i++) {
+          if (cancelled) return;
+          if (delays[i] > 0) {
+            await new Promise((r) => setTimeout(r, delays[i]));
+            if (cancelled) return;
+          }
+          try {
+            if (!token) {
+              token = await obtainExpoPushToken();
+              if (!token) continue;
+              tokenRef.current = token;
+              setCachedPushToken(token);
+            }
+            await registerPushToken({ token, platform: platformTag() });
+            return;
+          } catch (err) {
+            if (i === delays.length - 1) {
+              console.warn("[Push] registration skipped after retries:", err);
+            }
+          }
+        }
+      })();
       return () => {
         cancelled = true;
       };

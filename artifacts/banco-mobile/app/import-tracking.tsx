@@ -122,6 +122,35 @@ export default function ImportTrackingScreen() {
           {t("importTrack.subtitle")}
         </AppText>
 
+        {/* CAR IMPORT hub — all import services (search, auctions, calculator,
+            documents, tracking) live behind this one entry. Additive: nothing
+            below it changed. */}
+        <Pressable
+          onPress={() => router.push("/import" as any)}
+          style={[
+            styles.hubCta,
+            { backgroundColor: colors.card, borderColor: colors.border, flexDirection: rowDir },
+          ]}
+          testID="import-hub-cta"
+        >
+          <View style={styles.hubIcon}>
+            <Feather name="grid" size={18} color="#E53935" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <AppText style={[styles.hubTitle, { color: colors.foreground, textAlign }]}>
+              {t("importHub.hubCta")}
+            </AppText>
+            <AppText style={[styles.hubSub, { color: colors.mutedForeground, textAlign }]}>
+              {t("importHub.hubCtaSub")}
+            </AppText>
+          </View>
+          <Feather
+            name={isRTL ? "chevron-left" : "chevron-right"}
+            size={18}
+            color={colors.mutedForeground}
+          />
+        </Pressable>
+
         {/* Request a car import */}
         <Pressable
           onPress={() => router.push("/import/request" as any)}
@@ -192,8 +221,17 @@ export default function ImportTrackingScreen() {
               const title =
                 o.listing_title ?? o.origin_country ?? t("importTrack.reqVehicle");
               return (
-                <View
+                // Pressable (was a plain View): each order now opens its live
+                // detail screen (full timeline + cancel). Purely additive.
+                <Pressable
                   key={o.id}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/import/order/[id]",
+                      params: { id: o.id },
+                    } as any)
+                  }
+                  accessibilityRole="button"
                   style={[
                     styles.orderCard,
                     {
@@ -223,7 +261,12 @@ export default function ImportTrackingScreen() {
                       {!cancelled && si != null ? `  ·  ${si + 1}/6` : ""}
                     </AppText>
                   </View>
-                </View>
+                  <Feather
+                    name={isRTL ? "chevron-left" : "chevron-right"}
+                    size={16}
+                    color={colors.mutedForeground}
+                  />
+                </Pressable>
               );
             })}
           </View>
@@ -385,6 +428,30 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     marginBottom: 4,
     lineHeight: 21,
+  },
+  hubCta: {
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  hubIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "rgba(229,57,53,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  hubTitle: {
+    fontSize: 14,
+    fontFamily: "Cairo_700Bold",
+  },
+  hubSub: {
+    fontSize: 11.5,
+    fontFamily: "Inter_400Regular",
   },
   sectionTitle: {
     fontSize: 16,

@@ -5,6 +5,7 @@ import {
   interactions,
   users,
   listings,
+  listingAttributes,
   leadBilling,
   type Plan,
 } from "@workspace/db/schema";
@@ -19,6 +20,7 @@ import { isInsufficientFunds, toMoney } from "../lib/billing";
 import { createNotification } from "./NotificationService";
 import { isEmailChannelEnabled, sendLeadNotificationEmail } from "./EmailService";
 import { schedulePaymentSuccess } from "./BillingNotificationService";
+import { resolveSellerContactPhone } from "../lib/resolveSellerContactPhone";
 
 const LEAD_ACTION_LABEL: Record<TrackLeadInput["actionType"], string> = {
   whatsapp: "واتساب · WhatsApp",
@@ -103,9 +105,11 @@ export async function contactLead(input: ContactLeadInput): Promise<{ phone: str
       sellerRole: users.role,
       title: listings.title,
       sellerPhone: users.phone,
+      specs: listingAttributes.specs,
     })
     .from(listings)
     .leftJoin(users, eq(listings.userId, users.id))
+    .leftJoin(listingAttributes, eq(listingAttributes.listingId, listings.id))
     .where(
       and(
         eq(listings.id, input.listingId),
@@ -123,7 +127,10 @@ export async function contactLead(input: ContactLeadInput): Promise<{ phone: str
 
   const sellerId = listing.userId;
   const sellerRole = (listing.sellerRole ?? "individual") as UserRole;
-  let disclosedPhone: string | null = listing.sellerPhone ?? null;
+  let disclosedPhone: string | null = resolveSellerContactPhone(
+    listing.sellerPhone,
+    listing.specs,
+  );
 
   // Pre-flight token check (no lock, no side-effects).
   // Rejected here before any rate counters are touched — an attacker flooding
@@ -207,9 +214,11 @@ export async function contactLead(input: ContactLeadInput): Promise<{ phone: str
       .select({
         userId: listings.userId,
         sellerPhone: users.phone,
+        specs: listingAttributes.specs,
       })
       .from(listings)
       .innerJoin(users, eq(listings.userId, users.id))
+      .leftJoin(listingAttributes, eq(listingAttributes.listingId, listings.id))
       .where(
         and(
           eq(listings.id, input.listingId),
@@ -232,7 +241,7 @@ export async function contactLead(input: ContactLeadInput): Promise<{ phone: str
         { code: "NOT_FOUND" },
       );
     }
-    disclosedPhone = liveListing.sellerPhone ?? null;
+    disclosedPhone = resolveSellerContactPhone(liveListing.sellerPhone, liveListing.specs);
 
     await tx.update(leadTokens).set({ usedAt: txNow }).where(eq(leadTokens.id, token.id));
 

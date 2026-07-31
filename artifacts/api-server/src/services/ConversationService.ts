@@ -7,7 +7,7 @@ import {
   users,
   notifications,
 } from "@workspace/db/schema";
-import { and, eq, or, desc, asc, ne, isNull, inArray, sql, gte } from "drizzle-orm";
+import { and, eq, or, desc, asc, ne, isNull, inArray, sql, gte, lt } from "drizzle-orm";
 import { createNotification } from "./NotificationService";
 import { checkMessageRate, checkConversationRate } from "./AbuseService";
 import { isEmailChannelEnabled, sendNewMessageEmail } from "./EmailService";
@@ -207,6 +207,10 @@ export async function createConversation(
     )
     .limit(1);
 
+  if (!conv) {
+    throw codedError("INTERNAL_ERROR", "Conversation could not be created");
+  }
+
   // Re-opening a thread the buyer had hidden brings it back into their inbox.
   if (conv.buyerDeletedAt) {
     await db
@@ -303,16 +307,50 @@ export async function listConversations(
 
 export async function getMessages(
   clerkId: string,
-  conversationId: string
+  conversationId: string,
+  opts: { limit?: number; before?: string } = {}
 ): Promise<MessageDTO[]> {
   const userId = await getUserId(clerkId);
   await loadParticipantConversation(conversationId, userId);
 
-  const rows = await db
-    .select()
-    .from(messages)
-    .where(eq(messages.conversationId, conversationId))
-    .orderBy(asc(messages.createdAt));
+  const conditions = [eq(messages.conversationId, conversationId)];
+
+  // Cursor page (older than `before`): load messages strictly older than the
+  // anchor's created_at within this conversation.
+  if (opts.before) {
+    const [anchor] = await db
+      .select({ createdAt: messages.createdAt })
+      .from(messages)
+      .where(
+        and(eq(messages.id, opts.before), eq(messages.conversationId, conversationId))
+      )
+      .limit(1);
+    if (anchor?.createdAt) {
+      conditions.push(lt(messages.createdAt, anchor.createdAt));
+    }
+  }
+
+  // MSG-07: optional limit returns the newest N (DESC then reverse to ASC).
+  // Omit limit → full chronological history (website / legacy clients).
+  const limit =
+    typeof opts.limit === "number" && Number.isFinite(opts.limit) && opts.limit > 0
+      ? Math.min(Math.floor(opts.limit), 1000)
+      : undefined;
+
+  const raw = limit
+    ? await db
+        .select()
+        .from(messages)
+        .where(and(...conditions))
+        .orderBy(desc(messages.createdAt))
+        .limit(limit)
+    : await db
+        .select()
+        .from(messages)
+        .where(and(...conditions))
+        .orderBy(asc(messages.createdAt));
+
+  const rows = limit ? [...raw].reverse() : raw;
 
   // Batch-resolve reply previews (within this conversation) and shared-listing
   // cards so the thread renders quoted replies + listing cards without N+1.
@@ -498,7 +536,12 @@ export async function sendMessage(
       type: "message",
       title: sender?.name ?? "رسالة جديدة · New message",
       body: preview.length > 80 ? `${preview.slice(0, 79)}…` : preview,
-      data: { conversation_id: conversationId, listing_id: conv.listingId },
+      data: {
+        conversation_id: conversationId,
+        listing_id: conv.listingId,
+        // Recipient's role when they open the thread (mark-sold / seller chrome).
+        role: isBuyer ? "seller" : "buyer",
+      },
     });
 
     // Best-effort email to the recipient — never blocks the send response.

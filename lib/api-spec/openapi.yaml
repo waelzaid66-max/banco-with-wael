@@ -2356,6 +2356,8 @@ components:
         One occupied grid cell on the map — its centroid and how many listings it
         aggregates. listing_id is set ONLY when count is 1 (a single tappable pin);
         for multi-listing cells it is null and the client shows a count bubble.
+        Single pins may also carry price_display / is_bookable / category so
+        off-page pins keep labels without waiting for the feed page (MAP-04).
       required:
         - lat
         - lng
@@ -2369,6 +2371,15 @@ components:
         count:
           type: integer
         listing_id:
+          type: string
+          nullable: true
+        price_display:
+          type: string
+          nullable: true
+        is_bookable:
+          type: boolean
+          nullable: true
+        category:
           type: string
           nullable: true
 
@@ -2695,6 +2706,39 @@ components:
         updated_at:
           type: string
           nullable: true
+
+    ImportDocumentKind:
+      type: string
+      enum: [invoice, export, passport, id, poa, insurance, shipping, customs]
+      description: >-
+        Fixed paperwork checklist for a car import — mirrors the mobile Import
+        Documents screen. New kinds are additive.
+
+    ImportOrderDocument:
+      type: object
+      description: One buyer-uploaded file attached to an import order.
+      required: [id, order_id, kind, url, created_at]
+      properties:
+        id:
+          type: string
+        order_id:
+          type: string
+        kind:
+          $ref: "#/components/schemas/ImportDocumentKind"
+        url:
+          type: string
+        created_at:
+          type: string
+
+    AttachImportOrderDocumentBody:
+      type: object
+      required: [kind, url]
+      properties:
+        kind:
+          $ref: "#/components/schemas/ImportDocumentKind"
+        url:
+          type: string
+          description: Servable URL returned by the presigned-upload flow.
 
     PromoCampaignView:
       type: object
@@ -4485,6 +4529,18 @@ paths:
                   type: number
                 location:
                   type: string
+                latitude:
+                  type: number
+                  minimum: -90
+                  maximum: 90
+                  description: >
+                    Optional precise pin (send with longitude). Overrides the area
+                    centroid for near-me search + map display.
+                longitude:
+                  type: number
+                  minimum: -180
+                  maximum: 180
+                  description: Optional precise pin (send with latitude).
                 status:
                   type: string
                   enum: [active, sold, archived]
@@ -4973,6 +5029,115 @@ paths:
                 properties:
                   data:
                     $ref: "#/components/schemas/ImportOrder"
+                  error:
+                    $ref: "#/components/schemas/ApiError"
+                    nullable: true
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+
+  /v1/import-orders/{id}/documents:
+    get:
+      operationId: listImportOrderDocuments
+      summary: List the paperwork attached to an import order (owner only)
+      description: >-
+        Matches Express `GET /api/v1/import-orders/:id/documents`.
+      tags: [import-orders]
+      security:
+        - ClerkAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Attached documents, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ImportOrderDocument"
+                  error:
+                    $ref: "#/components/schemas/ApiError"
+                    nullable: true
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+    post:
+      operationId: attachImportOrderDocument
+      summary: Attach an uploaded file to an import order (owner only)
+      description: >-
+        The file must already be uploaded through the shared presigned-URL
+        flow; this records its servable URL under a checklist kind. Matches
+        Express `POST /api/v1/import-orders/:id/documents`.
+      tags: [import-orders]
+      security:
+        - ClerkAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttachImportOrderDocumentBody"
+      responses:
+        "201":
+          description: The attached document
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ImportOrderDocument"
+                  error:
+                    $ref: "#/components/schemas/ApiError"
+                    nullable: true
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+
+  /v1/import-orders/{id}/documents/{documentId}:
+    delete:
+      operationId: deleteImportOrderDocument
+      summary: Remove an attached document from an import order (owner only)
+      tags: [import-orders]
+      security:
+        - ClerkAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: documentId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Delete result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, error, meta]
+                properties:
+                  data:
+                    type: object
+                    required: [deleted]
+                    properties:
+                      deleted:
+                        type: boolean
                   error:
                     $ref: "#/components/schemas/ApiError"
                     nullable: true
@@ -5808,6 +5973,24 @@ paths:
         - name: id
           in: path
           required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: >
+            Newest N messages (1–1000). Omitted = full chronological history.
+            Mobile polls with a page size to avoid unbounded refetch.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+        - name: before
+          in: query
+          required: false
+          description: >
+            Message id cursor — return messages strictly older than this id
+            (same conversation). Used with limit for older-page loads.
           schema:
             type: string
       responses:

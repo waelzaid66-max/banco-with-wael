@@ -68,7 +68,22 @@ export async function listConversationsHandler(req: Request, res: Response) {
 
 export async function getMessagesHandler(req: Request, res: Response) {
   try {
-    const result = await getMessages(req.userId!, req.params.id as string);
+    const rawLimit = req.query.limit;
+    const rawBefore = req.query.before;
+    const limit =
+      typeof rawLimit === "string" && rawLimit.trim()
+        ? Number(rawLimit)
+        : undefined;
+    const before =
+      typeof rawBefore === "string" && rawBefore.trim()
+        ? rawBefore.trim()
+        : undefined;
+    const result = await getMessages(req.userId!, req.params.id as string, {
+      ...(Number.isFinite(limit) && (limit as number) > 0
+        ? { limit: limit as number }
+        : {}),
+      ...(before ? { before } : {}),
+    });
     const validated = validateResponse(z.array(MessageItemSchema), result);
     return res.json(successResponse(validated, { total: validated.length }));
   } catch (err) {

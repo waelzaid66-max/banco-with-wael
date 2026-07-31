@@ -505,6 +505,41 @@ export interface MapCluster {
   count: number;
   /** Present ONLY for a single-listing cluster (count === 1) → a tappable pin. */
   listing_id: string | null;
+  /** Single-pin price label (MAP-04) — omitted on multi-count bubbles. */
+  price_display?: string | null;
+  /** Single-pin bookable flag (furnished/daily stays). */
+  is_bookable?: boolean | null;
+  /** Listing category for section tint when the pin is off the loaded page. */
+  category?: string | null;
+}
+
+/** Compact map pin money — mirrors BffService.formatMoney for cluster singles. */
+const MAP_CURRENCIES = new Set([
+  "EGP", "SAR", "AED", "KWD", "QAR", "JOD", "OMR", "LYD", "USD", "EUR",
+]);
+
+function mapPinPriceDisplay(args: {
+  is_request: boolean | null | undefined;
+  price: string | number | null | undefined;
+  currency: string | null | undefined;
+  offer_type: string | null | undefined;
+  rental_term: string | null | undefined;
+}): string | null {
+  if (args.is_request) return "طلب سعر / Price requested";
+  if (args.price == null || args.price === "") return null;
+  const n = Number(args.price);
+  if (!Number.isFinite(n)) return null;
+  const code = MAP_CURRENCIES.has((args.currency ?? "").trim().toUpperCase())
+    ? (args.currency as string).trim().toUpperCase()
+    : "EGP";
+  let money: string;
+  if (n >= 1_000_000) money = `${(n / 1_000_000).toFixed(2).replace(/\.00$/, "")}M ${code}`;
+  else if (n >= 1_000) money = `${Math.round(n / 1_000).toLocaleString("en-EG")}K ${code}`;
+  else money = `${n.toLocaleString("en-EG")} ${code}`;
+  if (args.offer_type !== "rent") return money;
+  if (args.rental_term === "furnished_daily") return `${money} /يوم`;
+  if (args.rental_term === "annual_contract") return `${money} /سنة`;
+  return `${money} /شهر`;
 }
 
 /**
@@ -575,6 +610,12 @@ export async function mapClusters(
       // cluster holds exactly one listing (→ a tappable pin), so any single id is
       // correct; for multi-listing cells the value is ignored.
       sample: sql<string>`min(${listings.id}::text)`,
+      sample_price: sql<string | null>`min(${listings.basePriceCash}::text)`,
+      sample_currency: sql<string | null>`min(${listingAttributes.specs}->>'currency')`,
+      sample_category: sql<string | null>`min(${listings.category})`,
+      sample_offer: sql<string | null>`min(${listingAttributes.specs}->>'offer_type')`,
+      sample_rental: sql<string | null>`min(${listingAttributes.specs}->>'rental_term')`,
+      sample_is_request: sql<boolean>`bool_or(${listings.isRequest})`,
     })
     .from(listings)
     .leftJoin(users, eq(listings.userId, users.id))
@@ -585,12 +626,31 @@ export async function mapClusters(
     // Bound the payload — a sane viewport never needs more cells than this.
     .limit(2000);
 
-  return rows.map((r) => ({
-    lat: Number(r.clat),
-    lng: Number(r.clng),
-    count: Number(r.cnt),
-    listing_id: Number(r.cnt) === 1 ? r.sample : null,
-  }));
+  return rows.map((r) => {
+    const count = Number(r.cnt);
+    const listing_id = count === 1 ? r.sample : null;
+    if (count !== 1 || !listing_id) {
+      return { lat: Number(r.clat), lng: Number(r.clng), count, listing_id: null };
+    }
+    const price_display = mapPinPriceDisplay({
+      is_request: r.sample_is_request,
+      price: r.sample_price,
+      currency: r.sample_currency,
+      offer_type: r.sample_offer,
+      rental_term: r.sample_rental,
+    });
+    const is_bookable =
+      r.sample_category === "real_estate" && r.sample_rental === "furnished_daily";
+    return {
+      lat: Number(r.clat),
+      lng: Number(r.clng),
+      count,
+      listing_id,
+      price_display,
+      is_bookable,
+      category: r.sample_category,
+    };
+  });
 }
 
 export async function getAutocomplete(query: string): Promise<string[]> {
@@ -634,6 +694,7 @@ export async function getTrending(
       views: interactions.views,
       clicks: interactions.clicks,
       industrial_type: listingAttributes.industrialType,
+      is_request: listings.isRequest,
     })
     .from(listings)
     .leftJoin(users, eq(listings.userId, users.id))
@@ -839,6 +900,7 @@ async function computeSimilarListings(listingId: string, limit: number): Promise
       user_role: users.role,
       quality_score: users.qualityScore,
       industrial_type: listingAttributes.industrialType,
+      is_request: listings.isRequest,
     })
     .from(listings)
     .leftJoin(users, eq(listings.userId, users.id))

@@ -989,6 +989,9 @@ export const MapClusterSchema = z
     lng: z.number(),
     count: z.number(),
     listing_id: z.string().nullable(),
+    price_display: z.string().nullable().optional(),
+    is_bookable: z.boolean().nullable().optional(),
+    category: z.string().nullable().optional(),
   })
   .strict();
 
@@ -1392,6 +1395,9 @@ export const UpdateListingSchema = z
     description: z.string().max(2000).optional(),
     base_price_cash: z.number().positive().optional(),
     location: z.string().min(2).max(100).optional(),
+    // Optional precise pin (MAP-09). Both axes or neither — same contract as create.
+    latitude: z.number().min(-90).max(90).optional(),
+    longitude: z.number().min(-180).max(180).optional(),
     // Lifecycle status patch (Task #71). Sellers mark a deal closed ("sold")
     // or hide a listing ("archived").
     status: z.enum(["active", "sold", "archived"]).optional(),
@@ -1404,6 +1410,17 @@ export const UpdateListingSchema = z
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field must be provided for update",
+  })
+  .superRefine((data, ctx) => {
+    const hasLat = data.latitude !== undefined;
+    const hasLng = data.longitude !== undefined;
+    if (hasLat !== hasLng) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: hasLat ? ["longitude"] : ["latitude"],
+        message: "latitude and longitude must be sent together",
+      });
+    }
   });
 
 export const UpdateListingResultSchema = z
@@ -2619,6 +2636,39 @@ export const CreateImportOrderSchema = z
 
 export const ImportOrderCreateResultSchema = z
   .object({ id: z.string() })
+  .strict();
+
+// Fixed checklist of paperwork kinds — mirrors the mobile Import Documents
+// screen (app/import/documents.tsx). New kinds are additive.
+export const ImportDocumentKindZ = z.enum([
+  "invoice",
+  "export",
+  "passport",
+  "id",
+  "poa",
+  "insurance",
+  "shipping",
+  "customs",
+]);
+
+export const ImportOrderDocumentSchema = z
+  .object({
+    id: z.string(),
+    order_id: z.string(),
+    kind: ImportDocumentKindZ,
+    url: z.string(),
+    created_at: z.string(),
+  })
+  .strict();
+
+export type ImportOrderDocument = z.infer<typeof ImportOrderDocumentSchema>;
+
+export const AttachImportOrderDocumentSchema = z
+  .object({
+    kind: ImportDocumentKindZ,
+    // Servable URL returned by the shared presigned-upload flow.
+    url: z.string().trim().url().max(2000),
+  })
   .strict();
 
 export const SubmitOfferSchema = z

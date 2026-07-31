@@ -145,16 +145,15 @@ services:
       PAYMOB_SECRET_KEY: ${PAYMOB_SECRET_KEY:-}
       PAYMOB_HMAC_SECRET: ${PAYMOB_HMAC_SECRET:-}
       PAYMOB_INTEGRATION_IDS: ${PAYMOB_INTEGRATION_IDS:-}
-      # Object storage (optional — required for media uploads).
-      # Hostinger VPS has no IAM role — static keys must reach the container when
-      # OBJECT_STORAGE_PROVIDER=s3 (see objectStorage.s3 + COOLIFY deploy docs).
-      OBJECT_STORAGE_PROVIDER: ${OBJECT_STORAGE_PROVIDER:-}
-      AWS_REGION: ${AWS_REGION:-}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
-      S3_BUCKET: ${S3_BUCKET:-}
-      PUBLIC_OBJECT_SEARCH_PATHS: ${PUBLIC_OBJECT_SEARCH_PATHS:-}
-      PRIVATE_OBJECT_DIR: ${PRIVATE_OBJECT_DIR:-}
+      # Object storage — REQUIRED on Coolify (production throws if unset / replit).
+      # Hostinger VPS has no IAM role — static keys must reach the container.
+      OBJECT_STORAGE_PROVIDER: ${OBJECT_STORAGE_PROVIDER:?OBJECT_STORAGE_PROVIDER is required (use s3 on Coolify)}
+      AWS_REGION: ${AWS_REGION:?AWS_REGION is required for S3}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?AWS_ACCESS_KEY_ID is required for S3 on Coolify}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?AWS_SECRET_ACCESS_KEY is required for S3 on Coolify}
+      S3_BUCKET: ${S3_BUCKET:?S3_BUCKET is required for S3}
+      PUBLIC_OBJECT_SEARCH_PATHS: ${PUBLIC_OBJECT_SEARCH_PATHS:?PUBLIC_OBJECT_SEARCH_PATHS is required}
+      PRIVATE_OBJECT_DIR: ${PRIVATE_OBJECT_DIR:?PRIVATE_OBJECT_DIR is required}
       # Coolify markers — objectStorageProvider forbids replit when these are set.
       COOLIFY_URL: ${COOLIFY_URL:-}
       COOLIFY_FQDN: ${COOLIFY_FQDN:-}
@@ -166,6 +165,10 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       LOG_DIR: ${LOG_DIR:-}
       CRON_TIMEZONE: ${CRON_TIMEZONE:-Africa/Cairo}
+      # Pool sizing — keep replicas × DB_POOL_MAX under Postgres max_connections.
+      DB_POOL_MAX: ${DB_POOL_MAX:-20}
+      # Traefik → nginx → api = 2 hops (override if edge topology differs).
+      TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-2}
     healthcheck:
       test: ["CMD", "node", "-e",
         "fetch('http://127.0.0.1:8080/api/readyz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
@@ -174,8 +177,12 @@ services:
       start_period: 45s
       retries: 3
 
-  # ── banco-web (Next.js consumer app) ────────────────────────────────────────
+  # ── banco-web (FROZEN Next twin — optional; canonical consumer is banco-website)
+  # Profile-gated so a default Coolify deploy is api + banco-website + web (nginx).
+  # Enable explicitly: docker compose --profile legacy-banco-web up -d
+  # Or set COMPOSE_PROFILES=legacy-banco-web in Coolify if you still need the twin.
   banco-web:
+    profiles: ["legacy-banco-web"]
     build:
       context: .
       dockerfile: deploy/coolify/Dockerfile.banco-web
@@ -227,19 +234,19 @@ services:
       dockerfile: deploy/coolify/Dockerfile.banco-website
       args:
         NEXT_PUBLIC_API_URL: http://api:8080
-        NEXT_PUBLIC_SITE_URL: ${BANCO_WEBSITE_URL:-http://localhost:3001}
+        NEXT_PUBLIC_SITE_URL: ${BANCO_WEBSITE_URL:?BANCO_WEBSITE_URL is required for canonical site bake}
         # Parity with banco-web bake args — site-env already reads these; without
         # compose wiring, Coolify builds forever show App Store "soon" even when
         # NEXT_PUBLIC_APP_*_URL secrets are set on the project.
-        NEXT_PUBLIC_MARKET_URL: ${BANCO_WEB_MARKET_URL:-}
-        NEXT_PUBLIC_ADMIN_URL: ${BANCO_WEB_ADMIN_URL:-}
+        NEXT_PUBLIC_MARKET_URL: ${BANCO_WEB_MARKET_URL:-/market/}
+        NEXT_PUBLIC_ADMIN_URL: ${BANCO_WEB_ADMIN_URL:-/admin/}
         NEXT_PUBLIC_APP_ANDROID_URL: ${NEXT_PUBLIC_APP_ANDROID_URL:-}
         NEXT_PUBLIC_APP_IOS_URL: ${NEXT_PUBLIC_APP_IOS_URL:-}
         NEXT_PUBLIC_WEB_SEARCH_LIVE: ${NEXT_PUBLIC_WEB_SEARCH_LIVE:-false}
         NEXT_PUBLIC_WEB_SEARCH_MAP: ${NEXT_PUBLIC_WEB_SEARCH_MAP:-false}
         NEXT_PUBLIC_WEB_MARKET_COPY: ${NEXT_PUBLIC_WEB_MARKET_COPY:-false}
         NEXT_PUBLIC_SEARCH_ENABLED: ${NEXT_PUBLIC_SEARCH_ENABLED:-true}
-        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is required}
         NEXT_PUBLIC_CLERK_PROXY_URL: ${NEXT_PUBLIC_CLERK_PROXY_URL:-}
         NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}
     image: banco-website:latest
@@ -271,11 +278,12 @@ services:
       context: .
       dockerfile: deploy/coolify/Dockerfile.web
       args:
-        VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:-}
+        VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:?VITE_CLERK_PUBLISHABLE_KEY is required for SPA bake}
         VITE_CLERK_PROXY_URL: ${VITE_CLERK_PROXY_URL:-}
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
-        VITE_MARKET_URL: ${VITE_MARKET_URL:-}
-        VITE_ADMIN_URL: ${VITE_ADMIN_URL:-}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+        VITE_MARKET_URL: ${VITE_MARKET_URL:-/market/}
+        VITE_ADMIN_URL: ${VITE_ADMIN_URL:-/admin/}
+        VITE_WEB_URL: ${VITE_WEB_URL:-}
         VITE_APP_ANDROID_URL: ${VITE_APP_ANDROID_URL:-}
         VITE_APP_IOS_URL: ${VITE_APP_IOS_URL:-}
     image: banco-web-static:latest
