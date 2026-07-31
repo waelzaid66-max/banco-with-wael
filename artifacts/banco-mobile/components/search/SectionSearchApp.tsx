@@ -35,7 +35,11 @@ import { SearchResultsSurface } from "@/components/search/SearchResultsSurface";
 import { SearchResultsMap } from "@/components/search/SearchResultsMap";
 import { FilterSheet } from "@/components/search/FilterSheet";
 import { FilterPillSelect } from "@/components/search/FilterPillSelect";
-import { PropertyHomeHeader } from "@/components/search/property/PropertyHomeHeader";
+import {
+  PropertyHomeHeader,
+  RE_COMMERCIAL_TAB,
+  RE_COMMERCIAL_TYPES,
+} from "@/components/search/property/PropertyHomeHeader";
 import { axisShape, type SectionChrome } from "@/components/search/sectionChrome";
 import { MiniAppBottomNav } from "@/components/MiniAppBottomNav";
 import {
@@ -727,6 +731,8 @@ export function SectionSearchApp({
 
   /** RE type strip — composes with offer engine (sale/rent) via propertyType. */
   const selectRePropertyType = (value: string) => {
+    // Commercial Band D uses a UI sentinel — never commit it as propertyType.
+    if (value === RE_COMMERCIAL_TAB) return;
     if (value === RE_TYPE_ALL || value === criteria.propertyType) {
       update({ propertyType: null });
       return;
@@ -841,7 +847,8 @@ export function SectionSearchApp({
   const showListingMode = !lockedEngine && !isRealEstateSection;
   // Types live in PropertyHomeHeader Band D (mock-aligned primary set).
   const showReTypeStrip = false;
-  /** Band D tabs — All / Apartments / Villas / Commercial / Land. */
+  /** Band D tabs — All / Apartments / Villas / Commercial / Land.
+   *  Commercial is a picker sentinel (RE_COMMERCIAL_TAB) — never sent as API enum. */
   const reHeaderTypeTabs = useMemo(() => {
     if (!isRealEstateSection) return [] as { value: string; label: string }[];
     return [
@@ -849,20 +856,22 @@ export function SectionSearchApp({
       { value: "apartment", label: t("search.discover.section.deskApartment") },
       { value: "villa", label: t("search.discover.section.deskVilla") },
       {
-        value: "office",
+        value: RE_COMMERCIAL_TAB,
         label: t("search.discover.section.propertyTabCommercial"),
       },
       { value: "land", label: t("search.discover.section.deskLand") },
     ];
   }, [isRealEstateSection, t]);
-  // Commercial Band D tab maps to API property_type=office only. Do not fake
-  // highlight for shop/warehouse/commercial_land (those stay FilterSheet-only).
   const reHeaderActiveType = useMemo(() => {
     if (!criteria.propertyType) return RE_TYPE_ALL;
     if (
+      (RE_COMMERCIAL_TYPES as readonly string[]).includes(criteria.propertyType)
+    ) {
+      return RE_COMMERCIAL_TAB;
+    }
+    if (
       criteria.propertyType === "apartment" ||
       criteria.propertyType === "villa" ||
-      criteria.propertyType === "office" ||
       criteria.propertyType === "land"
     ) {
       return criteria.propertyType;
@@ -1228,12 +1237,18 @@ export function SectionSearchApp({
           activeFilterCount={activeFilterCount}
           activePropertyType={reHeaderActiveType}
           activeOfferKey={activeOfferKey ?? "all"}
+          wantedActive={criteria.listingMode === "buy"}
+          selectedPropertyType={criteria.propertyType}
           typeTabs={reHeaderTypeTabs}
           marketCountry={criteria.marketCountry}
           sort={criteria.sort}
           inputRef={inputRef}
           onBack={goBack}
           onSaveSearch={handleSaveSearch}
+          onOpenStays={() => {
+            playSound("tap");
+            router.push("/section/booking" as Href);
+          }}
           onOpenFilters={() => {
             playSound("tap");
             setShowFilters(true);
@@ -1252,6 +1267,11 @@ export function SectionSearchApp({
             playSound("tap");
             Haptics.selectionAsync();
             selectEngine(engineKey);
+          }}
+          onToggleWanted={() => {
+            playSound("tap");
+            Haptics.selectionAsync();
+            selectListingMode(criteria.listingMode === "buy" ? "all" : "buy");
           }}
           onOpenMarket={() => {
             playSound("tap");
@@ -1584,39 +1604,6 @@ export function SectionSearchApp({
               );
             })
           )
-        ) : null}
-        {/* RE Wanted chip moved into FilterSheet with offer engines — keeps
-            PropertyHomeHeader first paint balanced (Stay-parity). */}
-        {false && isRealEstateSection && !lockedEngine ? (
-          <Pressable
-            onPress={() => {
-              playSound("tap");
-              Haptics.selectionAsync();
-              selectListingMode(criteria.listingMode === "buy" ? "all" : "buy");
-            }}
-            style={[
-              styles.stripChip,
-              {
-                backgroundColor:
-                  criteria.listingMode === "buy" ? accent : colors.secondary,
-              },
-            ]}
-            testID="section-listing-mode-buy"
-          >
-            <AppText
-              style={[
-                styles.stripChipText,
-                {
-                  color:
-                    criteria.listingMode === "buy"
-                      ? "#FFFFFF"
-                      : colors.mutedForeground,
-                },
-              ]}
-            >
-              {t("search.listingModeBuy")}
-            </AppText>
-          </Pressable>
         ) : null}
         {showIndustrialChips ? [
           { key: "all" as IndustrialType, i18nKey: "home.industrialTypes.all" },

@@ -999,31 +999,64 @@ test("RE rentalTerm latch: rent unlocks chrome; leaving rent clears term", () =>
   assert.match(section, /testID="section-rental-pill"/);
 });
 
-test("RE Commercial Band D tab is honest office API (no fake commercial enum)", () => {
+test("RE Commercial Band D opens subtype picker (honest API enums)", () => {
   const section = fs.readFileSync(SECTION_APP, "utf8");
-  const tabs = section.match(
-    /const reHeaderTypeTabs\s*=\s*useMemo\([\s\S]*?\}, \[isRealEstateSection, t\]\);/,
-  )?.[0];
-  assert.ok(tabs, "reHeaderTypeTabs must exist");
+  const header = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "property", "PropertyHomeHeader.tsx"),
+    "utf8",
+  );
   assert.match(
-    tabs,
-    /value:\s*"office"[\s\S]*?propertyTabCommercial/,
-    "Commercial tab value must stay explicit office so API property_type is honest",
+    header,
+    /export const RE_COMMERCIAL_TAB = "__commercial__"/,
+    "Commercial Band D must use a non-API sentinel",
+  );
+  assert.match(
+    header,
+    /RE_COMMERCIAL_TYPES[\s\S]*?"office"[\s\S]*?"shop"[\s\S]*?"warehouse"[\s\S]*?"commercial_land"/,
+    "Commercial picker must list real API property_type values",
+  );
+  assert.match(header, /testID=\{`re-commercial-\$\{value\}`\}/);
+  assert.match(
+    section,
+    /value:\s*RE_COMMERCIAL_TAB/,
+    "Band D Commercial tab must use RE_COMMERCIAL_TAB sentinel",
+  );
+  assert.match(
+    section,
+    /RE_COMMERCIAL_TYPES[\s\S]*?RE_COMMERCIAL_TAB/,
+    "Any commercial subtype must light the Commercial Band D tab",
   );
   assert.doesNotMatch(
     section,
     /propertyType:\s*"commercial"/,
     "must never send propertyType=commercial (not an API enum)",
   );
-  // Highlight must not pretend shop/warehouse are the office tab.
-  const active = section.match(
-    /const reHeaderActiveType\s*=\s*useMemo\([\s\S]*?\}, \[criteria\.propertyType\]\);/,
-  )?.[0];
-  assert.ok(active, "reHeaderActiveType must exist");
+});
+
+test("RE Wanted + Stays are reachable from PropertyHomeHeader (P1)", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  const header = fs.readFileSync(
+    path.join(APP_ROOT, "components", "search", "property", "PropertyHomeHeader.tsx"),
+    "utf8",
+  );
+  assert.match(header, /testID="re-offer-wanted"/);
+  assert.match(header, /onToggleWanted/);
+  assert.match(header, /testID="re-header-stays"/);
+  assert.match(header, /onOpenStays/);
+  assert.match(
+    section,
+    /onToggleWanted=\{[\s\S]*?selectListingMode/,
+    "Wanted must toggle listingMode buy/all",
+  );
+  assert.match(
+    section,
+    /onOpenStays=\{[\s\S]*?\/section\/booking/,
+    "Stays header hit must push /section/booking",
+  );
   assert.doesNotMatch(
-    active,
-    /shop|warehouse|commercial_land/,
-    "Commercial tab must not light for non-office commercial subtypes",
+    section,
+    /false && isRealEstateSection[\s\S]*?section-listing-mode-buy/,
+    "dead Wanted chip gate must not remain",
   );
 });
 

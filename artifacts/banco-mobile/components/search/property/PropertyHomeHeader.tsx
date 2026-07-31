@@ -1,17 +1,18 @@
 /**
  * B-PROPERTIES — premium black header (visual shell).
  *
- * Stay-parity bands (A–D): back/save · wordmark · search+filter pill · type tabs.
+ * Stay-parity bands (A–D): back/save/stays · wordmark · search+filter pill ·
+ * offer+Wanted · type tabs (Commercial opens real subtype picker).
  * Country/currency (micro) + sort sit next to BANCO above the search pill.
- * Compact offer chips restore تمليك/إيجار (P0). Type tabs stay clean.
  * Presentational only — parent owns criteria and sheets. RE-only.
  */
 import { Feather, Ionicons } from "@/components/icons";
 import { Image } from "expo-image";
 import { AppTextInput as TextInput } from "@/components/AppTextInput";
 import type { TextInput as RNTextInput } from "react-native";
-import React from "react";
+import React, { useState } from "react";
 import {
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -22,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppText } from "@/components/AppText";
 import { MarketCountryButton } from "@/components/MarketCountryPicker";
+import { PROPERTY_TYPES } from "@/constants/listingCreateTaxonomy";
 import { useI18n } from "@/context/LanguageContext";
 import { sectionAccent } from "@/lib/sectionTheme";
 
@@ -34,6 +36,17 @@ const VOID = "#000000";
 const SNOW = "#FFFFFF";
 const ASH = "#8E8E93";
 const HAIRLINE = "rgba(255,255,255,0.16)";
+
+/** Band D sentinel — opens commercial subtype picker (never sent to API). */
+export const RE_COMMERCIAL_TAB = "__commercial__";
+
+/** Real API property_type values under the Commercial Band D tab. */
+export const RE_COMMERCIAL_TYPES = [
+  "office",
+  "shop",
+  "warehouse",
+  "commercial_land",
+] as const;
 
 export type PropertyTypeTab = {
   value: string;
@@ -48,12 +61,17 @@ type PropertyHomeHeaderProps = {
   activePropertyType: string;
   /** Offer axis: "all" | "sale" | "rent" */
   activeOfferKey: string;
+  /** Wanted browse (`listingMode=buy`) — composes with offer. */
+  wantedActive: boolean;
+  /** Live propertyType for commercial sheet row highlight. */
+  selectedPropertyType: string | null;
   typeTabs: PropertyTypeTab[];
   marketCountry: string;
   sort: string;
   inputRef: React.RefObject<RNTextInput | null>;
   onBack: () => void;
   onSaveSearch: () => void;
+  onOpenStays: () => void;
   onOpenFilters: () => void;
   onOpenSearch: () => void;
   onCloseSearch: () => void;
@@ -62,6 +80,7 @@ type PropertyHomeHeaderProps = {
   onClearQuery: () => void;
   onSelectType: (value: string) => void;
   onSelectOffer: (engineKey: string) => void;
+  onToggleWanted: () => void;
   onOpenMarket: () => void;
   onCycleSort: () => void;
 };
@@ -75,6 +94,7 @@ function tabIcon(value: string): React.ComponentProps<typeof Ionicons>["name"] {
       return "business-outline";
     case "villa":
       return "home";
+    case RE_COMMERCIAL_TAB:
     case "office":
       return "storefront-outline";
     case "land":
@@ -98,12 +118,15 @@ export function PropertyHomeHeader({
   activeFilterCount,
   activePropertyType,
   activeOfferKey,
+  wantedActive,
+  selectedPropertyType,
   typeTabs,
   marketCountry,
   sort,
   inputRef,
   onBack,
   onSaveSearch,
+  onOpenStays,
   onOpenFilters,
   onOpenSearch,
   onCloseSearch,
@@ -112,11 +135,13 @@ export function PropertyHomeHeader({
   onClearQuery,
   onSelectType,
   onSelectOffer,
+  onToggleWanted,
   onOpenMarket,
   onCycleSort,
 }: PropertyHomeHeaderProps) {
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
+  const [commercialOpen, setCommercialOpen] = useState(false);
   // Owner rule: never invent a fake 67px web pad (it destroyed headers before).
   // ~2mm tighter than Stay default — reclaim listing space (owner 2026-07-31).
   const topPad = Math.max(insets.top, Platform.OS === "web" ? 10 : 0);
@@ -128,6 +153,14 @@ export function PropertyHomeHeader({
     { value: "sale", label: t("home.engines.sale") },
     { value: "rent", label: t("home.engines.rent") },
   ] as const;
+
+  const handleTypePress = (value: string) => {
+    if (value === RE_COMMERCIAL_TAB) {
+      setCommercialOpen(true);
+      return;
+    }
+    onSelectType(value);
+  };
 
   return (
     <View style={[styles.root, { paddingTop: topPad - 1 }]} testID="re-property-header">
@@ -148,6 +181,16 @@ export function PropertyHomeHeader({
           />
         </Pressable>
         <View style={styles.topSpacer} />
+        <Pressable
+          onPress={onOpenStays}
+          style={styles.iconHit}
+          hitSlop={12}
+          testID="re-header-stays"
+          accessibilityRole="button"
+          accessibilityLabel={t("search.discover.section.deskStays")}
+        >
+          <Ionicons name="calendar" size={18} color={SNOW} />
+        </Pressable>
         <Pressable
           onPress={onSaveSearch}
           disabled={searchSaved}
@@ -315,7 +358,7 @@ export function PropertyHomeHeader({
         </View>
       )}
 
-      {/* Offer axis — تمليك / إيجار (P0 restore; was unreachable after header merge). */}
+      {/* Offer axis + Wanted (listingMode) — Wanted composes with sale/rent. */}
       <View
         style={[styles.offerRow, { flexDirection: rowDir }]}
         testID="re-offer-strip"
@@ -338,6 +381,18 @@ export function PropertyHomeHeader({
             </Pressable>
           );
         })}
+        <Pressable
+          onPress={onToggleWanted}
+          style={[styles.offerChip, wantedActive ? styles.offerChipActive : null]}
+          testID="re-offer-wanted"
+        >
+          <AppText
+            style={[styles.offerChipText, { color: wantedActive ? SNOW : ASH }]}
+            numberOfLines={1}
+          >
+            {t("search.listingModeBuy")}
+          </AppText>
+        </Pressable>
       </View>
 
       {/* Band D — primary types only (market lives next to BANCO above search). */}
@@ -355,7 +410,7 @@ export function PropertyHomeHeader({
             <React.Fragment key={tab.value}>
               {index > 0 ? <View style={styles.tabDivider} /> : null}
               <Pressable
-                onPress={() => onSelectType(tab.value)}
+                onPress={() => handleTypePress(tab.value)}
                 style={[styles.tabItem, active ? styles.tabItemActive : null]}
                 testID={`re-type-${tab.value}`}
               >
@@ -371,6 +426,59 @@ export function PropertyHomeHeader({
           );
         })}
       </ScrollView>
+
+      <Modal
+        visible={commercialOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCommercialOpen(false)}
+      >
+        <Pressable
+          style={styles.commercialBackdrop}
+          onPress={() => setCommercialOpen(false)}
+          testID="re-commercial-backdrop"
+        >
+          <View style={styles.commercialSheet}>
+            <AppText style={styles.commercialTitle}>
+              {t("search.discover.section.propertyTabCommercial")}
+            </AppText>
+            {RE_COMMERCIAL_TYPES.map((value) => {
+              const def = PROPERTY_TYPES.find((p) => p.value === value);
+              const label = def ? (isRTL ? def.ar : def.en) : value;
+              const rowActive = selectedPropertyType === value;
+              return (
+                <Pressable
+                  key={value}
+                  onPress={() => {
+                    setCommercialOpen(false);
+                    onSelectType(value);
+                  }}
+                  style={[
+                    styles.commercialRow,
+                    { flexDirection: rowDir },
+                    rowActive ? styles.commercialRowActive : null,
+                  ]}
+                  testID={`re-commercial-${value}`}
+                >
+                  <AppText
+                    style={[
+                      styles.commercialRowText,
+                      rowActive ? styles.commercialRowTextActive : null,
+                    ]}
+                  >
+                    {label}
+                  </AppText>
+                  <Feather
+                    name={isRTL ? "chevron-left" : "chevron-right"}
+                    size={16}
+                    color={rowActive ? ACCENT : ASH}
+                  />
+                </Pressable>
+              );
+            })}
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -544,6 +652,51 @@ const styles = StyleSheet.create({
   },
   offerChipText: {
     fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+  },
+  commercialBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  commercialSheet: {
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: HAIRLINE,
+    backgroundColor: "#141414",
+    overflow: "hidden",
+    maxWidth: 400,
+    alignSelf: "center",
+    width: "100%",
+  },
+  commercialTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: SNOW,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: HAIRLINE,
+  },
+  commercialRow: {
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: HAIRLINE,
+  },
+  commercialRowActive: {
+    backgroundColor: "rgba(184,30,60,0.14)",
+  },
+  commercialRowText: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    color: SNOW,
+  },
+  commercialRowTextActive: {
+    color: ACCENT,
     fontFamily: "Inter_600SemiBold",
   },
   tabsScroll: {
