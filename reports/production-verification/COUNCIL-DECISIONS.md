@@ -318,6 +318,16 @@
 
 ---
 
+## D-2026-07-31-30 — Full high-precision Chair audit + Tranche B REL-00
+
+| | |
+|--|--|
+| **Decision** | Owner ordered deep Chair review. Tip advanced to Tranche B CLOSED @ `0893b8b`. Reliability independent REL-00 PASS; process ASK on D-W8-01 Stay-parity inversion. |
+| **Adopted** | `W8-REL-CHAIR-FULL-AUDIT.md` · `W8-REL-00-tranche-b-reverify.md` · channel. Gates 77/8/4/7/32/47/167/18. Chair quality 6.0/10. |
+| **Rejected** | Blind trust of Chair self-stamped REL-00 · freestyle revert D-W8-01 · Live Certified · tip fight. |
+
+---
+
 ## Template for future disputes
 
 ```markdown

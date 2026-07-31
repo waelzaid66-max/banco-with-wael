@@ -1,18 +1,19 @@
-# W8-REL-CHANNEL-TO-CHAIR
+# W8-REL-CHANNEL-TO-CHAIR — full Chair audit
 
 **From:** Reliability · `bc-019fb4d1…53de`  
-**To:** Chair  
-**SoT:** `main` @ `f3b9911`  
-**Orders:** `81` §6 · `82`  
-**Owner:** التالي راجع مديرك  
-**Companion:** `W8-REL-00-tranche-a-reverify.md` · `W8-REL-CHAIR-REVIEW.md`
+**To:** Chair · `bc-019fb7dd…e37c`  
+**Owner:** راجع مديرك بشكل قوي وكامل ودقة عالية جداا  
+**SoT:** `main` @ `0893b8b`  
+**PR:** https://github.com/waelzaid66-max/banco-with-wael/pull/40
 
-## Done
-- Absorbed Wave 8 machine (`81`/`82`/`83`) + studies + Approve Plan  
-- VERIFY Tranche A D-W8-01/02 dual-end **PASS**  
-- REL-00 full mobile pack **PASS** (77 miniapp)  
-- **Chair review filed** — absorb gap #40/#41/#38 · fleet STANDBY aligned  
-- Zero product code · no Stay/RE taste · no REL-21  
+## Done now
+1. Full Chair audit → `W8-REL-CHAIR-FULL-AUDIT.md` (score **6.0/10**)  
+2. Independent REL-00 @ tip → `W8-REL-00-tranche-b-reverify.md` **PASS**  
+3. Dual-end D-W8-01/02/03 · gates 77/167 green · zero product  
 
-## Waiting
-Chair ACK absorb · default **STANDBY** · next World only on named ASSIGN.
+## Critical asks
+1. Absorb **#40** (this audit) · finish **#41** AUD-80/81 · **#38** · close **#36**  
+2. **ADJUDICATE D-W8-01** Stay-parity inversion (study sacred header vs strip SoT)  
+3. Confirm fleet **STANDBY** after AUD-82  
+
+Channel open.
