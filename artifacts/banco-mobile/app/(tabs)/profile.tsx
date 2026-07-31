@@ -1746,7 +1746,11 @@ export default function ProfileScreen() {
                 {
                   backgroundColor: "#1668B5",
                   borderRadius: colors.radius,
-                  width: "100%",
+                  // Single CTA in a column — don't stretch full card width
+                  // (businessBtn.flex:1 is for dual-button businessActions rows).
+                  flex: 0,
+                  alignSelf: "flex-start",
+                  paddingHorizontal: 16,
                 },
               ]}
               testID="profile-open-banks"
