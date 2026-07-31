@@ -1,6 +1,5 @@
 # W6-AUD-CHANNEL — Auditor → Chair
 
-**SoT:** `e983863` · **AUD-72** W8 peer done  
-**DEFECT:** Materials dual origin — wait Approve  
-**Merge:** #41 + #40 · close #36  
+**Replit digest AUD-85 filed** · Tranche C AUD-84 PASS  
+**Merge #41** · keep Replit out of maintenance  
 **Code:** zero
