@@ -93,3 +93,13 @@ No symptom patches. No fake readiness. Missing evidence → **UNVERIFIED**.
 3. **Shared rate-limit store** — multi-replica honesty  
 4. **Create-time currency validation** — reject unknown codes (display already aligned)  
 5. **Visual/device certification** — not assumed from static gates  
+
+
+---
+
+## Council governance (added)
+
+- Charter: `62-ENGINEERING-COUNCIL-CHARTER.md`
+- Wave 1 orders: `63-ENGINEERING-COUNCIL-STANDING-ORDERS-WAVE1.md`
+- Decisions: `COUNCIL-DECISIONS.md`
+- Evidence root: `council/`
