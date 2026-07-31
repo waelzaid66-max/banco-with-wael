@@ -6,6 +6,10 @@
 
 ## Wave status (this branch)
 
+### Wave 4 (audit hardening)
+MSG-07b sliding-window absorb + newest-id mark-read + older-load gate · MSG-14 media open · MSG-08 report+hide · NOTIF-04 receipts · NOTIF-08 label · hub support copy · merge main
+
+
 | ID | Problem | Severity | Status |
 |----|---------|----------|--------|
 | MSG-01 | Listing→chat dropped `listingId`/`role` (share/offer unwired) | High | **Fixed** |
@@ -25,7 +29,7 @@
 | MAP-03 | Near-me radius circle removed from `mapHtml` | High | **Fixed** (restore circle + hosts) |
 | MAP-04 | `/search/map` clusters lack price/bookable | High | **Fixed** (server emits + client prefer) |
 | MAP-06 | Web locate failure silent | Medium | **Fixed** (Alert parity) |
-| MSG-07b | Older-page load via `before=` | Medium | **Fixed** (scroll + button) |
+| MSG-07b | Older-page load via `before=` + sliding-window absorb | Medium | **Fixed** (audit harden) |
 | MSG-11 | Email CTA path mismatch | Medium | **Fixed** (workspace messages) |
 | MSG-12 | Import support generic inbox | Medium | **Fixed** (support tickets) |
 | MSG-15 | Inbox empty no browse CTA | Low | **Fixed** |
@@ -34,6 +38,10 @@
 | NOTIF-05 | Unread capped at 100 | Medium | **Fixed** (full count) |
 | NOTIF-06 | OS badge missing in push | Medium | **Fixed** |
 | NOTIF-07 | Push register single-attempt | Medium | **Fixed** (backoff retry) |
+| MSG-14 | Video/audio rendered as broken image | Medium | **Fixed** (openable attachment) |
+| MSG-08 | No report-message / hide from thread | High | **Fixed** (support ticket + soft-hide) |
+| NOTIF-04 | No Expo receipt processing | High | **Fixed** (receipt prune; durable retry = 04b) |
+| NOTIF-08 | “In-app” toggle also suppresses push | Medium | **Fixed** (label honesty) |
 
 Guards: `test:messenger-wiring` · `test:production-wiring` · existing `test:notification-routing`
 
@@ -44,9 +52,9 @@ Guards: `test:messenger-wiring` · `test:production-wiring` · existing `test:no
 | ID | Gap | Severity | Notes |
 |----|-----|----------|-------|
 | MSG-05 | Poll-only (3s/8s/15s) — no WS/typing/presence | Product | G47; needs Owner decision before rewrite |
-| MSG-08 | No block-user / report-message | High | Trust & safety |
+| MSG-08b | No hard block-user (mutual ban) | High | Soft-hide + report exist; ban needs schema |
 | MSG-13 | No per-thread mute | Medium | Global prefs only |
-| MSG-14 | Video/audio API > mobile renderer (images only) | Medium | |
+| MSG-14b | Video/audio *picker* still images-only | Low | Renderer opens URL (MSG-14) |
 
 **Architecture (keep):** HTTP polling · participant auth · listing-anchored conversations · inbox already passes listingId+role.
 
@@ -57,8 +65,7 @@ Guards: `test:messenger-wiring` · `test:production-wiring` · existing `test:no
 | ID | Gap | Severity | Notes |
 |----|-----|----------|-------|
 | NOTIF-02 | EAS/APNs/FCM device delivery not certified | Blocker (ops) | External credentials |
-| NOTIF-04 | No Expo receipt processing / retry queue | High | `PushService` |
-| NOTIF-08 | “In-app” toggle also suppresses push | Medium | Label vs semantics |
+| NOTIF-04b | No durable cross-process push retry queue | Medium | In-process receipt prune done |
 | NOTIF-10 | API base / Clerk env required for any delivery | Blocker (ops) | Cloud/EAS secrets |
 
 ---
@@ -118,4 +125,4 @@ Guards: `test:messenger-wiring` · `test:production-wiring` · existing `test:no
 ### Maps
 - Per-section browse maps · market-country framing · locate-me · near-me radius chips + **circle**  
 - Page pins + server clusters · price/bookable on singles · FilterSheet sync  
-- Create flow MapPinPicker (not edit yet)  
+- Create + edit MapPinPicker (MAP-09)  

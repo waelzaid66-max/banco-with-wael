@@ -225,3 +225,40 @@ test("NOTIF-06 push payload includes badge", () => {
 test("NOTIF-07 push registration retries with backoff", () => {
   assert.match(pushHook, /const delays = \[0, 2000, 5000, 15000\]/);
 });
+
+test("MSG-07b absorbs vacated poll ids and gates older load", () => {
+  assert.match(thread, /prevPollMsgsRef/);
+  assert.match(thread, /readyForOlderRef/);
+  assert.match(thread, /loadingOlderRef/);
+  assert.match(thread, /newestId/);
+  assert.match(thread, /maintainVisibleContentPosition/);
+  assert.match(thread, /prevPollMsgsRef\.current = \[\]/);
+});
+
+test("MSG-14 non-image media renders openable attachment", () => {
+  assert.match(thread, /mediaKind === "video"/);
+  assert.match(thread, /chat\.mediaVideo/);
+  assert.match(thread, /Linking\.openURL/);
+});
+
+test("MSG-08 report uses support tickets; hide uses deleteConversation", () => {
+  assert.match(thread, /createSupportTicket/);
+  assert.match(thread, /category: "abuse"/);
+  assert.match(thread, /deleteConversation/);
+  assert.match(thread, /action-report/);
+});
+
+test("NOTIF-08 settings label discloses push is gated with in-app", () => {
+  const i18n = fs.readFileSync(path.join(root, "constants/i18n.ts"), "utf8");
+  assert.match(i18n, /Alerts \(in-app \+ push\)/);
+});
+
+test("NOTIF-04 push schedules Expo receipt processing", () => {
+  const push = fs.readFileSync(
+    path.join(root, "../api-server/src/services/PushService.ts"),
+    "utf8",
+  );
+  assert.match(push, /getReceipts/);
+  assert.match(push, /processPushReceipts/);
+  assert.match(push, /scheduleReceiptCheck/);
+});

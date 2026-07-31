@@ -6,6 +6,8 @@ import {
   reactToMessage,
   markConversationRead,
   updateListing,
+  createSupportTicket,
+  deleteConversation,
   getListConversationsQueryKey,
   getGetMessagesQueryKey,
   getGetListingQueryKey,
@@ -24,6 +26,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Linking,
   useWindowDimensions,
   KeyboardAvoidingView,
   Modal,
@@ -126,12 +129,18 @@ export default function ThreadScreen() {
   const [actionFor, setActionFor] = useState<Message | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const listRef = useRef<FlatList<Row>>(null);
-  const lastReadCountRef = useRef(0);
   // MSG-07b: older pages live outside the poll cache so refetch never wipes them.
   const [older, setOlder] = useState<Message[]>([]);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [hasMoreOlder, setHasMoreOlder] = useState(true);
   const isPrependingRef = useRef(false);
+  const loadingOlderRef = useRef(false);
+  // Gate scroll-triggered loadOlder until the first scroll-to-end finishes
+  // (otherwise long threads land at the top of the newest page).
+  const readyForOlderRef = useRef(false);
+  const lastNewestIdRef = useRef<string | null>(null);
+  // Snapshot of the previous poll page — absorb vacated ids when the window slides.
+  const prevPollMsgsRef = useRef<Message[]>([]);
 
   // MSG-07: page the newest N messages every poll so long threads don't
   // re-download unbounded history every 3s. Older pages load via before=.
@@ -151,16 +160,39 @@ export default function ThreadScreen() {
 
   const messages: Message[] = query.data?.data ?? [];
 
-  // Reset older page when switching threads.
+  // Reset older page when switching threads (never absorb across conversations).
   useEffect(() => {
     setOlder([]);
     setHasMoreOlder(true);
     setLoadingOlder(false);
-    lastReadCountRef.current = 0;
+    loadingOlderRef.current = false;
+    isPrependingRef.current = false;
+    readyForOlderRef.current = false;
+    lastNewestIdRef.current = null;
+    prevPollMsgsRef.current = [];
   }, [conversationId]);
 
-  // Mark the thread read whenever new messages arrive (or on first load),
-  // then refresh the inbox so the unread badge clears.
+  // When the sliding poll window advances, messages that left the newest page
+  // must stay visible — absorb them into `older` (P0 MSG-07b audit).
+  useEffect(() => {
+    const prev = prevPollMsgsRef.current;
+    if (prev.length > 0 && messages.length > 0) {
+      const still = new Set(messages.map((m) => m.id));
+      const vacated = prev.filter((m) => !still.has(m.id));
+      if (vacated.length > 0) {
+        setOlder((cur) => {
+          const seen = new Set(cur.map((m) => m.id));
+          for (const m of messages) seen.add(m.id);
+          const add = vacated.filter((m) => !seen.has(m.id));
+          return add.length ? [...cur, ...add] : cur;
+        });
+      }
+    }
+    prevPollMsgsRef.current = messages;
+  }, [messages]);
+
+  // Mark the thread read whenever the newest message changes (length alone
+  // stays stuck at THREAD_PAGE on long threads).
   const markRead = useCallback(async () => {
     if (!conversationId) return;
     try {
@@ -173,45 +205,62 @@ export default function ThreadScreen() {
     }
   }, [conversationId, qc, t]);
 
-  // Rows = older pages + newest page + pending optimistic messages.
+  // Dedupe by id — older may overlap the poll page briefly during absorb.
+  const serverMessages: Message[] = (() => {
+    const seen = new Set<string>();
+    const out: Message[] = [];
+    for (const m of [...older, ...messages]) {
+      if (seen.has(m.id)) continue;
+      seen.add(m.id);
+      out.push(m);
+    }
+    return out;
+  })();
+
   const rows: Row[] = [
-    ...older.map((msg) => ({ kind: "server" as const, msg })),
-    ...messages.map((msg) => ({ kind: "server" as const, msg })),
+    ...serverMessages.map((msg) => ({ kind: "server" as const, msg })),
     ...pending.map((msg) => ({ kind: "pending" as const, msg })),
   ];
 
   // Read receipt belongs only under the last of MY delivered messages.
   const lastMineReadAt = (() => {
-    const all = [...older, ...messages];
-    for (let i = all.length - 1; i >= 0; i--) {
-      if (all[i].is_mine) return all[i].read_at ?? null;
+    for (let i = serverMessages.length - 1; i >= 0; i--) {
+      if (serverMessages[i].is_mine) return serverMessages[i].read_at ?? null;
     }
     return undefined;
   })();
   const lastMineId = (() => {
-    const all = [...older, ...messages];
-    for (let i = all.length - 1; i >= 0; i--) {
-      if (all[i].is_mine) return all[i].id;
+    for (let i = serverMessages.length - 1; i >= 0; i--) {
+      if (serverMessages[i].is_mine) return serverMessages[i].id;
     }
     return undefined;
   })();
 
   const scrollToEnd = useCallback((animated: boolean) => {
-    requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated }));
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToEnd({ animated });
+      // Allow older-page loads only after we've settled at the bottom once.
+      readyForOlderRef.current = true;
+    });
   }, []);
 
+  const newestId = messages.length > 0 ? messages[messages.length - 1]!.id : null;
+
   useEffect(() => {
-    if (messages.length !== lastReadCountRef.current) {
-      lastReadCountRef.current = messages.length;
-      markRead();
-      if (!isPrependingRef.current) scrollToEnd(true);
-    }
-  }, [messages.length, markRead, scrollToEnd]);
+    if (!newestId) return;
+    if (newestId === lastNewestIdRef.current) return;
+    const isFirst = lastNewestIdRef.current === null;
+    lastNewestIdRef.current = newestId;
+    markRead();
+    if (!isPrependingRef.current) scrollToEnd(!isFirst);
+  }, [newestId, markRead, scrollToEnd]);
 
   const loadOlder = useCallback(async () => {
-    if (!conversationId || loadingOlder || !hasMoreOlder) return;
+    if (!conversationId || loadingOlderRef.current || !hasMoreOlder) return;
+    if (!readyForOlderRef.current) return;
     const oldest = older[0] ?? messages[0];
     if (!oldest) return;
+    loadingOlderRef.current = true;
     setLoadingOlder(true);
     isPrependingRef.current = true;
     try {
@@ -235,11 +284,12 @@ export default function ThreadScreen() {
       // Keep hasMore so the user can retry by scrolling again.
     } finally {
       setLoadingOlder(false);
+      loadingOlderRef.current = false;
       requestAnimationFrame(() => {
         isPrependingRef.current = false;
       });
     }
-  }, [conversationId, loadingOlder, hasMoreOlder, older, messages]);
+  }, [conversationId, hasMoreOlder, older, messages]);
 
   // Deliver one optimistic message: render it instantly, then POST. MSG-06:
   // POST success commits the bubble (seed cache + drop pending) even if the
@@ -341,14 +391,29 @@ export default function ThreadScreen() {
     void deliver(tempId, { body, reply_to_id: offerMsgId });
   };
 
-  // Toggle an emoji reaction on a message, then refetch so the chips update.
+  // Toggle an emoji reaction on a message, then refresh chips (poll page + older).
   const react = useCallback(
     async (messageId: string, emoji: string) => {
       if (!conversationId) return;
       setActionFor(null);
       try {
         Haptics.selectionAsync();
-        await reactToMessage(conversationId, messageId, { emoji });
+        const res = await reactToMessage(conversationId, messageId, { emoji });
+        const nextReactions = res.data?.reactions;
+        const nextMine = res.data?.my_reactions;
+        if (nextReactions) {
+          setOlder((prev) =>
+            prev.map((m) =>
+              m.id === messageId
+                ? {
+                    ...m,
+                    reactions: nextReactions,
+                    my_reactions: nextMine ?? m.my_reactions,
+                  }
+                : m,
+            ),
+          );
+        }
         await query.refetch();
       } catch {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -356,6 +421,69 @@ export default function ThreadScreen() {
     },
     [conversationId, query]
   );
+
+  // MSG-08: report abusive content via real support tickets (no fake endpoint).
+  const reportMessage = useCallback(
+    (msg: Message) => {
+      if (!conversationId) return;
+      setActionFor(null);
+      Alert.alert(t("chat.reportTitle"), t("chat.reportBody"), [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("chat.reportConfirm"),
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              try {
+                const snippet = (msg.body ?? "").trim().slice(0, 500);
+                await createSupportTicket({
+                  subject: `Chat message report — ${conversationId}`,
+                  category: "abuse",
+                  message: [
+                    `conversation_id: ${conversationId}`,
+                    `message_id: ${msg.id}`,
+                    `media_kind: ${msg.media_kind ?? "none"}`,
+                    snippet ? `body: ${snippet}` : "body: (media or empty)",
+                  ].join("\n"),
+                });
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                Alert.alert(t("chat.reportSentTitle"), t("chat.reportSentBody"));
+              } catch {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                Alert.alert(t("common.error"), t("chat.reportError"));
+              }
+            })();
+          },
+        },
+      ]);
+    },
+    [conversationId, t],
+  );
+
+  // Soft-hide this thread for the current user (same API as inbox long-press).
+  const hideThread = useCallback(() => {
+    if (!conversationId) return;
+    Alert.alert(t("messages.deleteTitle"), t("messages.deleteBody"), [
+      { text: t("common.cancel"), style: "cancel" },
+      {
+        text: t("common.delete"),
+        style: "destructive",
+        onPress: () => {
+          void (async () => {
+            try {
+              await deleteConversation(conversationId);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              qc.invalidateQueries({ queryKey: getListConversationsQueryKey() });
+              router.back();
+            } catch {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              Alert.alert(t("common.error"), t("chat.hideError"));
+            }
+          })();
+        },
+      },
+    ]);
+  }, [conversationId, qc, t]);
 
   // Share the conversation's listing as a card inside the chat. Sent directly
   // (no optimistic bubble) — the card needs server-resolved title/thumb/price.
@@ -485,6 +613,8 @@ export default function ThreadScreen() {
     const mine = row.kind === "pending" ? true : row.msg.is_mine;
     const mediaUrl =
       row.kind === "pending" ? row.msg.localUri : row.msg.media_url ?? undefined;
+    const mediaKind =
+      row.kind === "pending" ? "image" : row.msg.media_kind ?? "image";
     const body = row.msg.body;
     const isPending = row.kind === "pending";
     const failed = isPending && row.msg.status === "failed";
@@ -498,6 +628,17 @@ export default function ThreadScreen() {
     const listingRef = server?.listing_ref ?? null;
     const reactions = server?.reactions ?? {};
     const myReactions = server?.my_reactions ?? [];
+
+    const openMedia = () => {
+      if (!mediaUrl || isPending) return;
+      if (mediaKind === "video" || mediaKind === "audio") {
+        void Linking.openURL(mediaUrl).catch(() => {
+          Alert.alert(t("common.error"), t("chat.openMediaError"));
+        });
+        return;
+      }
+      setViewerUri(mediaUrl);
+    };
 
     const bubbleInner = (
       <View
@@ -573,23 +714,54 @@ export default function ThreadScreen() {
           </Pressable>
         ) : null}
         {mediaUrl ? (
-          <Pressable
-            onPress={() => !isPending && setViewerUri(mediaUrl)}
-            disabled={isPending}
-            accessibilityRole="imagebutton"
-          >
-            <Image
-              source={{ uri: mediaUrl }}
-              style={styles.bubbleImage}
-              contentFit="cover"
-              transition={150}
-            />
-            {inFlight ? (
-              <View style={styles.imageUploadOverlay}>
-                <ActivityIndicator color="#fff" />
-              </View>
-            ) : null}
-          </Pressable>
+          mediaKind === "video" || mediaKind === "audio" ? (
+            <Pressable
+              onPress={openMedia}
+              disabled={isPending}
+              style={[
+                styles.mediaAttach,
+                {
+                  backgroundColor: mine ? "rgba(255,255,255,0.14)" : colors.background,
+                  borderColor: mine ? "rgba(255,255,255,0.25)" : colors.border,
+                  flexDirection: isRTL ? "row-reverse" : "row",
+                },
+              ]}
+              testID={`chat-media-${mediaKind}`}
+            >
+              <Feather
+                name={mediaKind === "video" ? "play-circle" : "headphones"}
+                size={22}
+                color={mine ? colors.primaryForeground : colors.primary}
+              />
+              <AppText
+                style={{
+                  color: mine ? colors.primaryForeground : colors.foreground,
+                  fontWeight: "600",
+                  fontSize: 13,
+                }}
+              >
+                {mediaKind === "video" ? t("chat.mediaVideo") : t("chat.mediaAudio")}
+              </AppText>
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={openMedia}
+              disabled={isPending}
+              accessibilityRole="imagebutton"
+            >
+              <Image
+                source={{ uri: mediaUrl }}
+                style={styles.bubbleImage}
+                contentFit="cover"
+                transition={150}
+              />
+              {inFlight ? (
+                <View style={styles.imageUploadOverlay}>
+                  <ActivityIndicator color="#fff" />
+                </View>
+              ) : null}
+            </Pressable>
+          )
         ) : null}
         {body ? (
           <AppText
@@ -859,14 +1031,21 @@ export default function ThreadScreen() {
             onContentSizeChange={() => {
               if (!isPrependingRef.current) {
                 listRef.current?.scrollToEnd({ animated: false });
+                readyForOlderRef.current = true;
               }
             }}
             onScroll={(e) => {
+              if (!readyForOlderRef.current) return;
               if (e.nativeEvent.contentOffset.y < 80) {
                 void loadOlder();
               }
             }}
             scrollEventThrottle={200}
+            maintainVisibleContentPosition={
+              Platform.OS === "ios"
+                ? { minIndexForVisible: 1, autoscrollToTopThreshold: 20 }
+                : undefined
+            }
             ListHeaderComponent={
               loadingOlder ? (
                 <View style={styles.olderSpinner}>
@@ -1292,6 +1471,31 @@ export default function ThreadScreen() {
                 </AppText>
               </Pressable>
             ) : null}
+            {actionFor && !actionFor.is_mine ? (
+              <Pressable
+                onPress={() => reportMessage(actionFor)}
+                style={[styles.sheetAction, { flexDirection: isRTL ? "row-reverse" : "row" }]}
+                testID="action-report"
+              >
+                <Feather name="flag" size={18} color={colors.destructive} />
+                <AppText style={[styles.sheetActionText, { color: colors.destructive }]}>
+                  {t("chat.report")}
+                </AppText>
+              </Pressable>
+            ) : null}
+            <Pressable
+              onPress={() => {
+                setActionFor(null);
+                hideThread();
+              }}
+              style={[styles.sheetAction, { flexDirection: isRTL ? "row-reverse" : "row" }]}
+              testID="action-hide-thread"
+            >
+              <Feather name="eye-off" size={18} color={colors.mutedForeground} />
+              <AppText style={[styles.sheetActionText, { color: colors.mutedForeground }]}>
+                {t("chat.hideThread")}
+              </AppText>
+            </Pressable>
           </View>
         </Pressable>
       </Modal>
@@ -1335,6 +1539,15 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 12,
+  },
+  mediaAttach: {
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: 4,
   },
   bubbleTime: {
     fontSize: 10.5,

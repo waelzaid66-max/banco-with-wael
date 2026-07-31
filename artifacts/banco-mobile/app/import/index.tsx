@@ -170,7 +170,7 @@ export default function CarImportHubScreen() {
         message:
           "Car import hub support request — please follow up with the buyer on their import journey.",
       });
-      Alert.alert(t("importOrder.supportSentTitle"), t("importOrder.supportSentBody"));
+      Alert.alert(t("importOrder.supportSentTitle"), t("importOrder.supportSentBodyHub"));
     } catch {
       Alert.alert(t("common.error"), t("importOrder.supportError"));
     } finally {
