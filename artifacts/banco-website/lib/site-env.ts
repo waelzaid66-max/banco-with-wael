@@ -20,18 +20,18 @@ function sameOriginSurfacePath(path: string): string | null {
   return `${base}${suffix}`;
 }
 
-/** Banco Market (dealer-os). Explicit env wins; else same host `/dealer-os/` when SITE_URL is set. */
+/** Banco Market (dealer-os). Explicit env wins; else same host `/market` (Coolify nginx map). */
 export function getMarketUrl(): string | null {
   const fromEnv = process.env.NEXT_PUBLIC_MARKET_URL?.trim();
   if (fromEnv) return fromEnv.replace(/\/+$/, "");
-  return sameOriginSurfacePath("/dealer-os");
+  return sameOriginSurfacePath("/market");
 }
 
-/** Admin control (admin-os). Explicit env wins; else same host `/admin-os/` when SITE_URL is set. */
+/** Admin control (admin-os). Explicit env wins; else same host `/admin` (Coolify nginx map). */
 export function getAdminUrl(): string | null {
   const fromEnv = process.env.NEXT_PUBLIC_ADMIN_URL?.trim();
   if (fromEnv) return fromEnv.replace(/\/+$/, "");
-  return sameOriginSurfacePath("/admin-os");
+  return sameOriginSurfacePath("/admin");
 }
 
 export function getAppStoreUrls(): { android: string | null; ios: string | null } {

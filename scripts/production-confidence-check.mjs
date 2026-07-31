@@ -266,6 +266,51 @@ function checkCoolifyDocsApex() {
   pass("coolify apex docs", "apex → web:80; no apex→banco-website diagram");
 }
 
+function checkCoolifyProductionLocks() {
+  const compose = path.join(ROOT, "docker-compose.coolify.yml");
+  const seo = path.join(ROOT, "artifacts/api-server/src/seoRoutes.ts");
+  const siteEnv = path.join(ROOT, "artifacts/banco-website/lib/site-env.ts");
+  const appTs = path.join(ROOT, "artifacts/api-server/src/app.ts");
+  if (!fs.existsSync(compose) || !fs.existsSync(seo) || !fs.existsSync(siteEnv) || !fs.existsSync(appTs)) {
+    fail("coolify production locks", "compose/seo/site-env/app.ts missing");
+    return;
+  }
+  const composeText = fs.readFileSync(compose, "utf8");
+  const seoText = fs.readFileSync(seo, "utf8");
+  const siteText = fs.readFileSync(siteEnv, "utf8");
+  const appText = fs.readFileSync(appTs, "utf8");
+
+  for (const needle of [
+    "OBJECT_STORAGE_PROVIDER:?OBJECT_STORAGE_PROVIDER is required",
+    "profiles: [\"legacy-banco-web\"]",
+    "TRUST_PROXY_HOPS",
+    "VITE_WEB_URL",
+    "BANCO_WEBSITE_URL:?BANCO_WEBSITE_URL is required",
+    "VITE_CLERK_PUBLISHABLE_KEY:?VITE_CLERK_PUBLISHABLE_KEY is required",
+  ]) {
+    if (!composeText.includes(needle)) {
+      fail("coolify production locks", `docker-compose.coolify.yml missing ${needle}`);
+      return;
+    }
+  }
+  if (!/DEEP_LINK_SCHEME\s*=\s*"bancooom"/.test(seoText)) {
+    fail("coolify production locks", 'seoRoutes DEEP_LINK_SCHEME must be "bancooom"');
+    return;
+  }
+  if (!siteText.includes('sameOriginSurfacePath("/market")') || !siteText.includes('sameOriginSurfacePath("/admin")')) {
+    fail("coolify production locks", "banco-website site-env defaults must be /market and /admin");
+    return;
+  }
+  if (!appText.includes("TRUST_PROXY_HOPS")) {
+    fail("coolify production locks", "api app.ts must honor TRUST_PROXY_HOPS");
+    return;
+  }
+  pass(
+    "coolify production locks",
+    "S3 required · legacy banco-web profile · SEO scheme bancooom · /market|/admin · trust hops",
+  );
+}
+
 function checkLandingDomainHops() {
   const landing = path.join(ROOT, "artifacts/landing/src/App.tsx");
   if (!fs.existsSync(landing)) {
@@ -387,6 +432,22 @@ function checkWellKnownTemplates() {
     fail("well-known nginx", "nginx.conf must serve /.well-known/ with default_type application/json");
     return;
   }
+  // Apex→web SEO must hit the API — never SPA index.html (OG/sitemap blind).
+  for (const needle of [
+    "location ^~ /l/",
+    "location ^~ /listing/",
+    "location = /sitemap.xml",
+    "location = /robots.txt",
+    "$banco_forwarded_proto",
+  ]) {
+    if (!nginxText.includes(needle)) {
+      fail(
+        "coolify nginx SEO/proxy",
+        `nginx.conf missing ${needle} (required for Coolify single-origin publish)`,
+      );
+      return;
+    }
+  }
   if (!dfText.includes("well-known/apple-app-site-association")) {
     fail("well-known Dockerfile.web", "must COPY AASA into the nginx image");
     return;
@@ -497,6 +558,7 @@ function main() {
   checkOpenApi();
   checkOpenApiCodegenFreshness();
   checkCoolifyDocsApex();
+  checkCoolifyProductionLocks();
   checkLandingDomainHops();
   checkReplitWipePollution();
   checkWellKnownTemplates();

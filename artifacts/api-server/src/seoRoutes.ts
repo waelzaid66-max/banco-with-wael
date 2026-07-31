@@ -15,7 +15,7 @@ import {
  * Honesty rules baked in:
  *   - Only listings that are active AND publicly visible (not flagged, seller not
  *     shadow-banned) are ever served; everything else is a real 404 + noindex.
- *   - The CTA deep-links to the app (`banco-mobile://listing/:id`). We do NOT
+ *   - The CTA deep-links to the app (`bancooom://listing/:id`). We do NOT
  *     invent App Store / Play Store URLs or deferred-deep-link claims.
  */
 
@@ -27,7 +27,7 @@ const CATEGORY_LABEL: Record<string, string> = {
   industrial: "Industrial",
 };
 
-const DEEP_LINK_SCHEME = "banco-mobile";
+const DEEP_LINK_SCHEME = "bancooom";
 
 // The global helmet CSP locks everything to 'self' (this is a JSON API). The
 // public HTML pages need inline <style> and listing images, so we override CSP
