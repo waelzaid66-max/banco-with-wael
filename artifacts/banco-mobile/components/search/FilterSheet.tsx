@@ -52,6 +52,7 @@ const SORTS: SearchSort[] = [
   "price_asc",
   "price_desc",
   "popular",
+  "nearest",
 ];
 const PAYMENTS: PaymentType[] = ["any", "installment"];
 

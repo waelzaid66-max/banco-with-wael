@@ -12,6 +12,9 @@ MSG-07b sliding-window absorb + newest-id mark-read + older-load gate · MSG-14 
 ### Wave 5 (precision audit + MSG-14b)
 Near-bottom autoscroll · Android prepend gate · hide copy honesty · poll-wins dedupe · before cursor id tie-break · DeviceNotRegistered-only prune · chat video picker
 
+### Wave 6 (precision + maps)
+MSG-07b P1 scroll/prepend/anchor · MAP-07 vendored Leaflet · MAP-08 `nearest` sort · MAP-10 bridge guards
+
 
 | ID | Problem | Severity | Status |
 |----|---------|----------|--------|
@@ -46,6 +49,9 @@ Near-bottom autoscroll · Android prepend gate · hide copy honesty · poll-wins
 | MSG-08 | No report-message / hide from thread | High | **Fixed** (support ticket + soft-hide) |
 | NOTIF-04 | No Expo receipt processing | High | **Fixed** (receipt prune; durable retry = 04b) |
 | NOTIF-08 | “In-app” toggle also suppresses push | Medium | **Fixed** (label honesty) |
+| MAP-07 | CDN Leaflet/MarkerCluster dependency | Medium | **Fixed** (inlined vendor; OSM tiles still network) |
+| MAP-08 | No sort=nearest | Product | **Partial** (`nearest` Haversine sort; draw-area still deferred) |
+| MAP-10 | No map interaction guards | Low | **Fixed** (bridge locate/viewport guards) |
 
 Guards: `test:messenger-wiring` · `test:production-wiring` · existing `test:notification-routing`
 
@@ -91,9 +97,8 @@ Guards: `test:messenger-wiring` · `test:production-wiring` · existing `test:no
 
 | ID | Gap | Severity |
 |----|-----|----------|
-| MAP-07 | CDN Leaflet/OSM dependency | Medium |
-| MAP-08 | No draw-area / sort=nearest | Product deferred |
-| MAP-10 | No E2E map interaction tests | Low |
+| MAP-08b | No draw-area polygon filter | Product deferred |
+| MAP-07b | OSM raster tiles still require network | Medium (by design) |
 
 ---
 

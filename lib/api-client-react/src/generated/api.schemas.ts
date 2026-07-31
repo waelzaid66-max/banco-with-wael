@@ -3350,7 +3350,7 @@ near_lng?: number;
  */
 radius_km?: number;
 /**
- * Result ordering. recommended (default) and newest use the created_at keyset cursor; price_asc, price_desc and popular switch to offset pagination (their cursor is an opaque numeric offset). popular ranks by lifetime interactions (views + clicks).
+ * Result ordering. recommended (default) and newest use the created_at keyset cursor; price_asc, price_desc, popular and nearest switch to offset pagination (their cursor is an opaque numeric offset). popular ranks by lifetime interactions (views + clicks). nearest ranks by Haversine distance when near_lat/near_lng are present.
  */
 sort?: SearchListingsSort;
 cursor?: string;
@@ -3443,6 +3443,7 @@ export const SearchListingsSort = {
   price_asc: 'price_asc',
   price_desc: 'price_desc',
   popular: 'popular',
+  nearest: 'nearest',
 } as const;
 
 export type SearchListings200 = {

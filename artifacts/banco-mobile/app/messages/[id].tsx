@@ -297,16 +297,19 @@ export default function ThreadScreen() {
       });
       const page = res.data ?? [];
       if (page.length < THREAD_PAGE) setHasMoreOlder(false);
-      if (page.length > 0) {
-        setOlder((prev) => {
-          const seen = new Set(prev.map((m) => m.id));
-          for (const m of messages) seen.add(m.id);
-          const unique = page.filter((m) => !seen.has(m.id));
-          return [...unique, ...prev];
-        });
-      } else {
+      const seen = new Set(older.map((m) => m.id));
+      for (const m of messages) seen.add(m.id);
+      const unique = page.filter((m) => !seen.has(m.id));
+      if (unique.length === 0) {
+        // All-dupe / empty — no layout growth; clear prepend gate now.
         setHasMoreOlder(false);
         isPrependingRef.current = false;
+      } else {
+        setOlder((prev) => [...unique, ...prev]);
+        // Safety: if onContentSizeChange never fires, release the gate.
+        setTimeout(() => {
+          isPrependingRef.current = false;
+        }, 450);
       }
     } catch {
       // Keep hasMore so the user can retry by scrolling again.
@@ -314,8 +317,6 @@ export default function ThreadScreen() {
     } finally {
       setLoadingOlder(false);
       loadingOlderRef.current = false;
-      // isPrependingRef clears on the next onContentSizeChange so Android
-      // (no MVCP) does not scroll-to-end mid-prepend.
     }
   }, [conversationId, hasMoreOlder, older, messages]);
 
@@ -609,7 +610,7 @@ export default function ThreadScreen() {
   // Step 2: confirm preview — upload image or video with explicit media_kind.
   const confirmSendMedia = async () => {
     const asset = previewAsset;
-    if (!asset || !conversationId) return;
+    if (!asset || !conversationId || uploading) return;
     setPreviewAsset(null);
     const kind = isVideoAsset(asset) ? "video" : "image";
     const tempId = `t-${Date.now()}`;
@@ -678,7 +679,12 @@ export default function ThreadScreen() {
       row.kind === "pending"
         ? row.msg.media_kind ??
           (row.msg.asset && isVideoAsset(row.msg.asset) ? "video" : "image")
-        : row.msg.media_kind ?? "image";
+        : row.msg.media_kind ??
+          (mediaUrl && /\.(mp4|mov|m4v|webm|3gp)(\?|$)/i.test(mediaUrl)
+            ? "video"
+            : mediaUrl && /\.(mp3|m4a|wav|ogg|aac)(\?|$)/i.test(mediaUrl)
+              ? "audio"
+              : "image");
     const body = row.msg.body;
     const isPending = row.kind === "pending";
     const failed = isPending && row.msg.status === "failed";
@@ -1103,7 +1109,8 @@ export default function ThreadScreen() {
               if (nearBottomRef.current) {
                 listRef.current?.scrollToEnd({ animated: false });
               }
-              readyForOlderRef.current = true;
+              // Do NOT arm readyForOlder here — first layout is often still at
+              // y≈0 before scrollToEnd; arm only from scrollToEnd itself.
             }}
             onScroll={(e) => {
               const { contentOffset, contentSize, layoutMeasurement } =

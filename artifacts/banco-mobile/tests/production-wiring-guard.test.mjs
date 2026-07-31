@@ -279,6 +279,7 @@ test("MSG-14b chat picker accepts videos with media_kind", () => {
   assert.match(thread, /uploadMediaAsset/);
   assert.match(thread, /media_kind:\s*uploaded\.type === "video"/);
   assert.match(thread, /partitionPickedAssets/);
+  assert.match(thread, /uploading\) return/);
 });
 
 test("MSG-08 report uses support tickets; hide uses deleteConversation", () => {
@@ -316,4 +317,53 @@ test("NOTIF-04 push schedules Expo receipt processing", () => {
 test("MSG-07b before cursor uses created_at + id tie-break", () => {
   assert.match(apiConv, /lt\(messages\.id, anchor\.id\)/);
   assert.match(apiConv, /orderBy\(desc\(messages\.createdAt\), desc\(messages\.id\)\)/);
+  assert.match(apiConv, /if \(!anchor\?\.createdAt\) return \[\]/);
+});
+
+test("MSG-07b does not arm older-load on contentSizeChange", () => {
+  assert.match(thread, /nearBottomRef/);
+  assert.match(thread, /Do NOT arm readyForOlder here/);
+  assert.match(thread, /unique\.length === 0/);
+});
+
+test("MAP-07 Leaflet is vendored inline (no unpkg)", () => {
+  const mapHtml = fs.readFileSync(
+    path.join(root, "components/search/mapHtml.ts"),
+    "utf8",
+  );
+  const pinPicker = fs.readFileSync(
+    path.join(root, "components/MapPinPicker.tsx"),
+    "utf8",
+  );
+  assert.match(mapHtml, /mapVendorInline/);
+  assert.match(mapHtml, /LEAFLET_JS/);
+  assert.doesNotMatch(mapHtml, /unpkg\.com\/leaflet/);
+  assert.doesNotMatch(pinPicker, /unpkg\.com\/leaflet/);
+  assert.ok(
+    fs.existsSync(path.join(root, "components/search/mapVendorInline.ts")),
+  );
+});
+
+test("MAP-08 nearest sort is a real API sort value", () => {
+  const searchSvc = fs.readFileSync(
+    path.join(root, "../api-server/src/services/SearchService.ts"),
+    "utf8",
+  );
+  const filterSheet = fs.readFileSync(
+    path.join(root, "components/search/FilterSheet.tsx"),
+    "utf8",
+  );
+  assert.match(searchSvc, /"nearest"/);
+  assert.match(searchSvc, /nearMeDistanceKmSql/);
+  assert.match(filterSheet, /"nearest"/);
+});
+
+test("MAP-10 map Html still posts locate_error + viewport bridge", () => {
+  const mapHtml = fs.readFileSync(
+    path.join(root, "components/search/mapHtml.ts"),
+    "utf8",
+  );
+  assert.match(mapHtml, /locate_error/);
+  assert.match(mapHtml, /type:\s*"viewport"/);
+  assert.match(mapHtml, /BANCO_MAP/);
 });

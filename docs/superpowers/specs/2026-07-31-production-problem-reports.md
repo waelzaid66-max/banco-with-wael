@@ -268,6 +268,16 @@ Each item below is a standing problem report. **Nothing listed is deleted from t
 
 ---
 
+## Wave 6 — higher precision + maps
+
+**MSG-07b P1:** Do not arm `readyForOlder` on contentSizeChange; clear prepend on all-dupe pages; missing `before` anchor returns `[]`.  
+**MAP-07:** Leaflet 1.9.4 + MarkerCluster inlined (`mapVendorInline.ts`); browse map + pin picker; OSM tiles remain network.  
+**MAP-08:** Real `sort=nearest` (Haversine) when near_lat/lng present.  
+**MAP-10:** Guards for locate_error / viewport / BANCO_MAP bridge.  
+**Status:** Fixed
+
+---
+
 ## Still open
 
-MSG-05 / MSG-08b / MSG-13 / MSG-14c · NOTIF-02 / NOTIF-04b / NOTIF-10 · MAP-07 / MAP-08 / MAP-10
+MSG-05 / MSG-08b / MSG-13 / MSG-14c · NOTIF-02 / NOTIF-04b / NOTIF-10 · MAP-07b / MAP-08b
