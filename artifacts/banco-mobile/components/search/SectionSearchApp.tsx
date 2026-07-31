@@ -1378,8 +1378,6 @@ export function SectionSearchApp({
           draftQuery={draftQuery}
           searchSaved={searchSaved}
           activeFilterCount={activeFilterCount}
-          marketCountry={criteria.marketCountry}
-          sort={criteria.sort}
           inputRef={inputRef}
           onBack={goBack}
           onSaveSearch={handleSaveSearch}
@@ -1397,17 +1395,6 @@ export function SectionSearchApp({
           onQueryChange={handleQueryChange}
           onSubmitQuery={() => commitQueryNow(draftQuery)}
           onClearQuery={clearQuery}
-          onOpenMarket={() => {
-            playSound("tap");
-            setMarketPickerOpen(true);
-          }}
-          onCycleSort={() => {
-            playSound("tap");
-            const cycle = ["recommended", "newest", "price_asc", "price_desc"] as const;
-            const next =
-              cycle[(cycle.indexOf(criteria.sort as (typeof cycle)[number]) + 1) % cycle.length];
-            update({ sort: next });
-          }}
         />
       ) : (
       <>
@@ -1596,9 +1583,9 @@ export function SectionSearchApp({
           live in FilterSheet + Band D. Import-hub rule still holds: no dead taps. ── */}
 
       {/* ── Primary chip strip: country/currency · sort · mode/engines.
-          RE: country + sort live inside PropertyHomeHeader (no wasted strip row).
-          B-oom Car: market/sort in CarsHomeHeader; listingMode + engines stay
-          visible here as chips (Wave 6 REL-17 — do not bury). ── */}
+          RE/materials: country + sort live inside home headers.
+          B-oom Car: market/sort SoT = this strip only (W8 D-W8-01); listingMode
+          + engines chips stay visible (REL-17). ── */}
       {!isRealEstateSection && !isMaterialsSection ? (
       <View
         style={[styles.chipStrip, { flexDirection: rowDir }]}
@@ -1611,11 +1598,8 @@ export function SectionSearchApp({
             setMarketPickerOpen(true);
           }}
         />
-        {/* Quick sort — a small in-strip filter present in every section (was a
-            4th header icon that crowded the title). Cycles recommended → newest
-            → price low→high → high→low. Isolated: plain criteria state, never
-            persisted, resets on leave/reload, rides the ordinary `sort` param
-            without touching engines/facets. Car also exposes sort in CarsHomeHeader. */}
+        {/* Quick sort — one seat only (strip). Cycles recommended → newest
+            → price low→high → high→low. */}
         <Pressable
           onPress={() => {
             playSound("tap");
@@ -2088,42 +2072,6 @@ export function SectionSearchApp({
             );
           })}
         </ScrollView>
-      ) : null}
-
-      {/* ── Origin chips (materials only) ── */}
-      {showOriginChrome ? (
-        <View
-          style={[styles.chipRow, { flexDirection: rowDir }]}
-          testID="materials-origin-strip"
-        >
-          {(["all", "local", "imported"] as const).map((o) => {
-            const active = originKey === o;
-            return (
-              <Pressable
-                key={o}
-                onPress={() => {
-                  playSound("tap");
-                  Haptics.selectionAsync();
-                  selectOrigin(o);
-                }}
-                style={[
-                  styles.chip,
-                  { backgroundColor: active ? accent : colors.secondary },
-                ]}
-                testID={`section-origin-${o}`}
-              >
-                <AppText
-                  style={[
-                    styles.chipText,
-                    { color: active ? "#FFFFFF" : colors.mutedForeground },
-                  ]}
-                >
-                  {o === "all" ? t("home.engines.all") : t(`create.opts.${o}`)}
-                </AppText>
-              </Pressable>
-            );
-          })}
-        </View>
       ) : null}
 
       {/* ── Rental term (RE rent) — pill, not a full chip row.
