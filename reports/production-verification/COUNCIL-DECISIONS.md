@@ -348,6 +348,16 @@
 
 ---
 
+## D-2026-07-31-33 — Reliability ping Chair again (absorb #40)
+
+| | |
+|--|--|
+| **Decision** | Owner ordered seat to Chair again. Tip CI-green handoff `6999915`. REL-00 already PASS; absorb still owed. |
+| **Adopted** | `W8-REL-PING-CHAIR-AGAIN.md` · channel. Re-spot 85/167. |
+| **Rejected** | Inventing Tranche E · Live Certified. |
+
+---
+
 ## Template for future disputes
 
 ```markdown
