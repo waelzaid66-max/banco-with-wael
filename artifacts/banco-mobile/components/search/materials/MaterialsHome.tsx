@@ -2,9 +2,10 @@
  * Materials Industrial Hub — missing Mini-App HOME layer.
  *
  * Owner brief (mm-precision):
- * - Visual structure from the Industrial Hub mock (services / quick / trending /
- *   search+filters), adapted to BANCO native chrome.
- * - Header balanced like Boom Stay (compact brand band — NOT half the screen).
+ * - Visual structure from the Industrial Hub mock (services / quick / trending),
+ *   adapted to BANCO native chrome.
+ * - Header balanced like Boom Stay bands A–D (compact — NOT half the screen):
+ *   top actions → brand wordmark → search pill with filters → capability tabs.
  * - Does NOT erase filters: catalog layer keeps every strip + FilterSheet.
  * - Icons ONLY from `@/components/icons` SVG registry (Android/Expo-safe).
  * - Scope: `/section/materials` only. No other section UI.
@@ -36,7 +37,7 @@ const PANEL = "#121212";
 const ASH = "#8E8E93";
 const HAIR = "rgba(255,255,255,0.14)";
 const BANCO_LOGO = require("../../../assets/images/banco-logo.png");
-const HERO_PHOTO = require("../../../assets/images/categories/materials.jpg");
+const TREND_PHOTO = require("../../../assets/images/categories/materials.jpg");
 
 type MCIName = React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 type FeatherName = React.ComponentProps<typeof Feather>["name"];
@@ -134,11 +135,13 @@ const SERVICES: ServiceTile[] = [
     href: "/business/global-supply",
   },
   {
+    // Honest: taxonomy has no separate "equipment" subtype — open full catalog
+    // with FilterSheet so the shopper picks (distinct from Machines → machine).
     kind: "catalog",
     key: "equipment",
     icon: "package-variant-closed",
     titleKey: "materialsHub.svcEquipment",
-    seed: { industrialType: "machine" },
+    seed: { industrialType: "all", openFilters: true },
   },
 ];
 
@@ -193,12 +196,37 @@ const QUICK: QuickAction[] = [
   },
 ];
 
-/** Capability chips — same 4 slots as the mock, NO fake counts. */
-const STATS: { key: string; labelKey: string; icon: MCIName }[] = [
-  { key: "factories", labelKey: "materialsHub.statFactories", icon: "factory" },
-  { key: "machines", labelKey: "materialsHub.statMachines", icon: "cog" },
-  { key: "materials", labelKey: "materialsHub.statMaterials", icon: "package" },
-  { key: "markets", labelKey: "materialsHub.statMarkets", icon: "earth" },
+/** Band D — capability tabs (Stay type-tabs pattern). No fake counts. */
+const CAPABILITY_TABS: {
+  key: string;
+  labelKey: string;
+  icon: MCIName;
+  seed: MaterialsCatalogSeed;
+}[] = [
+  {
+    key: "factories",
+    labelKey: "materialsHub.statFactories",
+    icon: "factory",
+    seed: { industrialType: "all" },
+  },
+  {
+    key: "machines",
+    labelKey: "materialsHub.statMachines",
+    icon: "cog",
+    seed: { industrialType: "machine" },
+  },
+  {
+    key: "materials",
+    labelKey: "materialsHub.statMaterials",
+    icon: "package",
+    seed: { industrialType: "raw_material" },
+  },
+  {
+    key: "markets",
+    labelKey: "materialsHub.statMarkets",
+    icon: "earth",
+    seed: { industrialType: "all" },
+  },
 ];
 
 const TRENDING = [
@@ -249,8 +277,9 @@ export function MaterialsHome({ onOpenCatalog }: Props) {
 
   return (
     <View style={styles.root} testID="materials-hub-home">
-      {/* ── Stay-balanced dynamic header (compact — not half the screen) ── */}
-      <View style={[styles.headerRoot, { paddingTop: topPad - 1 }]}>
+      {/* Stay bands A–D — compact fixed header (not half-screen) */}
+      <View style={[styles.headerRoot, { paddingTop: topPad - 1 }]} testID="materials-hub-hero">
+        {/* Band A — top actions */}
         <View style={[styles.topBar, { flexDirection: rowDir }]}>
           <Pressable
             onPress={() => router.back()}
@@ -266,42 +295,34 @@ export function MaterialsHome({ onOpenCatalog }: Props) {
             />
           </Pressable>
           <View style={styles.topSpacer} />
-          <Pressable
-            onPress={() => openCatalog({ industrialType: "all" })}
-            style={styles.iconHit}
-            testID="materials-hub-header-search"
-            accessibilityRole="button"
-          >
-            <Feather name="search" size={20} color="#FFFFFF" />
-          </Pressable>
         </View>
 
-        {/* Brand band — Stay proportions: wordmark + tagline + powered-by BANCO */}
-        <View style={styles.brandBlock} testID="materials-hub-hero">
-          <View style={[styles.wordmarkRow, { flexDirection: rowDir }]}>
-            <View style={{ flex: 1, gap: 2 }}>
-              <AppText style={[styles.wordmarkCore, { textAlign }]} numberOfLines={1}>
-                {t("materialsHub.brand")}
-              </AppText>
-              <AppText style={[styles.wordmarkHub, { textAlign }]} numberOfLines={1}>
-                {t("materialsHub.brandHub")}
-              </AppText>
-            </View>
-            <View style={styles.heroThumbWrap}>
-              <Image source={HERO_PHOTO} style={styles.heroThumb} contentFit="cover" />
-              <LinearGradient
-                colors={["transparent", "rgba(0,0,0,0.55)"]}
-                style={StyleSheet.absoluteFill}
-              />
-              <View style={styles.heroThumbBadge}>
-                <MaterialCommunityIcons name="package" size={16} color="#FFFFFF" />
-              </View>
-            </View>
+        {/* Band B — brand only (logo + hub wordmark + rules + powered-by) */}
+        <View style={styles.brandBlock}>
+          <View
+            style={[
+              styles.wordmarkRow,
+              { flexDirection: isRTL ? "row-reverse" : "row" },
+            ]}
+          >
+            <Image
+              source={BANCO_LOGO}
+              style={styles.wordmarkLogo}
+              contentFit="contain"
+              tintColor={ACCENT}
+            />
+            <AppText style={styles.wordmarkHub} numberOfLines={1}>
+              {t("materialsHub.brandHub")}
+            </AppText>
           </View>
 
-          <AppText style={[styles.tagline, { textAlign: "center" }]} numberOfLines={2}>
-            {t("materialsHub.tagline")}
-          </AppText>
+          <View style={styles.taglineRow}>
+            <View style={styles.taglineRule} />
+            <AppText style={styles.tagline} numberOfLines={1}>
+              {t("materialsHub.tagline")}
+            </AppText>
+            <View style={styles.taglineRule} />
+          </View>
 
           <AppText style={styles.poweredLabel}>{t("materialsHub.poweredBy")}</AppText>
           <Image
@@ -310,16 +331,65 @@ export function MaterialsHome({ onOpenCatalog }: Props) {
             contentFit="contain"
             tintColor={ACCENT}
           />
-
-          <View style={[styles.statsRow, { flexDirection: rowDir }]}>
-            {STATS.map((s) => (
-              <View key={s.key} style={styles.statItem}>
-                <MaterialCommunityIcons name={s.icon} size={14} color={ACCENT} />
-                <AppText style={styles.statLabel}>{t(s.labelKey)}</AppText>
-              </View>
-            ))}
-          </View>
         </View>
+
+        {/* Band C — search pill; filters live inside (Stay pattern) */}
+        <View style={[styles.searchPill, { flexDirection: rowDir }]}>
+          <Pressable
+            onPress={() => openCatalog({ industrialType: "all" })}
+            style={[styles.searchMainHit, { flexDirection: rowDir }]}
+            testID="materials-hub-search"
+          >
+            <Feather name="search" size={18} color={ACCENT} />
+            <AppText
+              style={[styles.searchPlaceholder, { textAlign }]}
+              numberOfLines={1}
+            >
+              {t("materialsHub.searchPlaceholder")}
+            </AppText>
+          </Pressable>
+          <Pressable
+            onPress={() =>
+              openCatalog({ industrialType: "all", openFilters: true })
+            }
+            hitSlop={8}
+            style={styles.filterInSearch}
+            testID="materials-hub-filters"
+          >
+            <Feather name="sliders" size={17} color={ACCENT} />
+          </Pressable>
+        </View>
+
+        {/* Band D — capability tabs (honest seeds, no vanity counts) */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={[styles.tabsRow, { flexDirection: rowDir }]}
+          style={styles.tabsScroll}
+          testID="materials-hub-caps"
+        >
+          {CAPABILITY_TABS.map((tab, index) => (
+            <React.Fragment key={tab.key}>
+              {index > 0 ? <View style={styles.tabDivider} /> : null}
+              <Pressable
+                onPress={() => {
+                  if (tab.key === "factories") {
+                    openRoute("/section/factories");
+                    return;
+                  }
+                  openCatalog(tab.seed);
+                }}
+                style={styles.tabItem}
+                testID={`materials-hub-cap-${tab.key}`}
+              >
+                <MaterialCommunityIcons name={tab.icon} size={20} color={ACCENT} />
+                <AppText style={styles.tabLabel} numberOfLines={1}>
+                  {t(tab.labelKey)}
+                </AppText>
+              </Pressable>
+            </React.Fragment>
+          ))}
+        </ScrollView>
       </View>
 
       <ScrollView
@@ -422,7 +492,7 @@ export function MaterialsHome({ onOpenCatalog }: Props) {
               style={styles.trendCard}
               testID={`materials-hub-trend-${item.key}`}
             >
-              <Image source={HERO_PHOTO} style={styles.trendPhoto} contentFit="cover" />
+              <Image source={TREND_PHOTO} style={styles.trendPhoto} contentFit="cover" />
               <LinearGradient
                 colors={["transparent", "rgba(0,0,0,0.88)"]}
                 style={StyleSheet.absoluteFill}
@@ -433,30 +503,6 @@ export function MaterialsHome({ onOpenCatalog }: Props) {
             </Pressable>
           ))}
         </ScrollView>
-
-        {/* Search + Filters — open FULL catalog (all strips + FilterSheet intact). */}
-        <View style={[styles.searchRow, { flexDirection: rowDir }]}>
-          <Pressable
-            onPress={() => openCatalog({ industrialType: "all" })}
-            style={[styles.searchField, { flexDirection: rowDir }]}
-            testID="materials-hub-search"
-          >
-            <Feather name="search" size={18} color={ACCENT} />
-            <AppText style={styles.searchPlaceholder} numberOfLines={1}>
-              {t("materialsHub.searchPlaceholder")}
-            </AppText>
-          </Pressable>
-          <Pressable
-            onPress={() =>
-              openCatalog({ industrialType: "all", openFilters: true })
-            }
-            style={[styles.filtersBtn, { flexDirection: rowDir }]}
-            testID="materials-hub-filters"
-          >
-            <Feather name="sliders" size={16} color={ACCENT} />
-            <AppText style={styles.filtersText}>{t("materialsHub.filters")}</AppText>
-          </Pressable>
-        </View>
       </ScrollView>
 
       {/* Fixed BANCO mini-app bottom nav — never replace with mock tabs. */}
@@ -470,7 +516,7 @@ const styles = StyleSheet.create({
   headerRoot: {
     backgroundColor: VOID,
     paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingBottom: 4,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: HAIR,
   },
@@ -487,54 +533,47 @@ const styles = StyleSheet.create({
   },
   brandBlock: {
     alignItems: "center",
-    paddingTop: 2,
-    paddingBottom: 4,
-    gap: 6,
+    paddingTop: 0,
+    paddingBottom: 0,
+    marginBottom: 6,
   },
   wordmarkRow: {
-    width: "100%",
     alignItems: "center",
-    gap: 12,
+    gap: 8,
+    marginBottom: 6,
   },
-  wordmarkCore: {
-    color: ACCENT,
-    fontSize: 26,
-    fontFamily: "Cairo_700Bold",
-    letterSpacing: 0.5,
+  wordmarkLogo: {
+    width: 108,
+    height: 40,
   },
   wordmarkHub: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-    letterSpacing: 2.2,
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: ACCENT,
+    letterSpacing: 1.6,
     textTransform: "uppercase",
   },
-  heroThumbWrap: {
-    width: 88,
-    height: 72,
-    borderRadius: 14,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(168,42,28,0.55)",
-  },
-  heroThumb: { ...StyleSheet.absoluteFillObject },
-  heroThumbBadge: {
-    position: "absolute",
-    left: 6,
-    bottom: 6,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "rgba(168,42,28,0.9)",
+  taglineRow: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: 10,
+    maxWidth: "100%",
+    paddingHorizontal: 8,
+    marginBottom: 4,
+  },
+  taglineRule: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth * 2,
+    backgroundColor: ACCENT,
+    maxWidth: 56,
+    opacity: 0.85,
   },
   tagline: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
     color: ASH,
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    lineHeight: 17,
-    paddingHorizontal: 8,
+    textAlign: "center",
+    flexShrink: 1,
   },
   poweredLabel: {
     fontSize: 9,
@@ -542,27 +581,65 @@ const styles = StyleSheet.create({
     color: ASH,
     letterSpacing: 1.2,
     textTransform: "uppercase",
+    marginBottom: 2,
   },
   poweredLogo: {
     width: 72,
     height: 18,
   },
-  statsRow: {
-    width: "100%",
-    justifyContent: "space-between",
-    marginTop: 4,
-    gap: 4,
+  searchPill: {
+    height: 50,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: VOID,
+    borderWidth: 1.5,
+    borderColor: ACCENT,
   },
-  statItem: {
+  searchMainHit: {
     flex: 1,
     alignItems: "center",
+    gap: 10,
+    minHeight: 48,
+  },
+  searchPlaceholder: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    color: ASH,
+  },
+  filterInSearch: {
+    position: "relative",
+    padding: 4,
+  },
+  tabsScroll: {
+    marginTop: 8,
+    marginHorizontal: -16,
+  },
+  tabsRow: {
+    alignItems: "stretch",
+    paddingHorizontal: 12,
+    gap: 0,
+    minHeight: 48,
+  },
+  tabItem: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+    minWidth: 68,
     gap: 4,
   },
-  statLabel: {
-    color: "rgba(255,255,255,0.88)",
-    fontSize: 10.5,
+  tabLabel: {
+    fontSize: 11,
     fontFamily: "Inter_600SemiBold",
-    textAlign: "center",
+    color: ACCENT,
+  },
+  tabDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: "center",
+    height: 28,
+    backgroundColor: HAIR,
   },
   scroll: { flex: 1 },
   content: {
@@ -657,40 +734,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingBottom: 8,
     zIndex: 1,
-  },
-  searchRow: { alignItems: "center", gap: 10, marginTop: 2 },
-  searchField: {
-    flex: 1,
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: PANEL,
-    borderRadius: 14,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: HAIR,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    minHeight: 48,
-  },
-  searchPlaceholder: {
-    flex: 1,
-    color: ASH,
-    fontSize: 12.5,
-    fontFamily: "Inter_400Regular",
-  },
-  filtersBtn: {
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: PANEL,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(168,42,28,0.55)",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    minHeight: 48,
-  },
-  filtersText: {
-    color: "#FFFFFF",
-    fontSize: 12.5,
-    fontFamily: "Inter_600SemiBold",
   },
 });

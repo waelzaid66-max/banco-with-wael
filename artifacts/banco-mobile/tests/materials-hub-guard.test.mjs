@@ -43,7 +43,7 @@ test("materials is two-layer home then intact catalog", () => {
   assert.doesNotMatch(materials, /collapseInlineStrips/);
 });
 
-test("MaterialsHome is Stay-balanced hub (not half-screen, not Stay clone)", () => {
+test("MaterialsHome is Stay-band hub (not half-screen, not Stay clone)", () => {
   assert.match(home, /testID="materials-hub-home"/);
   assert.match(home, /testID="materials-hub-hero"/);
   assert.match(home, /testID="materials-hub-services"/);
@@ -51,10 +51,18 @@ test("MaterialsHome is Stay-balanced hub (not half-screen, not Stay clone)", () 
   assert.match(home, /testID="materials-hub-trending"/);
   assert.match(home, /testID="materials-hub-search"/);
   assert.match(home, /testID="materials-hub-filters"/);
+  assert.match(home, /testID="materials-hub-caps"/);
   assert.match(home, /MiniAppBottomNav/);
   assert.match(home, /paddingBottom:\s*132/);
   assert.match(home, /banco-logo/);
   assert.match(home, /brandBlock/);
+  assert.match(home, /searchPill/);
+  assert.match(home, /taglineRule/);
+  // Stay bands — search lives in header, not buried under scroll body alone.
+  assert.match(home, /Band C — search pill/);
+  assert.match(home, /Band D — capability tabs/);
+  // No competing hero thumb / half-screen photo in brand band.
+  assert.doesNotMatch(home, /heroThumb|heroWrap|minHeight:\s*132/);
   assert.doesNotMatch(home, /StaysHomeHeader|boom-logo/);
   assert.doesNotMatch(home, /href:\s*"\/import"/);
   assert.match(home, /\/business\/global-supply/);
@@ -63,6 +71,15 @@ test("MaterialsHome is Stay-balanced hub (not half-screen, not Stay clone)", () 
   // Icons from SVG registry only (no raw @expo/vector-icons).
   assert.match(home, /@\/components\/icons/);
   assert.doesNotMatch(home, /@expo\/vector-icons/);
+  // Equipment must not duplicate Machines → machine seed.
+  assert.match(
+    home,
+    /key:\s*"equipment"[\s\S]*?seed:\s*\{\s*industrialType:\s*"all",\s*openFilters:\s*true/,
+  );
+  assert.match(
+    home,
+    /key:\s*"machine"[\s\S]*?seed:\s*\{\s*industrialType:\s*"machine"\s*\}/,
+  );
 });
 
 test("SectionSearchApp additive props do not hide materials strips", () => {
@@ -97,4 +114,18 @@ test("factories untouched", () => {
   );
   assert.doesNotMatch(factories, /MaterialsHome|collapseInlineStrips/);
   assert.match(factories, /category="facilities"/);
+});
+
+test("recovery audit ledger exists for waves + materials", () => {
+  const audit = fs.readFileSync(
+    path.resolve(
+      root,
+      "../../reports/production-verification/61-WAVES-AND-MATERIALS-RECOVERY-AUDIT.md",
+    ),
+    "utf8",
+  );
+  assert.match(audit, /collapseInlineStrips/);
+  assert.match(audit, /#16/);
+  assert.match(audit, /#25/);
+  assert.match(audit, /Tracks A/);
 });
