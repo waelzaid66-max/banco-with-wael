@@ -1,6 +1,6 @@
 # Wave 8 — Delivery status (Owner)
 
-**SoT:** `main` @ `db0d329`  
+**SoT:** `main` @ `812e703` (Tranche C land `db0d329`)  
 **Date:** 2026-07-31  
 
 ## Done
