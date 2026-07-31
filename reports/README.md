@@ -4,7 +4,8 @@
 
 | Pack | Path |
 |------|------|
-| **Production Fingerprint (canonical JSON)** | [`ProductionFingerprint.json`](./ProductionFingerprint.json) |
+| **Verification Authority (2026-07-31 tip `06c709a`)** | [`verification-authority/2026-07-31/`](./verification-authority/2026-07-31/) |
+| **Production Fingerprint (canonical JSON)** | [`ProductionFingerprint.json`](./ProductionFingerprint.json) — *historical 2026-07-21; see VA pack* |
 | **Validation Standard (F0/F1 + full mandatory set)** | [`production-validation-standard-2026-07-21/`](./production-validation-standard-2026-07-21/) |
 | Protocol v1.0 evidence pack | [`production-protocol-v1-2026-07-21/`](./production-protocol-v1-2026-07-21/) |
 | **Laptop validation results** | [`laptop-validation-results.json`](./laptop-validation-results.json) |
@@ -27,7 +28,7 @@ node scripts/laptop-validation-matrix.mjs --prod-url https://YOUR_API_HOST
 Laptop paste: `audit/handoff/PASTE-CURSOR-LAPTOP-AGENT-F0-F1-COMPLETE-AR.md`  
 Dual-agent split: `audit/CONTINUATION-CLOUD-LAPTOP-DUAL-AGENT-2026-07-21-AR.md`
 
-**Production Ready is NOT declared** while install/typecheck/live F1 remain BLOCKED.
+**Live Production is NOT certified.** See Verification Authority pack (2026-07-31): tip CI may be green while public DNS still fails. July 21 F0/F1 laptop matrices are historical.
 
 ## Other folders
 
