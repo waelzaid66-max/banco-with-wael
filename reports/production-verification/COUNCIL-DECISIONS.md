@@ -205,6 +205,17 @@
 
 ---
 
+## D-2026-07-31-19 — Reliability Wave 4b VERIFY + archaeology + REL-12 ask
+
+| | |
+|--|--|
+| **Decision** | Reliability executes Wave 4b VERIFY-only on tip `ea4334a`; files archaeology gap search across all origin branches + tag `w.4.1`; drafts REL-12 Approve Plan ask for MOB-C-10. |
+| **Adopted** | `W4b-REL-10-VERIFY` · `W4b-REL-11-VERIFY` · `W4b-REL-00` · `W4b-REL-ZONE-D-REBIND` · `W4b-REL-ARCHAEOLOGY-GAP-REPORT` · `W4b-REL-ASK-CHAIR-REL12-AUTHGATE`. Gates 73/7/32/47/167/18 + api tsc PASS; cutover NOT_CUTOVER. |
+| **Finding** | No missing product code vs remote fleet; residual gaps = OPS cutover/Clerk/well-known + MOB-C-10 UX + optional doc absorbs from Idle/Auditor side branches. |
+| **Rejected** | Coding REL-12 without Approve; CAR IMPORT W4/5; Live Certified; self-merge; inventing product gaps from stale dual-repo docs. |
+
+---
+
 ## Template for future disputes
 
 ```markdown
