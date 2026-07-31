@@ -15,8 +15,7 @@ This is the **ONE** engineering backlog. All other reports feed this file. Agent
 | Gate | Status | Evidence |
 |------|--------|----------|
 | Public Live Certified | **NO** | `70` · `ops:live-cutover` not 0 without placeholders |
-| Tip CI on `e4d36b6` | **UNKNOWN** | run `30653414400` **cancelled** (2s) — must re-run green |
-| Last known green CI on main | **PASS** | `efd3bc4` run `30652807610` success |
+| Tip CI on Director tip | **PASS** | `217628c` run `30654087293` success (all jobs) |
 | Mobile local guards post-W9 | **PASS** | section **90/90** · materials 8 · ui-density 4 · production-wiring 47 · `pnpm test` green |
 | Typecheck local (mobile) | **PASS** | `pnpm typecheck` on tip |
 | Visual / device / APNs / FCM | **UNVERIFIED** | Requires physical devices + prod push + real network |
@@ -60,7 +59,7 @@ Status: OPEN · VERIFY · HOLD · CLOSED · UNVERIFIED
 
 | ID | Sev | Title | Evidence | Owner | Deps | Risk | Verify | Pri |
 |----|-----|-------|----------|-------|------|------|--------|-----|
-| **DIR-01** | P0 | Re-run CI green on tip `e4d36b6`+ | run 30653414400 cancelled | Reliability | — | Blind tip | All CI jobs success on tip SHA | **1** |
+| **DIR-01** | P0 | Re-run CI green on tip `e4d36b6`+ | run 30653414400 cancelled → **CLOSED** tip `217628c` run `30654087293` **success** (Mobile·API·Typecheck·Gates·ESLint·GCP) | Reliability | — | Blind tip | All CI jobs success on tip SHA | **CLOSED** |
 | **DIR-02** | P0 | AUD-90 peer Wave9 E | `87` · W9 plan | Intelligence (read) | DIR-01 | False green | Greps: no `#C4A35A` · `section-header-map` · `hideOriginAxis` · Leaflet on disk · 90/90 | **2** |
 | **DIR-03** | P0 | Replit unify shots R01–R12 on tip | PASTE-WAVE8 | UX/Visual + Replit | DIR-01 | Env≠product | SYNC_SHA + shot ids · Maps RED · Factories header map | **3** |
 
