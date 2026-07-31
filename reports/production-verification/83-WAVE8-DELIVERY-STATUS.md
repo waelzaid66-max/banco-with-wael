@@ -1,10 +1,20 @@
-# Wave 8+ / Wave9 — Delivery status (Owner)
+# 83 — Delivery status (Director)
 
-**SoT:** `main` (Wave9 Tranche E)  
+**SoT:** `main` @ Wave9 E / Director backlog tip  
 **Date:** 2026-07-31  
 
 ## Done
-Wave8 A–D · 10 Worlds protected · CI green · Replit PASTE · Strict orders `85` · **Wave9 full re-inventory `87` · Tranche E landed** (Maps red · Factories header-map · Materials hideOriginAxis · Stay rose dead CSS · Maps tabs flexGrow:0) · section-guard **90/90** · NO-DELETE Leaflet/FilterSheet/mapLatch verified
+Wave8 A–D · Wave9 Tranche E · 10 Worlds inventory `87` · **Director Master Backlog `88` · Standing Orders `89`**
+
+## Blocked / open (see `88`)
+- DIR-01 CI tip green (Wave9 CI cancelled)  
+- SEC-01/02 secrets + `.replit` hygiene (plaintext Paymob key + pk_live + domain still on tip)  
+- AUTH-01 · DEP-01 · LIVE-01  
+- Device/push/OAuth **UNVERIFIED**  
+- Dual-filter HOLDs MOB-01..03  
 
 ## Next
-Auditor AUD-90 · REL-00 · Replit R01–R12 on new tip · ASK Chair before Car/RE/Stay dual-filter plans · **STANDBY** on HOLD epics
+Seats execute `89` §2 → Director reviews evidence → Approve Plan only for next product ID  
+
+## Sign-Off
+**NOT COMPLETE** — no Live Certified claim

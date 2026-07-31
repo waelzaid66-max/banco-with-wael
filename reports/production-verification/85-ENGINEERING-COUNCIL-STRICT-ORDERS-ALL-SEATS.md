@@ -3,10 +3,11 @@
 **Issued by:** Chief Production Architect (Chair)  
 **Date:** 2026-07-31  
 **SoT tip:** `main` (Wave9 Tranche E atop Wave8 floors)  
+**Director authority:** Master Backlog **`88`** · Standing Orders **`89`** (supersedes freestyle seat lists)  
 **Floors إلزامية:** `a05190e` (Tranche D) · `6999915` (CI green stamp) · Wave9 E (Maps/Factories/Materials/Stay)  
-**قانون المالك:** 10 أقسام · ميني-آب ميني-آب · ممنوع تهور/اختراع/كسر · ads E2E · finished sacred · **ممنوع مسح Leaflet/FilterSheet/mapLatch** · **ممنوع كسر هوية الأحمر**  
+**قانون المالك:** 10 أقسام · ميني-آب ميني-آب · ممنوع تهور/اختراع/كسر · ads E2E · finished sacred · **ممنوع مسح Leaflet/FilterSheet/mapLatch** · **ممنوع كسر هوية الأحمر** · **ممنوع دمج `*-5cf0`**  
 
-اقرأ قبل أي حركة: `87` · `85` · `81` · `84` · `PASTE-REPLIT-WAVE8-UNIFY-MAIN-AR.md` · `ROLES-CURSOR-VS-REPLIT-AR.md`
+اقرأ قبل أي حركة: **`88`** · **`89`** · `87` · `85` · `PASTE-REPLIT-WAVE8-UNIFY-MAIN-AR.md`
 
 ---
 
