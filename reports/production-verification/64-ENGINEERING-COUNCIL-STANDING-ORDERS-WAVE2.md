@@ -62,6 +62,8 @@ Same finding format as Wave 1. Plus `W2-AUD-WAVE2-ROLLUP.md` when B1 queue done.
 | **REL-05** | Dealer OS investment / RFQ / global-supply currency: UI select/allowlist + API validators using same set as `listingCurrencyAllowlist()` / `SUPPORTED_LISTING_CURRENCY_SET` (D-07) | Free-text `Input` for those three write surfaces gone; invalid codes rejected server-side |
 | **REL-00** | Re-verify tip gates after your commits (wiring pack · chain · confidence · api typecheck) | `W2-REL-00-tip-reverify.md` |
 
+> **D-09 update:** Chair **force-executed REL-04/05** on tip. Reliability’s remaining job is **verify** (`W2-REL-04-05-VERIFY.md` + REL-00), not re-implement. See `65-W2-CHAIR-COORDINATION-PROTOCOL.md`.
+
 ### C2 — Optional if capacity (Chair optional)
 
 | ID | Item |
