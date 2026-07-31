@@ -241,6 +241,7 @@ export async function getCompanyListings(
       user_name: users.name,
       user_role: users.role,
       quality_score: users.qualityScore,
+      is_request: listings.isRequest,
     })
     .from(listings)
     .leftJoin(users, eq(listings.userId, users.id))
@@ -267,8 +268,8 @@ export async function getCompanyListings(
  * (who have no dealer endpoint) and companies alike see their real posts. Unlike
  * the public company view this is owner-only — it intentionally drops the
  * active-only + publicVisibilityConditions gate so the owner sees every status
- * of their own catalogue (incomplete/imageless rows are still dropped by the
- * FeedItem transform).
+ * of their own catalogue (imageless SALES are still dropped by the FeedItem
+ * transform; photo-less Wanted/requests keep a placeholder when is_request is set).
  */
 export async function getMyListings(
   clerkId: string,
@@ -295,6 +296,7 @@ export async function getMyListings(
       user_name: users.name,
       user_role: users.role,
       quality_score: users.qualityScore,
+      is_request: listings.isRequest,
     })
     .from(listings)
     .leftJoin(users, eq(listings.userId, users.id))

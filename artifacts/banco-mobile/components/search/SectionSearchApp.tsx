@@ -1187,7 +1187,7 @@ export function SectionSearchApp({
         <Pressable
           onPress={() => {
             playSound("tap");
-            router.push("/listings/create?request=1" as Href);
+            router.push("/listings/create?request=1&category=real_estate" as Href);
           }}
           style={[
             styles.emptyCta,
@@ -1260,7 +1260,7 @@ export function SectionSearchApp({
           }}
           onOpenRequest={() => {
             playSound("tap");
-            router.push("/listings/create?request=1" as Href);
+            router.push("/listings/create?request=1&category=real_estate" as Href);
           }}
           onOpenMap={() => {
             playSound("tap");

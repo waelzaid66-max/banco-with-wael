@@ -661,7 +661,7 @@ export function BookingStaysApp() {
         <Pressable
           onPress={() => {
             playSound("tap");
-            router.push("/listings/create?request=1" as Href);
+            router.push("/listings/create?request=1&category=real_estate" as Href);
           }}
           style={[
             styles.emptyCta,

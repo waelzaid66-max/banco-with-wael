@@ -1063,8 +1063,8 @@ test("RE Wanted + Stays + Request + Map are reachable from PropertyHomeHeader", 
   );
   assert.match(
     section,
-    /onOpenRequest=\{[\s\S]*?\/listings\/create\?request=1/,
-    "Request header hit must push create RFQ route",
+    /onOpenRequest=\{[\s\S]*?\/listings\/create\?request=1&category=real_estate/,
+    "Request header hit must push create RFQ route locked to real_estate",
   );
   assert.match(
     section,

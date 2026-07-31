@@ -107,7 +107,7 @@ const DESKS: DeskDef[] = [
     icon: "document-text-outline",
     labelKey: "search.discover.section.deskRequest",
     testID: "re-desk-request",
-    action: { kind: "href", href: "/listings/create?request=1" as Href },
+    action: { kind: "href", href: "/listings/create?request=1&category=real_estate" as Href },
   },
   {
     id: "more",

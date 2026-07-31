@@ -80,4 +80,28 @@ describe("transformToFeedItem — is_bookable", () => {
     expect(item?.is_request).toBe(false);
     expect(item?.is_bookable).toBe(true);
   });
+
+  it("keeps Wanted/request listings on the wall without a thumbnail", () => {
+    const item = transformToFeedItem(
+      row({
+        thumbnail_url: null,
+        base_price_cash: "0",
+        is_request: true,
+      }),
+    );
+    expect(item).not.toBeNull();
+    expect(item?.is_request).toBe(true);
+    expect(item?.media_preview?.startsWith("data:image/svg+xml")).toBe(true);
+    expect(item?.price_display).toMatch(/Price requested|طلب سعر/);
+  });
+
+  it("still drops photo-less SALE listings", () => {
+    const item = transformToFeedItem(
+      row({
+        thumbnail_url: null,
+        is_request: false,
+      }),
+    );
+    expect(item).toBeNull();
+  });
 });
