@@ -290,6 +290,14 @@ test("MSG-08 report uses support tickets; hide uses deleteConversation", () => {
   assert.match(thread, /chat\.hideTitle/);
 });
 
+test("MSG-08 inbox soft-hide uses hide copy (not delete)", () => {
+  assert.match(inbox, /handleHide/);
+  assert.match(inbox, /chat\.hideTitle/);
+  assert.match(inbox, /chat\.hideThread/);
+  assert.doesNotMatch(inbox, /messages\.deleteTitle/);
+  assert.doesNotMatch(inbox, /handleDelete/);
+});
+
 test("NOTIF-08 settings label discloses push is gated with in-app", () => {
   const i18n = fs.readFileSync(path.join(root, "constants/i18n.ts"), "utf8");
   assert.match(i18n, /Alerts \(in-app \+ push\)/);
@@ -356,6 +364,8 @@ test("MAP-08 nearest sort is a real API sort value", () => {
   assert.match(searchSvc, /"nearest"/);
   assert.match(searchSvc, /nearMeDistanceKmSql/);
   assert.match(filterSheet, /"nearest"/);
+  assert.match(filterSheet, /nearestNeedsNearMe/);
+  assert.match(filterSheet, /!criteria\.nearMeEnabled/);
 });
 
 test("MAP-10 map Html still posts locate_error + viewport bridge", () => {
@@ -366,4 +376,18 @@ test("MAP-10 map Html still posts locate_error + viewport bridge", () => {
   assert.match(mapHtml, /locate_error/);
   assert.match(mapHtml, /type:\s*"viewport"/);
   assert.match(mapHtml, /BANCO_MAP/);
+});
+
+test("MSG-11b website thread: media links + newest-id mark-read + soft send", () => {
+  const webThread = fs.readFileSync(
+    path.join(root, "../banco-website/components/workspace/MessageThreadPanel.tsx"),
+    "utf8",
+  );
+  assert.match(webThread, /lastNewestIdRef/);
+  assert.match(webThread, /newestId/);
+  assert.match(webThread, /media_url/);
+  assert.match(webThread, /messagesMediaVideo/);
+  assert.match(webThread, /setQueryData/);
+  assert.match(webThread, /Soft refresh only/);
+  assert.match(webThread, /maxLength=\{4000\}/);
 });

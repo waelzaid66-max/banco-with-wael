@@ -492,6 +492,8 @@ const en = {
     yearTo: "To",
     nearMe: "Near me",
     nearMeDenied: "Location permission is required to search near you.",
+    nearestNeedsNearMe:
+      "Turn on Near me first so we can sort by distance from your location.",
     locateFailedTitle: "Couldn't find your location",
     locateDeniedBody:
       "Allow location access so Locate me can centre the map. You can enable it in Settings.",
@@ -2765,6 +2767,8 @@ const ar: typeof en = {
     yearTo: "إلى",
     nearMe: "قريب مني",
     nearMeDenied: "يلزم السماح بالموقع للبحث بالقرب منك.",
+    nearestNeedsNearMe:
+      "فعّل «قريب مني» أولاً عشان نرتّب النتائج حسب المسافة من موقعك.",
     locateFailedTitle: "تعذّر تحديد موقعك",
     locateDeniedBody:
       "اسمح بالوصول للموقع عشان زر موقعي يوسّط الخريطة. تقدر تفعّله من الإعدادات.",

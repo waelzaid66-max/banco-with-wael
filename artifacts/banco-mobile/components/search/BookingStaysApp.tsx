@@ -486,7 +486,12 @@ export function BookingStaysApp() {
 
   const toggleNearMe = useCallback(async () => {
     if (criteria.nearMeEnabled) {
-      update({ nearMeEnabled: false, nearLat: null, nearLng: null });
+      update({
+        nearMeEnabled: false,
+        nearLat: null,
+        nearLng: null,
+        ...(criteria.sort === "nearest" ? { sort: "recommended" as const } : {}),
+      });
       return;
     }
     const coords = await requestNearMeCoords();
@@ -500,7 +505,7 @@ export function BookingStaysApp() {
       nearLng: coords.lng,
       nearRadiusKm: DEFAULT_NEAR_RADIUS_KM,
     });
-  }, [criteria.nearMeEnabled, t, update]);
+  }, [criteria.nearMeEnabled, criteria.sort, t, update]);
 
   // "Clear all" → this page's clean baseline (real_estate + rent + All, market
   // preserved). Post-reset the page is not dirty.

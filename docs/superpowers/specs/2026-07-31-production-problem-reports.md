@@ -229,7 +229,7 @@ Each item below is a standing problem report. **Nothing listed is deleted from t
 
 **Symptom:** Video/audio `media_url` forced through `<Image>`.  
 **Fix:** Openable attachment chip via `Linking.openURL` (+ EN/AR copy).  
-**Status:** Fixed (picker remains images-only → MSG-14b)
+**Status:** Fixed (picker → MSG-14b also Fixed)
 
 ---
 
@@ -274,6 +274,17 @@ Each item below is a standing problem report. **Nothing listed is deleted from t
 **MAP-07:** Leaflet 1.9.4 + MarkerCluster inlined (`mapVendorInline.ts`); browse map + pin picker; OSM tiles remain network.  
 **MAP-08:** Real `sort=nearest` (Haversine) when near_lat/lng present.  
 **MAP-10:** Guards for locate_error / viewport / BANCO_MAP bridge.  
+**Status:** Fixed
+
+---
+
+## Wave 7 — honesty + website parity
+
+**MSG-08c:** Mobile inbox long-press uses `chat.hide*` (not Delete); website inbox copy says Hide.  
+**MAP-08 gate:** FilterSheet refuses `nearest` without Near me (Alert → enable Near me); turning off Near me resets sort from nearest → recommended.  
+**MSG-11b:** Website `MessageThreadPanel` opens media links, marks read by newest id, seeds cache on send (MSG-06 parity), `maxLength={4000}`, listing_ref chrome.  
+**Hygiene:** Offer composer state hoisted with other `useState` in mobile thread.  
+**Docs:** Inventory §C Discover chips corrected; delivery ledger for sibling agent.  
 **Status:** Fixed
 
 ---

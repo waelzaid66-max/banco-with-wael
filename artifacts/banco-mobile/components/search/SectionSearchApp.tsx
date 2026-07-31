@@ -763,7 +763,12 @@ export function SectionSearchApp({
 
   const toggleNearMe = useCallback(async () => {
     if (criteria.nearMeEnabled) {
-      update({ nearMeEnabled: false, nearLat: null, nearLng: null });
+      update({
+        nearMeEnabled: false,
+        nearLat: null,
+        nearLng: null,
+        ...(criteria.sort === "nearest" ? { sort: "recommended" as const } : {}),
+      });
       return;
     }
     const coords = await requestNearMeCoords();
@@ -777,7 +782,7 @@ export function SectionSearchApp({
       nearLng: coords.lng,
       nearRadiusKm: DEFAULT_NEAR_RADIUS_KM,
     });
-  }, [criteria.nearMeEnabled, t, update]);
+  }, [criteria.nearMeEnabled, criteria.sort, t, update]);
 
   const openSearch = () => {
     playSound("tap");

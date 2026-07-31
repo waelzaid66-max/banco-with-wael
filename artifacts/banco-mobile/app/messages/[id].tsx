@@ -131,6 +131,9 @@ export default function ThreadScreen() {
   const [previewAsset, setPreviewAsset] =
     useState<ImagePicker.ImagePickerAsset | null>(null);
   const [viewerUri, setViewerUri] = useState<string | null>(null);
+  // Negotiation: compose + send a structured price offer (listing chats only).
+  const [offerOpen, setOfferOpen] = useState(false);
+  const [offerAmount, setOfferAmount] = useState("");
   // The message a long-press opened the reaction/reply sheet for; and the
   // message the composer is currently quoting in a reply.
   const [actionFor, setActionFor] = useState<Message | null>(null);
@@ -388,9 +391,6 @@ export default function ThreadScreen() {
     void deliver(tempId, { body, ...(replyId ? { reply_to_id: replyId } : {}) });
   };
 
-  // Negotiation: compose + send a structured price offer (listing chats only).
-  const [offerOpen, setOfferOpen] = useState(false);
-  const [offerAmount, setOfferAmount] = useState("");
   const sendOffer = () => {
     const n = Number(offerAmount.replace(/[^\d]/g, ""));
     if (!conversationId || !Number.isFinite(n) || n <= 0) return;
