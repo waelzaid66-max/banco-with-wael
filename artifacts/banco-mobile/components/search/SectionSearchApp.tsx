@@ -786,16 +786,16 @@ export function SectionSearchApp({
       ? criteria.originType
       : "all";
   const isMaterialsSection = criteria.category === "materials";
-  // B-CORE upper header owns market/sort/types/search+Filters (layer 1).
-  // Layer 2: origin + commodity share ONE compact strip (never a wasted full
-  // origin-only row). listingMode remains in FilterSheet. Never erase strips.
+  // B-CORE upper header owns market/sort/types/origin/search+Filters (layer 1).
+  // Origin lives IN the type strip (Band D). Layer 2 = commodities only when
+  // raw/all — never a wasted origin-only row. listingMode stays in FilterSheet.
   const showOriginChrome = isMaterialsSection;
   const showMaterialChrome =
     isMaterialsSection &&
     (criteria.industrialType === "all" ||
       criteria.industrialType === "raw_material");
-  // Origin + commodity share one layer-2 strip (showOriginChrome kept for guards).
-  const showMaterialsLayer2 = showOriginChrome;
+  // Commodity strip only (origin welded into header type strip).
+  const showMaterialsLayer2 = showMaterialChrome && showOriginChrome;
   const showCarOriginChrome = criteria.category === "car" && !lockedEngine;
   const showCarBrandStrip = criteria.category === "car" && !lockedEngine;
   const showRentalTerms =
@@ -1082,6 +1082,7 @@ export function SectionSearchApp({
           activeIndustrialType={criteria.industrialType}
           typeTabs={materialsHeaderTypeTabs}
           marketCountry={criteria.marketCountry}
+          originKey={originKey}
           sort={criteria.sort}
           inputRef={inputRef}
           onBack={goBack}
@@ -1099,6 +1100,11 @@ export function SectionSearchApp({
             playSound("tap");
             Haptics.selectionAsync();
             selectIndustrialType(value);
+          }}
+          onSelectOrigin={(value) => {
+            playSound("tap");
+            Haptics.selectionAsync();
+            selectOrigin(value);
           }}
           onOpenMarket={() => {
             playSound("tap");
@@ -1640,9 +1646,7 @@ export function SectionSearchApp({
         </ScrollView>
       ) : null}
 
-      {/* ── Materials layer 2: origin + commodity in ONE strip (no wasted row) ──
-          Origin leads as a dense segment; commodities follow when raw/all.
-          Filters stay wired (selectOrigin / selectMaterial) — never erased. */}
+      {/* ── Materials layer 2: commodities only (origin lives in header Band D) ── */}
       {showMaterialsLayer2 ? (
         <ScrollView
           horizontal
@@ -1655,116 +1659,66 @@ export function SectionSearchApp({
           ]}
           testID="materials-material-strip"
         >
-          <View
-            style={[styles.materialsOriginCluster, { flexDirection: rowDir }]}
-            testID="materials-origin-strip"
+          <Pressable
+            onPress={() => {
+              playSound("tap");
+              Haptics.selectionAsync();
+              update({ material: null });
+            }}
+            style={[
+              styles.stripChip,
+              styles.materialsCommodityChip,
+              {
+                backgroundColor: !criteria.material ? accent : colors.card,
+                borderWidth: 1,
+                borderColor: !criteria.material ? accent : colors.border,
+              },
+            ]}
+            testID="materials-material-all"
           >
-            {(["all", "local", "imported"] as const).map((o) => {
-              const active = originKey === o;
-              return (
-                <Pressable
-                  key={o}
-                  onPress={() => {
-                    playSound("tap");
-                    Haptics.selectionAsync();
-                    selectOrigin(o);
-                  }}
-                  style={[
-                    styles.materialsOriginChip,
-                    {
-                      backgroundColor: active ? accent : colors.secondary,
-                      borderColor: active ? accent : colors.border,
-                    },
-                  ]}
-                  testID={`section-origin-${o}`}
-                >
-                  <AppText
-                    style={[
-                      styles.materialsOriginChipText,
-                      { color: active ? "#FFFFFF" : colors.mutedForeground },
-                    ]}
-                  >
-                    {o === "all"
-                      ? t("home.engines.all")
-                      : t(`create.opts.${o}`)}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          {showMaterialChrome ? (
-            <>
-              <View
-                style={[
-                  styles.materialsLayer2Divider,
-                  { backgroundColor: colors.border },
-                ]}
-              />
+            <AppText
+              style={[
+                styles.stripChipText,
+                {
+                  color: !criteria.material ? "#FFFFFF" : colors.foreground,
+                },
+              ]}
+            >
+              {t("home.engines.all")}
+            </AppText>
+          </Pressable>
+          {MATERIAL_TYPES.map((m) => {
+            const active = criteria.material === m.value;
+            return (
               <Pressable
+                key={m.value}
                 onPress={() => {
                   playSound("tap");
                   Haptics.selectionAsync();
-                  update({ material: null });
+                  selectMaterial(m.value);
                 }}
                 style={[
                   styles.stripChip,
                   styles.materialsCommodityChip,
                   {
-                    backgroundColor: !criteria.material ? accent : colors.card,
+                    backgroundColor: active ? accent : colors.card,
                     borderWidth: 1,
-                    borderColor: !criteria.material ? accent : colors.border,
+                    borderColor: active ? accent : colors.border,
                   },
                 ]}
-                testID="materials-material-all"
+                testID={`materials-material-${m.value}`}
               >
                 <AppText
                   style={[
                     styles.stripChipText,
-                    {
-                      color: !criteria.material
-                        ? "#FFFFFF"
-                        : colors.foreground,
-                    },
+                    { color: active ? "#FFFFFF" : colors.foreground },
                   ]}
                 >
-                  {t("home.engines.all")}
+                  {isRTL ? m.ar : m.en}
                 </AppText>
               </Pressable>
-              {MATERIAL_TYPES.map((m) => {
-                const active = criteria.material === m.value;
-                return (
-                  <Pressable
-                    key={m.value}
-                    onPress={() => {
-                      playSound("tap");
-                      Haptics.selectionAsync();
-                      selectMaterial(m.value);
-                    }}
-                    style={[
-                      styles.stripChip,
-                      styles.materialsCommodityChip,
-                      {
-                        backgroundColor: active ? accent : colors.card,
-                        borderWidth: 1,
-                        borderColor: active ? accent : colors.border,
-                      },
-                    ]}
-                    testID={`materials-material-${m.value}`}
-                  >
-                    <AppText
-                      style={[
-                        styles.stripChipText,
-                        { color: active ? "#FFFFFF" : colors.foreground },
-                      ]}
-                    >
-                      {isRTL ? m.ar : m.en}
-                    </AppText>
-                  </Pressable>
-                );
-              })}
-            </>
-          ) : null}
+            );
+          })}
         </ScrollView>
       ) : null}
 
@@ -2097,33 +2051,12 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 18,
   },
-  // Materials layer 2 — origin welded into the commodity strip (dense, one row).
+  // Materials layer 2 — commodities only (origin lives in header type strip).
   materialsLayer2Strip: {
     alignItems: "center",
     gap: 6,
     paddingTop: 6,
     paddingBottom: 2,
-  },
-  materialsOriginCluster: {
-    alignItems: "center",
-    gap: 4,
-    paddingInlineEnd: 2,
-  },
-  materialsOriginChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 14,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  materialsOriginChipText: {
-    fontSize: 11.5,
-    fontFamily: "Inter_600SemiBold",
-  },
-  materialsLayer2Divider: {
-    width: StyleSheet.hairlineWidth,
-    height: 22,
-    opacity: 0.7,
-    marginHorizontal: 2,
   },
   materialsCommodityChip: {
     paddingHorizontal: 12,

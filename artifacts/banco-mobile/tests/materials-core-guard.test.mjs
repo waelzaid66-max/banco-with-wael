@@ -41,10 +41,10 @@ test("upper header is B-CORE bands with Filters inside search pill", () => {
   assert.match(header, /materialsBrand|materialsHubLabel/);
   assert.match(header, /section-filter-toggle/);
   assert.match(header, /testID="materials-type-strip"/);
-  // Market welded beside BANCO above search — not jammed into the type strip.
+  // Market welded as micro caption beside BANCO — not a fat mid-brand pill.
   assert.match(header, /materials-market-beside-banco|materials-powered-market-row/);
-  assert.match(header, /MarketCountryButton/);
-  assert.match(header, /compact/);
+  assert.match(header, /bancoMarketWeld|marketWeld/);
+  assert.doesNotMatch(header, /MarketCountryButton/);
   assert.doesNotMatch(header, /\b2450\b|\b18400\b|\b930\b/);
   assert.doesNotMatch(header, /@expo\/vector-icons|Marketplace|collapseInline/);
   assert.match(header, /@\/components\/icons/);
@@ -65,10 +65,11 @@ test("filters not erased — layered: header + material/origin strips + FilterSh
     /showMaterialChrome\s*=\s*\n?\s*isMaterialsSection/,
   );
   assert.match(section, /testID="materials-material-strip"/);
-  assert.match(section, /testID="materials-origin-strip"/);
-  // Origin merged into commodity strip — still wired
+  // Origin welded into header type strip (Band D) — still wired
+  assert.match(header, /testID="materials-origin-strip"/);
+  assert.match(header, /onSelectOrigin/);
+  assert.match(section, /onSelectOrigin/);
   assert.match(section, /selectOrigin/);
-  assert.match(section, /section-origin-\$\{o\}/);
   assert.match(header, /industrial-type-\$\{tab\.value\}/);
   assert.match(header, /materials-core-seal|categories\/materials\.jpg/);
 });

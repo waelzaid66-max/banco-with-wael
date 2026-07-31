@@ -853,15 +853,23 @@ test("Car section expands brand + origin strips; import deep-links engine", () =
 test("Materials (toridat) restores material strip + origin + market matrix", () => {
   const section = fs.readFileSync(SECTION_APP, "utf8");
   const filter = fs.readFileSync(FILTER_SHEET, "utf8");
+  const materialsHeader = fs.readFileSync(
+    path.join(
+      path.dirname(SECTION_APP),
+      "materials",
+      "MaterialsHomeHeader.tsx",
+    ),
+    "utf8",
+  );
   assert.match(
     section,
     /testID="materials-material-strip"/,
     "Materials must expose commodity material strip",
   );
   assert.match(
-    section,
+    materialsHeader,
     /testID="materials-origin-strip"/,
-    "Materials must expose origin strip (local/imported)",
+    "Materials must expose origin strip (local/imported) in header Band D",
   );
   // Owner 2026-07-27: same collapse as RE — one compact button, not 21 cells.
   assert.doesNotMatch(

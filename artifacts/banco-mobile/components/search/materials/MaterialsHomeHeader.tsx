@@ -1,12 +1,12 @@
 /**
  * B-CORE Industrial Hub — upper header only (materials).
  *
- * Same method as B-PROPERTIES / Stay: bands A–D inside SectionSearchApp.
- * Compresses search + Filters + industrial types into the header.
- * Market/currency welded beside BANCO above the search pill (stable type strip).
- * Does NOT erase filters — commodity/origin/listingMode stay layered below / FilterSheet.
- * Does NOT touch MiniAppBottomNav.
- * No fake vanity counts. No separate hub dashboard.
+ * Stay method: brand stays clean; chrome welds into utility, not the wordmark.
+ * - Market/currency: micro caption welded TO the BANCO mark (not a fat mid-brand pill)
+ * - Origin (All/Local/Imported): compressed INTO the type strip (Band D) — no wasted row
+ * - Type strip stays types + origin only (stable)
+ * Filters still open FilterSheet; commodities stay under header when raw/all.
+ * Does NOT touch MiniAppBottomNav. No vanity counts. No fake hub.
  */
 import { Feather, Ionicons, MaterialCommunityIcons } from "@/components/icons";
 import { Image } from "expo-image";
@@ -14,7 +14,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { AppTextInput as TextInput } from "@/components/AppTextInput";
 import type { TextInput as RNTextInput } from "react-native";
 import type { IndustrialType } from "@workspace/taxonomy/categories";
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Platform,
   Pressable,
@@ -25,8 +25,10 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppText } from "@/components/AppText";
-import { MarketCountryButton } from "@/components/MarketCountryPicker";
+import { PHONE_COUNTRIES } from "@/constants/countryCodes";
+import { CURRENCY_BY_MARKET } from "@/constants/listingCreateTaxonomy";
 import { useI18n } from "@/context/LanguageContext";
+import { marketCountryLabel } from "@/lib/searchTaxonomy";
 import { sectionAccent } from "@/lib/sectionTheme";
 
 const BANCO_LOGO = require("../../../assets/images/banco-logo.png");
@@ -44,6 +46,8 @@ export type MaterialsTypeTab = {
   label: string;
 };
 
+export type MaterialsOriginKey = "all" | "local" | "imported";
+
 type Props = {
   searchOpen: boolean;
   draftQuery: string;
@@ -52,6 +56,7 @@ type Props = {
   activeIndustrialType: IndustrialType;
   typeTabs: MaterialsTypeTab[];
   marketCountry: string;
+  originKey: MaterialsOriginKey;
   sort: string;
   inputRef: React.RefObject<RNTextInput | null>;
   onBack: () => void;
@@ -63,6 +68,7 @@ type Props = {
   onSubmitQuery: () => void;
   onClearQuery: () => void;
   onSelectType: (value: IndustrialType) => void;
+  onSelectOrigin: (value: MaterialsOriginKey) => void;
   onOpenMarket: () => void;
   onCycleSort: () => void;
 };
@@ -103,6 +109,7 @@ export function MaterialsHomeHeader({
   activeIndustrialType,
   typeTabs,
   marketCountry,
+  originKey,
   sort,
   inputRef,
   onBack,
@@ -114,20 +121,43 @@ export function MaterialsHomeHeader({
   onSubmitQuery,
   onClearQuery,
   onSelectType,
+  onSelectOrigin,
   onOpenMarket,
   onCycleSort,
 }: Props) {
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
-  // ~2mm tighter than previous top rhythm (owner 2026-07-31).
   const topPad = Math.max(insets.top, Platform.OS === "web" ? 8 : 0);
   const rowDir = isRTL ? "row-reverse" : "row";
   const textAlign = isRTL ? "right" : "left";
   const sortActive = sort !== "recommended";
 
+  const marketMeta = useMemo(() => {
+    const phone = PHONE_COUNTRIES.find((c) => c.iso === marketCountry);
+    const currency = CURRENCY_BY_MARKET[marketCountry] ?? "";
+    const label = marketCountryLabel(marketCountry, isRTL);
+    return {
+      flag: phone?.flag ?? "",
+      currency,
+      // Short weld: flag + ISO currency (country name lives in the picker).
+      // Avoids a fat "Egypt EGP" pill fighting the BANCO wordmark.
+      caption: currency || label,
+      a11y: `${label}${currency ? ` ${currency}` : ""}`,
+    };
+  }, [marketCountry, isRTL]);
+
+  const originTabs: { value: MaterialsOriginKey; label: string }[] = [
+    { value: "all", label: t("home.engines.all") },
+    { value: "local", label: t("create.opts.local") },
+    { value: "imported", label: t("create.opts.imported") },
+  ];
+
   return (
-    <View style={[styles.root, { paddingTop: Math.max(0, topPad - 2) }]} testID="materials-core-header">
-      {/* Band A */}
+    <View
+      style={[styles.root, { paddingTop: Math.max(0, topPad - 2) }]}
+      testID="materials-core-header"
+    >
+      {/* Band A — back · sort · save (utility; brand stays clean like Stay) */}
       <View style={[styles.topBar, { flexDirection: rowDir }]}>
         <Pressable
           onPress={onBack}
@@ -144,6 +174,19 @@ export function MaterialsHomeHeader({
         </Pressable>
         <View style={styles.topSpacer} />
         <Pressable
+          onPress={onCycleSort}
+          style={[styles.sortHit, sortActive ? styles.sortHitActive : null]}
+          accessibilityLabel={t(`search.sortOptions.${sort}`)}
+          testID="section-sort-cycle"
+          hitSlop={8}
+        >
+          <Feather
+            name={sortIcon(sort)}
+            size={13}
+            color={sortActive ? SNOW : ASH}
+          />
+        </Pressable>
+        <Pressable
           onPress={onSaveSearch}
           disabled={searchSaved}
           style={styles.iconHit}
@@ -157,7 +200,7 @@ export function MaterialsHomeHeader({
         </Pressable>
       </View>
 
-      {/* Band B — B-CORE identity + compact industrial seal (~2mm denser) */}
+      {/* Band B — identity; BANCO mark + micro market welded as ONE unit */}
       <View style={styles.brandBlock} testID="materials-core-brand">
         <View
           style={[
@@ -197,10 +240,9 @@ export function MaterialsHomeHeader({
         <AppText style={styles.poweredLabel} numberOfLines={1}>
           {t("booking.poweredBy")}
         </AppText>
-        {/* Market welded beside BANCO above the search pill — type strip stays stable */}
         <View
           style={[
-            styles.poweredRow,
+            styles.bancoMarketWeld,
             { flexDirection: isRTL ? "row-reverse" : "row" },
           ]}
           testID="materials-powered-market-row"
@@ -211,33 +253,28 @@ export function MaterialsHomeHeader({
             contentFit="contain"
             tintColor={ACCENT}
           />
-          <MarketCountryButton
-            selected={marketCountry}
-            onPress={onOpenMarket}
-            compact
-            tone="onDark"
-            testID="materials-market-beside-banco"
-          />
+          {/* Micro market: caption under/beside BANCO — not a third brand pill */}
           <Pressable
-            onPress={onCycleSort}
-            style={[
-              styles.sortNearBanco,
-              sortActive ? styles.sortNearBancoActive : null,
-            ]}
-            accessibilityLabel={t(`search.sortOptions.${sort}`)}
-            testID="section-sort-cycle"
+            onPress={onOpenMarket}
+            style={[styles.marketWeld, { flexDirection: rowDir }]}
+            accessibilityLabel={marketMeta.a11y}
+            testID="materials-market-beside-banco"
             hitSlop={8}
           >
-            <Feather
-              name={sortIcon(sort)}
-              size={12}
-              color={sortActive ? SNOW : ASH}
-            />
+            {marketMeta.flag ? (
+              <AppText style={styles.marketFlag}>{marketMeta.flag}</AppText>
+            ) : (
+              <Feather name="globe" size={11} color={ASH} />
+            )}
+            <AppText style={styles.marketCaption} numberOfLines={1}>
+              {marketMeta.caption}
+            </AppText>
+            <Feather name="chevron-down" size={10} color={ASH} />
           </Pressable>
         </View>
       </View>
 
-      {/* Band C — search + Filters compressed inside pill (not erased) */}
+      {/* Band C — search + Filters */}
       {searchOpen ? (
         <View style={[styles.searchPill, { flexDirection: rowDir }]}>
           <Ionicons name="search" size={16} color={ACCENT} />
@@ -315,7 +352,7 @@ export function MaterialsHomeHeader({
         </View>
       )}
 
-      {/* Band D — industrial type tabs only (market lives beside BANCO) */}
+      {/* Band D — origin welded into type strip (no separate wasted row) */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -323,6 +360,33 @@ export function MaterialsHomeHeader({
         style={styles.tabsScroll}
         testID="materials-type-strip"
       >
+        <View
+          style={[styles.originSeg, { flexDirection: rowDir }]}
+          testID="materials-origin-strip"
+        >
+          {originTabs.map((o) => {
+            const active = originKey === o.value;
+            return (
+              <Pressable
+                key={o.value}
+                onPress={() => onSelectOrigin(o.value)}
+                style={[styles.originSegChip, active ? styles.originSegChipActive : null]}
+                testID={`section-origin-${o.value}`}
+              >
+                <AppText
+                  style={[
+                    styles.originSegText,
+                    { color: active ? SNOW : ASH },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {o.label}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </View>
+        <View style={styles.tabDivider} />
         {typeTabs.map((tab, index) => {
           const active = activeIndustrialType === tab.value;
           const tint = active ? SNOW : ASH;
@@ -338,13 +402,13 @@ export function MaterialsHomeHeader({
                 {icon.set === "mci" ? (
                   <MaterialCommunityIcons
                     name={icon.name}
-                    size={20}
+                    size={18}
                     color={active ? SNOW : ACCENT}
                   />
                 ) : (
                   <Feather
                     name={icon.name}
-                    size={20}
+                    size={18}
                     color={active ? SNOW : ACCENT}
                   />
                 )}
@@ -371,7 +435,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: HAIRLINE,
   },
-  topBar: { alignItems: "center", minHeight: 28 },
+  topBar: { alignItems: "center", minHeight: 28, gap: 2 },
   topSpacer: { flex: 1 },
   iconHit: {
     width: 32,
@@ -379,6 +443,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  sortHit: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: HAIRLINE,
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  sortHitActive: { backgroundColor: ACCENT, borderColor: ACCENT },
   brandBlock: { alignItems: "center", marginBottom: 2 },
   wordmarkRow: { alignItems: "center", gap: 6, marginBottom: 2 },
   wordmarkB: { width: 36, height: 44 },
@@ -444,19 +519,25 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginBottom: 1,
   },
-  poweredRow: { alignItems: "center", gap: 6, flexWrap: "wrap", justifyContent: "center" },
-  poweredLogo: { width: 60, height: 14 },
-  sortNearBanco: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+  bancoMarketWeld: {
     alignItems: "center",
+    gap: 6,
     justifyContent: "center",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: HAIRLINE,
-    backgroundColor: "rgba(255,255,255,0.06)",
   },
-  sortNearBancoActive: { backgroundColor: ACCENT, borderColor: ACCENT },
+  poweredLogo: { width: 60, height: 14 },
+  marketWeld: {
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 2,
+    paddingVertical: 1,
+  },
+  marketFlag: { fontSize: 11, lineHeight: 14 },
+  marketCaption: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+    color: ASH,
+    letterSpacing: 0.4,
+  },
   searchPill: {
     height: 42,
     borderRadius: 999,
@@ -508,23 +589,42 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 12,
     gap: 0,
-    minHeight: 48,
+    minHeight: 46,
+  },
+  originSeg: {
+    alignItems: "center",
+    gap: 2,
+    paddingHorizontal: 4,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderRadius: 12,
+    paddingVertical: 3,
+    marginInlineEnd: 2,
+  },
+  originSegChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  originSegChipActive: { backgroundColor: ACCENT },
+  originSegText: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
   },
   tabItem: {
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 12,
-    minWidth: 68,
-    gap: 3,
-    borderRadius: 14,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    minWidth: 64,
+    gap: 2,
+    borderRadius: 12,
+    paddingVertical: 5,
   },
-  tabItemActive: { backgroundColor: ACCENT, paddingHorizontal: 12 },
-  tabLabel: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
+  tabItemActive: { backgroundColor: ACCENT, paddingHorizontal: 10 },
+  tabLabel: { fontSize: 9.5, fontFamily: "Inter_600SemiBold" },
   tabDivider: {
     width: StyleSheet.hairlineWidth,
     alignSelf: "center",
-    height: 24,
+    height: 22,
     backgroundColor: HAIRLINE,
   },
 });
