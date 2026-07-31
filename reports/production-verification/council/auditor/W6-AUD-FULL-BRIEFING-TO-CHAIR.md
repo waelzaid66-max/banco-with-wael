@@ -1,16 +1,15 @@
-# W6-AUD-FULL-BRIEFING → Chair (deep audit)
+# W6-AUD-FULL-BRIEFING → Chair (Replit + side fixes)
 
 **From:** Auditor · PR **#41**  
-**To:** Chair · SoT **`main` @ `0893b8b`**  
-**Owner:** دقة عالية — خطط + توصيلات + نواقص  
-**Stamp:** `2026-07-31T15:54Z`
+**To:** Chair (يجمع تقارير Replit الآن) · SoT **`main` @ `ddb9371`**  
+**Stamp:** `2026-07-31T15:59Z`
 
 ---
 
 ## Verdict
 
-All 10 Worlds dual-end **PASS**. Wave8 defects closed in code. Deep gap hunt finds **docs drift + absorb debt + Live cutover** — not new chrome DEFECTS. Opinion: freeze product Worlds; fix council stamps; Owner ops for Live.
+Tranche C **PASS** (AUD-84). Replit corpus **summarized** (AUD-85) for your collection — role lock honored. All Wave8 side fixes A/B/C listed. Live still NOT_CUTOVER. No product freestyle.
 
-Full matrix: `W8-AUD-83-deep-plans-wiring-gaps.md`.
+Use `W8-AUD-85-replit-corpus-digest.md` as the index while you gather; do not execute historical PASTE-REPLIT maintenance orders.
 
 — Auditor STANDBY

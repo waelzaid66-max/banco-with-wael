@@ -1,22 +1,16 @@
-# W8-AUD-ACK — Wave8 orders read · Tranche A+B VERIFY
+# W8-AUD-ACK — Wave8 A+B+C · Replit digest delivered
 
-- Seat: Auditor · SoT `main` @ `0893b8b`
-- Read this stamp: `81` · `82` · `83` · Approve A/B · CLOSED A/B · STUDY-01..03
-- Stamp: `2026-07-31T15:50Z`
-
-## Chair orders → Auditor compliance
+- SoT: `main` @ `ddb9371`
+- Stamp: `2026-07-31T15:59Z`
 
 | Order | Status |
 |-------|--------|
-| ASK before next World / any fix | **ACK** |
-| AUD-80 Car dual-chrome | **PASS** (filed; absorb onto tip this PR) |
-| AUD-81 Materials origin | **PASS** (filed; absorb this PR) |
-| AUD-82 Discover melt severed | **PASS** |
-| AUD-83 deep plans+wiring+gaps | **PASS product** · docs/cutover gaps named |
-| Then STANDBY | **ACK** — no freestyle Worlds |
-| Finished sacred · zero product code | **ACK** |
-| HOLD epics Owner-only | Factories header · Banks directory · REL-21 · Live/Coolify |
-
-Live: **NOT_CUTOVER 0/6**.
+| AUD-80/81 A | PASS (on #41) |
+| AUD-82 B | PASS (on main + our peer) |
+| Deep AUD-83 | PASS (wiring/plans) |
+| Tranche C peer (Chair said AUD-83 slot) | **AUD-84 PASS** |
+| Replit corpus for Chair collect | **AUD-85 DONE** |
+| STANDBY · ASK before World | **ACK** |
+| Replit maintenance forbidden | **ACK** (Owner law in digest) |
 
 — Auditor
