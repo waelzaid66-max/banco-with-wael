@@ -18,8 +18,11 @@
 ## Filter layers (compressed, not erased)
 
 1. **Header Band C:** search + Filters → opens `FilterSheet`  
-2. **Header Band D:** All / Machine / Raw material / Production line  
-3. **FilterSheet:** material commodity, origin, listingMode, price, industry, …  
+2. **Header Band D:** All / Machine / Raw material / Production line (+ market/sort)  
+3. **Under header (layer 2):** material commodity strip + origin strip (when relevant)  
+4. **FilterSheet:** listingMode + material + origin + price + industry + …  
+
+Band B includes a **cropped** industrial seal (`materials.jpg` + B mark) — not a half-screen hero.
 
 ## Files
 

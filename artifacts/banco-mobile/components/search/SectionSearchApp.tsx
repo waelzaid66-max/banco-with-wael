@@ -786,11 +786,14 @@ export function SectionSearchApp({
       ? criteria.originType
       : "all";
   const isMaterialsSection = criteria.category === "materials";
-  // B-CORE upper header compresses market/sort/types into MaterialsHomeHeader.
-  // Commodity + origin + listingMode stay in FilterSheet (never erased).
-  // Strip testIDs remain in source for guards; first-paint chrome is the header.
-  const showOriginChrome = false;
-  const showMaterialChrome = false;
+  // B-CORE upper header owns market/sort/types/search+Filters (layer 1).
+  // Commodity + origin strips stay visible under the header (layer 2) — compressed,
+  // never erased. listingMode also remains in FilterSheet.
+  const showOriginChrome = isMaterialsSection;
+  const showMaterialChrome =
+    isMaterialsSection &&
+    (criteria.industrialType === "all" ||
+      criteria.industrialType === "raw_material");
   const showCarOriginChrome = criteria.category === "car" && !lockedEngine;
   const showCarBrandStrip = criteria.category === "car" && !lockedEngine;
   const showRentalTerms =

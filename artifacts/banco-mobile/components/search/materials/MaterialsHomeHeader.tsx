@@ -9,6 +9,7 @@
  */
 import { Feather, Ionicons, MaterialCommunityIcons } from "@/components/icons";
 import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { AppTextInput as TextInput } from "@/components/AppTextInput";
 import type { TextInput as RNTextInput } from "react-native";
 import type { IndustrialType } from "@workspace/taxonomy/categories";
@@ -29,6 +30,7 @@ import { sectionAccent } from "@/lib/sectionTheme";
 
 const BANCO_LOGO = require("../../../assets/images/banco-logo.png");
 const B_MARK = require("../../../assets/images/b-mark.png");
+const HERO_PHOTO = require("../../../assets/images/categories/materials.jpg");
 
 const ACCENT = sectionAccent("materials"); // #A82A1C
 const VOID = "#000000";
@@ -153,7 +155,7 @@ export function MaterialsHomeHeader({
         </Pressable>
       </View>
 
-      {/* Band B — B-CORE Industrial Hub identity */}
+      {/* Band B — B-CORE Industrial Hub identity + compact industrial seal */}
       <View style={styles.brandBlock} testID="materials-core-brand">
         <View
           style={[
@@ -169,6 +171,17 @@ export function MaterialsHomeHeader({
             <AppText style={styles.wordmarkHub} numberOfLines={1}>
               {t("search.discover.section.materialsHubLabel")}
             </AppText>
+          </View>
+          {/* Mock-aligned industrial seal — cropped, not half-screen hero */}
+          <View style={styles.heroSeal} testID="materials-core-seal">
+            <Image source={HERO_PHOTO} style={styles.heroSealPhoto} contentFit="cover" />
+            <LinearGradient
+              colors={["transparent", "rgba(0,0,0,0.55)"]}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={styles.heroSealMark}>
+              <Image source={B_MARK} style={styles.heroSealB} contentFit="contain" />
+            </View>
           </View>
         </View>
 
@@ -363,7 +376,25 @@ const styles = StyleSheet.create({
   brandBlock: { alignItems: "center", marginBottom: 4 },
   wordmarkRow: { alignItems: "center", gap: 8, marginBottom: 4 },
   wordmarkB: { width: 42, height: 52 },
-  wordmarkTextCol: { gap: 2 },
+  wordmarkTextCol: { gap: 2, flexShrink: 1 },
+  heroSeal: {
+    width: 72,
+    height: 60,
+    borderRadius: 12,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(168,42,28,0.55)",
+    marginInlineStart: 4,
+  },
+  heroSealPhoto: { ...StyleSheet.absoluteFillObject },
+  heroSealMark: {
+    position: "absolute",
+    left: 4,
+    bottom: 4,
+    width: 22,
+    height: 26,
+  },
+  heroSealB: { width: 22, height: 26 },
   wordmarkCore: {
     fontSize: 28,
     fontFamily: "Inter_700Bold",

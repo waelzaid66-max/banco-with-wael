@@ -47,7 +47,7 @@ test("upper header is B-CORE bands with Filters inside search pill", () => {
   assert.match(header, /@\/components\/icons/);
 });
 
-test("filters not erased — FilterSheet keeps material + origin + listingMode", () => {
+test("filters not erased — layered: header + material/origin strips + FilterSheet", () => {
   assert.match(filter, /showMaterial/);
   assert.match(filter, /showOrigin/);
   assert.match(filter, /filter-material/);
@@ -55,8 +55,16 @@ test("filters not erased — FilterSheet keeps material + origin + listingMode",
   assert.match(section, /MaterialsHomeHeader/);
   assert.match(section, /MiniAppBottomNav/);
   assert.doesNotMatch(section, /collapseInlineStrips/);
-  // industrial type testIDs still driven from header
+  // Layer 2 strips restored under header (not hidden forever)
+  assert.match(section, /showOriginChrome = isMaterialsSection/);
+  assert.match(
+    section,
+    /showMaterialChrome\s*=\s*\n?\s*isMaterialsSection/,
+  );
+  assert.match(section, /testID="materials-material-strip"/);
+  assert.match(section, /testID="materials-origin-strip"/);
   assert.match(header, /industrial-type-\$\{tab\.value\}/);
+  assert.match(header, /materials-core-seal|categories\/materials\.jpg/);
 });
 
 test("bottom nav component untouched and still BANCO five tabs contract", () => {
