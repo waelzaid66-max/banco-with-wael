@@ -1419,6 +1419,28 @@ test("B-oom Car mounts CarsHomeHeader Stay-parity shell", () => {
   );
   assert.match(header, /testID="cars-home-header"/);
   assert.match(header, /carBrand|BOOM_LOGO/);
+  // W8 D-W8-01: market/sort SoT is primary strip — header must not duplicate
+  // section-sort-cycle (duplicate testID / dual-seat).
+  assert.doesNotMatch(
+    header,
+    /testID="section-sort-cycle"/,
+    "CarsHomeHeader must not own section-sort-cycle (strip SoT)",
+  );
+  assert.doesNotMatch(
+    header,
+    /cars-market-beside-banco/,
+    "CarsHomeHeader must not weld market beside BANCO (strip MarketCountryButton SoT)",
+  );
+});
+
+test("Materials origin axis seats once (W8 D-W8-02)", () => {
+  const section = fs.readFileSync(SECTION_APP, "utf8");
+  const matches = section.match(/testID="materials-origin-strip"/g) || [];
+  assert.equal(
+    matches.length,
+    1,
+    "materials-origin-strip must appear exactly once (no legacy duplicate row)",
+  );
 });
 
 test("Discover map producers cover all catalogues (intentional duplication)", () => {
