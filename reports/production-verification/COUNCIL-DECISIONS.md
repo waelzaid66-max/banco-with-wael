@@ -49,6 +49,17 @@
 
 ---
 
+## D-2026-07-31-05 — Reliability re-verify + tip absorb main
+
+| | |
+|--|--|
+| **Decision** | Reliability seat (`System presence check`) re-verifies Wave 1b on tip and merges `main` (#33/#35/#37) into PR **#32** tip. |
+| **Adopted** | REL-00 TIP_HEALTHY (44 wiring · 167 chain · 18 confidence · api typecheck · lint); messenger phone SoT + car-import audit docs on tip. |
+| **Rejected** | Starting CAR IMPORT Wave 4/5; MSG-05 WebSocket; claiming Live Certified; competing tips. |
+| **Evidence** | `council/reliability/W1-REL-00-tip-reverify.md`, `W1-REL-01-02-03-verify.md` |
+
+---
+
 ## Template for future disputes
 
 ```markdown
