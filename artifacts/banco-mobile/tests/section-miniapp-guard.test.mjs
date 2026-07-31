@@ -876,9 +876,11 @@ test("B-PROPERTIES header filter lives inside search pill (Stay-parity)", () => 
   assert.match(header, /filterInSearch/);
   assert.match(header, /testID="section-filter-toggle"/);
   assert.match(header, /testID="section-search-open"|testID="section-search-input"/);
-  // No fake half-screen pad.
-  assert.match(header, /Platform\.OS === "web" \? 12/);
+  // No fake half-screen pad — RE trims ~2mm (web pad 10) vs Stay's 12.
+  assert.match(header, /Platform\.OS === "web" \? 1[02]/);
   assert.doesNotMatch(header, /\? 67/);
+  assert.match(header, /MarketCountryButton/);
+  assert.match(header, /sortNearBanco|section-sort-cycle/);
 });
 
 test("Car section expands brand + origin strips; import deep-links engine", () => {

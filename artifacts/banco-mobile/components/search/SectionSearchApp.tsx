@@ -1219,6 +1219,8 @@ export function SectionSearchApp({
           activeFilterCount={activeFilterCount}
           activePropertyType={reHeaderActiveType}
           typeTabs={reHeaderTypeTabs}
+          marketCountry={criteria.marketCountry}
+          sort={criteria.sort}
           inputRef={inputRef}
           onBack={goBack}
           onSaveSearch={handleSaveSearch}
@@ -1235,6 +1237,17 @@ export function SectionSearchApp({
             playSound("tap");
             Haptics.selectionAsync();
             selectRePropertyType(value);
+          }}
+          onOpenMarket={() => {
+            playSound("tap");
+            setMarketPickerOpen(true);
+          }}
+          onCycleSort={() => {
+            playSound("tap");
+            const cycle = ["recommended", "newest", "price_asc", "price_desc"] as const;
+            const next =
+              cycle[(cycle.indexOf(criteria.sort as (typeof cycle)[number]) + 1) % cycle.length];
+            update({ sort: next });
           }}
         />
       ) : (
@@ -1423,21 +1436,9 @@ export function SectionSearchApp({
           live in FilterSheet + Band D. Import-hub rule still holds: no dead taps. ── */}
 
       {/* ── Primary chip strip: country/currency · sort · mode/engines.
-          The country button leads EVERY section — one compact control, one
-          left edge, so the strips below it stack on the same axis.
-
-          WRAPS instead of scrolling sideways. Measured in cars before the
-          change: 999px of content inside a 375px window — 624px, nearly two
-          screens, of the user's own segmentation hidden off the right edge
-          where nothing hints it exists. These are "which slice am I browsing"
-          chips, so they stay one-tap chips (a dropdown would cost a tap on the
-          most-used control); they simply all fit now.
-
-          `flexGrow: 0` is carried over deliberately: the old horizontal
-          ScrollView needed it because without it RN let the strip eat the
-          column and crushed the results into a black void with one card pinned
-          at the bottom (owner screenshot regression). A wrapping View is taller
-          than a single row, so that constraint matters more here, not less. ── */}
+          RE: country + sort live inside PropertyHomeHeader (no wasted strip row).
+          Other sections keep this strip unchanged. ── */}
+      {!isRealEstateSection ? (
       <View
         style={[styles.chipStrip, { flexDirection: rowDir }]}
         testID="section-primary-strip"
@@ -1621,6 +1622,7 @@ export function SectionSearchApp({
           );
         }) : null}
       </View>
+      ) : null}
 
       {/* ── RE property-type axis (Stay-parallel) — never mixed into offer row.
           Shape comes from the section screen via chrome.propertyType:

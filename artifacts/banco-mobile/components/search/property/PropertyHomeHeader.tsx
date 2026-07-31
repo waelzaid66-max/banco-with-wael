@@ -2,8 +2,9 @@
  * B-PROPERTIES — premium black header (visual shell).
  *
  * Stay-parity bands (A–D): back/save · wordmark · search+filter pill · type tabs.
- * Presentational only — parent (`SectionSearchApp`) owns criteria and sheets.
- * RE-only; do not mount from Cars / Stay / Import.
+ * Country/currency welds into the type row (above All); sort sits next to BANCO —
+ * no wasted primary-strip row under the header.
+ * Presentational only — parent owns criteria and sheets. RE-only.
  */
 import { Feather, Ionicons } from "@/components/icons";
 import { Image } from "expo-image";
@@ -20,6 +21,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppText } from "@/components/AppText";
+import { MarketCountryButton } from "@/components/MarketCountryPicker";
 import { useI18n } from "@/context/LanguageContext";
 import { sectionAccent } from "@/lib/sectionTheme";
 
@@ -45,6 +47,8 @@ type PropertyHomeHeaderProps = {
   activeFilterCount: number;
   activePropertyType: string;
   typeTabs: PropertyTypeTab[];
+  marketCountry: string;
+  sort: string;
   inputRef: React.RefObject<RNTextInput | null>;
   onBack: () => void;
   onSaveSearch: () => void;
@@ -55,6 +59,8 @@ type PropertyHomeHeaderProps = {
   onSubmitQuery: () => void;
   onClearQuery: () => void;
   onSelectType: (value: string) => void;
+  onOpenMarket: () => void;
+  onCycleSort: () => void;
 };
 
 /** Names must exist in `@/components/icons` ICONS registry (Android/Expo safe). */
@@ -75,6 +81,13 @@ function tabIcon(value: string): React.ComponentProps<typeof Ionicons>["name"] {
   }
 }
 
+function sortIcon(sort: string): React.ComponentProps<typeof Feather>["name"] {
+  if (sort === "price_asc") return "trending-up";
+  if (sort === "price_desc") return "trending-down";
+  if (sort === "newest") return "clock";
+  return "list";
+}
+
 export function PropertyHomeHeader({
   searchOpen,
   draftQuery,
@@ -82,6 +95,8 @@ export function PropertyHomeHeader({
   activeFilterCount,
   activePropertyType,
   typeTabs,
+  marketCountry,
+  sort,
   inputRef,
   onBack,
   onSaveSearch,
@@ -92,13 +107,17 @@ export function PropertyHomeHeader({
   onSubmitQuery,
   onClearQuery,
   onSelectType,
+  onOpenMarket,
+  onCycleSort,
 }: PropertyHomeHeaderProps) {
   const insets = useSafeAreaInsets();
   const { t, isRTL } = useI18n();
   // Owner rule: never invent a fake 67px web pad (it destroyed headers before).
-  const topPad = Math.max(insets.top, Platform.OS === "web" ? 12 : 0);
+  // ~2mm tighter than Stay default — reclaim listing space (owner 2026-07-31).
+  const topPad = Math.max(insets.top, Platform.OS === "web" ? 10 : 0);
   const rowDir = isRTL ? "row-reverse" : "row";
   const textAlign = isRTL ? "right" : "left";
+  const sortActive = sort !== "recommended";
 
   return (
     <View style={[styles.root, { paddingTop: topPad - 1 }]} testID="re-property-header">
@@ -114,7 +133,7 @@ export function PropertyHomeHeader({
         >
           <Feather
             name={isRTL ? "arrow-right" : "arrow-left"}
-            size={22}
+            size={20}
             color={SNOW}
           />
         </Pressable>
@@ -128,7 +147,7 @@ export function PropertyHomeHeader({
         >
           <Feather
             name="bookmark"
-            size={20}
+            size={18}
             color={searchSaved ? ACCENT : SNOW}
           />
         </Pressable>
@@ -180,13 +199,30 @@ export function PropertyHomeHeader({
             contentFit="contain"
             tintColor={ACCENT}
           />
+          {/* Small sort control welded next to BANCO — kills the wasted strip row. */}
+          <Pressable
+            onPress={onCycleSort}
+            style={[
+              styles.sortNearBanco,
+              sortActive ? styles.sortNearBancoActive : null,
+            ]}
+            accessibilityLabel={t(`search.sortOptions.${sort}`)}
+            testID="section-sort-cycle"
+            hitSlop={8}
+          >
+            <Feather
+              name={sortIcon(sort)}
+              size={13}
+              color={sortActive ? SNOW : ASH}
+            />
+          </Pressable>
         </View>
       </View>
 
       {/* Band C — search pill; filter lives inside (Stay-aligned) */}
       {searchOpen ? (
         <View style={[styles.searchPill, { flexDirection: rowDir }]}>
-          <Ionicons name="search" size={18} color={ACCENT} />
+          <Ionicons name="search" size={17} color={ACCENT} />
           <TextInput
             ref={inputRef}
             value={draftQuery}
@@ -201,11 +237,11 @@ export function PropertyHomeHeader({
           />
           {draftQuery.length > 0 ? (
             <Pressable onPress={onClearQuery} hitSlop={8} testID="section-search-clear">
-              <Feather name="x" size={16} color={ASH} />
+              <Feather name="x" size={15} color={ASH} />
             </Pressable>
           ) : (
             <Pressable onPress={onCloseSearch} hitSlop={8} testID="section-search-close">
-              <Feather name="x" size={16} color={ASH} />
+              <Feather name="x" size={15} color={ASH} />
             </Pressable>
           )}
           <Pressable
@@ -214,7 +250,7 @@ export function PropertyHomeHeader({
             style={styles.filterInSearch}
             testID="section-filter-toggle"
           >
-            <Feather name="sliders" size={17} color={ACCENT} />
+            <Feather name="sliders" size={16} color={ACCENT} />
             {activeFilterCount > 0 ? (
               <View style={styles.filterBadge}>
                 <AppText style={styles.filterBadgeText}>{activeFilterCount}</AppText>
@@ -229,7 +265,7 @@ export function PropertyHomeHeader({
             style={[styles.searchMainHit, { flexDirection: rowDir }]}
             testID="section-search-open"
           >
-            <Ionicons name="search" size={18} color={ACCENT} />
+            <Ionicons name="search" size={17} color={ACCENT} />
             <AppText
               style={[
                 styles.searchPlaceholder,
@@ -245,7 +281,7 @@ export function PropertyHomeHeader({
           </Pressable>
           {draftQuery.length > 0 ? (
             <Pressable onPress={onClearQuery} hitSlop={8} testID="section-search-clear">
-              <Feather name="x" size={16} color={ASH} />
+              <Feather name="x" size={15} color={ASH} />
             </Pressable>
           ) : null}
           <Pressable
@@ -254,7 +290,7 @@ export function PropertyHomeHeader({
             style={styles.filterInSearch}
             testID="section-filter-toggle"
           >
-            <Feather name="sliders" size={17} color={ACCENT} />
+            <Feather name="sliders" size={16} color={ACCENT} />
             {activeFilterCount > 0 ? (
               <View style={styles.filterBadge}>
                 <AppText style={styles.filterBadgeText}>{activeFilterCount}</AppText>
@@ -264,7 +300,7 @@ export function PropertyHomeHeader({
         </View>
       )}
 
-      {/* Band D — primary property types (mock-aligned; rest in FilterSheet) */}
+      {/* Band D — compact market welded before All + primary types */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -272,6 +308,14 @@ export function PropertyHomeHeader({
         style={styles.tabsScroll}
         testID="re-type-strip"
       >
+        <View style={styles.marketInTabs}>
+          <MarketCountryButton
+            selected={marketCountry}
+            onPress={onOpenMarket}
+            compact
+          />
+        </View>
+        <View style={styles.tabDivider} />
         {typeTabs.map((tab, index) => {
           const active = activePropertyType === tab.value;
           const tint = active ? ACCENT : ASH;
@@ -283,7 +327,7 @@ export function PropertyHomeHeader({
                 style={[styles.tabItem, active ? styles.tabItemActive : null]}
                 testID={`re-type-${tab.value}`}
               >
-                <Ionicons name={tabIcon(tab.value)} size={18} color={active ? SNOW : tint} />
+                <Ionicons name={tabIcon(tab.value)} size={16} color={active ? SNOW : tint} />
                 <AppText
                   style={[styles.tabLabel, { color: active ? SNOW : tint }]}
                   numberOfLines={1}
@@ -303,17 +347,17 @@ const styles = StyleSheet.create({
   root: {
     backgroundColor: VOID,
     paddingHorizontal: 16,
-    paddingBottom: 4,
+    paddingBottom: 2,
   },
   topBar: {
     alignItems: "center",
-    minHeight: 40,
+    minHeight: 34,
     marginBottom: 0,
   },
   topSpacer: { flex: 1 },
   iconHit: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -321,70 +365,84 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 0,
     paddingBottom: 0,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   wordmarkRow: {
     alignItems: "center",
-    gap: 8,
-    marginBottom: 6,
+    gap: 6,
+    marginBottom: 4,
   },
   wordmarkB: {
-    width: 36,
-    height: 44,
+    width: 32,
+    height: 40,
   },
   wordmarkProperties: {
-    fontSize: 22,
+    fontSize: 20,
     fontFamily: "Inter_700Bold",
     color: ACCENT,
-    letterSpacing: 1.2,
+    letterSpacing: 1.1,
   },
   wordmarkSeal: {
-    width: 34,
-    height: 34,
+    width: 30,
+    height: 30,
   },
   taglineRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
     maxWidth: "100%",
     paddingHorizontal: 8,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   taglineRule: {
     flex: 1,
     height: StyleSheet.hairlineWidth * 2,
     backgroundColor: ACCENT,
-    maxWidth: 56,
+    maxWidth: 48,
     opacity: 0.85,
   },
   tagline: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: "Inter_500Medium",
     color: ASH,
     textAlign: "center",
   },
   poweredLabel: {
-    fontSize: 9,
+    fontSize: 8,
     fontFamily: "Inter_500Medium",
     color: ASH,
-    letterSpacing: 1.2,
+    letterSpacing: 1.1,
     textTransform: "uppercase",
-    marginBottom: 2,
+    marginBottom: 1,
   },
   poweredRow: {
     alignItems: "center",
-    gap: 6,
+    gap: 8,
   },
   poweredLogo: {
-    width: 72,
-    height: 18,
+    width: 68,
+    height: 16,
+  },
+  sortNearBanco: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: HAIRLINE,
+    backgroundColor: "rgba(255,255,255,0.06)",
+  },
+  sortNearBancoActive: {
+    backgroundColor: ACCENT,
+    borderColor: ACCENT,
   },
   searchPill: {
-    height: 50,
+    height: 46,
     borderRadius: 999,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     alignItems: "center",
-    gap: 10,
+    gap: 8,
     backgroundColor: VOID,
     borderWidth: 1.5,
     borderColor: ACCENT,
@@ -392,17 +450,17 @@ const styles = StyleSheet.create({
   searchMainHit: {
     flex: 1,
     alignItems: "center",
-    gap: 10,
-    minHeight: 48,
+    gap: 8,
+    minHeight: 44,
   },
   searchPlaceholder: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: "Inter_500Medium",
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: "Inter_400Regular",
     color: SNOW,
     padding: 0,
@@ -429,36 +487,40 @@ const styles = StyleSheet.create({
     color: SNOW,
   },
   tabsScroll: {
-    marginTop: 8,
+    marginTop: 6,
     marginHorizontal: -16,
   },
   tabsRow: {
-    alignItems: "stretch",
+    alignItems: "center",
     paddingHorizontal: 12,
     gap: 0,
-    minHeight: 48,
+    minHeight: 44,
+  },
+  marketInTabs: {
+    paddingHorizontal: 4,
+    justifyContent: "center",
   },
   tabItem: {
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 12,
-    minWidth: 68,
-    gap: 4,
-    borderRadius: 16,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    minWidth: 62,
+    gap: 3,
+    borderRadius: 14,
+    paddingVertical: 5,
   },
   tabItemActive: {
     backgroundColor: ACCENT,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
   },
   tabLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: "Inter_600SemiBold",
   },
   tabDivider: {
     width: StyleSheet.hairlineWidth,
     alignSelf: "center",
-    height: 28,
+    height: 24,
     backgroundColor: HAIRLINE,
   },
 });
