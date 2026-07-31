@@ -152,3 +152,24 @@ test("Expo product identity stays canonical (BANCO / com.bancooom.app)", () => {
   // Slug may stay bancoboom for EAS project continuity — scheme/package are SoT.
   assert.equal(json.expo.scheme, "bancooom");
 });
+
+test("usesAppleSignIn is backed by expo-apple-authentication plugin", () => {
+  const json = JSON.parse(fs.readFileSync(path.join(APP_ROOT, "app.json"), "utf8"));
+  assert.equal(json.expo.ios?.usesAppleSignIn, true);
+  const plugins = JSON.stringify(json.expo.plugins ?? []);
+  assert.match(plugins, /expo-apple-authentication/);
+  const pkg = JSON.parse(fs.readFileSync(path.join(APP_ROOT, "package.json"), "utf8"));
+  assert.ok(
+    pkg.dependencies?.["expo-apple-authentication"],
+    "expo-apple-authentication must be a runtime dependency",
+  );
+  const types = json.expo.ios?.privacyManifests?.NSPrivacyAccessedAPITypes ?? [];
+  assert.ok(Array.isArray(types) && types.length > 0, "iOS privacy manifests must not be empty");
+});
+
+test("EAS builds refuse replit.com router origin fallback", () => {
+  const src = fs.readFileSync(APP_CONFIG, "utf8");
+  assert.match(src, /EAS_BUILD/);
+  assert.match(src, /replit\.com/i);
+  assert.match(src, /EAS build refused/);
+});
