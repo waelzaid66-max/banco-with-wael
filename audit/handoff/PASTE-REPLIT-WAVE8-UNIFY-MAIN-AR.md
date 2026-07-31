@@ -28,7 +28,8 @@
 | **أمر النسخة** | `git reset --hard origin/main` بعد `fetch` |
 | **Product floor (إلزامي)** | `a05190e` = Tranche D CLOSED |
 | **CI-green floor (إلزامي)** | `6999915` = Mobile+Gates+API+Typecheck success stamp |
-| Tip وقت الكتابة | `162ff56` (قد يتحرك فوقه docs — بلّغ `SYNC_SHA` دائمًا) |
+| Tip وقت الكتابة | يتحرك — بلّغ `SYNC_SHA` دائمًا (Director tip ≥ `3d4773b` / أحدث `main`) |
+| section-guard | **90/90** (ليس 85) |
 
 **تعريف MATCH:** بعد `reset --hard origin/main`، كلا الـ floors سلف لـ `HEAD`. لا فرع غير `main`.
 
@@ -63,10 +64,15 @@ pnpm --filter @workspace/db run push-force || true
 # حارس الموبايل (قراءة فقط)
 cd artifacts/banco-mobile
 pnpm run test:section-guard
-# المتوقع: 85/85 PASS
+# المتوقع: 90/90 PASS
 ```
 
-ثم أعد تشغيل workflows من واجهة Replit (API :8080 · Expo Metro · Web).
+ثم أعد تشغيل workflows من واجهة Replit (API :8080 · Expo Metro · **Web = banco-website** على :5000).
+
+**أسرار (Owner — إلزامي بعد SEC-01/02):** المفاتيح لم تعد في `.replit` الملتزم. ضع في Replit Secrets:
+- `PAYMENT_CONFIG_ENCRYPTION_KEY`
+- `CLERK_SECRET_KEY` (يطابق publishable)
+- live publishable فقط على بيئة إنتاج حقيقية — **ممنوع** `pk_live` و`EXPO_PUBLIC_DOMAIN=banco.today` في development shared
 
 ```bash
 # Expo معاينة نظيفة
@@ -117,7 +123,7 @@ npx expo start --clear
 | R05 | RE | PropertyHomeHeader · map |
 | R06 | Stay | StaysHomeHeader أسود · map |
 | R07 | Materials | origin مرة واحدة · map |
-| R08 | Factories | facilities · FAB map |
+| R08 | Factories | header map (`section-header-map`) · facilities · FAB |
 | R09 | Import hub | `/import` · Search Cars → `car?engine=import` |
 | R10 | Banks | brochure فقط · لا directory حي |
 | R11 | Profile/Accounts | جلسة Clerk تعمل (مش 401 موجة) |
@@ -153,19 +159,21 @@ npx expo start --clear
 
 SYNC_SHA: …
 TRANCHE_D_FLOOR: OK|FAIL
-SECTION_GUARD: 85/85 PASS|FAIL
+SECTION_GUARD: 90/90 PASS|FAIL
 EXPO: OK|FAIL (port …)
 API: OK|FAIL (port 8080 · sample /api/v1/search …)
+WEB: banco-website OK|FAIL (port 5000 · not frozen banco-web)
 
-ENV_CONTRACT: DOMAIN_FROM_REPLIT_DEV=yes|no · CLERK_PAIR=test/test|BROKEN · no_pk_live_in_shared=yes|no
+ENV_CONTRACT: DOMAIN_FROM_REPLIT_DEV=yes|no · CLERK_PAIR=test/test|BROKEN · no_pk_live_in_committed_replit=yes|no · PAYMENT_KEY_IN_SECRETS=yes|no
 
 SHOTS R01–R12: PASS/FAIL + links
+# R03 Maps accent RED · R08 Factories header map visible
 DATA: listing_count≈… · arabic_weak=yes|no · auth_session=OK|401
 
 RED_LOGS (literal):
 …
 
-ASK_CHAIR: (سؤال تشغيل فقط — لا طلب صيانة كود)
+ASK_DIRECTOR: (سؤال تشغيل فقط — لا طلب صيانة كود)
 ```
 
 ---

@@ -2,8 +2,10 @@
 
 **Issued by:** Chief Production Delivery Director  
 **Date:** 2026-07-31  
-**SoT:** `origin/main` · Master Backlog = **`88-DIRECTOR-MASTER-BACKLOG.md`**  
+**SoT:** `origin/main` · Master Backlog = **`88-DIRECTOR-MASTER-BACKLOG.md`** · Wake = **`90`**  
 **Supersedes parallel “do what you want” lists.** Wave8/9 product law still holds (`85`/`87`).
+
+**Board snapshot:** DIR-01/02 CLOSED · SEC-01/02 VCS CLOSED (Owner Secrets pending) · DEP-01a EXECUTED · DIR-03 OPEN · Sign-Off NOT COMPLETE
 
 ---
 

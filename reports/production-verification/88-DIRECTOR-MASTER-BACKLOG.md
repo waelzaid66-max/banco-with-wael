@@ -2,9 +2,10 @@
 
 **Authority:** Chief Production Delivery Director  
 **Date:** 2026-07-31  
-**SoT tip:** `origin/main` @ `e4d36b6` (Wave9 Tranche E)  
+**SoT tip:** `origin/main` (Director continue · Wave9 E + SEC/DEP hygiene)  
 **Mission:** Production Readiness — not feature invention  
 **Law:** Evidence or UNKNOWN · Repair not rewrite · NO-DELETE Leaflet/FilterSheet/mapLatch/messenger · No `*-5cf0` merges without written Director EXECUTE  
+**Team wake:** `90-DIRECTOR-TEAM-WAKE.md` 
 
 This is the **ONE** engineering backlog. All other reports feed this file. Agents do not invent parallel lists.
 
@@ -44,7 +45,7 @@ This is the **ONE** engineering backlog. All other reports feed this file. Agent
 | Claim | Source | Director ruling |
 |-------|--------|-----------------|
 | Merge `cursor/*-5cf0` starting with accounts-clerk-harden | Replit master issues §Branches | **REJECTED** — pollution risk · floors a05190e+6999915 · Chair/Director written EXECUTE only |
-| P0-ENV-01 “fixed” in `a5390bc` | Replit report | **SUPERSEDED / OPEN** — tip `.replit` still has `EXPO_PUBLIC_DOMAIN=banco.today`, `pk_live_*`, plaintext `PAYMENT_CONFIG_ENCRYPTION_KEY` (lines ~129–139) |
+| P0-ENV-01 “fixed” in `a5390bc` | Replit report | **WAS OPEN** → **SEC-01/02 EXECUTED** (committed secrets removed). Owner must set Secrets UI. Residual: shared `PUBLIC_*` still points at banco.today (SEC-02b watch) |
 | Live Certified / COMPLETE | Any seat | **FORBIDDEN** without Live Cutover evidence |
 | Invent FactoriesHomeHeader / Banks directory / REL-21 taxonomy | Any | **HOLD** until Owner names World |
 
@@ -59,19 +60,20 @@ Status: OPEN · VERIFY · HOLD · CLOSED · UNVERIFIED
 
 | ID | Sev | Title | Evidence | Owner | Deps | Risk | Verify | Pri |
 |----|-----|-------|----------|-------|------|------|--------|-----|
-| **DIR-01** | P0 | Re-run CI green on tip `e4d36b6`+ | run 30653414400 cancelled → **CLOSED** tip `217628c` run `30654087293` **success** (Mobile·API·Typecheck·Gates·ESLint·GCP) | Reliability | — | Blind tip | All CI jobs success on tip SHA | **CLOSED** |
-| **DIR-02** | P0 | AUD-90 peer Wave9 E | `87` · W9 plan | Intelligence (read) | DIR-01 | False green | Greps: no `#C4A35A` · `section-header-map` · `hideOriginAxis` · Leaflet on disk · 90/90 | **2** |
-| **DIR-03** | P0 | Replit unify shots R01–R12 on tip | PASTE-WAVE8 | UX/Visual + Replit | DIR-01 | Env≠product | SYNC_SHA + shot ids · Maps RED · Factories header map | **3** |
+| **DIR-01** | P0 | Re-run CI green on tip | **CLOSED** `217628c` run 30654087293 | Reliability | — | — | CI all jobs | **CLOSED** |
+| **DIR-02** | P0 | AUD-90 peer Wave9 E | **CLOSED PASS** `DIR-02-AUD-90-VERIFY-PASS.md` · 90/90 | Director/Intel | DIR-01 | — | Greps + guards | **CLOSED** |
+| **DIR-03** | P0 | Replit unify shots R01–R12 on tip | PASTE updated 90/90 · website workflow | UX + Replit | SEC-02 | Env≠product | SYNC_SHA + shot ids | **3** |
 
 ### Track B — Secrets / Env / Deploy (Live blockers)
 
 | ID | Sev | Title | Evidence | Owner | Deps | Risk | Verify | Pri |
 |----|-----|-------|----------|-------|------|------|--------|-----|
-| **SEC-01** | P0 | Remove plaintext `PAYMENT_CONFIG_ENCRYPTION_KEY` from `.replit` → encrypted secrets + rotation plan | `.replit:129` | PE-API + Owner ops | — | Key leak | Key absent from VCS · secrets store set · decrypt smoke | **4** |
-| **SEC-02** | P0 | Sanitize `.replit` userenv: no `EXPO_PUBLIC_DOMAIN=banco.today` shared · no `pk_live` in shared · no placeholder secrets | `.replit:135-139` | PE-API + Replit eyes | — | CORS/blank/401 | Clean Replit cold start evidence | **5** |
-| **AUTH-01** | P0 | Clerk sign-in full state machine (needs_second_factor / new_password / …) on all auth surfaces | Replit P0-AUTH-01 · partial in `profile.tsx` | PE-Mobile | SEC-02 | Lockout | Matrix Guest→Login→MFA paths · **device UNVERIFIED** until physical | **6** |
-| **DEP-01** | P0 | Canonical web = `banco-website`; freeze `banco-web`; align Replit preview + Coolify apex | `FROZEN.md` · coolify compose · Replit P0-DEPLOY-01 | PE-API + Director | Owner | Wrong site shipped | Preview==compose apex · no banco-web default | **7** |
-| **LIVE-01** | P0 | Coolify Live Cutover without `--allow-placeholders` | `70` Hard Truth | Owner ops + Director | SEC-01/02 · DEP-01 | Fake Live | `pnpm ops:live-cutover` exit 0 | **LAST** |
+| **SEC-01** | P0 | Remove plaintext `PAYMENT_CONFIG_ENCRYPTION_KEY` from `.replit` | **VCS CLOSED** · Owner Secrets + rotation still required | Owner ops | — | Key leak history | Grep absent · Secrets set | **OWNER** |
+| **SEC-02** | P0 | Remove committed `pk_live` + `EXPO_PUBLIC_DOMAIN=banco.today` | **VCS CLOSED** · Replit cold-start VERIFY open | Replit eyes | — | CORS/blank | Grep + shots | **VERIFY** |
+| **SEC-02b** | P2 | Residual shared `PUBLIC_API_BASE_URL` / `EXPO_PUBLIC_PUBLIC_APP_URL` → banco.today | `.replit` shared | Director | SEC-02 | Local CORS risk | Approve Plan before change | **WATCH** |
+| **AUTH-01** | P0 | Clerk sign-in full state machine | partial `profile.tsx` | PE-Mobile | SEC-02 VERIFY | Lockout | Matrix · device UNVERIFIED | **6** |
+| **DEP-01** | P0 | Canonical web = `banco-website` | Coolify legacy profile OK · **DEP-01a Replit workflow → banco-website EXECUTED** | Director | Owner | Wrong preview | Workflow grep + shot :5000 | **VERIFY** |
+| **LIVE-01** | P0 | Coolify Live Cutover | `70` | Owner + Director | SEC Owner · DEP VERIFY | Fake Live | cutover exit 0 | **LAST** |
 
 ### Track C — Security harden (pre-Live)
 
@@ -92,7 +94,7 @@ Status: OPEN · VERIFY · HOLD · CLOSED · UNVERIFIED
 | **MOB-02** | P2 | RE propertyType + Wanted dual | `87` D-W9-07 | PE-Mobile | **HOLD** | 21 |
 | **MOB-03** | P2 | Stay type + Wanted dual | `87` D-W9-08 | PE-Mobile | **HOLD** | 22 |
 | **MOB-04** | P2 | Android tab bar elevation / hit targets | Replit P2-ANDROID-01 · `_layout.tsx` elev present | UX audit first | VERIFY then plan | 15 |
-| **MOB-05** | P2 | Pins: `@clerk/expo@3.3.1` · `@expo/vector-icons@15.0.3` exact | `package.json` already exact | Intelligence | **LIKELY CLOSED** — re-confirm | 14 |
+| **MOB-05** | P2 | Pins: `@clerk/expo@3.3.1` · `@expo/vector-icons@15.0.3` exact | package.json | Intelligence | **CLOSED** | — |
 | **MOB-06** | P2 | Post-signup intent refs clear on abandon | Replit P2-AUTH-02 | PE-Mobile | OPEN after AUTH-01 | 16 |
 | **MOB-07** | P2 | Role upgrade individual→dealer path | Replit P2-AUTH-03 | PE-Mobile | OPEN | 17 |
 | **MOB-08** | P3 | FlatList windowing params | Replit P2-PERF-01 | PE-Mobile | HOLD | 30 |
