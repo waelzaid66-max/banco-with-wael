@@ -2,7 +2,7 @@
 
 **Issued by:** Chief Production Architect (Chair)  
 **Date:** 2026-07-31  
-**SoT tip:** `main` @ `aa62473` (CI success على هذا الـ tip)  
+**SoT tip:** `main` @ `9cb903c` (docs wake atop CI-green `aa62473`)  
 **Floors إلزامية:** `a05190e` (Tranche D) · `6999915` (CI green stamp)  
 **قانون المالك:** 10 أقسام · ميني-آب ميني-آب · ممنوع تهور/اختراع/كسر · ads E2E · finished sacred  
 
