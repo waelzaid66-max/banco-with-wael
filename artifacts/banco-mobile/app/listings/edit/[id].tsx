@@ -163,9 +163,13 @@ export default function EditListingScreen() {
   };
 
   const onSave = () => {
-    if (!id || !title.trim()) return;
-    const base_price_cash = digitsToNumber(price);
-    if (base_price_cash <= 0) {
+    if (!id || !title.trim() || !listing) return;
+    // Buyer requests carry no sale price (parity with create): do not require
+    // or PATCH base_price_cash. Sending 0 would risk price-drop notify side
+    // effects on the API update path (MOB-C-09 / REL-11).
+    const isRequest = !!listing.is_request;
+    const base_price_cash = isRequest ? undefined : digitsToNumber(price);
+    if (!isRequest && (base_price_cash === undefined || base_price_cash <= 0)) {
       Alert.alert(t("common.error"), t("editListing.priceRequired"));
       return;
     }
@@ -186,7 +190,7 @@ export default function EditListingScreen() {
         title: title.trim(),
         description: description.trim() || undefined,
         location: locationValue ?? location.trim(),
-        base_price_cash,
+        ...(base_price_cash !== undefined ? { base_price_cash } : {}),
         // Merged server-side — only these two keys change, other specs stay.
         specs: { market_country: marketCountry, currency },
         media,
@@ -370,20 +374,23 @@ export default function EditListingScreen() {
             </Pressable>
           </View>
 
-          <Field
-            label={isFurnishedDaily ? t("editListing.priceNightHint") : t("editListing.priceHint")}
-            colors={colors}
-            isRTL={isRTL}
-          >
-            <TextInput
-              value={price}
-              onChangeText={setPrice}
-              keyboardType="numeric"
-              style={[styles.input, { color: colors.foreground, borderColor: colors.border, textAlign: isRTL ? "right" : "left" }]}
-              placeholder="0"
-              placeholderTextColor={colors.mutedForeground}
-            />
-          </Field>
+          {!listing.is_request ? (
+            <Field
+              label={isFurnishedDaily ? t("editListing.priceNightHint") : t("editListing.priceHint")}
+              colors={colors}
+              isRTL={isRTL}
+            >
+              <TextInput
+                value={price}
+                onChangeText={setPrice}
+                keyboardType="numeric"
+                style={[styles.input, { color: colors.foreground, borderColor: colors.border, textAlign: isRTL ? "right" : "left" }]}
+                placeholder="0"
+                placeholderTextColor={colors.mutedForeground}
+                testID="edit-listing-price"
+              />
+            </Field>
+          ) : null}
 
           {/* Compact market + currency (same chrome as create) — no chip clouds. */}
           <Field label={t("create.fields.marketCountry")} colors={colors} isRTL={isRTL}>

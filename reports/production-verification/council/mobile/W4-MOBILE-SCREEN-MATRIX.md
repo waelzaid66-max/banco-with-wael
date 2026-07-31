@@ -1,33 +1,27 @@
-# W4 — Mobile screen matrix (master)
+# W4-MOBILE-SCREEN-MATRIX.md
 
-**Tip:** PR #32 · **Wave:** `67-MOBILE-SUCCESS-AUDIT-WAVE4.md`  
-**Legend:** PENDING · IN_PROGRESS · HEALTHY · RISK · DEFECT · UNVERIFIED_VISUAL · FIXED
+**Tip:** PR #32 · **Wave:** `67` + **`69` Wave 4b**  
+**Protocol:** `68` distrust — half-path HEALTHY invalid  
+**Legend:** PENDING · IN_PROGRESS · HEALTHY · RISK · DEFECT · UNVERIFIED_VISUAL · FIXED · SUPERSEDED · HYPOTHESIS
 
 | Zone | Screen / surface | Status | Packet |
 |------|------------------|--------|--------|
 | A | Tab shell + FAB | HEALTHY | W4-CHAIR-ZONE-A-TABS |
 | A | Feed | HEALTHY | W4-CHAIR-ZONE-A-TABS |
 | A | Search / Discover | HEALTHY | W4-CHAIR-ZONE-A-TABS |
-| A | Messages list | HEALTHY | W4-CHAIR-ZONE-A-TABS |
+| A | Messages list | HEALTHY | W4-CHAIR-ZONE-A-TABS (+ Zone D) |
 | A | Saved | RISK LOW | W4-CHAIR-ZONE-A-TABS |
-| A | Profile (Skip/role) | FIXED REL-09 | W4-CHAIR-ZONE-A-TABS + REL-09 |
-| B | /section/car | HEALTHY | W4-CHAIR-ZONE-B-SECTIONS |
-| B | /section/real-estate | HEALTHY | W4-CHAIR-ZONE-B-SECTIONS |
-| B | /section/factories | HEALTHY | W4-CHAIR-ZONE-B-SECTIONS |
-| B | /section/materials | HEALTHY | W4-CHAIR-ZONE-B-SECTIONS |
-| B | /section/booking | HEALTHY | W4-CHAIR-ZONE-B-SECTIONS |
-| C | listing/[id] | SKEPTIC — see Zone C packet | W4-CHAIR-ZONE-C-LISTINGS-SKEPTIC |
-| C | listings/create | **REL-10 FIXED** deep-link (C-01…04) | W4-REL-10-CHAIR-EXECUTE |
-| C | listings/edit | PENDING (C-09/10 open) | W4-CHAIR-ZONE-C-LISTINGS-SKEPTIC |
-| C | listings/mine | PENDING (C-10/12) | W4-CHAIR-ZONE-C-LISTINGS-SKEPTIC |
-| D | messages/[id] | PENDING Reliability | |
-| D | notifications | PENDING Reliability | |
-| E | business/banks | PENDING Auditor | |
-| E | business RFQ/supply/investments | PENDING Auditor | |
-| F | import/* | PENDING Support | |
-| F | industry | PENDING Support | |
-| F | wallet/billing/plans/settings/legal | PENDING Support | |
+| A | Profile (Skip/role) | FIXED REL-09 | W4-CHAIR-ZONE-A-TABS + REL-09 + AUD peer |
+| B | /section/* (5) | HEALTHY emit; create consumer FIXED REL-10 | W4-CHAIR-ZONE-B-SECTIONS (amended) |
+| C | listing/[id] | HYPOTHESIS→rebind Wave4b | W4-MOB-C-01 (stale SHA) · skeptic MOB-C-11 |
+| C | listings/create | **FIXED REL-10** | skeptic + REL-10 + AUD REL-10 peer; C-02 HEALTHY **SUPERSEDED** |
+| C | listings/edit | **FIXED REL-11** price/request; RISK MEDIUM AuthGate MOB-C-10 open | skeptic C-09/10 · W4-REL-11-CHAIR-EXECUTE · W4-MOB-C-03 |
+| C | listings/mine | RISK / PENDING AuthGate MOB-C-10 | skeptic · W4-MOB-C-04 |
+| D | messages/[id] · notifications · auth | HYPOTHESIS @ `3a234ef` → **Wave4b rebind** | W4-REL-ZONE-D-* |
+| E | business/* | HYPOTHESIS @ `3a234ef` → **AUD-42 rebind** | W4-MOB-E-01…03 |
+| F | import/industry/wallet/settings/legal | HYPOTHESIS @ `3a234ef` → **SUP-10 rebind** | W4-MOB-F-ZONE-STATIC |
 | G | notificationRouting + deep links | PENDING shared | |
-| * | Device screenshots all zones | UNVERIFIED_VISUAL | Owner device |
+| * | Device screenshots | UNVERIFIED_VISUAL | Owner device |
 
-**Baseline gates (Chair):** mobile tests 267 pass · chain 167/167 · confidence 20/20 (pre-REL-09 push re-run required).
+**Open Approve backlog:** MOB-C-10 AuthGate (REL-12 plan only until Approve).  
+**Non-goals:** Live Certified · CAR IMPORT W4/5 · MSG-05.

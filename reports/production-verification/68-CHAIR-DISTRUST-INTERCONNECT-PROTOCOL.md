@@ -41,3 +41,6 @@ Owner order: architecture is large, precise, interconnected. **Do not trust what
 
 - Zone B empty-CTA HEALTHY → **amended**: healthy emit; create consumer fixed in **REL-10** (MOB-C-01/02/03/04).
 - Matrix: Zone C no longer PENDING-blind — skeptic packet is SoT until Auditor peers.
+- Auditor create HEALTHY @ `3a234ef` → **SUPERSEDED** (anti-pollution presentation).
+- Edit request price DEFECT → **REL-11 FIXED** (omit `base_price_cash`; never send `0`).
+- Zone D/E/F packets @ `3a234ef` → **HYPOTHESIS** until Wave 4b tip rebind (`69`).

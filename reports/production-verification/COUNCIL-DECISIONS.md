@@ -193,6 +193,18 @@
 
 ---
 
+## D-2026-07-31-18 — Absorb #36/#38 + REL-11 request edit price (MOB-C-09)
+
+| | |
+|--|--|
+| **Decision** | Absorb Auditor anti-pollution + W3/W4 evidence + Idle Zone F onto tip; Chair Approves and executes **REL-11** for MOB-C-09. |
+| **Absorb** | Auditor: W3 AUD-30…33 · W4 presentation + REL-10 peer · Zone C/E packets (create HEALTHY **SUPERSEDED**). Idle: `W4-MOB-F-ZONE-STATIC` + support index (tip SHA `3a234ef` = **hypothesis** until Wave4b re-bind under `68`). |
+| **REL-11** | Edit `is_request`: skip price>0 gate; hide price field; **omit** `base_price_cash` from PATCH (never send `0` — price-drop notify risk). Keep market/currency patch. Guard `MOB-C-09 / REL-11` in section-miniapp-guard. |
+| **Rejected** | MOB-C-10 AuthGate redesign this wave; inventing Zone E defects without tip re-skeptic; Live Certified; CAR IMPORT W4/5; tip fights via #36/#38. |
+| **Orders** | `69-ENGINEERING-COUNCIL-STANDING-ORDERS-WAVE4b.md` |
+
+---
+
 ## Template for future disputes
 
 ```markdown

@@ -105,11 +105,13 @@
 
 ## MOB-C-09
 
-- **Status:** DEFECT
-- **Severity:** MEDIUM (buyer-request edit broken)
-- **Evidence:** Edit `onSave` requires `base_price_cash > 0` always (`edit/[id].tsx:167-170`) and always PATCHes `base_price_cash` + `currency` (`:183-191`). Create omits price/currency for `is_request`. Media editor knows `isRequest` (`:267`) but price gate ignores it. Hydration only sets price when `price_cash` is a number (`:96-98`) — requests often empty → save blocked.
+- **Status:** **FIXED REL-11** (Chair D-18) — was DEFECT
+- **Severity:** was MEDIUM (buyer-request edit broken)
+- **Evidence (pre-fix):** Edit `onSave` required `base_price_cash > 0` always (`edit/[id].tsx`) and always PATCHed `base_price_cash`. Create omits price for `is_request`.
+- **Repair:** Skip gate + hide price field when `listing.is_request`; omit `base_price_cash` from PATCH (never send `0`). Guard in `section-miniapp-guard.test.mjs`. See `W4-REL-11-CHAIR-EXECUTE.md`.
+- **Still open:** MOB-C-10 client AuthGate (not part of REL-11).
 - **What prior agents might have missed:** EDIT-MEDIA-DEAD repair + market chrome were checked; request-price parity with create was not.
-- **Fix risk:** Skip price requirement / omit `base_price_cash` when `listing.is_request` — **low** if mirrored to API update rules. Sending `0` may trigger price-drop side effects in `ListingService` — verify server update path before inventing a zero. Currency-on-request PATCH is softer RISK (create omits it).
+- **Fix risk:** Skip price requirement / omit `base_price_cash` when `listing.is_request` — **low** if mirrored to API update rules. Sending `0` may trigger price-drop side effects in `ListingService` — verified; omit instead.
 
 ---
 

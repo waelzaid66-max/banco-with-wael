@@ -1551,6 +1551,33 @@ test("MOB-C: create deep-link accepts industrial + remaps browse slugs", () => {
   );
 });
 
+test("MOB-C-09 / REL-11: edit skips price gate for buyer requests", () => {
+  const edit = fs.readFileSync(
+    path.join(APP_ROOT, "app", "listings", "edit", "[id].tsx"),
+    "utf8",
+  );
+  assert.match(
+    edit,
+    /const isRequest = !!listing\.is_request/,
+    "edit onSave must branch on listing.is_request",
+  );
+  assert.match(
+    edit,
+    /base_price_cash !== undefined \? \{ base_price_cash \}/,
+    "requests must omit base_price_cash from PATCH (no zero price-drop)",
+  );
+  assert.match(
+    edit,
+    /!listing\.is_request \?[\s\S]*?edit-listing-price/,
+    "price field hidden for is_request listings",
+  );
+  assert.doesNotMatch(
+    edit,
+    /const base_price_cash = digitsToNumber\(price\);\s*if \(base_price_cash <= 0\)/,
+    "must not unconditionally require price > 0",
+  );
+});
+
 test("Section horizontal chip ScrollViews use flexGrow:0 (no black void)", () => {
   const section = fs.readFileSync(SECTION_APP, "utf8");
   assert.match(
