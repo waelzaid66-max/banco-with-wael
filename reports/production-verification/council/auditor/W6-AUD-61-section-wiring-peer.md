@@ -1,44 +1,48 @@
-# W6-AUD-61 — Peer Chair section-wiring truth (`73`)
+# W6-AUD-61 — Maps stack dual-end inventory (World 7)
 
-- Seat: Production Auditor · Protocol **`68`** (producer + consumer)
-- SoT: `main` @ **`6ad7a484cf5dcf6fa35f281212c2509bfdbd1274`**
-- Chair evidence: `73-SECTION-WIRING-TRUTH-AUDIT.md` · Approve Plan `W6-CHAIR-APPROVE-PLAN-MAPS-CARS.md`
-- Mode: **independent dual-end peer** · **zero product code** · await Owner Maps pick
+- Seat: Production Auditor · World: **Maps** only
+- SoT: `main` @ `6ad7a484cf5dcf6fa35f281212c2509bfdbd1274`
+- Orders: `74` AUD-61 · design §2 Maps stack · `73` §1
+- Mode: evidence only · **DO NOT DELETE** any listed asset
 
-## Peer results
+## A. Stack present (do not gut)
 
-| # | Chair claim | Auditor dual-end | Severity | Peer |
-|---|-------------|------------------|----------|------|
-| 1 | Discover Maps primary → RE | Producer `exploreOnMap` → `/section/real-estate?map=1` (`search.tsx:488-491`); FAB `discover-map-toggle` same (`:1084-1087`); copy `exploreMapSub` = properties (`i18n.ts:520` / AR `:2803`); UI `discover-explore-map` (`SearchDiscover.tsx:279-306`). Secondary portals car/materials/factories/booking `?map=1` (`:333-352`) **OK**. Consumer `mapLatch` / `SectionSearchApp` **OK**. **No** `/section/maps`. | **HIGH** | **CONFIRM DEFECT** |
-| 2 | RE header ≠ Owner mock | `PropertyHomeHeader` exists (Chair inventory). No Owner reference in repo → cannot invent defect pixels. | MEDIUM / PRODUCT | **CONFIRM HOLD** |
-| 3 | Cars tertiary “deleted” | `car.tsx:22` `engines: "pill"`; `SectionSearchApp:1658-1675` → single `FilterPillSelect` `section-engine` (not `engine-*` chips). Contract still has new/used/import + fuel/trans (`search-contract` `CAR_ENGINES`). Factories still `engines: "chips"`. | **HIGH** | **CONFIRM DEFECT** (buried ≠ deleted) |
-| 4 | Brands first-paint empty / country-like | Strip = one `car-brand-btn` (`SectionSearchApp:1807-1854`); taxonomy ~100+ / **16** popular; FilterSheet popular-only (Chair). | **HIGH** / UX | **CONFIRM** |
-| 5 | Location/maps buried | FilterSheet location/nearMe + section latch OK; Discover primary wrong (#1). | MEDIUM | **CONFIRM RISK** |
-| 6 | Sections “unstable” | Asymmetric chrome intentional; locks/REL-10/12 strong. | MEDIUM | **CONFIRM MIXED** |
-| 7 | Banks incomplete | Brochure + inbox; D-11 intentional (`banks.tsx:496`). | LOW | **CONFIRM INTENDED** — not defect |
+| Asset | Path | Role |
+|-------|------|------|
+| Leaflet + CSS | `assets/map-vendor/leaflet.js` · `leaflet.css` | Offline vendor |
+| MarkerCluster | `assets/map-vendor/leaflet.markercluster.js` · `MarkerCluster*.css` | Clusters |
+| Vendor inline | `components/search/mapVendorInline.ts` | Bridge |
+| HTML bridge | `components/search/mapHtml.ts` | WebView HTML |
+| Results map | `SearchResultsMap.tsx` / `.web.tsx` | Map UI |
+| Overlay | `MapOverlayChrome.tsx` | Count + pin preview |
+| Latch helpers | `lib/mapLatch.ts` | `wantsMapFromParam` · `openOrLatchMap` · `resolveMapLatch` |
+| Seller pin | `components/MapPinPicker.tsx` | Create/edit (World 10 adjacent) |
 
-## Anti-pollution (binding)
+## B. Producers (Discover — World 1 → Maps)
 
-| Prior stamp | Action |
-|-------------|--------|
-| Zone A Explore-on-map → RE as healthy wiring | **SUPERSEDED / WRONG PRODUCT** under Owner order + `68` |
-| Zone B MOB-B-02 “Explore-on-map CTA → RE = HEALTHY” | **RETRACT for map primary product** — latch consumer remains OK; **producer primary is the defect** |
-| Accept #32 staging | **Still valid** — these are post-Accept chrome defects, not Accept blockers for Coolify tip |
+| Control | Destination | Dual-end | Verdict |
+|---------|-------------|----------|---------|
+| Primary `exploreOnMap` / `discover-explore-map` | `/section/real-estate?map=1` | `search.tsx:488-491` + `SearchDiscover.tsx:279-306` | **DEFECT HIGH** — Maps≠RE law broken |
+| FAB `discover-map-toggle` | same `exploreOnMap()` | `search.tsx:1084-1087` | **DEFECT** (same) |
+| Portal car | `/section/car?map=1` | `SearchDiscover.tsx:333` | **OK** |
+| Portal materials | `/section/materials?map=1` | `:339` | **OK** |
+| Portal factories | `/section/factories?map=1` | `:345` | **OK** |
+| Portal stays | `/section/booking?map=1` | `:351` | **OK** |
+| Copy | `exploreMapSub` = properties | `i18n.ts:520` / AR `:2803` | **DEFECT** (RE identity) |
+| Route `/section/maps` | — | absent | N/A (Opt B future) |
 
-## Align with Approve Plan
+## C. Consumers per section (`?map=1`)
 
-| ID | Auditor stance |
-|----|----------------|
-| **REL-16** | **SUPPORT** — Owner pick A/B/C first; default A if Owner silent (Chair). Peer after force-exec only. |
-| **REL-17** | **SUPPORT** — restore chips visibility; keep FilterSheet; no API enum invent. |
-| **REL-18** | **SUPPORT** after REL-17 — popular chip row + picker UX per Owner. |
-| **PROD-RE-HEADER** | **HOLD** until Owner reference. |
-| Banks directory | **HOLD** (D-11). |
+| World | Host | Latch / map open | Verdict |
+|-------|------|------------------|---------|
+| B-oom Car | `SectionSearchApp` category=`car` | `mapLatch` + `params.map` (`SectionSearchApp.tsx:308-315`, `:386+`) · `SearchResultsMap` | **OK consumer** |
+| B-PROPERTIES | same + `PropertyHomeHeader` map | `re-header-map` → `openOrLatchMap` | **OK consumer** |
+| Materials | `MaterialsHomeHeader` | `materials-header-map` | **OK consumer** |
+| Factories | `SectionSearchApp` | shared latch | **OK consumer** |
+| BOOM STAY | `BookingStaysApp` | same `mapLatch` helpers (`:54`, `:310-347`, `:707`) · `stays-header-map` | **OK consumer** |
 
-## Forbidden this seat
+**Judgment:** Maps **tech stack intact**; Maps **identity mis-surfaced** via Discover primary → RE. Repair = REL-16 (Approve-gated), not vendor rewrite.
 
-Product repairs · invent RE mock · Coolify/DNS · Live Certified · CAR IMPORT W4/5 · tip fight · currency SoT.
+## D. Peer of Chair HIGH (#1)
 
-## Auditor JUDGMENT
-
-Chair `73` is **evidence-true** on `main`. Auditor peers **HIGH** on Maps→RE and Cars pill burial. Standing by for Owner Maps pick + Chair Approve paste → then VERIFY/peer only.
+**CONFIRM** producer primary defect; consumer latch **not** the break. Align design Opt **A** recommended.

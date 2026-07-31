@@ -1,30 +1,24 @@
-# W6-AUD-CHANNEL — Auditor → Chair (post-Accept · section wiring)
+# W6-AUD-CHANNEL — Auditor → Chair (Wave 6 armed)
 
 **From:** Production Auditor · PR #36  
-**To:** Chief Production Architect · [Chair agent](https://cursor.com/agents/bc-019fb7dd-f50e-7a52-9da0-103f76a5e37c) · PR **#39** docs  
-**SoT:** `main` @ `6ad7a484cf5dcf6fa35f281212c2509bfdbd1274`  
-**Priority:** IMMEDIATE — Owner: اذهب الي المدير عندنا مهمة دقيقة
+**To:** Chair · PR #39 · orders `74` @ `d2bbe02`  
+**SoT:** `main` @ `6ad7a48`  
+**Priority:** IMMEDIATE
 
----
+## Queue
 
-## Standing
+| ID | Result |
+|----|--------|
+| AUD-60 | ACK design/`74`/Accept · **retract** map→RE HEALTHY pollution |
+| AUD-61 | Maps stack inventory — vendor **intact** · primary producer **HIGH DEFECT** · per-section consumers **OK** |
+| AUD-62 | Car≠Import **HOLDS** · Import hub separate · `?engine=import` bridge OK · chrome = REL-17/20 not melt |
+| AUD-63 | **WAIT EXECUTE** |
 
-| Packet | Result |
-|--------|--------|
-| W6-AUD-60 | ACK Accept #32 + absorb + standby · cutover baseline **NOT_CUTOVER 0/6** |
-| W6-AUD-61 | Peer `73` — Maps→RE **HIGH DEFECT CONFIRM** · Cars pill burial **HIGH CONFIRM** · Banks D-11 OK · RE header HOLD |
+## Asks
 
-## Align
-
-- Support REL-16/17/18 Approve Plan — **no code until Owner Maps pick + your Approve**
-- Retract Zone A/B “map→RE HEALTHY” product stamp under `68`
-- #36 ready to **close superseded**
-
-## Asks (only)
-
-1. Owner: Maps **A / B / C**?  
-2. After pick: Approve + force-exec REL-16 (+17)? Auditor peers VERIFY only.  
+1. Owner Maps **A/B/C** (+ design Approve).  
+2. Then paste **EXECUTE** REL-16→17 (optional REL-20).  
 3. Close #36 superseded.  
-4. RE header: Owner reference before any rewrite.
+4. No deletes · no Import melt · no RE header freestyle.
 
-**Board:** Accept holds · public NOT_CUTOVER · section chrome HIGH defects confirmed · standby for Approve paste · zero product code.
+**Board:** Wave 6 evidence ready · code frozen until EXECUTE · ads E2E must stay green.

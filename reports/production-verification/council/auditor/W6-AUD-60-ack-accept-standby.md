@@ -1,32 +1,37 @@
-# W6-AUD-60 — ACK Accept #32 + post-merge standby
+# W6-AUD-60 — ACK Wave 6 design + retract map→RE HEALTHY pollution
 
-- Seat: Production Auditor · `bc-019fb7f4-92be-7d5b-96d8-17142efbc8f0`
-- Branch: `cursor/qa-verification-audit-c8f0` · PR **#36** (docs only — close as superseded when Chair/Owner OK)
-- **Tip SoT now:** `main` @ **`6ad7a484cf5dcf6fa35f281212c2509bfdbd1274`** (merge #32)
-- Chair absorb tip: `69d98fe` · Owner handoff: `72-OWNER-HANDOFF-ACCEPT-32.md`
-- Stamp: `2026-07-31T14:44:29Z`
+- Seat: Production Auditor · Protocol `68`
+- SoT: `main` @ `6ad7a484cf5dcf6fa35f281212c2509bfdbd1274`
+- Chair branch (docs): `cursor/section-wiring-audit-e37c` @ `d2bbe02c776acd6d07d359ff9af1229187469563`
+- Binding: `74-ENGINEERING-COUNCIL-STANDING-ORDERS-WAVE6.md` · design spec · `73` · Accept handoff `72`
+- Stamp: `2026-07-31T14:46:56Z`
 
 ## ACK
 
-| Item | Stance |
-|------|--------|
-| #32 **MERGED** → main | **ACK** |
-| Absorb W4b+W5 Auditor + Idle SUP-20/21 | **ACK** — present on `main` |
-| Matrix Zone E/F **CONFIRMED** | **ACK** |
-| Verdict CONDITIONAL GO staging · **NOT_CUTOVER** public | **ACK** |
-| REL-15 · AP-CI **DEFERRED** | **ACK** — no code until new Approve paste |
-| Post-merge standby paste (`72`) | **ACK** — executing |
+| Artifact | Stance |
+|----------|--------|
+| #32 MERGED · SoT=`main` | **ACK** |
+| Absorb W4b/W5 Auditor + SUP-20/21 | **ACK** (on main) |
+| Design Wave 6 (10 worlds · no deletes · Car≠Import · Maps≠RE) | **ACK** |
+| Standing orders `74` | **ACK** — evidence-only until Owner Maps pick + EXECUTE |
+| Approve Plan REL-16/17/20 WAIT | **ACK** |
+| REL-15 / AP-CI DEFERRED | **ACK** |
+| Post-merge standby (`72`) | **ACK** |
 
-## Post-Accept baseline (Auditor duty)
+## Pollution retract (binding)
 
-| Check | Result |
-|-------|--------|
-| `pnpm ops:live-cutover` @ `2026-07-31T14:44:29Z` | **NOT_CUTOVER 0/6** (Replit apex + Horizons www) — **unchanged** (not a flip) |
-| Tip gates | Report only if go red |
-| Product freelancing | **FORBIDDEN** |
-| Live Certified | **FORBIDDEN** |
-| CAR IMPORT W4/5 · MSG-05 · FI directory | **FORBIDDEN** |
+| Prior stamp | Action |
+|-------------|--------|
+| Zone A Explore-on-map → `/section/real-estate?map=1` as product-correct HEALTHY | **RETRACTED / SUPERSEDED** |
+| Zone B MOB-B-02 “primary Explore-on-map CTA → RE = HEALTHY” | **RETRACTED for map primary product** |
+| Latch consumer / secondary portals HEALTHY | **KEEP** (consumer OK; producer primary is the defect) |
 
-## Ask
+Under Owner order + `68` + design §0.6: re-stamping map→RE as HEALTHY is **forbidden**.
 
-Close PR **#36** as **superseded** (evidence absorbed onto `main` via Accept).
+## Cutover baseline
+
+`pnpm ops:live-cutover` @ Accept window: **NOT_CUTOVER 0/6** — unchanged. Report only on flip/red gates.
+
+## Product code
+
+**Zero** until Chair paste says **EXECUTE**. Ask: close PR #36 superseded when convenient.
