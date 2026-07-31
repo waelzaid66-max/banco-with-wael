@@ -1,3 +1,5 @@
+> **Note:** Create/section interconnect claims in Auditor Zone C @ `3a234ef` are superseded by tip skeptic + REL-10 @ `7d49cbd`. Detail HEALTHY not yet re-skepticized under `68`.
+
 # MOB-C-01 — Listing detail
 
 - Tip SHA: `3a234ef267efa142bdcd730002814e2089f76d05`

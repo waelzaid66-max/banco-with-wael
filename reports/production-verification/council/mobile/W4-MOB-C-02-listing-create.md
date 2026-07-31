@@ -1,3 +1,5 @@
+> **SUPERSEDED vs tip `7d49cbd`.** See `W4-AUD-PRESENTATION-TO-CHAIR-ANTIPOLLUTION.md` + `W4-MOB-REL10-PEER.md`. Do not treat this file as SoT.
+
 # MOB-C-02 — Listing create
 
 - Tip SHA: `3a234ef267efa142bdcd730002814e2089f76d05`
