@@ -1,0 +1,82 @@
+// B-CORE materials UPPER HEADER only — filters compressed, never erased.
+// Method: same as B-PROPERTIES (chrome inside SectionSearchApp).
+// Run: node --test tests/materials-core-guard.test.mjs
+
+import assert from "node:assert/strict";
+import test from "node:test";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const materials = fs.readFileSync(path.join(root, "app/section/materials.tsx"), "utf8");
+const header = fs.readFileSync(
+  path.join(root, "components/search/materials/MaterialsHomeHeader.tsx"),
+  "utf8",
+);
+const section = fs.readFileSync(
+  path.join(root, "components/search/SectionSearchApp.tsx"),
+  "utf8",
+);
+const filter = fs.readFileSync(
+  path.join(root, "components/search/FilterSheet.tsx"),
+  "utf8",
+);
+const i18n = fs.readFileSync(path.join(root, "constants/i18n.ts"), "utf8");
+const nav = fs.readFileSync(
+  path.join(root, "components/MiniAppBottomNav.tsx"),
+  "utf8",
+);
+
+test("materials shell is thin SectionSearchApp — no fake hub home layer", () => {
+  assert.match(materials, /SectionSearchApp/);
+  assert.doesNotMatch(materials, /useState<"home"|MaterialsHome[^H]/);
+  assert.doesNotMatch(materials, /collapseInlineStrips/);
+});
+
+test("upper header is B-CORE bands with Filters inside search pill", () => {
+  assert.match(header, /testID="materials-core-header"/);
+  assert.match(header, /testID="materials-core-brand"/);
+  assert.match(header, /b-mark/);
+  assert.match(header, /materialsBrand|materialsHubLabel/);
+  assert.match(header, /section-filter-toggle/);
+  assert.match(header, /testID="materials-type-strip"/);
+  assert.match(header, /size=\{22\}/);
+  assert.doesNotMatch(header, /\b2450\b|\b18400\b|\b930\b/);
+  assert.doesNotMatch(header, /@expo\/vector-icons|Marketplace|collapseInline/);
+  assert.match(header, /@\/components\/icons/);
+});
+
+test("filters not erased — FilterSheet keeps material + origin + listingMode", () => {
+  assert.match(filter, /showMaterial/);
+  assert.match(filter, /showOrigin/);
+  assert.match(filter, /filter-material/);
+  assert.match(filter, /filter-listing-mode-/);
+  assert.match(section, /MaterialsHomeHeader/);
+  assert.match(section, /MiniAppBottomNav/);
+  assert.doesNotMatch(section, /collapseInlineStrips/);
+  // industrial type testIDs still driven from header
+  assert.match(header, /industrial-type-\$\{tab\.value\}/);
+});
+
+test("bottom nav component untouched and still BANCO five tabs contract", () => {
+  assert.match(nav, /MiniAppBottomNav|testID/);
+  assert.doesNotMatch(nav, /Marketplace/);
+  assert.match(section, /<MiniAppBottomNav/);
+});
+
+test("i18n en+ar for B-CORE header", () => {
+  assert.match(i18n, /materialsBrand:\s*"CORE"/);
+  assert.match(i18n, /materialsHubLabel:\s*"Industrial Hub"/);
+  assert.match(i18n, /materialsHubLabel:\s*"المركز الصناعي"/);
+});
+
+test("other sections not mounted with materials header", () => {
+  const factories = fs.readFileSync(
+    path.join(root, "app/section/factories.tsx"),
+    "utf8",
+  );
+  const car = fs.readFileSync(path.join(root, "app/section/car.tsx"), "utf8");
+  assert.doesNotMatch(factories, /MaterialsHomeHeader/);
+  assert.doesNotMatch(car, /MaterialsHomeHeader/);
+});

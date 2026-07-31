@@ -14,13 +14,14 @@
     "test:universal-links": "node --test tests/universal-links-config.test.mjs",
     "test:session-restore": "node --test tests/session-restore.test.mjs",
     "test:section-guard": "node --test tests/section-miniapp-guard.test.mjs",
+    "test:materials-core": "node --test tests/materials-core-guard.test.mjs",
     "test:i18n": "node --test tests/i18n-usage.test.mjs",
     "test:accounts": "node --test tests/accounts-clerk-journey.test.mjs",
     "test:notification-routing": "node --test tests/notification-routing.test.mjs",
     "test:create-market": "node --test tests/create-listing-market-guard.test.mjs",
     "test:scale": "node --test tests/scale-readiness.test.mjs",
     "test:cdn": "node --test tests/cdn-readiness.test.mjs",
-    "test": "pnpm run test:icons && pnpm run test:lib && pnpm run test:resilience && pnpm run test:universal-links && pnpm run test:session-restore && pnpm run test:section-guard && pnpm run test:i18n && pnpm run test:accounts && pnpm run test:notification-routing && pnpm run test:create-market && pnpm run test:scale && pnpm run test:cdn"
+    "test": "pnpm run test:icons && pnpm run test:lib && pnpm run test:resilience && pnpm run test:universal-links && pnpm run test:session-restore && pnpm run test:section-guard && pnpm run test:materials-core && pnpm run test:i18n && pnpm run test:accounts && pnpm run test:notification-routing && pnpm run test:create-market && pnpm run test:scale && pnpm run test:cdn"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
