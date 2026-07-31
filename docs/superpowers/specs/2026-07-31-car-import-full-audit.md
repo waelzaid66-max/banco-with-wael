@@ -29,13 +29,13 @@ Source: HTML previews mirrored from `artifacts/banco-mobile/app/import/**` + i18
 
 | # | Route | Artifact |
 |---|-------|----------|
-| 1 | `/import` hub | `/opt/cursor/artifacts/screenshots/car-import-01-hub.png` |
-| 2 | `/import/auctions` | `/opt/cursor/artifacts/screenshots/car-import-02-auctions.png` |
-| 3 | `/import/calculator` | `/opt/cursor/artifacts/screenshots/car-import-03-calculator.png` |
-| 4 | `/import/documents` | `/opt/cursor/artifacts/screenshots/car-import-04-documents.png` |
-| 5 | `/import/request` | `/opt/cursor/artifacts/screenshots/car-import-05-request.png` |
-| 6 | `/import-tracking` | `/opt/cursor/artifacts/screenshots/car-import-06-tracking.png` |
-| 7 | `/import/order/[id]` | `/opt/cursor/artifacts/screenshots/car-import-07-order-detail.png` |
+| 1 | `/import` hub | `docs/superpowers/artifacts/car-import-screenshots/car-import-01-hub.png` |
+| 2 | `/import/auctions` | `docs/superpowers/artifacts/car-import-screenshots/car-import-02-auctions.png` |
+| 3 | `/import/calculator` | `docs/superpowers/artifacts/car-import-screenshots/car-import-03-calculator.png` |
+| 4 | `/import/documents` | `docs/superpowers/artifacts/car-import-screenshots/car-import-04-documents.png` |
+| 5 | `/import/request` | `docs/superpowers/artifacts/car-import-screenshots/car-import-05-request.png` |
+| 6 | `/import-tracking` | `docs/superpowers/artifacts/car-import-screenshots/car-import-06-tracking.png` |
+| 7 | `/import/order/[id]` | `docs/superpowers/artifacts/car-import-screenshots/car-import-07-order-detail.png` |
 
 Watermark `PREVIEW · …` = fidelity mock from code, not a secret live device capture.
 
