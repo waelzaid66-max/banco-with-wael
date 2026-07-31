@@ -391,3 +391,77 @@ test("MSG-11b website thread: media links + newest-id mark-read + soft send", ()
   assert.match(webThread, /Soft refresh only/);
   assert.match(webThread, /maxLength=\{4000\}/);
 });
+
+test("CTO: listing currencies cover mobile market map (no silent EGP rewrite)", () => {
+  const currencies = fs.readFileSync(
+    path.join(root, "../api-server/src/lib/supportedCurrencies.ts"),
+    "utf8",
+  );
+  const taxonomy = fs.readFileSync(
+    path.join(root, "constants/listingCreateTaxonomy.ts"),
+    "utf8",
+  );
+  const marketCodes = [...taxonomy.matchAll(/:\s*"(EGP|SAR|AED|KWD|QAR|BHD|IQD|LBP|MAD|TND|SDG|TRY|GBP|USD|EUR|JOD|OMR|LYD|DZD|ILS|SYP|YER)"/g)].map(
+    (m) => m[1],
+  );
+  for (const code of new Set(marketCodes)) {
+    assert.match(
+      currencies,
+      new RegExp(`"${code}"`),
+      `server allowlist missing market currency ${code}`,
+    );
+  }
+  assert.match(currencies, /normalizeListingCurrency/);
+});
+
+test("CTO: mobile searchParams gates car/industry/origin like search-contract", () => {
+  const sp = fs.readFileSync(path.join(root, "lib/searchParams.ts"), "utf8");
+  assert.match(sp, /category === "car"/);
+  assert.match(sp, /allowIndustry/);
+  assert.match(sp, /category === "facilities"/);
+  assert.match(sp, /delete \(sp as \{ origin_type\?: string \}\)\.origin_type/);
+  assert.match(
+    sp,
+    /paymentType === "installment"[\s\S]*category === "car"[\s\S]*real_estate/,
+  );
+});
+
+test("CTO: message/conversation/comment rates fail closed on counter outage", () => {
+  const abuse = fs.readFileSync(
+    path.join(root, "../api-server/src/services/AbuseService.ts"),
+    "utf8",
+  );
+  assert.match(abuse, /Message rate counter unavailable — failing closed/);
+  assert.match(abuse, /Comment rate counter unavailable — failing closed/);
+  assert.match(abuse, /Conversation rate counter unavailable — failing closed/);
+  assert.doesNotMatch(
+    abuse,
+    /Message rate counter unavailable — failing open/,
+  );
+});
+
+test("CTO: production skips auto-seed spawn without demo escape hatch", () => {
+  const boot = fs.readFileSync(
+    path.join(root, "../api-server/src/lib/bootstrap.ts"),
+    "utf8",
+  );
+  assert.match(boot, /BANCO_ALLOW_DEMO_SEED/);
+  assert.match(boot, /skipping auto-seed/);
+  assert.match(boot, /NODE_ENV === "production"/);
+});
+
+test("CTO: web nearest sort gated on Near me (banco-web + website)", () => {
+  for (const app of ["banco-web", "banco-website"]) {
+    const controls = fs.readFileSync(
+      path.join(root, `../${app}/components/SearchControls.tsx`),
+      "utf8",
+    );
+    const near = fs.readFileSync(
+      path.join(root, `../${app}/components/SearchNearMeControl.tsx`),
+      "utf8",
+    );
+    assert.match(controls, /"nearest"/);
+    assert.match(controls, /nearestNeedsNearMe/);
+    assert.match(near, /sort"\) === "nearest"/);
+  }
+});

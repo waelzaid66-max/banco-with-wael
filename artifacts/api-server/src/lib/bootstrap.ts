@@ -47,6 +47,19 @@ export async function ensureDbExtensions(): Promise<void> {
  * so a seed error never prevents the server from starting.
  */
 export async function ensureSeedData(): Promise<void> {
+  // Production must never auto-spawn demo inventory. Seed script itself also
+  // refuses without BANCO_ALLOW_DEMO_SEED=1 — skip the COUNT+spawn entirely so
+  // empty prod DBs don't thrash a doomed child process on every boot.
+  const isProd =
+    process.env.NODE_ENV === "production" ||
+    process.env.BANCO_ENV === "production";
+  if (isProd && process.env.BANCO_ALLOW_DEMO_SEED !== "1") {
+    logger.info(
+      "ensureSeedData: production — skipping auto-seed (set BANCO_ALLOW_DEMO_SEED=1 only for intentional demo DBs)",
+    );
+    return;
+  }
+
   try {
     const [row] = await db
       .select({ n: count() })

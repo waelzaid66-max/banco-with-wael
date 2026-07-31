@@ -155,7 +155,7 @@ export async function createConversation(
   const buyerId = await getUserId(clerkId);
 
   // Conversation-creation rate cap: prevents bulk thread-opening spam directed
-  // at sellers. This is a convenience-path guard (fails open on counter outage)
+  // at sellers. Fail-closed on counter outage (spam during blips > brief 429).
   // layered on top of the listing-visibility gate below, which is the real
   // authorization boundary.
   const rateCheck = await checkConversationRate({ userId: buyerId, ip });

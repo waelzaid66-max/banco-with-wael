@@ -213,6 +213,7 @@ export function SearchControls({ liveEnabled }: SearchControlsProps) {
     "price_asc",
     "price_desc",
     "popular",
+    "nearest",
   ];
   const fuelOptions = ["petrol", "diesel", "electric", "hybrid", "natural_gas"] as const;
   const transmissionOptions = ["automatic", "manual", "cvt"] as const;
@@ -358,12 +359,20 @@ export function SearchControls({ liveEnabled }: SearchControlsProps) {
           <span>{copy.sortLabel}</span>
           <select
             value={draft.sort}
-            onChange={(e) =>
-              setDraft((s) => ({
-                ...s,
-                sort: e.target.value as SearchCriteria["sort"],
-              }))
-            }
+            onChange={(e) => {
+              const sort = e.target.value as SearchCriteria["sort"];
+              // MAP-08 honesty: nearest without coords silently fell back to
+              // recommended on the API — refuse the option until Near me is on.
+              const nearReady =
+                draft.nearMeEnabled &&
+                draft.nearLat != null &&
+                draft.nearLng != null;
+              if (sort === "nearest" && !nearReady) {
+                window.alert(copy.nearestNeedsNearMe);
+                return;
+              }
+              setDraft((s) => ({ ...s, sort }));
+            }}
             style={inputStyle}
           >
             {sortOptions.map((sort) => (

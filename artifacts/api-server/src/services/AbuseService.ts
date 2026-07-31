@@ -443,8 +443,9 @@ export async function checkListingRate(ctx: { userId: string; ip?: string }): Pr
 /**
  * Enforces the max-messages-per-minute cap for a single user. Returns a
  * decision; the caller turns a block into a 429. Hitting the cap is audited and
- * escalates suspicion (message spam is a strong intent signal). Fails OPEN if
- * the durable counter is unavailable (user-convenience cap).
+ * escalates suspicion (message spam is a strong intent signal). Fails CLOSED if
+ * the durable counter is unavailable — at scale, spam during outage is worse
+ * than a brief 429.
  */
 export async function checkMessageRate(ctx: { userId: string; ip?: string }): Promise<AbuseDecision> {
   try {
@@ -463,16 +464,16 @@ export async function checkMessageRate(ctx: { userId: string; ip?: string }): Pr
     }
     return { ok: true };
   } catch (err) {
-    auditLogger.error({ err, user_id: ctx.userId }, "Message rate counter unavailable — failing open");
-    return { ok: true };
+    auditLogger.error({ err, user_id: ctx.userId }, "Message rate counter unavailable — failing closed");
+    return { ok: false, reason: "validation_unavailable" };
   }
 }
 
 /**
  * Enforces the max-comments-per-hour cap for a single user (listing Q&A
  * anti-spam). Returns a decision; the caller turns a block into a 429. Hitting
- * the cap is audited and escalates suspicion. Fails OPEN if the durable counter
- * is unavailable (user-convenience cap).
+ * the cap is audited and escalates suspicion. Fails CLOSED if the durable
+ * counter is unavailable (spam during outage beats brief comment 429).
  */
 export async function checkCommentRate(ctx: { userId: string; ip?: string }): Promise<AbuseDecision> {
   try {
@@ -491,8 +492,8 @@ export async function checkCommentRate(ctx: { userId: string; ip?: string }): Pr
     }
     return { ok: true };
   } catch (err) {
-    auditLogger.error({ err, user_id: ctx.userId }, "Comment rate counter unavailable — failing open");
-    return { ok: true };
+    auditLogger.error({ err, user_id: ctx.userId }, "Comment rate counter unavailable — failing closed");
+    return { ok: false, reason: "validation_unavailable" };
   }
 }
 
@@ -563,8 +564,8 @@ export async function validateReport(ctx: {
 /**
  * Enforces the per-user conversation-creation cap. Returns a decision; the
  * caller converts a block into a 429. Prevents bulk conversation spam directed
- * at sellers (a side-channel harassment vector). Fails OPEN on counter outage
- * (user-convenience cap — the listing-visibility gate is the real auth boundary).
+ * at sellers (a side-channel harassment vector). Fails CLOSED on counter outage
+ * — spam floods during DB blips are worse than brief 429s.
  */
 export async function checkConversationRate(ctx: {
   userId: string;
@@ -585,8 +586,11 @@ export async function checkConversationRate(ctx: {
     }
     return { ok: true };
   } catch (err) {
-    auditLogger.error({ err, user_id: ctx.userId }, "Conversation rate counter unavailable — failing open");
-    return { ok: true };
+    auditLogger.error(
+      { err, user_id: ctx.userId },
+      "Conversation rate counter unavailable — failing closed",
+    );
+    return { ok: false, reason: "validation_unavailable" };
   }
 }
 

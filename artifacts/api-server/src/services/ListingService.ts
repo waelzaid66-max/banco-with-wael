@@ -29,6 +29,7 @@ import {
   servingWildcardToObjectPath,
 } from "../lib/uploadClaims";
 import { MEDIA_VERIFY_RETRYABLE } from "../lib/mediaVerify";
+import { normalizeListingCurrency } from "../lib/supportedCurrencies";
 import type { CreateListingSchema } from "../validators/schemas";
 import type { z } from "zod";
 
@@ -729,13 +730,9 @@ export async function getListingDetail(listingId: string, viewerClerkId?: string
   // Detail-side money label — mirrors BffService.formatMoney: the listing's
   // specs.currency (multi-market) with an EGP fallback for legacy rows and
   // anything outside the supported set, so a malformed spec never renders.
-  const SUPPORTED_CURRENCIES = new Set([
-    "EGP", "SAR", "AED", "KWD", "QAR", "JOD", "OMR", "LYD", "USD", "EUR",
-  ]);
-  const rawCurrency = String((specs as Record<string, unknown>)?.currency ?? "")
-    .trim()
-    .toUpperCase();
-  const listingCurrency = SUPPORTED_CURRENCIES.has(rawCurrency) ? rawCurrency : "EGP";
+  const listingCurrency = normalizeListingCurrency(
+    String((specs as Record<string, unknown>)?.currency ?? ""),
+  );
   function formatEGP(v: string) {
     const n = Number(v);
     if (n >= 1_000_000)
