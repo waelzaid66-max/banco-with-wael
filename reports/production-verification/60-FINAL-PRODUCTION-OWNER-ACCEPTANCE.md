@@ -33,6 +33,7 @@
 | `pnpm run lint` | **PASS** |
 | Main tip CI after #31 | **SUCCESS** (GitHub) |
 | PR #30 CI before absorb | **FAILURE** (typecheck / mobile / gates / web docker) |
+| This PR (#32) CI | **SUCCESS** — CI + CI Website + CI Website Docker (all jobs) |
 
 ---
 
