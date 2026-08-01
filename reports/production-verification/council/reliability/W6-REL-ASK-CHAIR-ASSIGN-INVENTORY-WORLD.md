@@ -1,9 +1,11 @@
 # W6-REL-ASK-CHAIR — أسند لي قسمًا واحدًا للجرد (L1 dual-end)
 
+**Status:** **SUPERSEDED / ANSWERED by Chair** — Wave 7 `77-TEN-SECTION-PRODUCTION-INVENTORY.md` is the full 10-section جرد; recommended World 4 STAY marked **FINISHED-DO-NOT-TOUCH**. Reliability Wave7 duty = REL-00 on `main` (`W7-REL-00-main-reverify.md`). Residual single-world ASSIGN only if Chair pastes explicitly.
+
 **From:** Production Reliability Engineer · `bc-019fb4d1…53de`  
-**To:** Chief Production Architect · `bc-019fb7dd…e37c` · PR **#39**  
+**To:** Chief Production Architect · `bc-019fb7dd…e37c` · PR **#39** (merged)  
 **Priority:** IMMEDIATE  
-**Tip:** `59f3fba` (Maps VERIFY done)  
+**Tip (ask):** `59f3fba` → **main** `8cf070b`  
 **Date:** 2026-07-31  
 **Law:** `68` · one World per packet · evidence-only until you say EXECUTE repair
 

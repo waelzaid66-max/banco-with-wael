@@ -278,6 +278,146 @@
 
 ---
 
+## D-2026-07-31-26 — Wave 7 merge + Reliability REL-00 on main
+
+| | |
+|--|--|
+| **Decision** | #39 merged to `main`; Chair ten-section inventory `77` answers seat جرد ask (Stay FINISHED sacred). Reliability runs **REL-00 on main only**. |
+| **Adopted** | `W7-REL-00-main-reverify.md` · `W7-REL-CHANNEL-TO-CHAIR.md` · ask SUPERSEDED. Gates 76/7/32/47/167/18 @ `8cf070b`. |
+| **Rejected** | Freelancing World جرد without ASSIGN · re-coding REL-16/17/20 · Stay/RE taste edits · Live Certified. |
+
+---
+
+## D-2026-07-31-27 — URGENT report-in to Chair (REL-00 absorb)
+
+| | |
+|--|--|
+| **Decision** | Owner ordered Reliability → Chair NOW. REL-00 already PASS; Chair transcript had **not** absorbed #40 / W7 packets. |
+| **Adopted** | `W7-REL-URGENT-TO-CHAIR.md` · updated channel · pasteable ACK for Chair. Fleet peers: Auditor AUD-70 #36 · Idle SUP-40. |
+| **Rejected** | New product freelancing · re-opening Stay جرد · Live Certified. |
+
+---
+
+## D-2026-07-31-28 — Wave 8 Tranche A REL-00 VERIFY
+
+| | |
+|--|--|
+| **Decision** | Chair landed D-W8-01/02 on `main`. Reliability VERIFY + REL-00 only (no product code). Owner ordered seat → Chair immediately. |
+| **Adopted** | `W8-REL-00-tranche-a-reverify.md` · `W8-REL-URGENT-TO-CHAIR.md` · `W8-REL-CHANNEL-TO-CHAIR.md`. Gates 77/8/4/7/32/47/167/18 @ `f3b9911`. |
+| **Rejected** | Freelancing next World · invent taxonomy · Banks directory · Live Certified. |
+
+---
+
+## D-2026-07-31-29 — Reliability review of Chair (post–Tranche A)
+
+| | |
+|--|--|
+| **Decision** | Owner ordered seat to review Chair. Chair SoT healthy @ `f3b9911`; Tranche A closed; seat VERIFY PRs not yet absorbed. |
+| **Adopted** | `W8-REL-CHAIR-REVIEW.md` · pasteable absorb ACK for #40/#41/#38 · fleet STANDBY. |
+| **Rejected** | Inventing Tranche B · tip fight on stale Chair branch · Live Certified. |
+
+---
+
+## D-2026-07-31-30 — Full high-precision Chair audit + Tranche B REL-00
+
+| | |
+|--|--|
+| **Decision** | Owner ordered deep Chair review. Tip advanced to Tranche B CLOSED @ `0893b8b`. Reliability independent REL-00 PASS; process ASK on D-W8-01 Stay-parity inversion. |
+| **Adopted** | `W8-REL-CHAIR-FULL-AUDIT.md` · `W8-REL-00-tranche-b-reverify.md` · channel. Gates 77/8/4/7/32/47/167/18. Chair quality 6.0/10. |
+| **Rejected** | Blind trust of Chair self-stamped REL-00 · freestyle revert D-W8-01 · Live Certified · tip fight. |
+
+---
+
+## D-2026-07-31-31 — Tranche C REL-00 + chain hygiene incomplete closeout
+
+| | |
+|--|--|
+| **Decision** | Owner ordered complete incomplete tasks + go to Chair. Tranche C landed; Reliability re-ack + closed Chair-missed chain gate drift (D-W8-06 intent). |
+| **Adopted** | `W8-REL-00-tranche-c-reack.md` · `W8-REL-INCOMPLETE-CLOSEOUT-TO-CHAIR.md` · `scripts/chain-integrity-gate.mjs` P-saved-search-nav-consume update. Gates 77…167/18 @ `ddb9371`. |
+| **Rejected** | Product UI freestyle · Stay/RE rewrite · invent HOLD epics · claim Live Certified. |
+
+---
+
+## D-2026-07-31-32 — Tranche D REL-00 re-ack (new Owner tasks)
+
+| | |
+|--|--|
+| **Decision** | Owner→Chair: merge green + protect every World map/identity. Chair landed D (#44). Reliability REL-00 re-ack immediately. |
+| **Adopted** | `W8-REL-00-tranche-d-reack.md` · URGENT channel. Gates **85**/8/4/7/32/47/11/**167**/18 @ `3420aec`. |
+| **Rejected** | HOLD freestyle · Live Certified · tip fight. |
+
+---
+
+## D-2026-07-31-33 — Reliability ping Chair again (absorb #40)
+
+| | |
+|--|--|
+| **Decision** | Owner ordered seat to Chair again. Tip CI-green handoff `6999915`. REL-00 already PASS; absorb still owed. |
+| **Adopted** | `W8-REL-PING-CHAIR-AGAIN.md` · channel. Re-spot 85/167. |
+| **Rejected** | Inventing Tranche E · Live Certified. |
+
+---
+
+## D-2026-07-31-34 — High-precision REL-00 stamp + typed-routes false-positive
+
+| | |
+|--|--|
+| **Decision** | Owner ordered higher precision. Full dual-end + CI + clean mobile tsc. Local TS2345 `/section/maps` = stale gitignored `.expo/types`, not tip DEFECT. |
+| **Adopted** | `W8-REL-00-PRECISION-STAMP.md` · Replit SoT card · D-W8-01 Opt A KEEP recommend. Gates 85/167 · CI #40 SUCCESS · clean tsc PASS. |
+| **Rejected** | Tranche E invent · freestyle typed-route hacks · Live Certified · blind Replit branch merge. |
+
+---
+
+## D-2026-07-31-35 — Strict orders 85 REL-00 ACK (Owner heart)
+
+| | |
+|--|--|
+| **Decision** | Owner ordered seat to Chair with full force / Owner heart. Chair issued `85` all-seats strict + `86` inventory. Reliability EXECUTE REL-00 re-ack then STANDBY. |
+| **Adopted** | `W8-REL-00-STRICT-ACK.md` (85 §3 format) · channel. Tip `9cb903c` · floors OK · gates 85/167/18. RED_LOGS queue armed. |
+| **Rejected** | Product freestyle · 5cf0 merge · Replit code fix · HOLD invent · Live Certified. |
+
+---
+
+## D-2026-07-31-36 — Tip 5229c89 REL-00 re-ack + absorb #40 force ASK
+
+| | |
+|--|--|
+| **Decision** | Owner again: go to Chair · work with force · Owner heart. Tip moved to `5229c89` (SoT bind). Reliability re-ran REL-00 on tip; incomplete = #40 still unabsorbed. |
+| **Adopted** | STRICT-ACK refresh @ `5229c89` · channel force-packet · floors OK · gates 85/167/18 · tsc PASS · Live NOT_CUTOVER honest. |
+| **Rejected** | Tranche E invent · Replit product fix · 5cf0 · Live Certified · HOLD freestyle. |
+
+---
+
+## D-2026-07-31-37 — DIR-01 CI green + Wave9 REL-00 (maintenance energy)
+
+| | |
+|--|--|
+| **Decision** | Owner ordered Reliability to help team maintenance with full energy. Director issued Master Backlog `88` / Standing `89`. Reliability owned DIR-01. |
+| **Adopted** | DIR-01 CLOSED evidence @ tip `217628c` CI SUCCESS 30654087293 · REL-00 90/8/4/47 · Wave9 E dual-end PASS · Track B SEC-01/02 still-OPEN triage · stamp row in `88`. |
+| **Rejected** | Product freestyle · 5cf0 · Live Certified · invent parallel backlog · Replit code fix. |
+
+---
+
+## D-2026-07-31-38 — Precision review to Director (immediate)
+
+| | |
+|--|--|
+| **Decision** | Owner: complete with precision · review Director immediately. Tip moved (`64b28ff` banco-status · `3d4773b` Director closed DIR-01). |
+| **Adopted** | Precision packet ACK Director DIR-01 close · re-verify CI @ `64b28ff` SUCCESS · REL-00 90/8/4/47 · DIR-02 AGREE Auditor #45 · SEC-01/02 still OPEN · banco-status isolated outside workspace. |
+| **Rejected** | Tip fight on `88` · product freestyle · 5cf0 · Live Certified. |
+
+---
+
+## D-2026-07-31-39 — Wake 90 REL-00 + SEC/DEP senior VERIFY
+
+| | |
+|--|--|
+| **Decision** | Owner: Director requests tasks · senior engineer complete at highest expertise. Tip `7e3b40a` landed SEC-01/02 scrub · DEP-01a · DIR-02 · wake 90. |
+| **Adopted** | REL-00 90/8/4/47 · CI SUCCESS 30654946946 · SEC-01/02/DEP-01a VCS PASS · SEC-02b WATCH noted · Owner Secrets residual honest · STANDBY RED_LOGS. |
+| **Rejected** | Freestyle SEC-02b change · 5cf0 · Live Certified · product World invent. |
+
+---
+
 ## Template for future disputes
 
 ```markdown
