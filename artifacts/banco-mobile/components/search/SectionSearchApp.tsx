@@ -853,24 +853,58 @@ export function SectionSearchApp({
   const showMaterialsLayer2 = showMaterialChrome;
   const showCarOriginChrome = criteria.category === "car" && !lockedEngine;
   const showCarBrandStrip = criteria.category === "car" && !lockedEngine;
-  /** Hero stats strip. ONLY facts the app can actually prove — the number of
-   *  markets B-oom Car trades in. The rest of the owner's mock (vehicles,
-   *  dealers, auctions, ports, shipping lines) are marketing figures with no
-   *  live source yet: add them here the moment an endpoint returns them, never
-   *  as literals. An unknown number is an absent slot, not a guess. */
-  const carHeroStats = useMemo<CarHeroStat[]>(
-    () =>
-      isCarSection
-        ? [
-            {
-              key: "markets",
-              value: `${MARKET_COUNTRIES.length}`,
-              labelKey: "search.discover.section.carStatCountries",
-            },
-          ]
-        : [],
-    [isCarSection],
-  );
+  /**
+   * Hero quick-category gate. Owner rule 2026-08-01: no fake anything.
+   *
+   * FacetCounts has no vehicle-type map (category · condition · fuel_type ·
+   * transmission · payment_plan · property_type · finishing_type · offer_type ·
+   * industrial_type · industry · origin_type), and GET /v1/search has no
+   * body_type param — the API cannot separate a yacht from a sedan today. So
+   * every one of the owner's 21 types is ungated and the strip stays empty,
+   * exactly as lib/facets.ts requires ("never surface a chip that returns
+   * nothing"). Point `typeCounts` at the real map when it ships; the strip,
+   * the glyphs and the labels are already built.
+   */
+  const carHeroCategories = useMemo(() => {
+    if (!isCarSection) return [];
+    const typeCounts: Record<string, number> | undefined = undefined;
+    if (!typeCounts) return [];
+    return CAR_CATEGORIES.filter(
+      (c) => c.key === "more" || (typeCounts[c.key] ?? 0) > 0,
+    );
+  }, [isCarSection]);
+
+  /**
+   * Hero stats. Every entry is a live count or it does not exist.
+   *
+   * `scopedFacets.category` is the real per-category tally of active, publicly
+   * visible listings for the chosen market — the same source the browse chips
+   * already trust. While it loads, the band is simply absent (no skeleton
+   * pretending to be a number, no last-known value).
+   *
+   * The mock's other five figures — 1.2M+ vehicles, 950+ dealers, 18+ auctions,
+   * 34+ ports, 92+ shipping lines — have NO endpoint behind them anywhere in
+   * this repo. They are not written here as literals and must not be: this
+   * screen is the front door of a marketplace people spend money in.
+   */
+  const carHeroStats = useMemo<CarHeroStat[]>(() => {
+    if (!isCarSection) return [];
+    const out: CarHeroStat[] = [];
+    const liveCars = scopedFacets?.category?.car;
+    if (typeof liveCars === "number" && liveCars > 0) {
+      out.push({
+        key: "vehicles",
+        value: `${liveCars}`,
+        labelKey: "search.discover.section.carStatVehicles",
+      });
+    }
+    out.push({
+      key: "markets",
+      value: `${MARKET_COUNTRIES.length}`,
+      labelKey: "search.discover.section.carStatCountries",
+    });
+    return out;
+  }, [isCarSection, scopedFacets]);
   const showRentalTerms =
     criteria.category === "real_estate" &&
     (activeOfferKey === "rent" ||
@@ -1428,6 +1462,7 @@ export function SectionSearchApp({
           onQueryChange={handleQueryChange}
           onSubmitQuery={() => commitQueryNow(draftQuery)}
           onClearQuery={clearQuery}
+          categories={carHeroCategories}
           selectedCategory={carCategory}
           stats={carHeroStats}
           onSelectCategory={(key) => {

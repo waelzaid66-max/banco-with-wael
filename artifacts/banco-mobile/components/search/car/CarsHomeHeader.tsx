@@ -20,11 +20,16 @@
  *     the parent strip. This header renders neither — no dual seat, and the
  *     guard greps this file for both, so do not name them here either.
  *
- * Quick categories drive `q` (free text), NOT a taxonomy enum: the vehicle
- * taxonomy for motorcycles/marine/aviation is still unapproved (REL-21), and
- * emitting an unsupported enum would silently return nothing. Free text hits
- * the unified AR/EN search that already exists. Swap to the enum the day the
- * taxonomy lands — the strip does not change, only `onSelectCategory`.
+ * NOTHING HERE IS DECORATIVE COPY. Owner rule 2026-08-01: every number and
+ * every browsable control must resolve to real inventory or not render at all.
+ * Concretely:
+ *   • `categories` arrives already gated on live facet counts. The API has no
+ *     vehicle-type field yet (see the note on CAR_CATEGORIES), so today the
+ *     parent passes [] and Band D does not paint. It lights up by itself the
+ *     day the facet exists — no edit here.
+ *   • `stats` renders only entries the parent could prove. Empty ⇒ no band.
+ *   • The trust row states capabilities this repo actually ships. Do not add a
+ *     line to it without a feature behind it.
  */
 import { Feather, Ionicons } from "@/components/icons";
 import { Image } from "expo-image";
@@ -59,7 +64,18 @@ const HAIRLINE = "rgba(255,255,255,0.10)";
 
 const HERO_MIN_HEIGHT = 244;
 
-/** Trust row — monochrome only, accent is spent on the filter button. */
+/** Trust row — monochrome only, accent is spent on the filter button.
+ *
+ *  Each line is a capability that EXISTS in this repo, checked before it was
+ *  written here. Anything that cannot be pointed at is not a feature, it is an
+ *  advert, and it does not belong on a marketplace people spend money in:
+ *    verified   → listing/company `is_verified` + `trust_signal`
+ *    shipping   → app/import-tracking · app/import/calculator · global-supply
+ *    secure     → Paymob HMAC-verified webhooks + encrypted payment config
+ *    import     → the whole app/import hub
+ *    support    → in-app support requests (settings · import order)
+ *  The mock said "24/7 Support". Support is real; the 24/7 is an availability
+ *  promise nothing in this repo can keep, so the claim ships without it. */
 const FEATURES: { icon: string; key: string }[] = [
   { icon: "shield-check", key: "search.discover.section.carTrustDealers" },
   { icon: "globe", key: "search.discover.section.carTrustShipping" },
@@ -68,9 +84,26 @@ const FEATURES: { icon: string; key: string }[] = [
   { icon: "headphones", key: "search.discover.section.carTrustSupport" },
 ];
 
-/** Mockup order — cars first, "more" always last.
- *  Exported so the parent can resolve a key → its localised search term without
- *  rebuilding the list (one source, AR and EN alike). */
+/**
+ * The owner's 21 quick categories, in mock order.
+ *
+ * ⚠️ THIS LIST IS A TARGET, NOT A DATA SOURCE. As of 2026-08-01 the backend
+ * cannot tell a yacht from a sedan:
+ *   • GET /v1/search  → `category` enum is [car, real_estate, industrial] only.
+ *     There is no body_type / vehicle_type query parameter.
+ *   • GET /v1/search/facets → FacetCounts exposes category, condition,
+ *     fuel_type, transmission, payment_plan, property_type, finishing_type,
+ *     offer_type, industrial_type, industry, origin_type. No vehicle type.
+ *
+ * So a tap on "Yachts" cannot filter — it could only free-text guess, and land
+ * the user on an empty screen. lib/facets.ts states the house rule this would
+ * break: "gate browse chips so we never surface a chip that returns nothing."
+ *
+ * Therefore the parent gates this list against live facets and today passes an
+ * EMPTY array, so Band D does not render at all. Nothing fake ships. The day a
+ * vehicle-type facet exists, point the gate at it and all 21 appear — the strip
+ * and these glyphs are already built and waiting.
+ */
 export const CAR_CATEGORIES: { key: VehicleGlyphName; i18nKey: string }[] = [
   { key: "cars", i18nKey: "search.discover.section.carTypeCars" },
   { key: "suv", i18nKey: "search.discover.section.carTypeSuv" },
@@ -105,6 +138,8 @@ type Props = {
   searchSaved: boolean;
   activeFilterCount: number;
   inputRef: React.RefObject<RNTextInput | null>;
+  /** Already gated on live inventory by the parent. Empty ⇒ Band D is absent. */
+  categories: { key: VehicleGlyphName; i18nKey: string }[];
   selectedCategory: VehicleGlyphName | null;
   stats: CarHeroStat[];
   notificationCount?: number;
@@ -128,6 +163,7 @@ export function CarsHomeHeader({
   searchSaved,
   activeFilterCount,
   inputRef,
+  categories,
   selectedCategory,
   stats,
   notificationCount = 0,
@@ -356,7 +392,9 @@ export function CarsHomeHeader({
         </Pressable>
       </View>
 
-      {/* ── Band D — quick vehicle categories. ── */}
+      {/* ── Band D — quick vehicle categories. Absent until live inventory can
+              actually be filtered by vehicle type (see CAR_CATEGORIES). ── */}
+      {categories.length > 0 ? (
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -367,7 +405,7 @@ export function CarsHomeHeader({
         ]}
         testID="cars-category-strip"
       >
-        {CAR_CATEGORIES.map((c) => {
+        {categories.map((c) => {
           const active = selectedCategory === c.key;
           return (
             <Pressable
@@ -395,6 +433,7 @@ export function CarsHomeHeader({
           );
         })}
       </ScrollView>
+      ) : null}
 
       {/* ── Band E — stats. Absent when the parent has no real numbers. ── */}
       {stats.length > 0 ? (
