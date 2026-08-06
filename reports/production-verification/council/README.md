@@ -1,16 +1,22 @@
 # Council evidence root
 
-- `auditor/` — Production Auditor Wave packets (`W1-AUD-*`)
-- `reliability/` — Production Reliability Wave packets (`W1-REL-*`)
+**SoT tip:** `main` @ `7e3b40a` — Director continue · wake **`90`** · Master **`88`** · Orders **`89`**
 
-Charter: `../62-ENGINEERING-COUNCIL-CHARTER.md`  
-Orders: `../63-ENGINEERING-COUNCIL-STANDING-ORDERS-WAVE1.md`  
-Decisions: `../COUNCIL-DECISIONS.md`  
-Governing tip: PR #32 `cursor/final-production-acceptance-e37c`
+## Authority
 
-## Wave 6 / 6b (active)
+| Doc | Role |
+|-----|------|
+| `../88-DIRECTOR-MASTER-BACKLOG.md` | ONE backlog |
+| `../89-DIRECTOR-STANDING-ORDERS.md` | Seat law |
+| `../90-DIRECTOR-TEAM-WAKE.md` | Live wake paste |
+| `../85` · `../87` | Product law |
+| `chair/DIR-*` · `W8/W9-APPROVE-*` | Approve / reject / VERIFY |
 
-- Orders: `../76-ENGINEERING-COUNCIL-STANDING-ORDERS-WAVE6B.md` (VERIFY)
-- Chair verify: `chair/W6-CHAIR-VERIFY-MAPS11-BOOM-CAR.md`
-- Feature tip: PR #39 `cursor/section-wiring-audit-e37c`
-- Seats: `auditor/W6-*` · `reliability/W6-*` · `support/W6-*`
+## Support (#38)
+
+- `W8-SUP-50` — board = 88/90  
+- **`W8-SUP-59`** — **full atlas of all Director/Chair plans**  
+- `W8-SUP-58` — earlier 88/89 sync  
+- `W8-SUP-57` — Wave9 E peer  
+- `W8-SUP-53` — Maps NO-DELETE  
+- `W8-SUP-CHANNEL-TO-CHAIR.md`
